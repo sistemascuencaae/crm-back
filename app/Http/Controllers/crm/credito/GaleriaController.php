@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\Storage;
 
 class GaleriaController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->middleware('auth:api');
-    // }
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
 
     public function store(Request $request)
     {
