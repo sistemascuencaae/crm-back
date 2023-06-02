@@ -1,9 +1,9 @@
 <?php
 
 use App\Http\Controllers\crm\credito\AnalistaController;
-use App\Http\Controllers\FlujoController;
+use App\Http\Controllers\crm\FlujoController;
+use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\JWTController;
-use App\Http\Controllers\TareaController;
 use App\Http\Controllers\User\ProfileUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -69,8 +69,18 @@ Route::group(["prefix" => "crm"],function($router){
     Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);//
-    Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);//
+    Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
 });
+
+//cambios felipe sin actualizar
+Route::group(["prefix" => "crm"],function($router){
+    Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
+    Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
+    Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
+    Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
+
+});
+
 
 Route::group(["prefix" => "layout"],function($router){
     Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
