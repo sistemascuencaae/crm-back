@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\crm\credito\AnalistaController;
+use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\JWTController;
@@ -89,3 +90,10 @@ Route::group(["prefix" => "layout"],function($router){
 
 
 
+//Rutas Juan
+Route::group(["prefix" => "crm"],function($router){
+    Route::post('/add', [GaleriaController::class, 'store']); // Guardar la imagen
+    Route::get('/all', [GaleriaController::class, 'index']); // Listar las imagenes
+    Route::post('/update/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
+    Route::delete('/delete/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
+});
