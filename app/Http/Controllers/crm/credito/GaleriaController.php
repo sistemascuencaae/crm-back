@@ -66,6 +66,10 @@ class GaleriaController extends Controller
     public function destroy($id)
     {
         $galeria = Galeria::findOrFail($id);
+        
+        $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
+        Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
+        
         $galeria->delete();
 
         return response()->json(["message" => 200]);
