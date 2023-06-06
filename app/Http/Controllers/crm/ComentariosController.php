@@ -16,9 +16,9 @@ class ComentariosController extends Controller
 
     public function listaComentarios(Request $request){
         //$userId = $request->input('user_id');
-        $divId = $request->input('div_id');
-        $data = DB::select('select * from public.comentarios where div_id = '.$divId);
-        broadcast(new ComentariosEvent($data));
+        $tarea_id = $request->input('tarea_id');
+        $data = DB::select('select * from public.comentarios where tarea_id = '.$tarea_id);
+        //broadcast(new ComentariosEvent($data));
         return response()->json([
             "res" => 200,
             "data" => $data
@@ -33,8 +33,6 @@ class ComentariosController extends Controller
         $nombre_usuario = $request->input('nombre_usuario');
         $created_at = $request->input('created_at');
         $updated_at = $request->input('updated_at');
-
-
         $data = DB::table('comentarios')->insert([
             'user_id' => $user_id,
             'comentario' => $comentario,
