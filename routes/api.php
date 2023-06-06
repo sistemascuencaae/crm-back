@@ -110,3 +110,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/updateA/{id}', [ArchivoController::class, 'edit']); // Editar
     Route::delete('/deleteA/{id}', [ArchivoController::class, 'destroy']); // Eliminar
 });
+
+
+
+// CAMBIO FELIPE PRUEBA
