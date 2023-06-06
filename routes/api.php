@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\AnalistaController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
@@ -64,7 +65,7 @@ Route::group(["prefix" => "crm"],function($router){
     Route::post('/actulizarDatoDiv', [AnalistaController::class, 'actulizarDatoDiv']);
     Route::post('/pruebacambiodivDos', [AnalistaController::class, 'pruebacambiodivDos']);//pruebacambiodivDos
     Route::post('/updateDiv', [AnalistaController::class, 'updateDiv']);
-    Route::post('/listaComentarios', [AnalistaController::class, 'listaComentarios']);//listaComentarios
+    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);//listaComentarios
     Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']);//guardarComentario
     Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);

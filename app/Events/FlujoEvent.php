@@ -3,12 +3,13 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ComentariosEvent implements ShouldBroadcast
+class FlujoEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -34,8 +35,6 @@ class ComentariosEvent implements ShouldBroadcast
     }
 
 
-
-
     /**
      * Get the channels the event should broadcast on.
      *
@@ -48,6 +47,6 @@ class ComentariosEvent implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new PrivateChannel('tarea.comentarios.' .$this->data[0]->div_id);
+        return new PrivateChannel('departamento.flujo' .$this->data[0]->dep_id);
     }
 }
