@@ -18,7 +18,7 @@ class ComentariosController extends Controller
         //$userId = $request->input('user_id');
         $divId = $request->input('div_id');
         $data = DB::select('select * from public.comentarios where div_id = '.$divId);
-        broadcast(new ComentariosEvent($data));
+        //broadcast(new ComentariosEvent($data));
         return response()->json([
             "res" => 200,
             "data" => $data
