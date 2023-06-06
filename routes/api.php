@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\crm\credito\AnalistaController;
+use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
@@ -23,13 +24,13 @@ use Illuminate\Support\Facades\Route;
 //     return $request->user();
 // });
 
-Route::group(['middleware' => 'api'], function($router) {
+Route::group(['middleware' => 'api'], function ($router) {
 
     Route::post('/register', [JWTController::class, 'register']);
     Route::post('/login', [JWTController::class, 'login']);
     Route::post('/profile', [JWTController::class, 'profile']);
 
-    
+
 
 
 
@@ -45,7 +46,7 @@ Route::group(['middleware' => 'api'], function($router) {
 // });
 
 
-Route::group(['middleware' => 'api','prefix' => 'users'],function($router){
+Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
     Route::post('/profile-user', [ProfileUserController::class, 'profile_user']);
 });
 
@@ -60,21 +61,21 @@ Route::group(['middleware' => 'api','prefix' => 'users'],function($router){
 
 
 
-Route::group(["prefix" => "crm"],function($router){
+Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/pruebacambiodiv', [AnalistaController::class, 'pruebacambiodiv']);
     Route::post('/actulizarDatoDiv', [AnalistaController::class, 'actulizarDatoDiv']);
-    Route::post('/pruebacambiodivDos', [AnalistaController::class, 'pruebacambiodivDos']);//pruebacambiodivDos
+    Route::post('/pruebacambiodivDos', [AnalistaController::class, 'pruebacambiodivDos']); //pruebacambiodivDos
     Route::post('/updateDiv', [AnalistaController::class, 'updateDiv']);
-    Route::post('/listaComentarios', [AnalistaController::class, 'listaComentarios']);//listaComentarios
-    Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']);//guardarComentario
+    Route::post('/listaComentarios', [AnalistaController::class, 'listaComentarios']); //listaComentarios
+    Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']); //guardarComentario
     Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
-    Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);//
+    Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']); //
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
 });
 
 //cambios felipe sin actualizar
-Route::group(["prefix" => "crm"],function($router){
+Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
@@ -83,17 +84,25 @@ Route::group(["prefix" => "crm"],function($router){
 });
 
 
-Route::group(["prefix" => "layout"],function($router){
+Route::group(["prefix" => "layout"], function ($router) {
     Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
 });
 
 
 
 
-//Rutas Juan
-Route::group(["prefix" => "crm"],function($router){
+//Rutas Juan GALERIA
+Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/add', [GaleriaController::class, 'store']); // Guardar la imagen
     Route::get('/all', [GaleriaController::class, 'index']); // Listar las imagenes
     Route::post('/update/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
     Route::delete('/delete/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
+});
+
+//Rutas Juan ARCHIVO
+Route::group(["prefix" => "crm"], function ($router) {
+    Route::post('/addA', [ArchivoController::class, 'store']); // Guardar
+    Route::get('/allA', [ArchivoController::class, 'index']); // Listar
+    Route::post('/updateA/{id}', [ArchivoController::class, 'edit']); // Editar
+    Route::delete('/deleteA/{id}', [ArchivoController::class, 'destroy']); // Eliminar
 });
