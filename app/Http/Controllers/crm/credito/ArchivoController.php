@@ -12,6 +12,8 @@ use Tymon\JWTAuth\Providers\JWT\Provider;
 
 class ArchivoController extends Controller
 {
+
+    //test Desde Juan
     // public function __construct()
     // {
     //     $this->middleware('auth:api');
