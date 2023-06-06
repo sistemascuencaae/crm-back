@@ -15,12 +15,17 @@ class Flujo extends Model
         'fase',
         'descripcion',
         'genearar_tarea',
-        'posicion'
+        'orden'
     ];
     protected $hidden = [
         'created_at',
         'updated_at',
     ];
+
+    public function Departamento()
+    {
+       return $this->belongsTo(Departamento::class,"dep_id");
+    }
 
     public function Tarea()
     {
