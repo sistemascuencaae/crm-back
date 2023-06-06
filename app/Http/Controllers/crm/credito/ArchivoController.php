@@ -24,26 +24,24 @@ class ArchivoController extends Controller
         $titulo = $file->getClientOriginalName();
         
         $count = count($request->file());
+        echo (json_encode($count));
         
-        if ($count > 0) {
+        // if ($count > 0) {
             foreach ($request->file() as $item) {
-                echo (json_encode($count));
-                echo (json_encode($file));
-                echo (json_encode($titulo));
                 //acá almacenas cada archivo, un pequeño ejemplo:
                 //   $item->storeAs('files/', 'nombre-del-archivo');
-                // $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA CATEGORIAS
-                // $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta de la imagen en la que se encuentra
+                $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA CATEGORIAS
+                $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta de la imagen en la que se encuentra
 
-                // //tú coloca la lógica que necesites para almacenar cada archivo :) 
-                // $archivo = Archivo::create([
-                //     "titulo" => $titulo,
-                //     "archivo" => $path,
-                // ]);
+                //tú coloca la lógica que necesites para almacenar cada archivo :) 
+                $archivo = Archivo::create([
+                    "titulo" => $titulo,
+                    "archivo" => $path,
+                ]);
             }
-        }
+        // }
 
-        // return response()->json(["archivo" => $archivo,]);
+        return response()->json(["archivo" => $archivo,]);
 
         // -*-*-*-*-*-*-*-*-***********************************************************************
         // $file = $request->file("archivo");
