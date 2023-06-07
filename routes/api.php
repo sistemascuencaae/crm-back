@@ -105,10 +105,10 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 //Rutas Juan ARCHIVO
 Route::group(["prefix" => "crm"], function ($router) {
-    Route::post('/addA', [ArchivoController::class, 'store']); // Guardar
-    Route::get('/allA', [ArchivoController::class, 'index']); // Listar
-    Route::post('/updateA/{id}', [ArchivoController::class, 'edit']); // Editar
-    Route::delete('/deleteA/{id}', [ArchivoController::class, 'destroy']); // Eliminar
+    Route::post('/addArchivo', [ArchivoController::class, 'store']); // Guardar
+    Route::get('/allArchivo', [ArchivoController::class, 'index']); // Listar
+    Route::post('/updateArchivo/{id}', [ArchivoController::class, 'edit']); // Editar
+    Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'destroy']); // Eliminar
 });
 
 
