@@ -25,11 +25,11 @@ class ArchivoController extends Controller
         $file = $request->file("archivo");
         $titulo = $file->getClientOriginalName();
         
-        $count = count($request->file());
-        echo (json_encode($count));
+        // $count = count($request->file());
+        // echo (json_encode($count));
         
         // if ($count > 0) {
-            foreach ($request->file() as $item) {
+            // foreach ($request->file() as $item) {
                 //acá almacenas cada archivo, un pequeño ejemplo:
                 //   $item->storeAs('files/', 'nombre-del-archivo');
                 $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA CATEGORIAS
@@ -40,7 +40,7 @@ class ArchivoController extends Controller
                     "titulo" => $titulo,
                     "archivo" => $path,
                 ]);
-            }
+            // }
         // }
 
         return response()->json(["archivo" => $archivo,]);
