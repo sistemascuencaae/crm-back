@@ -15,11 +15,13 @@ class Flujo extends Model
         'fase',
         'descripcion',
         'genearar_tarea',
-        'orden'
+        'orden',
+        'estado'
     ];
     protected $hidden = [
         'created_at',
         'updated_at',
+        'deleted_at'
     ];
 
     public function Departamento()

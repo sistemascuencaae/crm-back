@@ -62,8 +62,9 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/create-flujo', [FlujoController::class, 'create']);
-    Route::get('/update-flujo', [FlujoController::class, 'update']);
+    Route::put('/update-flujo', [FlujoController::class, 'update']);
     Route::get('/list-flujo', [FlujoController::class, 'list']);
+    Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
 
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);

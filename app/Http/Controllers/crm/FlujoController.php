@@ -18,14 +18,16 @@ class FlujoController extends Controller
         $this->middleware('auth:api');
     }
 
-
+    public function list()
+    {
+        $data = Flujo::with('tarea')->get();
+        return response()->json(RespuestaApi::returnResultado('success', 'El listado de flujos se consigion con exito', $data));
+    }
     public function create(Request $request)
     {
-
-        
-
         try {
-            $data = Flujo::create($request->all());
+            $flujoCreado = Flujo::create($request->all());
+            $data = Flujo::with('tarea')->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Flujo creado con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e));
@@ -33,16 +35,24 @@ class FlujoController extends Controller
     }
     public function update(request $request)
     {
-        DB::transaction(function () use ($request) {
-            $flujo_id = $request->input('flujo_id');
-            $posision = $request->input('posision');
-        });
+        $id = $request->input('id');
+        Flujo::where('id', '=', $id)->update($request->all());
+
         $data = Flujo::with('tarea')->get();
-        return response()->json(RespuestaApi::returnResultado('success', 'El listado de flujos se consigion con exito', $data));
+        return response()->json(RespuestaApi::returnResultado('success', 'Flujo actualizado', $data));
     }
-    public function list()
+
+    public function delete($id)
     {
-        $data = Flujo::with('tarea')->get();
-        return response()->json(RespuestaApi::returnResultado('success', 'El listado de flujos se consigion con exito', $data));
+        try {
+            $flujo = Flujo::find($id);
+            
+            $flujo->delete();
+            $data = Flujo::with('tarea')->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Flujo eliminado', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e));
+        }
     }
+
 }
