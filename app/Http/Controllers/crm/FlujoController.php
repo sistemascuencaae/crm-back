@@ -46,12 +46,29 @@ class FlujoController extends Controller
     {
         try {
             $flujo = Flujo::find($id);
-            
+            $flujo->orden = null;
+            $flujo->save();
             $flujo->delete();
             $data = Flujo::with('tarea')->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Flujo eliminado', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e));
+        }
+    }
+
+
+    public function updateFlujos(Request $request){ 
+        $listaIds = $request->input('listaIds');
+        try {
+            for ($i = 0; $i < sizeof($listaIds); $i++) {
+                if($listaIds[$i] != null){
+                    DB::update('update flujo set orden = ' . ($i + 1) . ' where id = ' . $listaIds[$i]);
+                }
+            }
+            $data = Flujo::with('tarea')->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Tareas actualizadas', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error interno',$e->getMessage()));
         }
     }
 

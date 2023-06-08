@@ -12,7 +12,7 @@ class Flujo extends Model
      use SoftDeletes;
     protected $fillable = [
         'dep_id',
-        'fase',
+        'nombre',
         'descripcion',
         'genearar_tarea',
         'orden',

@@ -63,8 +63,9 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/create-flujo', [FlujoController::class, 'create']);
     Route::put('/update-flujo', [FlujoController::class, 'update']);
+    Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     Route::get('/list-flujo', [FlujoController::class, 'list']);
-    Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
+    Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);//
 
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
