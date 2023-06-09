@@ -10,7 +10,7 @@ class Archivo extends Model
 {
     use HasFactory;
 
-    protected $fillable = ["titulo", "archivo"];
+    protected $fillable = ["titulo", "observacion", "archivo"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -21,10 +21,5 @@ class Archivo extends Model
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
-    }
-    public function setDeletedAtAttribute($value)
-    {
-        date_default_timezone_set("America/Guayaquil");
-        $this->attributes["deleted_at"] = Carbon::now();
     }
 }
