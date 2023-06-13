@@ -71,28 +71,28 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']); //
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
-});
-
+    
     Route::post('/create-flujo', [FlujoController::class, 'create']);
     Route::put('/update-flujo', [FlujoController::class, 'update']);
     Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     Route::get('/list-flujo', [FlujoController::class, 'list']);
     Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);//
-
-
+    
+    
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
-
+    
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);//listaComentarios
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);//guardarComentario
-
 });
 
 
 
 
 
+
+//----------------------- RUTAS JUAN  ----------------------------------------------
 
 //Rutas Juan GALERIA
 Route::group(["prefix" => "crm"], function ($router) {
@@ -110,14 +110,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'destroy']); // Eliminar
 });
 
-//Rutas Juan ARCHIVO
+//Rutas Juan Etiqueta
 Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addEtiqueta', [EtiquetaController::class, 'store']); // Guardar
     Route::get('/allEtiqueta', [EtiquetaController::class, 'index']); // Listar
     Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'edit']); // Editar
     Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'destroy']); // Eliminar
 });
-
-
-
-// CAMBIO FELIPE PRUEBA
