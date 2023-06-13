@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\crm\ComentariosController;
-use App\Http\Controllers\crm\credito\AnalistaController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
@@ -60,14 +59,9 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 //----------------------- C R M   ----------------------------------------------
 
 
-
-
-
+//cambios felipe sin actualizar
 Route::group(["prefix" => "crm"], function ($router) {
-    Route::get('/pruebacambiodiv', [AnalistaController::class, 'pruebacambiodiv']);
-    Route::post('/actulizarDatoDiv', [AnalistaController::class, 'actulizarDatoDiv']);
-    Route::post('/pruebacambiodivDos', [AnalistaController::class, 'pruebacambiodivDos']); //pruebacambiodivDos
-    Route::post('/updateDiv', [AnalistaController::class, 'updateDiv']);
+
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']); //listaComentarios
     Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']); //guardarComentario
@@ -79,19 +73,23 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
 });
 
-//cambios felipe sin actualizar
-Route::group(["prefix" => "crm"], function ($router) {
-    Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
+    Route::post('/create-flujo', [FlujoController::class, 'create']);
+    Route::put('/update-flujo', [FlujoController::class, 'update']);
+    Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
+    Route::get('/list-flujo', [FlujoController::class, 'list']);
+    Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);//
+
+
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
 
+    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);//listaComentarios
+    Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);//guardarComentario
+
 });
 
 
-Route::group(["prefix" => "layout"], function ($router) {
-    Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
-});
 
 
 

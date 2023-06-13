@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Tarea;
+use App\Models\crm\Tarea;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
