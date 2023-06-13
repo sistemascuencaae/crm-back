@@ -36,7 +36,7 @@ class ArchivoController extends Controller
 
             // $galeria = Archivo::create($request->all());
 
-            $data = DB::select('select * from archivos');
+            $data = DB::select('select * from crm.archivos');
 
             // return response()->json(["archivo" => $data,]);
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo los archivos con éxito', $data));
