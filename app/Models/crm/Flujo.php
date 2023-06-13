@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 class Flujo extends Model
 {
-    protected $table = 'public.flujo';
+    protected $table = 'crm.flujo';
     protected $primaryKey = 'id';
      use SoftDeletes;
     protected $fillable = [

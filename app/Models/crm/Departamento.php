@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Departamento extends Model
 {
-    protected $table = 'public.departamento';
+    protected $table = 'crm.departamento';
     protected $primaryKey = 'dep_id';
      use SoftDeletes;
     protected $fillable = [

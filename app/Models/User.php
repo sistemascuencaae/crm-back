@@ -12,7 +12,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
-
+    protected $table = 'crm.users';
     /**
      * The attributes that are mass assignable.
      *
