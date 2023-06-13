@@ -6,11 +6,11 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Archivo extends Model
+class Etiqueta extends Model
 {
     use HasFactory;
 
-    protected $fillable = ["titulo", "observacion", "archivo"];
+    protected $fillable = ["nombre"];
 
     public function setCreatedAtAttribute($value)
     {
