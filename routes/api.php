@@ -3,6 +3,7 @@
 use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\AnalistaController;
 use App\Http\Controllers\crm\credito\ArchivoController;
+use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
@@ -68,10 +69,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/pruebacambiodivDos', [AnalistaController::class, 'pruebacambiodivDos']); //pruebacambiodivDos
     Route::post('/updateDiv', [AnalistaController::class, 'updateDiv']);
 
-    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);//listaComentarios
-    Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']);//guardarComentario
+    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']); //listaComentarios
+    Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']); //guardarComentario
 
-   
+
     Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']); //
@@ -109,6 +110,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/allArchivo', [ArchivoController::class, 'index']); // Listar
     Route::post('/updateArchivo/{id}', [ArchivoController::class, 'edit']); // Editar
     Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'destroy']); // Eliminar
+});
+
+//Rutas Juan ARCHIVO
+Route::group(["prefix" => "crm"], function ($router) {
+    Route::post('/addEtiqueta', [EtiquetaController::class, 'store']); // Guardar
+    Route::get('/allEtiqueta', [EtiquetaController::class, 'index']); // Listar
+    Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'edit']); // Editar
+    Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'destroy']); // Eliminar
 });
 
 
