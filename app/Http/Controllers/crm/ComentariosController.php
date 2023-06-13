@@ -29,7 +29,7 @@ class ComentariosController extends Controller
     public function guardarComentario(Request $request){
         $user_id = $request->input('user_id');
         $comentario = $request->input('comentario');
-        $div_id = $request->input('div_id');
+        $tarea_id = $request->input('tarea_id');
         $nombre_usuario = $request->input('nombre_usuario');
         $created_at = $request->input('created_at');
         $updated_at = $request->input('updated_at');
@@ -37,11 +37,11 @@ class ComentariosController extends Controller
             'user_id' => $user_id,
             'comentario' => $comentario,
             'nombre_usuario' => $nombre_usuario,
-            'div_id' => $div_id,
+            'tarea_id' => $tarea_id,
             'created_at' => $created_at,
         ]);
 
-        $data = DB::select('select * from public.comentarios where div_id = '.$div_id);
+        $data = DB::select('select * from public.comentarios where tarea_id = '.$tarea_id);
         broadcast(new ComentariosEvent($data));
         return response()->json([
             "res" => 200,

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\crm;
 
-use App\Models\Tarea;
+use App\Models\crm\Tarea;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 class Flujo extends Model
@@ -11,15 +11,17 @@ class Flujo extends Model
     protected $primaryKey = 'id';
      use SoftDeletes;
     protected $fillable = [
-        'id_dep',
-        'fase',
+        'dep_id',
+        'nombre',
         'descripcion',
         'genearar_tarea',
-        'orden'
+        'orden',
+        'estado'
     ];
     protected $hidden = [
         'created_at',
         'updated_at',
+        'deleted_at'
     ];
 
     public function Departamento()

@@ -48,6 +48,6 @@ class ComentariosEvent implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new PrivateChannel('tarea.comentarios.' .$this->data[0]->div_id);
+        return new PrivateChannel('tarea.comentarios.' .$this->data[0]->tarea_id);
     }
 }
