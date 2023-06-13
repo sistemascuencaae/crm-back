@@ -92,7 +92,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 
 
-//----------------------- RUTAS JUAN  ----------------------------------------------
+//----------------------- START RUTAS JUAN  ----------------------------------------------
 
 //Rutas Juan GALERIA
 Route::group(["prefix" => "crm"], function ($router) {
@@ -117,3 +117,5 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'edit']); // Editar
     Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'destroy']); // Eliminar
 });
+
+//----------------------- END RUTAS JUAN  ----------------------------------------------
