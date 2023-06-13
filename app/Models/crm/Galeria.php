@@ -9,6 +9,7 @@ use Illuminate\Support\Carbon;
 class Galeria extends Model
 {
     use HasFactory;
+    protected $table = 'crm.galerias';
 
     protected $fillable = ["titulo", "descripcion", "imagen"];
 

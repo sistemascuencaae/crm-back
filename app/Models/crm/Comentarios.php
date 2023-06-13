@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Comentarios extends Model
 {
-    protected $table = 'public.comentarios';
+    protected $table = 'crm.comentarios';
     protected $primaryKey = 'id';
      use SoftDeletes;
     protected $fillable = [
