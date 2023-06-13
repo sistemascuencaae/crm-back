@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class DivMovil extends Model
 {
     use SoftDeletes;
-    protected $table = 'public.div_movil';
+    protected $table = 'crm.div_movil';
     protected $primaryKey = 'div_id';
     protected $fillable = [
         "dato1",

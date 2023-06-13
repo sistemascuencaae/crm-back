@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Tarea extends Model
 {
-    protected $table = 'public.tarea';
+    protected $table = 'crm.tarea';
     protected $primaryKey = 'id';
     use SoftDeletes;
     protected $fillable = [

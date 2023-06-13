@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class Archivo extends Model
 {
     use HasFactory;
-
+    protected $table = 'crm.archivos';
     protected $fillable = ["titulo", "observacion", "archivo"];
 
     public function setCreatedAtAttribute($value)

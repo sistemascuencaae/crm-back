@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class Etiqueta extends Model
 {
     use HasFactory;
-
+    protected $table = 'crm.etiquetas';
     protected $fillable = ["nombre"];
 
     public function setCreatedAtAttribute($value)
