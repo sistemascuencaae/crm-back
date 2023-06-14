@@ -7,6 +7,7 @@ use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\JWTController;
+use App\Http\Controllers\PruebasController;
 use App\Http\Controllers\User\ProfileUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -85,6 +86,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);//listaComentarios
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);//guardarComentario
+
+    Route::get('/listaclientes/{cedula}', [PruebasController::class, 'listClientes']);//guardarComentario
 });
 
 

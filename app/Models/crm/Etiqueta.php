@@ -10,7 +10,7 @@ class Etiqueta extends Model
 {
     use HasFactory;
     protected $table = 'crm.etiquetas';
-    protected $fillable = ["nombre"];
+    protected $fillable = ["nombre","tar_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -22,4 +22,6 @@ class Etiqueta extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
+
+
 }
