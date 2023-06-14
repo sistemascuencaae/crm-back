@@ -14,6 +14,8 @@ class Entidad extends Model
 
     protected $primaryKey = 'ent_id';
 
+    public $timestamps = false;
+
     protected $fillable = [
         "ent_id",
         "ent_identificacion",

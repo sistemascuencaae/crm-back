@@ -13,6 +13,8 @@ class Cliente extends Model
 
     protected $primaryKey = 'cli_id';
 
+    public $timestamps = false;
+
     protected $fillable = [
         "cli_id",
         "cli_codigo",
