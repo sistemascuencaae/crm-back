@@ -15,10 +15,12 @@ class TareaController extends Controller
 {
     
 
-    public function __construct()
-    {
-        $this->middleware('auth:api');
+    public function list(Request $request){
+        $data = Tarea::with('Etiqueta', 'Galeria', 'Archivo')->get();
+        return response()->json(RespuestaApi::returnResultado('success', 'Lista de tareas', $data));
+
     }
+
     public function actualizarTareas(Request $request)
     {
         $listaIds = $request->input('listaIds');

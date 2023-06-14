@@ -8,6 +8,7 @@ use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\JWTController;
+use App\Http\Controllers\PruebasController;
 use App\Http\Controllers\User\ProfileUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -57,38 +58,44 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 
 
 
-//----------------------- C R M   ----------------------------------------------
+//----------------------- RUTAS FELIPE ----------------------------------------------
+//----------------------- RUTAS FELIPE ----------------------------------------------
+//----------------------- RUTAS FELIPE ----------------------------------------------
 
 
 //cambios felipe sin actualizar
 Route::group(["prefix" => "crm"], function ($router) {
 
 
-    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']); //listaComentarios
-    Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']); //guardarComentario
+    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
+    Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']);
 
 
     Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
-    Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']); //
-    Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
-    
-    Route::post('/create-flujo', [FlujoController::class, 'create']);
-    Route::put('/update-flujo', [FlujoController::class, 'update']);
-    Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
-    Route::get('/list-flujo', [FlujoController::class, 'list']);
-    Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);//
-    
-    
-    Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
     
-    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);//listaComentarios
-    Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);//guardarComentario
+    Route::get('/listFlujos', [FlujoController::class, 'list']);
+    Route::post('/create-flujo', [FlujoController::class, 'create']);
+    Route::put('/update-flujo', [FlujoController::class, 'update']);
+    Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
+    Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
+    
+    Route::get('/listTareas', [TareaController::class, 'list']);
+    
+    
+    
+
+    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
+    Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
+
+
 });
 
-
+//----------------------- FIN RUTAS FELIPE ----------------------------------------------
+//----------------------- FIN RUTAS FELIPE ----------------------------------------------
+//----------------------- FIN RUTAS FELIPE ----------------------------------------------
 
 
 
@@ -97,16 +104,16 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 //Rutas Juan GALERIA
 Route::group(["prefix" => "crm"], function ($router) {
-    Route::post('/add', [GaleriaController::class, 'store']); // Guardar la imagen
-    Route::get('/all', [GaleriaController::class, 'index']); // Listar las imagenes
-    Route::post('/update/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
-    Route::delete('/delete/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
+    Route::post('/addGaleria', [GaleriaController::class, 'store']); // Guardar la imagen
+    Route::get('/allGaleria/{id}', [GaleriaController::class, 'index']); // Listar las imagenes
+    Route::post('/updateGaleria/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
+    Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
 });
 
 //Rutas Juan ARCHIVO
 Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addArchivo', [ArchivoController::class, 'store']); // Guardar
-    Route::get('/allArchivo', [ArchivoController::class, 'index']); // Listar
+    Route::get('/allArchivo/{id}', [ArchivoController::class, 'index']); // Listar
     Route::post('/updateArchivo/{id}', [ArchivoController::class, 'edit']); // Editar
     Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'destroy']); // Eliminar
 });
@@ -114,13 +121,15 @@ Route::group(["prefix" => "crm"], function ($router) {
 //Rutas Juan Etiqueta
 Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addEtiqueta', [EtiquetaController::class, 'store']); // Guardar
-    Route::get('/allEtiqueta', [EtiquetaController::class, 'index']); // Listar
+    Route::get('/allEtiqueta/{id}', [EtiquetaController::class, 'index']); // Listar
     Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'edit']); // Editar
     Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'destroy']); // Eliminar
 });
 
 Route::group(["prefix" => "crm"], function ($router) { // Listar
     Route::get('/allEC/{cedula}', [EntidadController::class, 'list']); // Listar
+    Route::post('/updateE', [EntidadController::class, 'editEntidad']); // Editar
+    // Route::post('/updateD', [EntidadController::class, 'editDireccion']); // Editar
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------

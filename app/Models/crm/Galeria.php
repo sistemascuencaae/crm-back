@@ -11,7 +11,7 @@ class Galeria extends Model
     use HasFactory;
     protected $table = 'crm.galerias';
 
-    protected $fillable = ["titulo", "descripcion", "imagen"];
+    protected $fillable = ["titulo", "descripcion", "imagen", "tar_id"];
 
     public function setCreatedAtAttribute($value)
     {
