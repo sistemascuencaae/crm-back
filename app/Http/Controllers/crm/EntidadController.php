@@ -14,7 +14,7 @@ class EntidadController extends Controller
 {
     public function list($cedula)
     {
-        $data = Entidad::with('cliente', 'direccion')->where('ent_identificacion', $cedula)->get();
+        $data = Entidad::with('cliente', 'direccion')->where('ent_identificacion', $cedula)->first();
 
         return response()->json(["message" => 200, "data" => $data]);
     }
