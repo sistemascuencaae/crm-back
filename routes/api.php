@@ -4,6 +4,7 @@ use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
+use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\JWTController;
@@ -92,7 +93,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 
 
-//----------------------- RUTAS JUAN  ----------------------------------------------
+//----------------------- START RUTAS JUAN  ----------------------------------------------
 
 //Rutas Juan GALERIA
 Route::group(["prefix" => "crm"], function ($router) {
@@ -117,3 +118,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'edit']); // Editar
     Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'destroy']); // Eliminar
 });
+
+Route::group(["prefix" => "crm"], function ($router) { // Listar
+    Route::get('/allEC/{cedula}', [EntidadController::class, 'list']); // Listar
+});
+
+//----------------------- END RUTAS JUAN  ----------------------------------------------
