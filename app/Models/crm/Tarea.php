@@ -40,4 +40,14 @@ class Tarea extends Model
         return $this->hasMany(Etiqueta::class,"tar_id");
     }
 
+    public function Galeria()
+    {
+        return $this->hasMany(Galeria::class,"tar_id");
+    }
+
+    public function Archivo()
+    {
+        return $this->hasMany(Archivo::class,"tar_id");
+    }
+
 }

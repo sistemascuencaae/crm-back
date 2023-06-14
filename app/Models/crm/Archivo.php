@@ -10,7 +10,7 @@ class Archivo extends Model
 {
     use HasFactory;
     protected $table = 'crm.archivos';
-    protected $fillable = ["titulo", "observacion", "archivo"];
+    protected $fillable = ["titulo", "observacion", "archivo","tar_id"];
 
     public function setCreatedAtAttribute($value)
     {

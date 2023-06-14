@@ -26,9 +26,9 @@ class GaleriaController extends Controller
         return response()->json(["imagen" => $galeria,]);
     }
 
-    public function index(Request $request)
+    public function index($tar_id)
     {
-        $galerias = Galeria::orderBy("id", "asc")->get();
+        $galerias = Galeria::orderBy("id", "asc")->where('tar_id',$tar_id)->get();
 
         // return response()->json([
         //     "imagenes" => $imagenes,]);
@@ -41,6 +41,7 @@ class GaleriaController extends Controller
                     "descripcion" => $galeria->descripcion,
                     // "imagen" => env("APP_URL") . "storage/app/public/" . $imagen->imagen,
                     "imagen" => $galeria->imagen,
+                    "tar_id" => $galeria->tar_id,
                 ];
             }),
         ]);
