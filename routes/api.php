@@ -128,6 +128,8 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 Route::group(["prefix" => "crm"], function ($router) { // Listar
     Route::get('/allEC/{cedula}', [EntidadController::class, 'list']); // Listar
+    Route::post('/updateE', [EntidadController::class, 'editEntidad']); // Editar
+    // Route::post('/updateD', [EntidadController::class, 'editDireccion']); // Editar
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
