@@ -13,6 +13,8 @@ class Direccion extends Model
 
     protected $primaryKey = 'dir_id';
 
+    public $timestamps = false;
+
     protected $fillable = [
         "dir_id",
         "dir_calle_principal",
