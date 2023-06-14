@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class PruebasController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware('auth:api');
+    // }
 
 
     public function pruebaswebsokets(Request $request)
@@ -52,9 +52,9 @@ class PruebasController extends Controller
 
 
 
-    public function updatePositionDiv(Request $request) {
+    public function listClientes($cedula) {
 
-        
+        echo('aaaaa: '.$cedula);
 
 
 

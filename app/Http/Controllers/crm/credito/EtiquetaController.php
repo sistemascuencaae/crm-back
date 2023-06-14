@@ -30,9 +30,9 @@ class EtiquetaController extends Controller
         }
     }
 
-    public function index(Request $request)
+    public function index($tar_id)
     {
-        $etiquetas = Etiqueta::orderBy("id", "asc")->get();
+        $etiquetas = Etiqueta::orderBy("id", "asc")->where('tar_id',$tar_id)->get();
 
         return response()->json([
             "etiquetas" => $etiquetas,
