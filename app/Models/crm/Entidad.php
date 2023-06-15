@@ -1,8 +1,9 @@
 <?php
 
 namespace App\Models\crm;
-
+use App\Models\crm\credito\ClienteFae;
 use App\Models\crm\Cliente;
+use App\Models\crm\credito\ReferenAnexo;
 use App\Models\crm\Direccion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -42,6 +43,15 @@ class Entidad extends Model
     public function direccion()
     {
         return $this->belongsTo(Direccion::class, "ent_direccion_principal");
+    }
+
+    public function clientefae()
+    {
+        return $this->hasMany(ClienteFae::class, "ent_id");
+    }
+    public function referenanexo()
+    {
+        return $this->hasMany(ReferenAnexo::class, "ent_id");
     }
 }
 

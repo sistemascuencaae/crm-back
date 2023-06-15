@@ -22,7 +22,8 @@ class Tarea extends Model
         'info4',
         'info5',
         'info6',
-        'info7'
+        'info7',
+        'ent_id'
     ];
     protected $hidden = [
         'created_at',
