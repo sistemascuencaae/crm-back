@@ -53,6 +53,7 @@ class Entidad extends Model
     {
         return $this->hasMany(ReferenAnexo::class, "ent_id");
     }
-}
+    
+}   
 
 // select * from public.entidad ent inner join public.cliente cli on cli.ent_id = ent.ent_id
