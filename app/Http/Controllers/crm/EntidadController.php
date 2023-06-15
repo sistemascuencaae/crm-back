@@ -14,7 +14,8 @@ class EntidadController extends Controller
 {
     public function list($cedula)
     {
-        $data = Entidad::with('cliente', 'direccion')->where('ent_identificacion', $cedula)->first();
+        $data = Entidad::with('cliente', 'direccion','clientefae','referenanexo')->where('ent_identificacion', $cedula)->first();
+        //$clifae = DB::select("select * from public.av_clientes_reiterativos c where c.cedula = '0100091560';");
 
         return response()->json(["message" => 200, "data" => $data]);
     }
