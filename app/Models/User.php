@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-
+use App\Models\crm\UsuarioDynamo;
+use App\Models\crm\Departamento;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -11,8 +12,9 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
+    protected $table = 'public.users';
     use HasFactory, Notifiable;
-    protected $table = 'crm.users';
+    
     /**
      * The attributes that are mass assignable.
      *
@@ -22,6 +24,7 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
+        'usu_id',
     ];
 
     /**
@@ -62,5 +65,14 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [];
+    }
+
+    public function UsuarioDynamo()
+    {
+       return $this->belongsTo(UsuarioDynamo::class,"usu_id");
+    }
+    public function Departamento()
+    {
+       return $this->belongsTo(Departamento::class,"dep_id");
     }
 }
