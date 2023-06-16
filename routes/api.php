@@ -4,6 +4,7 @@ use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
+use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
@@ -75,18 +76,24 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
-    
+
     Route::get('/listFlujos', [FlujoController::class, 'list']);
     Route::post('/create-flujo', [FlujoController::class, 'create']);
     Route::put('/update-flujo', [FlujoController::class, 'update']);
     Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
-    
+
     Route::get('/listTareas', [TareaController::class, 'list']);
+
+
+
+
+
     Route::get('/byCedula/{cedula}', [EntidadController::class, 'byCedula']); // Listar
     
     
     
+
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
@@ -111,6 +118,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/allGaleria/{id}', [GaleriaController::class, 'index']); // Listar las imagenes
     Route::post('/updateGaleria/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
+
+    Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'index']); // Listar los tipos de imagenes
 });
 
 //Rutas Juan ARCHIVO
