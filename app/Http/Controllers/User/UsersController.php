@@ -14,7 +14,7 @@ class UsersController extends Controller
 
     public function listAnalistas()
     {
-        $data = DB::select('select * from public.usuario where usu_tipo_analista = 1');
+        $data = User::with('UsuarioDynamo')->where('usu_tipo_analista',1)->get();
         return response()->json(RespuestaApi::returnResultado('success', 'Lista de usuarios analistas', $data));
     }
 
