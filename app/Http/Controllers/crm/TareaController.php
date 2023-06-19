@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\DB;
 class TareaController extends Controller
 {
     public function add(Request $request){
+
+        //  echo('aaaa'.json_encode($request->all()));
+
         try {
             $tarea = Tarea::create($request->all());
             return response()->json(RespuestaApi::returnResultado('success', 'Tarea creada con exito', $tarea));

@@ -25,7 +25,7 @@ class Tarea extends Model
         'info6',
         'info7',
         'ent_id',
-
+        'fecha_vencimiento',
     ];
     protected $casts = [
         'created_at'  => 'datetime:Y-m-d H:00',
