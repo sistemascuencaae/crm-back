@@ -24,10 +24,13 @@ class Tarea extends Model
         'info5',
         'info6',
         'info7',
-        'ent_id'
+        'ent_id',
+
+    ];
+    protected $casts = [
+        'created_at'  => 'datetime:Y-m-d H:00',
     ];
     protected $hidden = [
-        'created_at',
         'updated_at',
         'deleted_at',
     ];

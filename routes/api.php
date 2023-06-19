@@ -75,18 +75,19 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
-    
+
     Route::get('/listFlujos', [FlujoController::class, 'list']);
     Route::post('/create-flujo', [FlujoController::class, 'create']);
     Route::put('/update-flujo', [FlujoController::class, 'update']);
     Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
-    
+
+    Route::post('/addTarea', [TareaController::class, 'add']);
     Route::get('/listTareas', [TareaController::class, 'list']);
     Route::get('/byCedula/{cedula}', [EntidadController::class, 'byCedula']); // Listar
-    
-    
-    
+
+
+
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
