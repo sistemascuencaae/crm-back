@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\DB;
 
 class EntidadController extends Controller
 {
-    public function list($cedula)
+    public function byId($id)
     {
-        $data = Entidad::with('cliente', 'direccion','clientefae','referenanexo')->where('ent_identificacion', $cedula)->first();
+        $data = Entidad::with('cliente', 'direccion','clientefae','referenanexo')->where('ent_id', $id)->first();
         //$clifae = DB::select("select * from public.av_clientes_reiterativos c where c.cedula = '0100091560';");
 
         return response()->json(["message" => 200, "data" => $data]);

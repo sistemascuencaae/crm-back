@@ -133,7 +133,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 });
 
 Route::group(["prefix" => "crm"], function ($router) { // Listar
-    Route::get('/allEC/{cedula}', [EntidadController::class, 'list']); // Listar
+    Route::get('/byId/{id}', [EntidadController::class, 'byId']); // Listar
     Route::post('/updateE', [EntidadController::class, 'editEntidad']); // Editar
     // Route::post('/updateD', [EntidadController::class, 'editDireccion']); // Editar
 });
