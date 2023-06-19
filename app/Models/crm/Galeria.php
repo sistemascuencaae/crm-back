@@ -5,9 +5,13 @@ namespace App\Models\crm;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Galeria extends Model
+class Galeria extends Model implements Auditable
 {
+    use AuditableTrait;
+
     use HasFactory;
     protected $table = 'crm.galerias';
 
