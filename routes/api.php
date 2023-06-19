@@ -4,6 +4,7 @@ use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
+use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
@@ -103,7 +104,6 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 
 
-
 //----------------------- START RUTAS JUAN  ----------------------------------------------
 
 //Rutas Juan GALERIA
@@ -112,6 +112,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/allGaleria/{id}', [GaleriaController::class, 'index']); // Listar las imagenes
     Route::post('/updateGaleria/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
+
+    Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'index']); // Listar los tipos de imagenes
 });
 
 //Rutas Juan ARCHIVO

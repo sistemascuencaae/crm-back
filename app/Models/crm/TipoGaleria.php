@@ -2,16 +2,16 @@
 
 namespace App\Models\crm;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 
-class Galeria extends Model
+class TipoGaleria extends Model
 {
     use HasFactory;
-    protected $table = 'crm.galerias';
+    protected $table = 'crm.tipo_galeria';
 
-    protected $fillable = ["titulo", "descripcion", "imagen", "tar_id", "tipo_gal_id"];
+    protected $fillable = ["nombre", "descripcion", "estado"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -23,14 +23,5 @@ class Galeria extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-    public function setDeletedAtAttribute($value)
-    {
-        date_default_timezone_set("America/Guayaquil");
-        $this->attributes["deleted_at"] = Carbon::now();
-    }
 
-    public function tipo_galeria()
-    {
-        return $this->belongsTo(TipoGaleria::class, "tipo_gal_id");
-    }
 }
