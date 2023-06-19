@@ -11,7 +11,7 @@ use OwenIt\Auditing\Auditable as AuditableTrait;
 class Archivo extends Model implements Auditable
 {
     use AuditableTrait;
-// hola
+
     use HasFactory;
     protected $table = 'crm.archivos';
     protected $fillable = ["titulo", "observacion", "archivo","tar_id"];
