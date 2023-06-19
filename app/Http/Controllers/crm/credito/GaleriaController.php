@@ -42,6 +42,7 @@ class GaleriaController extends Controller
                     // "imagen" => env("APP_URL") . "storage/app/public/" . $imagen->imagen,
                     "imagen" => $galeria->imagen,
                     "tar_id" => $galeria->tar_id,
+                    "tipo_gal_id" => $galeria->tipo_gal_id
                 ];
             }),
         ]);
