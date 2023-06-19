@@ -19,7 +19,6 @@ class TareaController extends Controller
 
         try {
             $tarea = Tarea::create($request->all());
-            $tarea->create_at = $tarea->created_at->format('yyyy-MM-dd  HH:mm:ss');
             return response()->json(RespuestaApi::returnResultado('success', 'Tarea creada con exito', $tarea));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e));
