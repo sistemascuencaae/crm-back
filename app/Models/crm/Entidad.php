@@ -1,15 +1,20 @@
 <?php
 
 namespace App\Models\crm;
+
 use App\Models\crm\credito\ClienteFae;
 use App\Models\crm\Cliente;
 use App\Models\crm\credito\ReferenAnexo;
 use App\Models\crm\Direccion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Entidad extends Model
+class Entidad extends Model implements Auditable
 {
+    use AuditableTrait;
+
     use HasFactory;
     protected $table = 'public.entidad';
 
@@ -53,7 +58,7 @@ class Entidad extends Model
     {
         return $this->hasMany(ReferenAnexo::class, "ent_id");
     }
-    
-}   
+
+}
 
 // select * from public.entidad ent inner join public.cliente cli on cli.ent_id = ent.ent_id

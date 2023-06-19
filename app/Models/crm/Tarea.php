@@ -5,9 +5,13 @@ namespace App\Models\crm;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Tarea extends Model
+class Tarea extends Model implements Auditable
 {
+    use AuditableTrait;
+
     protected $table = 'crm.tarea';
     protected $primaryKey = 'id';
     use SoftDeletes;
@@ -29,7 +33,7 @@ class Tarea extends Model
         'fecha_vencimiento',
     ];
     protected $casts = [
-        'created_at'  => 'datetime:Y-m-d H:00',
+        'created_at' => 'datetime:Y-m-d H:00',
     ];
     protected $hidden = [
         'deleted_at',
@@ -48,22 +52,22 @@ class Tarea extends Model
 
     public function Flujo()
     {
-       return $this->belongsTo(Flujo::class,"flujo_id");
+        return $this->belongsTo(Flujo::class, "flujo_id");
     }
 
     public function Etiqueta()
     {
-        return $this->hasMany(Etiqueta::class,"tar_id");
+        return $this->hasMany(Etiqueta::class, "tar_id");
     }
 
     public function Galeria()
     {
-        return $this->hasMany(Galeria::class,"tar_id");
+        return $this->hasMany(Galeria::class, "tar_id");
     }
 
     public function Archivo()
     {
-        return $this->hasMany(Archivo::class,"tar_id");
+        return $this->hasMany(Archivo::class, "tar_id");
     }
 
 }
