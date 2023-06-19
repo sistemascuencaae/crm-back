@@ -13,7 +13,18 @@ use Illuminate\Support\Facades\DB;
 
 class TareaController extends Controller
 {
-    
+    public function add(Request $request){
+
+        //  echo('aaaa'.json_encode($request->all()));
+
+        try {
+            $tarea = Tarea::create($request->all());
+            return response()->json(RespuestaApi::returnResultado('success', 'Tarea creada con exito', $tarea));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e));
+        }
+    }
+
 
     public function list(Request $request){
         $data = Tarea::with('Etiqueta', 'Galeria', 'Archivo')->get();
@@ -40,7 +51,7 @@ class TareaController extends Controller
 
 
     public function buscarTarea($id){
-        
+
         $tarea = Tarea::find($id);
         return response()->json(RespuestaApi::returnResultado('success', 'Tarea encontrada', $tarea));
     }

@@ -83,16 +83,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
 
+    Route::post('/addTarea', [TareaController::class, 'add']);
     Route::get('/listTareas', [TareaController::class, 'list']);
-
-
-
-
-
     Route::get('/byCedula/{cedula}', [EntidadController::class, 'byCedula']); // Listar
-    
-    
-    
+
+
 
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
@@ -106,7 +101,6 @@ Route::group(["prefix" => "crm"], function ($router) {
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
-
 
 
 
