@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
@@ -136,6 +137,10 @@ Route::group(["prefix" => "crm"], function ($router) { // Listar
     Route::get('/byId/{id}', [EntidadController::class, 'byId']); // Listar
     Route::post('/updateE', [EntidadController::class, 'editEntidad']); // Editar
     // Route::post('/updateD', [EntidadController::class, 'editDireccion']); // Editar
+});
+
+Route::group(["prefix" => "crm"], function ($router) { // Listar
+    Route::get('/allBitacora/{id}', [BitacoraController::class, 'index']); // Listar
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
