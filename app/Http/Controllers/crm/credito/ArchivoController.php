@@ -32,11 +32,12 @@ class ArchivoController extends Controller
                 "observacion" => $request->observacion,
                 // Falta guaradara este campo
                 "archivo" => $path,
+                "tar_id" => $request->tar_id
             ]);
 
             // $galeria = Archivo::create($request->all());
 
-            $data = DB::select('select * from archivos');
+            $data = DB::select('select * from crm.archivos where tar_id ='.$request->tar_id);
 
             // return response()->json(["archivo" => $data,]);
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo los archivos con éxito', $data));
@@ -45,10 +46,10 @@ class ArchivoController extends Controller
         }
     }
 
-    public function index(Request $request)
+    public function index($tar_id)
     {
         try {
-            $archivos = Archivo::orderBy("id", "desc")->get();
+            $archivos = Archivo::orderBy("id", "desc")->where('tar_id',$tar_id)->get();
 
             // return response()->json([
             //     "archivos" => $archivos->map(function ($archivo) {
@@ -67,6 +68,7 @@ class ArchivoController extends Controller
                         "titulo" => $archivo->titulo,
                         "observacion" => $archivo->observacion,
                         "archivo" => $archivo->archivo,
+                        "tar_id" => $archivo->tar_id
                     ];
                 }),
             ]));

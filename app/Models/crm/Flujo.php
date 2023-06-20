@@ -5,11 +5,16 @@ namespace App\Models\crm;
 use App\Models\crm\Tarea;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-class Flujo extends Model
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
+
+class Flujo extends Model implements Auditable
 {
+    use AuditableTrait;
+
     protected $table = 'crm.flujo';
     protected $primaryKey = 'id';
-     use SoftDeletes;
+    use SoftDeletes;
     protected $fillable = [
         'dep_id',
         'nombre',
@@ -26,12 +31,12 @@ class Flujo extends Model
 
     public function Departamento()
     {
-       return $this->belongsTo(Departamento::class,"dep_id");
+        return $this->belongsTo(Departamento::class, "dep_id");
     }
 
     public function Tarea()
     {
-        return $this->hasMany(Tarea::class,"flujo_id");
+        return $this->hasMany(Tarea::class, "flujo_id");
     }
 
 
