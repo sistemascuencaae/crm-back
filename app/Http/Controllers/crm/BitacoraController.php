@@ -12,14 +12,23 @@ class BitacoraController extends Controller
     {
         // $bitacora = DB::select('select * from public.audits');
 
-        $bitacora = DB::select("select adi.*,ur.name  from public.audits adi
+        $bitacora = DB::select("select adi.*,ur.name,gal.titulo  from public.audits adi
         left join crm.archivos arc on arc.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Archivo'
         left join crm.galerias gal on gal.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Galeria'
         left join crm.comentarios c on c.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Comentarios'
         left join crm.etiquetas e on e.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Etiqueta'
         left join crm.tarea tar on tar.id = arc.tar_id or tar.id = gal.tar_id or tar.id = c.tarea_id or tar.id = e.tar_id
         left join public.users ur on ur.id = adi.user_id 
-        where tar.id = " . $tar_id . ";");
+        where tar.id = " . $tar_id . "
+        order By 1 DESC");
+        // $bitacora = DB::select("select adi.*,ur.name  from public.audits adi
+        // left join crm.archivos arc on arc.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Archivo'
+        // left join crm.galerias gal on gal.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Galeria'
+        // left join crm.comentarios c on c.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Comentarios'
+        // left join crm.etiquetas e on e.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Etiqueta'
+        // left join crm.tarea tar on tar.id = arc.tar_id or tar.id = gal.tar_id or tar.id = c.tarea_id or tar.id = e.tar_id
+        // left join public.users ur on ur.id = adi.user_id 
+        // where tar.id = " . $tar_id . ";");
 
         return response()->json([
             "bitacora" => $bitacora,
