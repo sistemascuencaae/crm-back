@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
-use App\Models\crm\Departamento;
+use App\Models\crm\TipoTablero;
 use Illuminate\Http\Request;
 
-class DepartamentoController extends Controller
+class TipoTableroController extends Controller
 {
     public function index()
     {
-        $departamentos = Departamento::orderBy("id", "desc")->get();
+        $tipoTableros = TipoTablero::orderBy("id", "desc")->get();
 
         return response()->json([
-            "departamentos" => $departamentos,
+            "tipoTableros" => $tipoTableros,
         ]);
     }
 }
