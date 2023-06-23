@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Etiqueta extends Model implements Auditable
+class Nota extends Model implements Auditable
 {
     use AuditableTrait;
 
@@ -17,8 +17,8 @@ class Etiqueta extends Model implements Auditable
 
     use SoftDeletes;
 
-    protected $table = 'crm.etiquetas';
-    protected $fillable = ["nombre", "color", "tar_id"];
+    protected $table = 'crm.nota';
+    protected $fillable = ["nombre", "texto"];
 
     public function setCreatedAtAttribute($value)
     {

@@ -4,6 +4,7 @@ namespace App\Models\crm;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
@@ -13,6 +14,9 @@ class Galeria extends Model implements Auditable
     use AuditableTrait;
 
     use HasFactory;
+
+    use SoftDeletes;
+
     protected $table = 'crm.galerias';
 
     protected $fillable = ["titulo", "descripcion", "imagen", "tar_id", "tipo_gal_id"];

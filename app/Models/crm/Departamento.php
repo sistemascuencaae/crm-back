@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\crm;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,10 +13,11 @@ class Departamento extends Model implements Auditable
 
     protected $table = 'crm.departamento';
     protected $primaryKey = 'dep_id';
-    use SoftDeletes;
+
     protected $fillable = [
         'dep_nombre',
-        'dep_descripcion'
+        'dep_descripcion',
+        'estado'
     ];
     protected $hidden = [
         'created_at',
