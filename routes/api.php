@@ -1,13 +1,18 @@
 <?php
 
+use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
+use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FlujoController;
+use App\Http\Controllers\crm\NotaController;
+use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
+use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UsersController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\User\ProfileUserController;
@@ -106,36 +111,62 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 //----------------------- START RUTAS JUAN  ----------------------------------------------
 
-//Rutas Juan GALERIA
 Route::group(["prefix" => "crm"], function ($router) {
+
+    // GALERIA
+
     Route::post('/addGaleria', [GaleriaController::class, 'store']); // Guardar la imagen
     Route::get('/allGaleria/{id}', [GaleriaController::class, 'index']); // Listar las imagenes
     Route::post('/updateGaleria/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
 
     Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'index']); // Listar los tipos de imagenes
-});
 
-//Rutas Juan ARCHIVO
-Route::group(["prefix" => "crm"], function ($router) {
+    // ARCHIVO
+
     Route::post('/addArchivo', [ArchivoController::class, 'store']); // Guardar
     Route::get('/allArchivo/{id}', [ArchivoController::class, 'index']); // Listar
     Route::post('/updateArchivo/{id}', [ArchivoController::class, 'edit']); // Editar
     Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'destroy']); // Eliminar
-});
 
-//Rutas Juan Etiqueta
-Route::group(["prefix" => "crm"], function ($router) {
+    // Etiqueta
+
     Route::post('/addEtiqueta', [EtiquetaController::class, 'store']); // Guardar
     Route::get('/allEtiqueta/{id}', [EtiquetaController::class, 'index']); // Listar
     Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'edit']); // Editar
     Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'destroy']); // Eliminar
-});
 
-Route::group(["prefix" => "crm"], function ($router) { // Listar
+    // ENTIDAD
+
     Route::get('/byId/{id}', [EntidadController::class, 'byId']); // Listar
     Route::post('/updateE', [EntidadController::class, 'editEntidad']); // Editar
     // Route::post('/updateD', [EntidadController::class, 'editDireccion']); // Editar
+
+    // BITACORA
+
+    Route::get('/allBitacora/{id}', [BitacoraController::class, 'index']); // Listar
+
+    // TABLERO
+
+    Route::post('/addTablero', [TableroController::class, 'store']); // guardar
+    Route::get('/allTablero', [TableroController::class, 'index']); // listar
+    Route::put('/updateTablero/{id}', [TableroController::class, 'edit']); // Editar
+
+    // DEPARTAMENTO
+
+    Route::get('/allDepartamento', [DepartamentoController::class, 'index']); // listar
+
+    // TIPO_TABLERO
+
+    Route::get('/allTipoTablero', [TipoTableroController::class, 'index']); // listar
+
+    // NOTAS
+
+    Route::post('/addNota', [NotaController::class, 'store']); // guardar
+    Route::get('/allNota', [NotaController::class, 'index']); // listar
+    Route::post('/updateNota/{id}', [NotaController::class, 'edit']); // Editar
+    Route::delete('/deleteNota/{id}', [NotaController::class, 'destroy']); // Eliminar
+
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
