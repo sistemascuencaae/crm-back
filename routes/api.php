@@ -9,6 +9,7 @@ use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FlujoController;
+use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoTableroController;
@@ -158,6 +159,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     // TIPO_TABLERO
 
     Route::get('/allTipoTablero', [TipoTableroController::class, 'index']); // listar
+
+    // NOTAS
+
+    Route::post('/addNota', [NotaController::class, 'store']); // guardar
+    Route::get('/allNota', [NotaController::class, 'index']); // listar
+    Route::post('/updateNota/{id}', [NotaController::class, 'edit']); // Editar
+    Route::delete('/deleteNota/{id}', [NotaController::class, 'destroy']); // Eliminar
 
 });
 
