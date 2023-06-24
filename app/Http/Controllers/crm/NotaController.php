@@ -29,17 +29,9 @@ class NotaController extends Controller
         }
     }
 
-    // public function index($tar_id)
-    // {
-    //     $notas = Nota::orderBy("id", "asc")->where('tar_id',$tar_id)->get();
-
-    //     return response()->json([
-    //         "etiquetas" => $etiquetas,
-    //     ]);
-    // }
-    public function index()
+    public function index($tar_id)
     {
-        $notas = Nota::orderBy("id", "asc")->get();
+        $notas = Nota::orderBy("id", "asc")->where('tar_id', $tar_id)->get();
 
         return response()->json([
             "notas" => $notas
