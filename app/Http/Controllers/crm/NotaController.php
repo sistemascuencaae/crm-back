@@ -7,6 +7,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Nota;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class NotaController extends Controller
 {
@@ -20,10 +21,9 @@ class NotaController extends Controller
         try {
             $nota = Nota::create($request->all());
 
-            // $data = DB::select('select * from crm.notas');
-
-            // return response()->json(["archivo" => $nota,]);
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la nota con éxito', $nota));
+            $data = DB::select('select * from crm.nota where tar_id ='.$request->tar_id);
+            
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la nota con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -31,7 +31,7 @@ class NotaController extends Controller
 
     public function index($tar_id)
     {
-        $notas = Nota::orderBy("id", "asc")->where('tar_id', $tar_id)->get();
+        $notas = Nota::orderBy("id", "desc")->where('tar_id', $tar_id)->get();
 
         return response()->json([
             "notas" => $notas
