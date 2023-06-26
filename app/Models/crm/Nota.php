@@ -18,7 +18,7 @@ class Nota extends Model implements Auditable
     use SoftDeletes;
 
     protected $table = 'crm.nota';
-    protected $fillable = ["nombre", "texto"];
+    protected $fillable = ["nombre", "texto", "tar_id"];
 
     public function setCreatedAtAttribute($value)
     {
