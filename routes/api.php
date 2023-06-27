@@ -171,7 +171,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // NOTAS
 
     Route::post('/addNota', [NotaController::class, 'store']); // guardar
-    Route::get('/allNota', [NotaController::class, 'index']); // listar
+    Route::get('/allNota/{id}', [NotaController::class, 'index']); // listar
     Route::post('/updateNota/{id}', [NotaController::class, 'edit']); // Editar
     Route::delete('/deleteNota/{id}', [NotaController::class, 'destroy']); // Eliminar
 
