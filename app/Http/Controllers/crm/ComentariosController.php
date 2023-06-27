@@ -33,7 +33,7 @@ class ComentariosController extends Controller
         $nombre_usuario = $request->input('nombre_usuario');
         $created_at = $request->input('created_at');
         $updated_at = $request->input('updated_at');
-        $data = DB::table('comentarios')->insert([
+        $data = DB::table('crm.comentarios')->insert([
             'user_id' => $user_id,
             'comentario' => $comentario,
             'nombre_usuario' => $nombre_usuario,

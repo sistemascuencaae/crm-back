@@ -27,7 +27,7 @@ class TareaController extends Controller
 
 
     public function list(Request $request){
-        $data = Tarea::with('Etiqueta', 'Galeria', 'Archivo')->get();
+        $data = Tarea::with('Etiqueta', 'Galeria', 'Archivo','User')->get();
         return response()->json(RespuestaApi::returnResultado('success', 'Lista de tareas', $data));
 
     }

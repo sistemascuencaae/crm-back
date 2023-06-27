@@ -8,6 +8,7 @@ use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
+use App\Http\Controllers\crm\FaseController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\TableroController;
@@ -77,7 +78,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']);
 
 
-    Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
@@ -87,6 +87,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::put('/update-flujo', [FlujoController::class, 'update']);
     Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
+
+
+    //------------------------------------------------------------------>FASE
+    Route::get('/listFase', [FaseController::class, 'list']);
+    // Route::post('/create-flujo', [FlujoController::class, 'create']);
+    // Route::put('/update-flujo', [FlujoController::class, 'update']);
+    // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
+    // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
 
     Route::post('/addTarea', [TareaController::class, 'add']);
     Route::get('/listTareas', [TareaController::class, 'list']);
