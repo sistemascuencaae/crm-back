@@ -30,6 +30,15 @@ class EntidadController extends Controller
         }
     }
 
+    public function byCedulaProveedor($cedula){
+        $entidad = Entidad::with('cliente')->where('ent_identificacion', $cedula)->first();
+        if($entidad){
+            return response()->json(RespuestaApi::returnResultado('success', 'El proveedor encontrado', $entidad));
+        }else{
+            return response()->json(RespuestaApi::returnResultado('error', 'El proveedor no existe', []));
+        }
+    }
+
     public function editEntidad(Request $request)
     {
         $ent = $request->input('entidad');

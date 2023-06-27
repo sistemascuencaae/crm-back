@@ -139,3 +139,9 @@ Route::group(["prefix" => "crm"], function ($router) { // Listar
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
+
+//----------------------- START RUTAS JAIRO  ----------------------------------------------
+Route::group(["prefix" => "crm"], function ($router) {
+    Route::get('/byCedulaProveedor/{cedula}', [EntidadController::class, 'byCedulaProveedor']); // Listar
+});
+//----------------------- END RUTAS JAIRO  ----------------------------------------------
