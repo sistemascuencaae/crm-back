@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -48,6 +49,15 @@ class Tarea extends Model implements Auditable
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
+    }
+    public function Entidad()
+    {
+        return $this->belongsTo(Entidad::class, "ent_id");
+    }
+
+    public function User()
+    {
+        return $this->belongsTo(User::class, "user_id");
     }
 
     public function Flujo()
