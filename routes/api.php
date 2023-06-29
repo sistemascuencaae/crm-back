@@ -15,7 +15,7 @@ use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoTableroController;
-use App\Http\Controllers\User\UsersController;
+use App\Http\Controllers\User\UsersOpenceoController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\User\ProfileUserController;
 use Illuminate\Support\Facades\Route;
@@ -113,7 +113,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
 
-    Route::get('/listAnalistas', [UsersController::class, 'listAnalistas']);
+    Route::get('/listAnalistas', [UsersOpenceoController::class, 'listAnalistas']);
+    Route::get('/listUsuariosActivos', [UsersOpenceoController::class, 'listUsuariosActivos']);
 
 
 });
@@ -165,7 +166,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addTablero', [TableroController::class, 'store']); // guardar
     Route::get('/allTablero', [TableroController::class, 'index']); // listar
-    Route::put('/updateTablero/{id}', [TableroController::class, 'edit']); // Editar
+    Route::post('/updateTablero/{id}', [TableroController::class, 'edit']); // Editar
 
     // DEPARTAMENTO
 
