@@ -35,7 +35,7 @@ class TableroController extends Controller
 
     public function index()
     {
-        $tableros = Tablero::orderBy("id", "desc")->get();
+        $tableros = Tablero::with('tableroUsuario.usuario')->orderBy("id", "desc")->get();
 
         return response()->json([
             "tableros" => $tableros,
