@@ -158,7 +158,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addTablero', [TableroController::class, 'store']); // guardar
     Route::get('/allTablero', [TableroController::class, 'index']); // listar
-    Route::put('/updateTablero/{id}', [TableroController::class, 'edit']); // Editar
+    Route::post('/updateTablero/{id}', [TableroController::class, 'edit']); // Editar
 
     // DEPARTAMENTO
 

@@ -40,10 +40,7 @@ class TableroController extends Controller
         try {
             $tablero = Tablero::findOrFail($id);
 
-            $tablero->update([
-                "nombre" => $request->nombre,
-                "observacion" => $request->descripcion
-            ]);
+            $tablero->update($request->all());
 
             return response()->json(["tablero" => $tablero]);
         } catch (Exception $e) {
