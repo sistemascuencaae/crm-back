@@ -2,31 +2,24 @@
 
 namespace App\Models\crm;
 
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
-use OwenIt\Auditing\Contracts\Auditable;
-use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Tablero extends Model implements Auditable
+class TableroUsuario extends Model
 {
-    use AuditableTrait;
-
-    use HasFactory;
-
-    protected $table = 'crm.tablero';
-
-    protected $fillable = ["nombre", "descripcion", "estado", "titab_id", "dep_id"];
-
-
-
-
-    public function tableroUsuario()
+    
+    protected $table = 'crm.tablero_user';
+    protected $primaryKey = 'tu_id';
+    protected $fillable = [
+        "user_id",
+        "tab_id",
+    ];
+    public function usuario()
     {
-        return $this->hasMany(TableroUsuario::class, "tab_id");
+        return $this->hasMany(User::class,"id","user_id");
     }
-
-
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
@@ -37,4 +30,5 @@ class Tablero extends Model implements Auditable
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
+
 }
