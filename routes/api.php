@@ -6,6 +6,7 @@ use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\EntidadController;
+use App\Http\Controllers\crm\ProductoController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\User\UsersController;
@@ -142,6 +143,7 @@ Route::group(["prefix" => "crm"], function ($router) { // Listar
 
 //----------------------- START RUTAS JAIRO  ----------------------------------------------
 Route::group(["prefix" => "crm"], function ($router) {
-    Route::get('/byCedulaProveedor/{cedula}', [EntidadController::class, 'byCedulaProveedor']); // Listar
+    Route::get('/byCedulaProveedor/{cedula}', [EntidadController::class, 'byCedulaProveedor']);
+    Route::post('/buscaProducto', [ProductoController::class, 'buscaProducto']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------
