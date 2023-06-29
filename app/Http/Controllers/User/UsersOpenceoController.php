@@ -4,7 +4,6 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\UsuarioDynamo;
 use App\Models\User;
 
 class UsersOpenceoController extends Controller
@@ -15,15 +14,15 @@ class UsersOpenceoController extends Controller
         return response()->json(RespuestaApi::returnResultado('success', 'Lista de usuarios analistas', $data));
     }
 
-    public function listEmpleadosActivos()
+    public function listUsuariosActivos()
     {
-        $empleados = UsuarioDynamo::orderBy("usu_id", "asc")->where('usu_activo', true)->get();
+        $usuarios = User::orderBy("id", "asc")->get();
 
-        return response()->json(RespuestaApi::returnResultado('success', 'Lista de empleados activos', [
-            "empleados" => $empleados->map(function ($emp) {
+        return response()->json(RespuestaApi::returnResultado('success', 'Lista de usuarios activos', [
+            "usuarios" => $usuarios->map(function ($usuario) {
                 return [
-                    "usu_id" => $emp->usu_id,
-                    "usu_alias" => $emp->usu_alias
+                    "id" => $usuario->id,
+                    "name" => $usuario->name
                 ];
             }),
         ]));

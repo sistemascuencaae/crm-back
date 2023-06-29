@@ -7,20 +7,27 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Tablero;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TableroController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware('auth:api');
+    // }
 
     public function store(Request $request)
     {
         try {
-            $tablero = Tablero::create($request->all());
+            $tab = $request->all();
+            DB::transaction(function () use ($tab) {
+                $tablero = Tablero::create($tab);
+                for ($i = 0; $i < sizeof($tab['usuarios']); $i++) {
+                    DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tablero con éxito', $tablero));
+                }
+            });
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tablero con éxito', $tab));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -36,6 +43,27 @@ class TableroController extends Controller
     }
 
     public function edit(Request $request, $id)
+    {
+        try {
+            $tab = Tablero::findOrFail($id);
+            // DELETE FROM crm.tablero_user WHERE user_id in (3,4);
+
+            DB::transaction(function () use ($tab) {
+                $tablero = Tablero::create($tab);
+                //.$tab['eliminados'] = '(3,4,5,6)'
+                DB::delete(' DELETE FROM crm.tablero_user WHERE user_id in' . $tab['eliminados']);
+                for ($i = 0; $i < sizeof($tab['usuarios']); $i++) {
+                    DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
+                }
+            });
+
+            return response()->json(["tablero" => $tab]);
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function edit2(Request $request, $id)
     {
         try {
             $tablero = Tablero::findOrFail($id);

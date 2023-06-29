@@ -107,7 +107,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
 
     Route::get('/listAnalistas', [UsersOpenceoController::class, 'listAnalistas']);
-    Route::get('/listEmpleadosActivos', [UsersOpenceoController::class, 'listEmpleadosActivos']);
+    Route::get('/listUsuariosActivos', [UsersOpenceoController::class, 'listUsuariosActivos']);
 
 
 });
