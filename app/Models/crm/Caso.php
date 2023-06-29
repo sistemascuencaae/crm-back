@@ -2,6 +2,8 @@
 
 namespace App\Models\crm;
 
+use App\Models\User;
+use App\Models\crm\Entidad;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,17 +19,23 @@ class Caso extends Model
     protected $table = 'crm.caso';
 
     protected $fillable = [
-        "id",
         "fas_id",
         "nombre",
         "descripcion",
         "estado",
         "orden",
+        "ent_id",
+        "user_id",
     ];
 
-    public function Caso()
+    public function user()
     {
-        return $this->hasMany(Caso::class, "fas_id");
+        return $this->belongsTo(User::class, "id");
+    }
+
+    public function entidad()
+    {
+        return $this->belongsTo(Entidad::class, "ent_id");
     }
 
     public function setCreatedAtAttribute($value)
