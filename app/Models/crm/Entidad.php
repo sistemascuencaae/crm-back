@@ -23,7 +23,6 @@ class Entidad extends Model implements Auditable
     public $timestamps = false;
 
     protected $fillable = [
-        "ent_id",
         "ent_identificacion",
         "ent_nombres",
         "ent_apellidos",

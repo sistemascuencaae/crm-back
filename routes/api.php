@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\crm\BitacoraController;
+use App\Http\Controllers\crm\CasoController;
 use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
@@ -95,6 +96,12 @@ Route::group(["prefix" => "crm"], function ($router) {
     // Route::put('/update-flujo', [FlujoController::class, 'update']);
     // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
+
+    //------------------------------------------------------------------>CASO
+    Route::put('/editCaso', [CasoController::class, 'edit']);
+
+
+
 
     Route::post('/addTarea', [TareaController::class, 'add']);
     Route::get('/listTareas', [TareaController::class, 'list']);
