@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\crm\Caso;
 use App\Models\crm\Tarea;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
@@ -27,10 +28,10 @@ Broadcast::channel('App.User.{id}', function ($user, $id) {
 
 
 
-Broadcast::channel('tarea.comentarios.{id}', function ($user, $id) {
+Broadcast::channel('caso.comentarios.{id}', function ($user, $id) {
     // echo(json_encode($user->id));
      $usuario = User::where("id", $user->id)->get();
-     $comenTarea = Tarea::where("id", $id)->get();
+     $comenTarea = Caso::where("id", $id)->get();
      if ($comenTarea[0] && $usuario[0]) {
          return true;
      } else {
