@@ -67,17 +67,17 @@ class Tarea extends Model implements Auditable
 
     public function Etiqueta()
     {
-        return $this->hasMany(Etiqueta::class, "tar_id");
+        return $this->hasMany(Etiqueta::class, "caso_id");
     }
 
     public function Galeria()
     {
-        return $this->hasMany(Galeria::class, "tar_id");
+        return $this->hasMany(Galeria::class, "caso_id");
     }
 
     public function Archivo()
     {
-        return $this->hasMany(Archivo::class, "tar_id");
+        return $this->hasMany(Archivo::class, "caso_id");
     }
 
 }

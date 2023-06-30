@@ -26,9 +26,9 @@ class GaleriaController extends Controller
         return response()->json(["imagen" => $galeria,]);
     }
 
-    public function index($tar_id)
+    public function index($caso_id)
     {
-        $galerias = Galeria::orderBy("id", "asc")->where('tar_id',$tar_id)->get();
+        $galerias = Galeria::orderBy("id", "asc")->where('caso_id',$caso_id)->get();
 
         // return response()->json([
         //     "imagenes" => $imagenes,]);
@@ -41,7 +41,7 @@ class GaleriaController extends Controller
                     "descripcion" => $galeria->descripcion,
                     // "imagen" => env("APP_URL") . "storage/app/public/" . $imagen->imagen,
                     "imagen" => $galeria->imagen,
-                    "tar_id" => $galeria->tar_id,
+                    "caso_id" => $galeria->caso_id,
                     "tipo_gal_id" => $galeria->tipo_gal_id
                 ];
             }),
@@ -68,10 +68,10 @@ class GaleriaController extends Controller
     public function destroy($id)
     {
         $galeria = Galeria::findOrFail($id);
-        
+
         $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
         Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
-        
+
         $galeria->delete();
 
         return response()->json(["message" => 200]);
