@@ -18,6 +18,7 @@ class Comentarios extends Model implements Auditable
         'id',
         'user_id',
         'comentario',
+        "caso_id",
         'div_id',
         'created_at',
         'updated_at',

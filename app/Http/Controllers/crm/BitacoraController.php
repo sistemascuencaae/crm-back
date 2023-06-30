@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class BitacoraController extends Controller
 {
-    public function index($tar_id)
+    public function index($caso_id)
     {
         // $bitacora = DB::select('select * from public.audits');
 
@@ -18,9 +18,9 @@ class BitacoraController extends Controller
         left join crm.comentarios c on c.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Comentarios'
         left join crm.etiquetas e on e.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Etiqueta'
         left join crm.nota n on n.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Nota'
-        left join crm.tarea tar on tar.id = arc.tar_id or tar.id = gal.tar_id or tar.id = c.tarea_id or tar.id = e.tar_id or tar.id = n.tar_id
+        left join crm.caso cas on cas.id = arc.caso_id or cas.id = gal.caso_id or cas.id = c.caso_id or cas.id = e.caso_id or cas.id = n.caso_id
         left join public.users ur on ur.id = adi.user_id
-        where tar.id = " . $tar_id . "
+        where cas.id = " . $caso_id . "
         order By 1 DESC");
 
         return response()->json([
