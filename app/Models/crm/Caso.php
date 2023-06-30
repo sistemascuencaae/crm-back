@@ -23,6 +23,7 @@ class Caso extends Model
         "nombre",
         "descripcion",
         "estado",
+        "prioridad",
         "orden",
         "ent_id",
         "user_id",
