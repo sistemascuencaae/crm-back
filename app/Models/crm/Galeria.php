@@ -19,7 +19,7 @@ class Galeria extends Model implements Auditable
 
     protected $table = 'crm.galerias';
 
-    protected $fillable = ["titulo", "descripcion", "imagen", "tar_id", "tipo_gal_id"];
+    protected $fillable = ["titulo", "descripcion", "imagen", "caso_id", "tipo_gal_id"];
 
     public function setCreatedAtAttribute($value)
     {

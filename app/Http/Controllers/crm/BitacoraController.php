@@ -19,7 +19,7 @@ class BitacoraController extends Controller
         left join crm.etiquetas e on e.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Etiqueta'
         left join crm.nota n on n.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Nota'
         left join crm.tarea tar on tar.id = arc.tar_id or tar.id = gal.tar_id or tar.id = c.tarea_id or tar.id = e.tar_id or tar.id = n.tar_id
-        left join public.users ur on ur.id = adi.user_id 
+        left join public.users ur on ur.id = adi.user_id
         where tar.id = " . $tar_id . "
         order By 1 DESC");
 

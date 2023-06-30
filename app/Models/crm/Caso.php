@@ -38,7 +38,20 @@ class Caso extends Model
     {
         return $this->belongsTo(Entidad::class, "ent_id");
     }
+    public function Etiqueta()
+    {
+        return $this->hasMany(Etiqueta::class, "caso_id");
+    }
 
+    public function Galeria()
+    {
+        return $this->hasMany(Galeria::class, "caso_id");
+    }
+
+    public function Archivo()
+    {
+        return $this->hasMany(Archivo::class, "caso_id");
+    }
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
