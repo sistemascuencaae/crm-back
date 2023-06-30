@@ -21,17 +21,17 @@ class NotaController extends Controller
         try {
             $nota = Nota::create($request->all());
 
-            $data = DB::select('select * from crm.nota where tar_id ='.$request->tar_id);
-            
+            $data = DB::select('select * from crm.nota where caso_id ='.$request->caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la nota con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function index($tar_id)
+    public function index($caso_id)
     {
-        $notas = Nota::orderBy("id", "desc")->where('tar_id', $tar_id)->get();
+        $notas = Nota::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
 
         return response()->json([
             "notas" => $notas

@@ -18,7 +18,7 @@ class Etiqueta extends Model implements Auditable
     use SoftDeletes;
 
     protected $table = 'crm.etiquetas';
-    protected $fillable = ["nombre", "color", "tar_id"];
+    protected $fillable = ["nombre", "color", "caso_id"];
 
     public function setCreatedAtAttribute($value)
     {
