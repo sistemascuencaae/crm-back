@@ -16,7 +16,7 @@ class NotaController extends Controller
         $this->middleware('auth:api');
     }
 
-    public function store(Request $request)
+    public function addNota(Request $request)
     {
         try {
             $nota = Nota::create($request->all());
@@ -29,7 +29,7 @@ class NotaController extends Controller
         }
     }
 
-    public function index($caso_id)
+    public function listNotaByCasoId($caso_id)
     {
         $notas = Nota::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
 
@@ -38,7 +38,7 @@ class NotaController extends Controller
         ]);
     }
 
-    public function edit(Request $request, $id)
+    public function updateNota(Request $request, $id)
     {
         try {
             $nota = Nota::findOrFail($id);
@@ -55,7 +55,7 @@ class NotaController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function deleteNota($id)
     {
         try {
             $nota = Nota::findOrFail($id);

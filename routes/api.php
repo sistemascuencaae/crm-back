@@ -170,18 +170,18 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // DEPARTAMENTO
 
-    Route::get('/allDepartamento', [DepartamentoController::class, 'index']); // listar
+    Route::get('/allDepartamento', [DepartamentoController::class, 'allDepartamento']); // listar
 
     // TIPO_TABLERO
 
-    Route::get('/allTipoTablero', [TipoTableroController::class, 'index']); // listar
+    Route::get('/allTipoTablero', [TipoTableroController::class, 'allTipoTablero']); // listar
 
     // NOTAS
 
-    Route::post('/addNota', [NotaController::class, 'store']); // guardar
-    Route::get('/allNota/{id}', [NotaController::class, 'index']); // listar
-    Route::post('/updateNota/{id}', [NotaController::class, 'edit']); // Editar
-    Route::delete('/deleteNota/{id}', [NotaController::class, 'destroy']); // Eliminar
+    Route::post('/addNota', [NotaController::class, 'addNota']); // guardar
+    Route::get('/listNotaByCasoId/{id}', [NotaController::class, 'listNotaByCasoId']); // listar
+    Route::post('/updateNota/{id}', [NotaController::class, 'updateNota']); // Editar
+    Route::delete('/deleteNota/{id}', [NotaController::class, 'deleteNota']); // Eliminar
 
 });
 
