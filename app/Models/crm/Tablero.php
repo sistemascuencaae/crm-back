@@ -18,15 +18,6 @@ class Tablero extends Model implements Auditable
 
     protected $fillable = ["nombre", "descripcion", "estado", "titab_id", "dep_id"];
 
-
-
-
-    public function tableroUsuario()
-    {
-        return $this->hasMany(TableroUsuario::class, "tab_id");
-    }
-
-
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
@@ -36,5 +27,10 @@ class Tablero extends Model implements Auditable
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
+    }
+
+    public function tableroUsuario()
+    {
+        return $this->hasMany(TableroUsuario::class, "tab_id");
     }
 }

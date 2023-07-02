@@ -16,7 +16,7 @@ class TableroController extends Controller
     //     $this->middleware('auth:api');
     // }
 
-    public function store(Request $request)
+    public function addTablero(Request $request)
     {
         try {
             $tab = $request->all();
@@ -24,7 +24,6 @@ class TableroController extends Controller
                 $tablero = Tablero::create($tab);
                 for ($i = 0; $i < sizeof($tab['usuarios']); $i++) {
                     DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
-
                 }
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tablero con éxito', $tab));
@@ -33,7 +32,7 @@ class TableroController extends Controller
         }
     }
 
-    public function index()
+    public function listTableroByUser()
     {
         $tableros = Tablero::with('tableroUsuario.usuario')->orderBy("id", "desc")->get();
 
@@ -42,7 +41,7 @@ class TableroController extends Controller
         ]);
     }
 
-    public function edit(Request $request, $id)
+    public function updateTablero(Request $request, $id)
     {
         try {
             $tab = Tablero::findOrFail($id);
@@ -63,16 +62,16 @@ class TableroController extends Controller
         }
     }
 
-    public function edit2(Request $request, $id)
-    {
-        try {
-            $tablero = Tablero::findOrFail($id);
+    // public function edit2(Request $request, $id)
+    // {
+    //     try {
+    //         $tablero = Tablero::findOrFail($id);
 
-            $tablero->update($request->all());
+    //         $tablero->update($request->all());
 
-            return response()->json(["tablero" => $tablero]);
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
-    }
+    //         return response()->json(["tablero" => $tablero]);
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
 }
