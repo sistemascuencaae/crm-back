@@ -131,12 +131,12 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // GALERIA
 
-    Route::post('/addGaleria', [GaleriaController::class, 'store']); // Guardar la imagen
-    Route::get('/allGaleria/{id}', [GaleriaController::class, 'index']); // Listar las imagenes
-    Route::post('/updateGaleria/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
-    Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
+    Route::post('/addGaleria', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
+    Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
+    Route::post('/updateGaleria/{id}', [GaleriaController::class, 'updateGaleria']); // Edita la imagen
+    Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
 
-    Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'index']); // Listar los tipos de imagenes
+    Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'allTipoGaleria']); // Listar los tipos de imagenes
 
     // ARCHIVO
 
