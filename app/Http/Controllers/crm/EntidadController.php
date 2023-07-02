@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class EntidadController extends Controller
 {
-    public function byId($id)
+    public function searchById($id)
     {
         $data = Entidad::with('cliente', 'direccion','clientefae','referenanexo')->where('ent_id', $id)->first();
         //$clifae = DB::select("select * from public.av_clientes_reiterativos c where c.cedula = '0100091560';");
@@ -21,7 +21,7 @@ class EntidadController extends Controller
         return response()->json(["message" => 200, "data" => $data]);
     }
 
-    public function byCedula($cedula){
+    public function searchByCedula($cedula){
         $entidad = Entidad::with('cliente')->where('ent_identificacion', $cedula)->first();
         if($entidad){
             return response()->json(RespuestaApi::returnResultado('success', 'El cliente encontrado', $entidad));
@@ -30,7 +30,7 @@ class EntidadController extends Controller
         }
     }
 
-    public function editEntidad(Request $request)
+    public function updateEntidad(Request $request)
     {
         $ent = $request->input('entidad');
         $cli = $request->input('cliente');

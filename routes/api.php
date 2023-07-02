@@ -154,9 +154,9 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // ENTIDAD
 
-    Route::get('/byId/{id}', [EntidadController::class, 'byId']); // Listar
-    Route::post('/updateE', [EntidadController::class, 'editEntidad']); // Editar
-    // Route::post('/updateD', [EntidadController::class, 'editDireccion']); // Editar
+    Route::get('/searchById/{id}', [EntidadController::class, 'searchById']); // Listar
+    Route::get('/searchByCedula/{id}', [EntidadController::class, 'searchByCedula']); // Listar
+    Route::post('/updateEntidad', [EntidadController::class, 'updateEntidad']); // Editar
 
     // BITACORA
 
