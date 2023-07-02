@@ -147,10 +147,10 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // Etiqueta
 
-    Route::post('/addEtiqueta', [EtiquetaController::class, 'store']); // Guardar
-    Route::get('/allEtiqueta/{id}', [EtiquetaController::class, 'index']); // Listar
-    Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'edit']); // Editar
-    Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'destroy']); // Eliminar
+    Route::post('/addEtiqueta', [EtiquetaController::class, 'addEtiqueta']); // Guardar
+    Route::get('/listEtiquetaByCasoId/{id}', [EtiquetaController::class, 'listEtiquetaByCasoId']); // Listar
+    // Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'updateEtiqueta']); // Editar
+    Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'deleteEtiqueta']); // Eliminar
 
     // ENTIDAD
 
