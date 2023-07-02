@@ -160,7 +160,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // BITACORA
 
-    Route::get('/allBitacora/{id}', [BitacoraController::class, 'index']); // Listar
+    Route::get('/listBitacoraByCasoId/{id}', [BitacoraController::class, 'listBitacoraByCasoId']); // Listar
 
     // TABLERO
 

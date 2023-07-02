@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class BitacoraController extends Controller
 {
-    public function index($caso_id)
+    public function listBitacoraByCasoId($caso_id)
     {
         // $bitacora = DB::select('select * from public.audits');
 
