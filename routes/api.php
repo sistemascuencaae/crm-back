@@ -140,10 +140,10 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // ARCHIVO
 
-    Route::post('/addArchivo', [ArchivoController::class, 'store']); // Guardar
-    Route::get('/allArchivo/{id}', [ArchivoController::class, 'index']); // Listar
-    Route::post('/updateArchivo/{id}', [ArchivoController::class, 'edit']); // Editar
-    Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'destroy']); // Eliminar
+    Route::post('/addArchivo', [ArchivoController::class, 'addArchivo']); // Guardar
+    Route::get('/listArchivoByCasoId/{id}', [ArchivoController::class, 'listArchivoByCasoId']); // Listar
+    Route::post('/updateArchivo/{id}', [ArchivoController::class, 'updateArchivo']); // Editar
+    Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'deleteArchivo']); // Eliminar
 
     // Etiqueta
 
