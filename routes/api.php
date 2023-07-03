@@ -6,6 +6,7 @@ use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
+use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
@@ -184,5 +185,18 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::delete('/deleteNota/{id}', [NotaController::class, 'deleteNota']); // Eliminar
 
 });
+
+Route::group(["prefix" => "credito"], function ($router) {
+
+    // SOLICITUD CREDITO
+
+    Route::post('/addSolicitudCredito', [solicitudCreditoController::class, 'addSolicitudCredito']); // Guardar
+    Route::get('/listSolicitudCreditoByEntidadId/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoByEntidadId']); // Listar por entidad ID
+    Route::get('/listSolicitudCreditoByRucCedula/{cedula}', [solicitudCreditoController::class, 'listSolicitudCreditoByRucCedula']); // Listar por cedula
+    // // Route::get('/listSolicitudCreditoById/{id}', [GaleriaController::class, 'listSolicitudCreditoById']); // Listar
+    // Route::post('/updateSolicitudCredito/{id}', [GaleriaController::class, 'updateSolicitudCredito']); // Editar
+    // Route::delete('/deleteSolicitudCredito/{id}', [GaleriaController::class, 'deleteSolicitudCredito']); // Elimina
+});
+
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
