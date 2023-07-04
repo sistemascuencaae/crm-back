@@ -156,7 +156,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // ENTIDAD
 
     Route::get('/searchById/{id}', [EntidadController::class, 'searchById']); // Listar
-    Route::get('/searchByCedula/{id}', [EntidadController::class, 'searchByCedula']); // Listar
+    Route::get('/searchByCedula/{cedula}', [EntidadController::class, 'searchByCedula']); // Listar
     Route::post('/updateEntidad', [EntidadController::class, 'updateEntidad']); // Editar
 
     // BITACORA

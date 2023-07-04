@@ -15,20 +15,34 @@ class EntidadController extends Controller
 {
     public function searchById($id)
     {
-        $data = Entidad::with('cliente', 'direccion','clientefae','referenanexo')->where('ent_id', $id)->first();
+        $data = Entidad::with('cliente', 'direccion', 'clientefae', 'referenanexo')->where('ent_id', $id)->first();
         //$clifae = DB::select("select * from public.av_clientes_reiterativos c where c.cedula = '0100091560';");
 
         return response()->json(["message" => 200, "data" => $data]);
     }
 
-    public function searchByCedula($cedula){
-        $entidad = Entidad::with('cliente', 'direccion','clientefae','referenanexo')->where('ent_identificacion', $cedula)->first();
-        if($entidad){
-            return response()->json(RespuestaApi::returnResultado('success', 'El cliente encontrado', $entidad));
-        }else{
+    // public function searchByCedula($cedula)
+    // {
+    //     $entidad = Entidad::with('cliente', 'direccion', 'clientefae', 'referenanexo')->where('ent_identificacion', $cedula)->first();
+    //     if ($entidad) {
+    //         return response()->json(RespuestaApi::returnResultado('success', 'El cliente encontrado', $entidad));
+    //     } else {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'El cliente no existe', []));
+    //     }
+    // }
+
+    public function searchByCedula($cedula)
+    {
+        $cliente = DB::select("select * from public.av_info_cliente where numerodocumento = '" . $cedula . "'");
+
+        if ($cliente) {
+            return response()->json(RespuestaApi::returnResultado('success', 'El cliente encontrado', $cliente));
+        } else {
             return response()->json(RespuestaApi::returnResultado('error', 'El cliente no existe', []));
         }
     }
+
+
 
     public function updateEntidad(Request $request)
     {
