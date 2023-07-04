@@ -22,7 +22,7 @@ class EntidadController extends Controller
     }
 
     public function searchByCedula($cedula){
-        $entidad = Entidad::with('cliente')->where('ent_identificacion', $cedula)->first();
+        $entidad = Entidad::with('cliente', 'direccion','clientefae','referenanexo')->where('ent_identificacion', $cedula)->first();
         if($entidad){
             return response()->json(RespuestaApi::returnResultado('success', 'El cliente encontrado', $entidad));
         }else{
