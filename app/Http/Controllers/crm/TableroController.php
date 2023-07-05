@@ -44,12 +44,10 @@ class TableroController extends Controller
 
     public function updateTablero(Request $request, $id)
     {
-        // $nota->update($request->all());
         try {
             $eliminados = $request->input('eliminados');
             $usuarios = $request->input('usuarios');
             $tablero = $request->all();
-            // $tablero = Tablero::findOrFail($id);
 
             //echo(json_encode($eliminados[0]['id']));
             $tab = DB::transaction(function () use ($tablero, $id, $eliminados, $usuarios) {
@@ -61,33 +59,25 @@ class TableroController extends Controller
                         'descripcion' => $tablero['descripcion'],
                         'estado' => $tablero['estado'],
                     ]);
-                    
-                    // $tablero->update([
-                        //     'dep_id' => $request->dep_id,
-                        //     'titab_id' => $request->titab_id,
-                        //     'nombre' => $request->nombre,
-                        //     'descripcion' => $request->descripcion,
-                        //     'estado' => $request->estado,
-                        // ]);
-                        
-                        for ($i = 0; $i < sizeof($eliminados); $i++) {
-                            if ($id && $eliminados[$i]['id']) {
+
+                for ($i = 0; $i < sizeof($eliminados); $i++) {
+                    if ($id && $eliminados[$i]['id']) {
                         DB::delete("DELETE FROM crm.tablero_user WHERE tab_id = " . $id . " and user_id = " . $eliminados[$i]['id']);
                     }
                 }
-                
+
                 for ($i = 0; $i < sizeof($usuarios); $i++) {
-                    $tabl = TableroUsuario::where('tab_id',$id)->where('user_id',$usuarios[$i])->first();
-                    if(!$tabl){
+                    $tabl = TableroUsuario::where('tab_id', $id)->where('user_id', $usuarios[$i])->first();
+                    if (!$tabl) {
                         DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$usuarios[$i]['id'], $id]);
                     }
-                    
                 }
-                
-                // $tablero = DB::select("select * from crm.tablero t where t.id = '" . $id . "'");
+
                 return $tablero;
             });
-            $dataRe = Tablero::with('tableroUsuario.usuario')->where('id',$id)->get();
+
+            $dataRe = Tablero::with('tableroUsuario.usuario')->where('id', $id)->get();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo el tablero con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
