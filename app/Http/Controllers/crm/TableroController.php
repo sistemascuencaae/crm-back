@@ -36,7 +36,10 @@ class TableroController extends Controller
                     DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
                 }
             });
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tablero con éxito', $tab));
+
+            $dataRe = Tablero::with('tableroUsuario.usuario')->orderBy("id", "desc")->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tablero con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
