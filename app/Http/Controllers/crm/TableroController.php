@@ -5,6 +5,7 @@ namespace App\Http\Controllers\crm;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Tablero;
+use App\Models\crm\TableroUsuario;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,15 @@ class TableroController extends Controller
     // {
     //     $this->middleware('auth:api');
     // }
+
+    public function listTableroByUser()
+    {
+        $tableros = Tablero::with('tableroUsuario.usuario')->orderBy("id", "desc")->get();
+
+        return response()->json([
+            "tableros" => $tableros,
+        ]);
+    }
 
     public function addTablero(Request $request)
     {
@@ -32,48 +42,55 @@ class TableroController extends Controller
         }
     }
 
-    public function listTableroByUser()
-    {
-        $tableros = Tablero::with('tableroUsuario.usuario')->orderBy("id", "desc")->get();
-
-        return response()->json([
-            "tableros" => $tableros,
-        ]);
-    }
-
-    // $nota->update($request->all());
     public function updateTablero(Request $request, $id)
     {
+        // $nota->update($request->all());
         try {
-            $tab = Tablero::findOrFail($id);
+            $eliminados = $request->input('eliminados');
+            $usuarios = $request->input('usuarios');
+            $tablero = $request->all();
+            // $tablero = Tablero::findOrFail($id);
 
-            DB::transaction(function () use ($tab) {
-                $tablero = Tablero::create($tab);
-
-                // //.$tab['eliminados'] = '(3,4,5,6)'
-                DB::delete("DELETE FROM crm.tablero_user WHERE user_id in " . [$tab['eliminados']]);
-
-                for ($i = 0; $i < sizeof($tab['usuarios']); $i++) {
-                    DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
+            //echo(json_encode($eliminados[0]['id']));
+            $tab = DB::transaction(function () use ($tablero, $id, $eliminados, $usuarios) {
+                Tablero::where('id', $id)
+                    ->update([
+                        'dep_id' => $tablero['dep_id'],
+                        'titab_id' => $tablero['titab_id'],
+                        'nombre' => $tablero['nombre'],
+                        'descripcion' => $tablero['descripcion'],
+                        'estado' => $tablero['estado'],
+                    ]);
+                    
+                    // $tablero->update([
+                        //     'dep_id' => $request->dep_id,
+                        //     'titab_id' => $request->titab_id,
+                        //     'nombre' => $request->nombre,
+                        //     'descripcion' => $request->descripcion,
+                        //     'estado' => $request->estado,
+                        // ]);
+                        
+                        for ($i = 0; $i < sizeof($eliminados); $i++) {
+                            if ($id && $eliminados[$i]['id']) {
+                        DB::delete("DELETE FROM crm.tablero_user WHERE tab_id = " . $id . " and user_id = " . $eliminados[$i]['id']);
+                    }
                 }
+                
+                for ($i = 0; $i < sizeof($usuarios); $i++) {
+                    $tabl = TableroUsuario::where('tab_id',$id)->where('user_id',$usuarios[$i])->first();
+                    if(!$tabl){
+                        DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$usuarios[$i]['id'], $id]);
+                    }
+                    
+                }
+                
+                // $tablero = DB::select("select * from crm.tablero t where t.id = '" . $id . "'");
+                return $tablero;
             });
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo el tablero con éxito', $tab));
+            $dataRe = Tablero::with('tableroUsuario.usuario')->where('id',$id)->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo el tablero con éxito', $dataRe));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
-    // public function edit2(Request $request, $id)
-    // {
-    //     try {
-    //         $tablero = Tablero::findOrFail($id);
-
-    //         $tablero->update($request->all());
-
-    //         return response()->json(["tablero" => $tablero]);
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
 }
