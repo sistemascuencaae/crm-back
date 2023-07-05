@@ -49,7 +49,7 @@ class NotaController extends Controller
 
             $nota->update($request->all());
 
-            return response()->json(["notas" => $nota,]);
+            return response()->json(["notas" => $nota]);
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
