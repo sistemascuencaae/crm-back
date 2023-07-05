@@ -27,6 +27,7 @@ class Caso extends Model
         "orden",
         "ent_id",
         "user_id",
+        "fecha_vencimiento"
     ];
 
     public function user()
