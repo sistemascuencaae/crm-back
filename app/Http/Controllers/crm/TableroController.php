@@ -19,7 +19,7 @@ class TableroController extends Controller
 
     public function listTableroByUser()
     {
-        $tableros = Tablero::with('tableroUsuario.usuario')->orderBy("id", "desc")->get();
+        $tableros = Tablero::with('tableroUsuario.usuario')->where('estado', true)->orderBy("id", "desc")->get();
 
         return response()->json([
             "tableros" => $tableros,
