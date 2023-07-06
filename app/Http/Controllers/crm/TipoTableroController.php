@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class TipoTableroController extends Controller
 {
-    public function index()
+    public function allTipoTablero()
     {
         $tipoTableros = TipoTablero::orderBy("id", "desc")->get();
 

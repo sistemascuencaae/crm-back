@@ -7,6 +7,7 @@ use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
+use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
@@ -136,58 +137,72 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // GALERIA
 
-    Route::post('/addGaleria', [GaleriaController::class, 'store']); // Guardar la imagen
-    Route::get('/allGaleria/{id}', [GaleriaController::class, 'index']); // Listar las imagenes
-    Route::post('/updateGaleria/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
-    Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
+    Route::post('/addGaleria', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
+    Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
+    Route::post('/updateGaleria/{id}', [GaleriaController::class, 'updateGaleria']); // Edita la imagen
+    Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
 
-    Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'index']); // Listar los tipos de imagenes
+    Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'allTipoGaleria']); // Listar los tipos de imagenes
 
     // ARCHIVO
 
-    Route::post('/addArchivo', [ArchivoController::class, 'store']); // Guardar
-    Route::get('/allArchivo/{id}', [ArchivoController::class, 'index']); // Listar
-    Route::post('/updateArchivo/{id}', [ArchivoController::class, 'edit']); // Editar
-    Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'destroy']); // Eliminar
+    Route::post('/addArchivo', [ArchivoController::class, 'addArchivo']); // Guardar
+    Route::get('/listArchivoByCasoId/{id}', [ArchivoController::class, 'listArchivoByCasoId']); // Listar
+    Route::post('/updateArchivo/{id}', [ArchivoController::class, 'updateArchivo']); // Editar
+    Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'deleteArchivo']); // Eliminar
 
     // Etiqueta
 
-    Route::post('/addEtiqueta', [EtiquetaController::class, 'store']); // Guardar
-    Route::get('/allEtiqueta/{id}', [EtiquetaController::class, 'index']); // Listar
-    Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'edit']); // Editar
-    Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'destroy']); // Eliminar
+    Route::post('/addEtiqueta', [EtiquetaController::class, 'addEtiqueta']); // Guardar
+    Route::get('/listEtiquetaByCasoId/{id}', [EtiquetaController::class, 'listEtiquetaByCasoId']); // Listar
+    // Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'updateEtiqueta']); // Editar
+    Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'deleteEtiqueta']); // Eliminar
 
     // ENTIDAD
 
-    Route::get('/byId/{id}', [EntidadController::class, 'byId']); // Listar
-    Route::post('/updateE', [EntidadController::class, 'editEntidad']); // Editar
-    // Route::post('/updateD', [EntidadController::class, 'editDireccion']); // Editar
+    Route::get('/searchById/{id}', [EntidadController::class, 'searchById']); // Listar
+    Route::get('/searchByCedula/{cedula}', [EntidadController::class, 'searchByCedula']); // Listar
+    Route::post('/updateEntidad', [EntidadController::class, 'updateEntidad']); // Editar
 
     // BITACORA
 
-    Route::get('/allBitacora/{id}', [BitacoraController::class, 'index']); // Listar
+    Route::get('/listBitacoraByCasoId/{id}', [BitacoraController::class, 'listBitacoraByCasoId']); // Listar
 
     // TABLERO
 
-    Route::post('/addTablero', [TableroController::class, 'store']); // guardar
-    Route::get('/allTablero', [TableroController::class, 'index']); // listar
-    Route::post('/updateTablero/{id}', [TableroController::class, 'edit']); // Editar
+    Route::post('/addTablero', [TableroController::class, 'addTablero']); // guardar
+    Route::get('/listTableroByUser', [TableroController::class, 'listTableroByUser']); // listar
+    Route::get('/listTableroInactivos', [TableroController::class, 'listTableroInactivos']); // listar tableros inactivos
+    Route::post('/updateTablero/{id}', [TableroController::class, 'updateTablero']); // Editar
 
     // DEPARTAMENTO
 
-    Route::get('/allDepartamento', [DepartamentoController::class, 'index']); // listar
+    Route::get('/allDepartamento', [DepartamentoController::class, 'allDepartamento']); // listar
 
     // TIPO_TABLERO
 
-    Route::get('/allTipoTablero', [TipoTableroController::class, 'index']); // listar
+    Route::get('/allTipoTablero', [TipoTableroController::class, 'allTipoTablero']); // listar
 
     // NOTAS
 
-    Route::post('/addNota', [NotaController::class, 'store']); // guardar
-    Route::get('/allNota/{id}', [NotaController::class, 'index']); // listar
-    Route::post('/updateNota/{id}', [NotaController::class, 'edit']); // Editar
-    Route::delete('/deleteNota/{id}', [NotaController::class, 'destroy']); // Eliminar
+    Route::post('/addNota', [NotaController::class, 'addNota']); // guardar
+    Route::get('/listNotaByCasoId/{id}', [NotaController::class, 'listNotaByCasoId']); // listar
+    Route::post('/updateNota/{id}', [NotaController::class, 'updateNota']); // Editar
+    Route::delete('/deleteNota/{id}', [NotaController::class, 'deleteNota']); // Eliminar
 
 });
+
+Route::group(["prefix" => "credito"], function ($router) {
+
+    // SOLICITUD CREDITO
+
+    Route::post('/addSolicitudCredito', [solicitudCreditoController::class, 'addSolicitudCredito']); // Guardar
+    Route::get('/listSolicitudCreditoByEntidadId/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoByEntidadId']); // Listar por entidad ID
+    Route::get('/listSolicitudCreditoByRucCedula/{cedula}', [solicitudCreditoController::class, 'listSolicitudCreditoByRucCedula']); // Listar por cedula
+    // Route::get('/listSolicitudCreditoById/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoById']); // Listar solicitudes por ID
+    // Route::post('/updateSolicitudCredito/{id}', [solicitudCreditoController::class, 'updateSolicitudCredito']); // Editar
+    // Route::delete('/deleteSolicitudCredito/{id}', [solicitudCreditoController::class, 'deleteSolicitudCredito']); // Elimina
+});
+
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------

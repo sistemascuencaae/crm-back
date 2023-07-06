@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class DepartamentoController extends Controller
 {
-    public function index()
+    public function allDepartamento()
     {
         $departamentos = Departamento::orderBy("id", "desc")->get();
 

@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class TipoGaleriaController extends Controller
 {
-    public function index()
+    public function allTipoGaleria()
     {
         $tiposGaleria = TipoGaleria::orderBy("id", "asc")->get();
 
