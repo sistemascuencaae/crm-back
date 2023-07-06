@@ -26,6 +26,15 @@ class TableroController extends Controller
         ]);
     }
 
+    public function listTableroInactivos()
+    {
+        $tableros = Tablero::with('tableroUsuario.usuario')->where('estado', false)->orderBy("id", "desc")->get();
+
+        return response()->json([
+            "tableros" => $tableros,
+        ]);
+    }
+
     public function addTablero(Request $request)
     {
         try {
