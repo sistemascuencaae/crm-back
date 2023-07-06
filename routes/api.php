@@ -194,9 +194,9 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::post('/addSolicitudCredito', [solicitudCreditoController::class, 'addSolicitudCredito']); // Guardar
     Route::get('/listSolicitudCreditoByEntidadId/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoByEntidadId']); // Listar por entidad ID
     Route::get('/listSolicitudCreditoByRucCedula/{cedula}', [solicitudCreditoController::class, 'listSolicitudCreditoByRucCedula']); // Listar por cedula
-    // // Route::get('/listSolicitudCreditoById/{id}', [GaleriaController::class, 'listSolicitudCreditoById']); // Listar
-    // Route::post('/updateSolicitudCredito/{id}', [GaleriaController::class, 'updateSolicitudCredito']); // Editar
-    // Route::delete('/deleteSolicitudCredito/{id}', [GaleriaController::class, 'deleteSolicitudCredito']); // Elimina
+    // Route::get('/listSolicitudCreditoById/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoById']); // Listar solicitudes por ID
+    // Route::post('/updateSolicitudCredito/{id}', [solicitudCreditoController::class, 'updateSolicitudCredito']); // Editar
+    // Route::delete('/deleteSolicitudCredito/{id}', [solicitudCreditoController::class, 'deleteSolicitudCredito']); // Elimina
 });
 
 
