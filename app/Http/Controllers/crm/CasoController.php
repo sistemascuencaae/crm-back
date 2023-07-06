@@ -15,6 +15,15 @@ class CasoController extends Controller
     //     $this->middleware('auth:api');
     // }
 
+    public function add(Request $request){
+        try {
+            $data = Caso::create($request->all());
+            return response()->json(RespuestaApi::returnResultado('success', 'El listado de clientes', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Exception', $th->getMessage()));
+        }
+    }
+
     public function list()
     {
         $data = Caso::with('caso.user', 'caso.entidad')->get();

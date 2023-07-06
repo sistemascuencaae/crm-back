@@ -26,12 +26,13 @@ class Caso extends Model
         "prioridad",
         "orden",
         "ent_id",
-        "user_id"
+        "user_id",
+        "fecha_vencimiento",
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class, "id");
+        return $this->belongsTo(User::class, "user_id", "id");
     }
 
     public function entidad()
@@ -52,6 +53,11 @@ class Caso extends Model
     {
         return $this->hasMany(Archivo::class, "caso_id");
     }
+    // public function setfechaVencimientoAttribute($value)
+    // {
+    //     date_default_timezone_set("America/Guayaquil");
+    //     $this->attributes["fecha_vencimiento"] = Carbon::now();
+    // }
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");

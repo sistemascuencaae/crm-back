@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
@@ -93,13 +94,14 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     //------------------------------------------------------------------>FASE
     Route::get('/listFase', [FaseController::class, 'list']);
-    // Route::post('/create-flujo', [FlujoController::class, 'create']);
+    Route::post('/addFase', [FaseController::class, 'add']);
     // Route::put('/update-flujo', [FlujoController::class, 'update']);
     // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
 
     //------------------------------------------------------------------>CASO
     Route::put('/editCaso', [CasoController::class, 'edit']);
+    Route::post('/addCaso', [CasoController::class, 'add']);
 
 
 
@@ -117,6 +119,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAnalistas', [UsersOpenceoController::class, 'listAnalistas']);
     Route::get('/listUsuariosActivos', [UsersOpenceoController::class, 'listUsuariosActivos']);
 
+    /************************  OPENCEO   *********************** */
+
+    Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
 
 });
 
