@@ -14,7 +14,7 @@ class GaleriaController extends Controller
     //     $this->middleware('auth:api');
     // }
 
-    public function store(Request $request)
+    public function addGaleria(Request $request)
     {
         if ($request->hasFile("imagen_file")) {
             $path = Storage::putFile("galerias", $request->file("imagen_file")); //se va a guardar dentro de la CARPETA CATEGORIAS
@@ -26,9 +26,9 @@ class GaleriaController extends Controller
         return response()->json(["imagen" => $galeria,]);
     }
 
-    public function index($caso_id)
+    public function listGaleriaByCasoId($caso_id)
     {
-        $galerias = Galeria::orderBy("id", "asc")->where('caso_id',$caso_id)->get();
+        $galerias = Galeria::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
 
         // return response()->json([
         //     "imagenes" => $imagenes,]);
@@ -48,7 +48,7 @@ class GaleriaController extends Controller
         ]);
     }
 
-    public function edit(Request $request, $id)
+    public function updateGaleria(Request $request, $id)
     {
         $galeria = Galeria::findOrFail($id);
 
@@ -65,7 +65,7 @@ class GaleriaController extends Controller
         return response()->json(["imagen" => $galeria,]);
     }
 
-    public function destroy($id)
+    public function deleteGaleria($id)
     {
         $galeria = Galeria::findOrFail($id);
 

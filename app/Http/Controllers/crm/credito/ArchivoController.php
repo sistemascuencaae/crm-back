@@ -18,7 +18,7 @@ class ArchivoController extends Controller
     //     $this->middleware('auth:api');
     // }
 
-    public function store(Request $request)
+    public function addArchivo(Request $request)
     {
         try {
             $file = $request->file("archivo");
@@ -30,37 +30,23 @@ class ArchivoController extends Controller
             $archivo = Archivo::create([
                 "titulo" => $titulo,
                 "observacion" => $request->observacion,
-                // Falta guaradara este campo
                 "archivo" => $path,
                 "caso_id" => $request->caso_id
             ]);
 
-            // $galeria = Archivo::create($request->all());
-
             $data = DB::select('select * from crm.archivos where caso_id ='.$request->caso_id);
 
-            // return response()->json(["archivo" => $data,]);
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo los archivos con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function index($caso_id)
+    public function listArchivoByCasoId($caso_id)
     {
         try {
             $archivos = Archivo::orderBy("id", "desc")->where('caso_id',$caso_id)->get();
 
-            // return response()->json([
-            //     "archivos" => $archivos->map(function ($archivo) {
-            //         return [
-            //             "id" => $archivo->id,
-            //             "titulo" => $archivo->titulo,
-            //             "observacion" => $archivo->observacion,
-            //             "archivo" => $archivo->archivo,
-            //         ];
-            //     }),
-            // ]);
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 "archivos" => $archivos->map(function ($archivo) {
                     return [
@@ -77,7 +63,7 @@ class ArchivoController extends Controller
         }
     }
 
-    public function edit(Request $request, $id)
+    public function updateArchivo(Request $request, $id)
     {
         try {
             $archivo = Archivo::findOrFail($id);
@@ -104,7 +90,7 @@ class ArchivoController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function deleteArchivo($id)
     {
         try {
             $archivo = Archivo::findOrFail($id);
@@ -114,7 +100,6 @@ class ArchivoController extends Controller
 
             $archivo->delete();
 
-            // return response()->json(["message" => 200]);
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito el archivo', $archivo));
 
         } catch (Exception $e) {
