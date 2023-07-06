@@ -26,8 +26,7 @@ class Caso extends Model
         "prioridad",
         "orden",
         "ent_id",
-        "user_id",
-        "fecha_vencimiento"
+        "user_id"
     ];
 
     public function user()
