@@ -16,10 +16,10 @@ class Fase extends Model
     protected $table = 'crm.fase';
 
     protected $fillable = [
-        "id",
         "tab_id",
         "nombre",
         "descripcion",
+        "generar_caso",
         "estado",
         "orden",
     ];
