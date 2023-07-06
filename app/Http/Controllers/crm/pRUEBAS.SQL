@@ -1,3 +1,10 @@
+
+-- View: public.av_solidario_clientes
+
+-- DROP VIEW public.av_solidario_clientes;
+-- SELECT * FROM public.av_solidario_clientes;
+CREATE OR REPLACE VIEW public.av_solidario_clientes
+ AS
  SELECT
         CASE
             WHEN ent.ent_tipo_identificacion::text = '1'::text THEN 'CED'::text
@@ -8,17 +15,23 @@
     split_part(btrim(ent.ent_apellidos::text), ' '::text, 1) AS apellidopaterno,
     split_part(btrim(ent.ent_apellidos::text), ' '::text, 2) AS apellidomaterno,
     split_part(btrim(ent.ent_nombres::text), ' '::text, 1) AS primernombre,
-    'ECS'::text AS nacionalidad,
+    pai_nombre AS nacionalidad,
     ent.ent_fechanacimiento AS fecha_nacimiento,
-    ''::text AS lugarnacimiento,
+    ctn.ctn_nombre AS lugarnacimiento,
     cli.cli_sexo AS sexo,
-    cli.cli_estadocivil = 'S'::bpchar THEN 'ESTCIVS'::text
- AS cestadocivil,
+        CASE
+            WHEN cli.cli_estadocivil = 'D'::bpchar THEN 'ESTCIVS'::text
+            WHEN cli.cli_estadocivil = 'C'::bpchar THEN 'ESTCIVC'::text
+            WHEN cli.cli_estadocivil = 'V'::bpchar THEN 'ESTCIVS'::text
+            WHEN cli.cli_estadocivil = 'S'::bpchar THEN 'ESTCIVS'::text
+            WHEN cli.cli_estadocivil = 'U'::bpchar THEN 'ESTCIVS'::text
+            ELSE '1'::text
+        END AS cestadocivil,
     cliane.cliane_num_cargas_familiares AS numero_dependientes,
     '0'::text AS separacion_bienes,
-    ''::text AS profesion,
+    'N'::text AS profesion,
         CASE
-            WHEN cliane.pane_id_nes::text = '12'::text THEN ''::text
+            WHEN cliane.pane_id_nes::text = '12'::text THEN 'S'::text
             WHEN cliane.pane_id_nes::text = '13'::text THEN 'P'::text
             WHEN cliane.pane_id_nes::text = '14'::text THEN 'S'::text
             WHEN cliane.pane_id_nes::text = '15'::text THEN 'T'::text
@@ -27,27 +40,27 @@
             ELSE 'S'::text
         END AS nivel_educacion,
     ubi.ubic_codigo1 AS provincia_domicilio,
-    ubi.ubic_codigo2 AS canton_domicilio,
-    ubi.ubic_codigo3 AS parroquia_domicilio,
-    cliane.cliane_barrio AS barrio_domicilio,
+    ctn.ctn_codigo AS canton_domicilio,
+    prq.prq_codigo AS parroquia_domicilio,
+    '0901560' AS barrio_domicilio,
     dir.dir_calle_principal AS avenida_principal1,
     dir.dir_numeracion AS numero_casa,
     dir.dir_calle_secundaria AS calle_transversal,
     dir.dir_indicaciones_adicionales AS referencias_ubicacion,
         CASE
-            WHEN cliane.pane_id_tvi::text = '18'::text THEN ''::text
+            WHEN cliane.pane_id_tvi::text = '18'::text THEN 'N'::text
             WHEN cliane.pane_id_tvi::text = '19'::text THEN 'A'::text
             WHEN cliane.pane_id_tvi::text = '21'::text THEN 'F'::text
             WHEN cliane.pane_id_tvi::text = '22'::text THEN 'S'::text
             WHEN cliane.pane_id_tvi::text = '23'::text THEN 'P'::text
-            ELSE 'A'::text
+            ELSE 'F'::text
         END AS tipo_vivienda,
     ''::text AS nombre_arrendador,
     ''::text AS telefono_arrendador,
     ''::text AS tiemnpo_residencia,
     tel.tel_numero AS telefono_domicilio,
     ''::text AS telefono_domicilio2,
-    ''::text AS celular,
+    tel2.tel_numero AS celular,
     ent.ent_email AS email,
     split_part(btrim(refane.refane_nombre::text), ' '::text, 2) AS refane1_apellpa,
     split_part(btrim(refane.refane_nombre::text), ' '::text, 3) AS refane1_apellma,
@@ -57,8 +70,8 @@
     refane.refane_direccion AS refane1_direccion_parti,
     ''::text AS refane1_empre_traba,
     ''::text AS refane1_direccion_trabajo,
-    '123456789'::text AS refane1_telefono_trabajo,
-    refane.refane_descripcion AS refane1_parentesco,
+    ''::text AS refane1_telefono_trabajo,
+	(select public.fa_datos_cliente('accion',refane.refane_descripcion)) AS refane1_parentesco,
     split_part(btrim(refane2.refane_nombre::text), ' '::text, 2) AS refane2_apellpa,
     split_part(btrim(refane2.refane_nombre::text), ' '::text, 3) AS refane2_apellma,
     split_part(btrim(refane2.refane_nombre::text), ' '::text, 1) AS refane2_nombre,
@@ -67,8 +80,8 @@
     refane2.refane_direccion AS refane2_direccion_parti,
     ''::text AS refane2_empre_traba,
     ''::text AS refane2_direccion_trabajo,
-    '123456789'::text AS refane2_telefono_trabajo,
-    refane2.refane_descripcion AS refane2_parentesco,
+    ''::text AS refane2_telefono_trabajo,
+	(select public.fa_datos_cliente('accion',refane2.refane_descripcion)) AS refane2_parentesco,
     split_part(btrim(refaneamistad.refane_nombre::text), ' '::text, 2) AS refane_amistad_apellpa,
     split_part(btrim(refaneamistad.refane_nombre::text), ' '::text, 3) AS refane_amistad_apellma,
     split_part(btrim(refaneamistad.refane_nombre::text), ' '::text, 1) AS refane_amistad_nombre,
@@ -77,8 +90,7 @@
     refaneamistad.refane_direccion AS refane_amistad_direccion_parti,
     ''::text AS refane_amistad_empre_traba,
     ''::text AS refane_amistad_direccion_trabajo,
-    '123456789'::text AS refane_amistad_telefono_trabajo,
-    refaneamistad.refane_descripcion AS refane_amistad_parentesco,
+    ''::text AS refane_amistad_telefono_trabajo,
     ''::text AS tipo_ref_bancaria1,
     ''::text AS banco1,
     ''::text AS tipo_cuenta1,
@@ -118,7 +130,7 @@
     ''::text AS ruc_negocio,
     com.com_nombre AS nombre_negocio,
     ''::text AS antiguedad_negocio,
-    ''::text AS provincia_negocio,
+    '0901560'::text AS provincia_negocio,
     ''::text AS canton_negocio,
     ''::text AS parroquia_negocio,
     ''::text AS barrio_negocio,
@@ -153,7 +165,7 @@
     'SUELVAR'::text AS tipo_sueldo,
     0 AS afiliacion_iess,
     ''::text AS diapago,
-    ''::text AS cargo,
+    'CARGADM'::text AS cargo,
     ''::text AS seccion_departamento,
     com.com_telefono1 AS telefono_ficprinc,
     com.com_telefono2 AS telefono_lugar_trabajo,
@@ -183,12 +195,17 @@
    FROM entidad ent
      LEFT JOIN cliente cli ON cli.ent_id = ent.ent_id
      LEFT JOIN cliente_anexo cliane ON cliane.cli_id = cli.cli_id
+	 LEFT JOIN pais pai on pai.pai_id = cliane.pai_id
+	 LEFT JOIN canton ctn on ctn.ctn_id = cliane.ctn_id
+	 LEFT JOIN parroquia prq on prq.prq_id = cliane.prq_id
      LEFT JOIN direccion dir ON dir.dir_id = ent.ent_direccion_principal
      JOIN ubicacion_cartera ubi ON ubi.ubi_id = cli.ubi_id
      LEFT JOIN cfactura cfa ON cfa.cli_id = cli.cli_id
      LEFT JOIN puntoventa pve ON pve.pve_id = cfa.pve_id
      LEFT JOIN almacen alm ON alm.alm_id = pve.alm_id
      LEFT JOIN ctipocom cti ON cti.cti_id = cfa.cti_id
+	 inner join telefono_entidad teli on teli.ent_id = ent.ent_id
+	 inner join telefono tel2 on tel2.tel_id = teli.tel_id
      LEFT JOIN telefono tel ON tel.tel_id = ent.ent_telefono_principal
      LEFT JOIN compania com ON cliane.com_id = com.com_id
      LEFT JOIN ( SELECT tt.num,
@@ -294,65 +311,83 @@ UNION ALL
     split_part(btrim(cliane.cliane_nombre_conyuge::text), ' '::text, 1) AS apellidopaterno,
     split_part(btrim(cliane.cliane_nombre_conyuge::text), ' '::text, 2) AS apellidomaterno,
     split_part(btrim(cliane.cliane_nombre_conyuge::text), ' '::text, 3) AS primernombre,
-    'ECS'::text AS nacionalidad,
+    pai_nombre AS nacionalidad,
     cliane.cliane_fecha_nacimiento_conyuge AS fecha_nacimiento,
-    ''::text AS lugarnacimiento,
+    ctn.ctn_nombre AS lugarnacimiento,
         CASE
             WHEN cliane.cliane_sexo_conyuge::text = 4::text THEN 'M'::text
             WHEN cliane.cliane_sexo_conyuge::text = 5::text THEN 'F'::text
             ELSE 'F'::text
         END AS sexo,
     'ESTCIVS'::text AS cestadocivil,
-    0 AS numero_dependientes,
+
+
+
+
+    cliane.cliane_num_cargas_familiares AS numero_dependientes,
     '0'::text AS separacion_bienes,
-    ''::text AS profesion,
-    ''::text AS nivel_educacion,
-    ''::character varying AS provincia_domicilio,
-    ''::character varying AS canton_domicilio,
-    ''::character varying AS parroquia_domicilio,
-    ''::character varying AS barrio_domicilio,
-    ''::character varying AS avenida_principal1,
-    ''::character varying AS numero_casa,
-    ''::character varying AS calle_transversal,
-    ''::character varying AS referencias_ubicacion,
-    'A'::text AS tipo_vivienda,
+    'N'::text AS profesion,
+        CASE
+            WHEN cliane.pane_id_nes::text = '12'::text THEN 'S'::text
+            WHEN cliane.pane_id_nes::text = '13'::text THEN 'P'::text
+            WHEN cliane.pane_id_nes::text = '14'::text THEN 'S'::text
+            WHEN cliane.pane_id_nes::text = '15'::text THEN 'T'::text
+            WHEN cliane.pane_id_nes::text = '16'::text THEN 'U'::text
+            WHEN cliane.pane_id_nes::text = '17'::text THEN 'G'::text
+            ELSE 'S'::text
+        END AS nivel_educacion,
+    ubi.ubic_codigo1 AS provincia_domicilio,
+    ctn.ctn_codigo AS canton_domicilio,
+    prq.prq_codigo AS parroquia_domicilio,
+    '0901560' AS barrio_domicilio,
+    dir.dir_calle_principal AS avenida_principal1,
+    dir.dir_numeracion AS numero_casa,
+    dir.dir_calle_secundaria AS calle_transversal,
+    dir.dir_indicaciones_adicionales AS referencias_ubicacion,
+        CASE
+            WHEN cliane.pane_id_tvi::text = '18'::text THEN 'N'::text
+            WHEN cliane.pane_id_tvi::text = '19'::text THEN 'A'::text
+            WHEN cliane.pane_id_tvi::text = '21'::text THEN 'F'::text
+            WHEN cliane.pane_id_tvi::text = '22'::text THEN 'S'::text
+            WHEN cliane.pane_id_tvi::text = '23'::text THEN 'P'::text
+            ELSE 'F'::text
+        END AS tipo_vivienda,
     ''::text AS nombre_arrendador,
     ''::text AS telefono_arrendador,
     ''::text AS tiemnpo_residencia,
-    ''::character varying AS telefono_domicilio,
+    tel.tel_numero AS telefono_domicilio,
     ''::text AS telefono_domicilio2,
-    ''::text AS celular,
-    ''::character varying AS email,
-    ''::text AS refane1_apellpa,
-    ''::text AS refane1_apellma,
-    ''::text AS refane1_nombre,
-    ''::character varying AS refane1_tel_particular1,
-    ''::character varying AS refane1_celular,
-    ''::character varying AS refane1_direccion_parti,
+    tel2.tel_numero AS celular,
+    ent.ent_email AS email,
+    split_part(btrim(refane.refane_nombre::text), ' '::text, 2) AS refane1_apellpa,
+    split_part(btrim(refane.refane_nombre::text), ' '::text, 3) AS refane1_apellma,
+    split_part(btrim(refane.refane_nombre::text), ' '::text, 1) AS refane1_nombre,
+    refane.refane_numero_telefono2 AS refane1_tel_particular1,
+    refane.refane_numero_telefono AS refane1_celular,
+    refane.refane_direccion AS refane1_direccion_parti,
     ''::text AS refane1_empre_traba,
     ''::text AS refane1_direccion_trabajo,
     ''::text AS refane1_telefono_trabajo,
-    ''::character varying AS refane1_parentesco,
-    ''::text AS refane2_apellpa,
-    ''::text AS refane2_apellma,
-    ''::text AS refane2_nombre,
-    ''::character varying AS refane2_tel_particular1,
-    ''::character varying AS refane2_celular,
-    ''::character varying AS refane2_direccion_parti,
+	(select public.fa_datos_cliente('accion',refane.refane_descripcion)) AS refane1_parentesco,
+    split_part(btrim(refane2.refane_nombre::text), ' '::text, 2) AS refane2_apellpa,
+    split_part(btrim(refane2.refane_nombre::text), ' '::text, 3) AS refane2_apellma,
+    split_part(btrim(refane2.refane_nombre::text), ' '::text, 1) AS refane2_nombre,
+    refane2.refane_numero_telefono2 AS refane2_tel_particular1,
+    refane2.refane_numero_telefono AS refane2_celular,
+    refane2.refane_direccion AS refane2_direccion_parti,
     ''::text AS refane2_empre_traba,
     ''::text AS refane2_direccion_trabajo,
     ''::text AS refane2_telefono_trabajo,
-    ''::character varying AS refane2_parentesco,
-    ''::text AS refane_amistad_apellpa,
-    ''::text AS refane_amistad_apellma,
-    ''::text AS refane_amistad_nombre,
-    ''::character varying AS refane_amistad_tel_particular1,
-    ''::character varying AS refane_amistad_celular,
-    ''::character varying AS refane_amistad_direccion_parti,
+	(select public.fa_datos_cliente('accion',refane2.refane_descripcion)) AS refane2_parentesco,
+    split_part(btrim(refaneamistad.refane_nombre::text), ' '::text, 2) AS refane_amistad_apellpa,
+    split_part(btrim(refaneamistad.refane_nombre::text), ' '::text, 3) AS refane_amistad_apellma,
+    split_part(btrim(refaneamistad.refane_nombre::text), ' '::text, 1) AS refane_amistad_nombre,
+    refaneamistad.refane_numero_telefono2 AS refane_amistad_tel_particular1,
+    refaneamistad.refane_numero_telefono AS refane_amistad_celular,
+    refaneamistad.refane_direccion AS refane_amistad_direccion_parti,
     ''::text AS refane_amistad_empre_traba,
     ''::text AS refane_amistad_direccion_trabajo,
     ''::text AS refane_amistad_telefono_trabajo,
-    ''::character varying AS refane_amistad_parentesco,
     ''::text AS tipo_ref_bancaria1,
     ''::text AS banco1,
     ''::text AS tipo_cuenta1,
@@ -369,12 +404,30 @@ UNION ALL
     ''::text AS banco_emi_tarjeta1,
     ''::text AS numero_tarjeta,
     ''::text AS cupo_tarjeta,
-    'SAL'::text AS cfuenteingreso,
-    3 AS cactividad_economica,
+        CASE
+            WHEN cliane.pane_id_tin::text = '34'::text THEN 'SAL'::text
+            WHEN cliane.pane_id_tin::text = '35'::text THEN 'SAL'::text
+            WHEN cliane.pane_id_tin::text = '36'::text THEN 'VEN'::text
+            WHEN cliane.pane_id_tin::text = '37'::text THEN 'VEN'::text
+            WHEN cliane.pane_id_tin::text = '38'::text THEN 'REN'::text
+            WHEN cliane.pane_id_tin::text = '39'::text THEN 'SAL'::text
+            WHEN cliane.pane_id_tin::text = '40'::text THEN 'SAL'::text
+            ELSE 'SAL'::text
+        END AS cfuenteingreso,
+        CASE
+            WHEN cliane.pane_id_tin::text = '34'::text THEN 3::numeric
+            WHEN cliane.pane_id_tin::text = '35'::text THEN 3::numeric
+            WHEN cliane.pane_id_tin::text = '36'::text THEN 2::numeric
+            WHEN cliane.pane_id_tin::text = '37'::text THEN 3::numeric
+            WHEN cliane.pane_id_tin::text = '38'::text THEN 8::numeric
+            WHEN cliane.pane_id_tin::text = '39'::text THEN 3::numeric
+            WHEN cliane.pane_id_tin::text = '40'::text THEN 11::numeric
+            ELSE 5::numeric
+        END AS cactividad_economica,
     ''::text AS ruc_negocio,
     com.com_nombre AS nombre_negocio,
     ''::text AS antiguedad_negocio,
-    ''::text AS provincia_negocio,
+    '0901560'::text AS provincia_negocio,
     ''::text AS canton_negocio,
     ''::text AS parroquia_negocio,
     ''::text AS barrio_negocio,
@@ -401,18 +454,18 @@ UNION ALL
     0 AS gastos_totales_negocio,
     0 AS activos_totales_negocio,
     0 AS pasivos_totales_negocio,
-    ''::character varying AS ruc_empresa,
-    ''::character varying AS nombre_empresa,
-    '1500-01-01'::date AS fecha_ingreso,
-    ''::character varying AS actividad_empresa,
+    com.com_ruc AS ruc_empresa,
+    com.com_nombre AS nombre_empresa,
+    cliane.cliane_fecha_inicio_ingreso AS fecha_ingreso,
+    com.com_actividad AS actividad_empresa,
     'CONTINDEF'::text AS tipo_contrato,
     'SUELVAR'::text AS tipo_sueldo,
     0 AS afiliacion_iess,
     ''::text AS diapago,
-    ''::text AS cargo,
+    'CARGADM'::text AS cargo,
     ''::text AS seccion_departamento,
-    ''::character varying AS telefono_ficprinc,
-    ''::character varying AS telefono_lugar_trabajo,
+    com.com_telefono1 AS telefono_ficprinc,
+    com.com_telefono2 AS telefono_lugar_trabajo,
     ''::text AS extension,
     ''::text AS email_trabajo,
     ''::text AS provincia_trabajo,
@@ -422,11 +475,11 @@ UNION ALL
     ''::text AS avenida_principal_trabajo,
     ''::text AS numero_casa_trabajo,
     ''::text AS calle_transversal_trabajo,
-    ''::character varying AS "referencias_ubicación_trabajo",
-    0 AS total_ingresos_mensuales,
-    0 AS total_gastos_mensuales,
-    0 AS total_activos,
-    0 AS total_pasivos,
+    com.com_direccion AS "referencias_ubicación_trabajo",
+    cliane.cliane_ingresos AS total_ingresos_mensuales,
+    cliane.cliane_egresos AS total_gastos_mensuales,
+    cliane.cliane_activos AS total_activos,
+    cliane.cliane_pasivos AS total_pasivos,
     0 AS valor_vivienda,
     split_part(btrim(cliane.cliane_nombre_conyuge::text), ' '::text, 4) AS segundo_nombre_cli,
     0 AS esobligadoconta,
@@ -443,12 +496,17 @@ UNION ALL
    FROM entidad ent
      LEFT JOIN cliente cli ON cli.ent_id = ent.ent_id
      LEFT JOIN cliente_anexo cliane ON cliane.cli_id = cli.cli_id
+	 LEFT JOIN pais pai on pai.pai_id = cliane.pai_id
+	 LEFT JOIN canton ctn on ctn.ctn_id = cliane.ctn_id
+	 LEFT JOIN parroquia prq on prq.prq_id = cliane.prq_id
      LEFT JOIN direccion dir ON dir.dir_id = ent.ent_direccion_principal
      JOIN ubicacion_cartera ubi ON ubi.ubi_id = cli.ubi_id
      LEFT JOIN cfactura cfa ON cfa.cli_id = cli.cli_id
      LEFT JOIN puntoventa pve ON pve.pve_id = cfa.pve_id
      LEFT JOIN almacen alm ON alm.alm_id = pve.alm_id
      LEFT JOIN ctipocom cti ON cti.cti_id = cfa.cti_id
+     inner join telefono_entidad teli on teli.ent_id = ent.ent_id
+	 inner join telefono tel2 on tel2.tel_id = teli.tel_id
      LEFT JOIN telefono tel ON tel.tel_id = ent.ent_telefono_principal
      LEFT JOIN compania com ON cliane.com_id = com.com_id
      LEFT JOIN ( SELECT tt.num,
@@ -548,3 +606,272 @@ UNION ALL
                    FROM referencias_anexo) tt2
           WHERE tt2.num = 3) refaneamistad ON refaneamistad.ent_id = ent.ent_id
      JOIN cfactura_entidad_financiera cef ON cef.cfa_id = cfa.cfa_id AND cef.efi_id = 7;
+
+ALTER TABLE public.av_solidario_clientes
+    OWNER TO postgres;
+
+GRANT ALL ON TABLE public.av_solidario_clientes TO postgres;
+GRANT SELECT ON TABLE public.av_solidario_clientes TO tableau;
+GRANT ALL ON TABLE public.av_solidario_clientes TO icreativa;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- SELECT
+--     CASE
+--     WHEN ent.ent_tipo_identificacion::text = '1'::text THEN 'CED'::text
+--     WHEN ent.ent_tipo_identificacion::text = '2'::text THEN 'RUC'::text
+--     ELSE 'PAS'::text
+--     END AS tipodocumento,
+--     ent.ent_identificacion AS numerodocumento,
+--     split_part(btrim(ent.ent_apellidos::text), ' '::text, 1) AS apellidopaterno,
+--     split_part(btrim(ent.ent_apellidos::text), ' '::text, 2) AS apellidomaterno,
+--     split_part(btrim(ent.ent_nombres::text), ' '::text, 1) AS primernombre,
+--     pai_nombre AS nacionalidad,
+--     ent.ent_fechanacimiento AS fecha_nacimiento,
+--     ctn.ctn_nombre AS lugarnacimiento,
+--     cli.cli_sexo AS sexo,
+--     CASE
+--     WHEN cli.cli_estadocivil = 'D'::bpchar THEN 'DIVORCIADO'::text
+--     WHEN cli.cli_estadocivil = 'C'::bpchar THEN 'CASADO'::text
+--     WHEN cli.cli_estadocivil = 'V'::bpchar THEN 'VIUDO'::text
+--     WHEN cli.cli_estadocivil = 'S'::bpchar THEN 'SOLTERO'::text
+--     WHEN cli.cli_estadocivil = 'U'::bpchar THEN 'UNION'::text
+--     ELSE 'SOLTERO'::text
+--     END AS cestadocivil,
+--     cliane.cliane_num_cargas_familiares AS numero_dependientes,
+--     aec.aec_nombre AS profesion,
+--         CASE
+--             WHEN cliane.pane_id_nes::text = '12'::text THEN 'SIN ESTUDIOS'::text
+--             WHEN cliane.pane_id_nes::text = '13'::text THEN 'PRIMARIOS/BASICOS'::text
+--             WHEN cliane.pane_id_nes::text = '14'::text THEN 'MEDIOS/SECUNDARIOS'::text
+--             WHEN cliane.pane_id_nes::text = '15'::text THEN 'FORMACION INTERMEDIA/TECNICA'::text
+--             WHEN cliane.pane_id_nes::text = '16'::text THEN 'UNIVERSITARIOS'::text
+--             WHEN cliane.pane_id_nes::text = '17'::text THEN 'POSTGRADO'::text
+--             ELSE 'S'::text
+--         END AS nivel_educacion
+
+
+
+
+
+
+--    FROM entidad ent
+--      LEFT JOIN cliente cli ON cli.ent_id = ent.ent_id
+--      LEFT JOIN cliente_anexo cliane ON cliane.cli_id = cli.cli_id
+-- 	 LEFT JOIN pais pai on pai.pai_id = cliane.pai_id
+-- 	 LEFT JOIN canton ctn on ctn.ctn_id = cliane.ctn_id
+-- 	 LEFT JOIN actividad_economica aec on aec.aec_id = cliane.aec_id
+-- 	 LEFT JOIN parroquia prq on prq.prq_id = cliane.prq_id
+--      LEFT JOIN direccion dir ON dir.dir_id = ent.ent_direccion_principal
+--      LEFT JOIN ubicacion_cartera ubi ON ubi.ubi_id = cli.ubi_id
+--      LEFT JOIN cfactura cfa ON cfa.cli_id = cli.cli_id
+--      LEFT JOIN puntoventa pve ON pve.pve_id = cfa.pve_id
+--      LEFT JOIN almacen alm ON alm.alm_id = pve.alm_id
+--      LEFT JOIN ctipocom cti ON cti.cti_id = cfa.cti_id
+--      LEFT JOIN telefono tel ON tel.tel_id = ent.ent_telefono_principal
+--      LEFT JOIN compania com ON cliane.com_id = com.com_id
+--      LEFT JOIN ( SELECT tt.num,
+--             tt.ident,
+--             tt.refane_id,
+--             tt.refane_nombre,
+--             tt.refane_descripcion,
+--             tt.refane_direccion,
+--             tt.refane_documento_url,
+--             tt.refane_email,
+--             tt.refane_numero_telefono,
+--             tt.refane_numero_telefono2,
+--             tt.refane_numero_telefono3,
+--             tt.ent_id,
+--             tt.ctn_id,
+--             tt.pane_id_trf,
+--             tt.locked
+--            FROM ( SELECT row_number() OVER (PARTITION BY referencias_anexo.ent_id ORDER BY referencias_anexo.ent_id) AS num,
+--                     referencias_anexo.ent_id AS ident,
+--                     referencias_anexo.refane_id,
+--                     referencias_anexo.refane_nombre,
+--                     referencias_anexo.refane_descripcion,
+--                     referencias_anexo.refane_direccion,
+--                     referencias_anexo.refane_documento_url,
+--                     referencias_anexo.refane_email,
+--                     referencias_anexo.refane_numero_telefono,
+--                     referencias_anexo.refane_numero_telefono2,
+--                     referencias_anexo.refane_numero_telefono3,
+--                     referencias_anexo.ent_id,
+--                     referencias_anexo.ctn_id,
+--                     referencias_anexo.pane_id_trf,
+--                     referencias_anexo.locked
+--                    FROM referencias_anexo) tt
+--           WHERE tt.num = 1) refane ON refane.ent_id = ent.ent_id
+--      LEFT JOIN ( SELECT tt2.num,
+--             tt2.ident,
+--             tt2.refane_id,
+--             tt2.refane_nombre,
+--             tt2.refane_descripcion,
+--             tt2.refane_direccion,
+--             tt2.refane_documento_url,
+--             tt2.refane_email,
+--             tt2.refane_numero_telefono,
+--             tt2.refane_numero_telefono2,
+--             tt2.refane_numero_telefono3,
+--             tt2.ent_id,
+--             tt2.ctn_id,
+--             tt2.pane_id_trf,
+--             tt2.locked
+--            FROM ( SELECT row_number() OVER (PARTITION BY referencias_anexo.ent_id ORDER BY referencias_anexo.ent_id) AS num,
+--                     referencias_anexo.ent_id AS ident,
+--                     referencias_anexo.refane_id,
+--                     referencias_anexo.refane_nombre,
+--                     referencias_anexo.refane_descripcion,
+--                     referencias_anexo.refane_direccion,
+--                     referencias_anexo.refane_documento_url,
+--                     referencias_anexo.refane_email,
+--                     referencias_anexo.refane_numero_telefono,
+--                     referencias_anexo.refane_numero_telefono2,
+--                     referencias_anexo.refane_numero_telefono3,
+--                     referencias_anexo.ent_id,
+--                     referencias_anexo.ctn_id,
+--                     referencias_anexo.pane_id_trf,
+--                     referencias_anexo.locked
+--                    FROM referencias_anexo) tt2
+--           WHERE tt2.num = 2) refane2 ON refane2.ent_id = ent.ent_id
+--      LEFT JOIN ( SELECT tt2.num,
+--             tt2.ident,
+--             tt2.refane_id,
+--             tt2.refane_nombre,
+--             tt2.refane_descripcion,
+--             tt2.refane_direccion,
+--             tt2.refane_documento_url,
+--             tt2.refane_email,
+--             tt2.refane_numero_telefono,
+--             tt2.refane_numero_telefono2,
+--             tt2.refane_numero_telefono3,
+--             tt2.ent_id,
+--             tt2.ctn_id,
+--             tt2.pane_id_trf,
+--             tt2.locked
+--            FROM ( SELECT row_number() OVER (PARTITION BY referencias_anexo.ent_id ORDER BY referencias_anexo.ent_id) AS num,
+--                     referencias_anexo.ent_id AS ident,
+--                     referencias_anexo.refane_id,
+--                     referencias_anexo.refane_nombre,
+--                     referencias_anexo.refane_descripcion,
+--                     referencias_anexo.refane_direccion,
+--                     referencias_anexo.refane_documento_url,
+--                     referencias_anexo.refane_email,
+--                     referencias_anexo.refane_numero_telefono,
+--                     referencias_anexo.refane_numero_telefono2,
+--                     referencias_anexo.refane_numero_telefono3,
+--                     referencias_anexo.ent_id,
+--                     referencias_anexo.ctn_id,
+--                     referencias_anexo.pane_id_trf,
+--                     referencias_anexo.locked
+--                    FROM referencias_anexo) tt2
+--           WHERE tt2.num = 3) refaneamistad ON refaneamistad.ent_id = ent.ent_id
+-- where ent.ent_identificacion = '0100091560'
+
+
+
+
+
+
