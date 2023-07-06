@@ -27,6 +27,7 @@ class Caso extends Model
         "orden",
         "ent_id",
         "user_id",
+        "fecha_vencimiento",
     ];
 
     public function user()
@@ -52,6 +53,11 @@ class Caso extends Model
     {
         return $this->hasMany(Archivo::class, "caso_id");
     }
+    // public function setfechaVencimientoAttribute($value)
+    // {
+    //     date_default_timezone_set("America/Guayaquil");
+    //     $this->attributes["fecha_vencimiento"] = Carbon::now();
+    // }
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");

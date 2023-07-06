@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
@@ -99,6 +100,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     //------------------------------------------------------------------>CASO
     Route::put('/editCaso', [CasoController::class, 'edit']);
+    Route::post('/addCaso', [CasoController::class, 'add']);
 
 
 
@@ -116,6 +118,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAnalistas', [UsersOpenceoController::class, 'listAnalistas']);
     Route::get('/listUsuariosActivos', [UsersOpenceoController::class, 'listUsuariosActivos']);
 
+    /************************  OPENCEO   *********************** */
+
+    Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
 
 });
 
