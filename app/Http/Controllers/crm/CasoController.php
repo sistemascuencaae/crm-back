@@ -19,8 +19,8 @@ class CasoController extends Controller
     {
         try {
             $result = Caso::create($request->all());
-            $data = Caso::with('user', 'entidad')->where('id', $result['id'])->first();
-            return response()->json(RespuestaApi::returnResultado('success', 'El listado de clientes', $data));
+            $data = Caso::with('user', 'entidad')->where('id',$result['id'])->first();
+            return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Exception', $th->getMessage()));
         }

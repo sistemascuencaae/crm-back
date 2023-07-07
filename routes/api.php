@@ -122,6 +122,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     /************************  OPENCEO   *********************** */
 
     Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
+    Route::get('/listClientes/{parametro}', [ClienteOpenceoController::class, 'list']);
 
 });
 
