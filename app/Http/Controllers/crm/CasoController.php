@@ -15,10 +15,11 @@ class CasoController extends Controller
     //     $this->middleware('auth:api');
     // }
 
-    public function add(Request $request){
+    public function add(Request $request)
+    {
         try {
             $result = Caso::create($request->all());
-            $data = Caso::with('user', 'entidad')->where('id',$result['id'])->first();
+            $data = Caso::with('user', 'entidad')->where('id', $result['id'])->first();
             return response()->json(RespuestaApi::returnResultado('success', 'El listado de clientes', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Exception', $th->getMessage()));
@@ -32,13 +33,20 @@ class CasoController extends Controller
     }
     public function edit(Request $request)
     {
-        try{
+        try {
             $caso = Caso::find($request->input('id'));
             $caso->update($request->all());
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $caso));
 
-        }catch(Exception $e){
+        } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
         }
     }
+
+    public function listCasoById($id)
+    {
+        $data = Caso::with('user', 'entidad')->where('id', $id)->get();
+        return response()->json(RespuestaApi::returnResultado('success', 'El caso se listo con éxito', $data));
+    }
+
 }
