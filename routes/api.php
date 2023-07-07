@@ -191,6 +191,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/updateNota/{id}', [NotaController::class, 'updateNota']); // Editar
     Route::delete('/deleteNota/{id}', [NotaController::class, 'deleteNota']); // Eliminar
 
+    // CASO
+
+    Route::get('/listCasoById/{id}', [CasoController::class, 'listCasoById']); // listar
+
 });
 
 Route::group(["prefix" => "credito"], function ($router) {
