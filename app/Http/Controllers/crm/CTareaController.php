@@ -55,7 +55,7 @@ class CTareaController extends Controller
     public function listTareasByIdTablero($tab_id)
     {
         try {
-            $tareas = CTipoTarea::where('tab_id', $tab_id)->with('DTipoTarea')->orderBy('estado', 'DESC')->get();
+            $tareas = CTipoTarea::where('tab_id', $tab_id)->with('DTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo las tareas del tablero con éxito', $tareas));
         } catch (Exception $e) {
