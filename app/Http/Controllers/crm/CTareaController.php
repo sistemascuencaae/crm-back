@@ -50,13 +50,9 @@ class CTareaController extends Controller
 
     public function updateCTarea(Request $request, $id)
     {
-
-
         try {
             $tareas = $request->input('tareas');
             $cTarea = $request->all();
-            // $cTarea = CTipoTarea::findOrFail($id);
-            // echo (json_encode($tareas));
 
             $dataRe = DB::transaction(function () use ($cTarea, $id, $tareas) {
                 CTipoTarea::where('id', $id)
@@ -65,39 +61,24 @@ class CTareaController extends Controller
                         'estado' => $cTarea['estado']
                     ]);
 
-                    //echo('guardado: '.json_encode($tareas));
-
                 for ($i = 0; $i < sizeof($tareas); $i++) {
-
-
-                    if($tareas[$i]['id']>0){
+                    if ($tareas[$i]['id']) {
                         DTipoTarea::where('id', $tareas[$i]['id'])
-                        ->update($tareas[$i]);
-                    }else{
-                        $d = DTipoTarea::create([
+                            ->update($tareas[$i]);
+                    } else {
+                        DTipoTarea::create([
                             "ctt_id" => $id,
                             "nombre" => $tareas[$i]['nombre'],
                             "requerido" => $tareas[$i]['requerido'],
                             "estado" => $tareas[$i]['estado']
-                        ]); 
+                        ]);
                     }
-
-
-                    // // $dTipoTarea = DTipoTarea::where('ctt_id', $id)->where('ctt_id', $tareas[$i])->first();
-                    // //echo($tareas[$i]['id']);
-                    // $dt = DTipoTarea::find($tareas[$i]['id']);
-                    // if ($dt) {
-                    //     //DB::update('UPDATE crm.dtipo_tarea (id) values (?)', [$tareas[$i]['ctt_id'], $id]);
-                    //     $dt->updated([$tareas[$i]]);
-                    // }
-                    //echo('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'.$dt);
                 }
 
-                // echo (json_encode($cTarea));
-               // return CTipoTarea::with('dTipoTarea')->where('id', $id)->get();
+                return CTipoTarea::with('dTipoTarea')->where('id', $id)->get();
             });
 
-            //return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo la Tarea con éxito', $dataRe));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo la Tarea con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
