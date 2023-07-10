@@ -38,7 +38,8 @@ class CTareaController extends Controller
                         "estado" => $cTar['tareas'][$i]['estado']
                     ]);
                 }
-                return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->where('id', $cTarea->id)->get();
+                // return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->where('id', $cTarea->id)->get();
+                return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->get();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la Tarea con éxito', $data));
@@ -75,7 +76,8 @@ class CTareaController extends Controller
                     }
                 }
 
-                return CTipoTarea::with('dTipoTarea')->where('id', $id)->orderBy('id', 'DESC')->get();
+                // return CTipoTarea::with('dTipoTarea')->orderBy('id', 'DESC')->get();
+                return CTipoTarea::with('dTipoTarea')->get();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo la Tarea con éxito', $dataRe));
