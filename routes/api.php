@@ -9,6 +9,7 @@ use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
+use App\Http\Controllers\crm\CTareaController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FaseController;
@@ -194,6 +195,12 @@ Route::group(["prefix" => "crm"], function ($router) {
     // CASO
 
     Route::get('/listCasoById/{id}', [CasoController::class, 'listCasoById']); // listar
+
+    // CTAREA
+
+    Route::post('/addCTarea', [CTareaController::class, 'addCTarea']); // guardar
+    Route::get('/listTareasByIdTablero/{tab_id}', [CTareaController::class, 'listTareasByIdTablero']); // guardar
+
 
 });
 
