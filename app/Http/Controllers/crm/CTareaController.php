@@ -75,7 +75,7 @@ class CTareaController extends Controller
                     }
                 }
 
-                return CTipoTarea::with('dTipoTarea')->where('id', $id)->get();
+                return CTipoTarea::with('dTipoTarea')->where('id', $id)->orderBy('id', 'DESC')->get();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo la Tarea con éxito', $dataRe));
