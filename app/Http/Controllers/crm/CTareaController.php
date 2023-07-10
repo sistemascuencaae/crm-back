@@ -12,6 +12,17 @@ use Illuminate\Support\Facades\DB;
 
 class CTareaController extends Controller
 {
+    public function listTareasByIdTablero($tab_id)
+    {
+        try {
+            $tareas = CTipoTarea::where('tab_id', $tab_id)->with('DTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las tareas del tablero con éxito', $tareas));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function addCTarea(Request $request)
     {
         try {
@@ -28,7 +39,7 @@ class CTareaController extends Controller
                 }
                 return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->where('id', $cTarea->id)->get();
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la Tarea con éxito', $data));
 
         } catch (Exception $e) {
@@ -36,16 +47,9 @@ class CTareaController extends Controller
         }
     }
 
-
-    public function listTareasByIdTablero($tab_id)
+    public function updateCTarea()
     {
-        try {
-            $tareas = CTipoTarea::where('tab_id', $tab_id)->with('DTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las tareas del tablero con éxito', $tareas));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
     }
 
 }

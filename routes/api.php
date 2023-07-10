@@ -200,6 +200,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addCTarea', [CTareaController::class, 'addCTarea']); // guardar
     Route::get('/listTareasByIdTablero/{tab_id}', [CTareaController::class, 'listTareasByIdTablero']); // guardar
+    Route::post('/updateCTarea/{id}', [CTareaController::class, 'updateCTarea']); // Edita la tarea
 
 
 });
