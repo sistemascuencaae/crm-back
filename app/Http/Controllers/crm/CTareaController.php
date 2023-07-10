@@ -9,6 +9,7 @@ use App\Models\crm\DTipoTarea;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Mockery\Undefined;
 
 class CTareaController extends Controller
 {
@@ -47,9 +48,62 @@ class CTareaController extends Controller
         }
     }
 
-    public function updateCTarea()
+    public function updateCTarea(Request $request, $id)
     {
 
+
+        try {
+            $tareas = $request->input('tareas');
+            $cTarea = $request->all();
+            // $cTarea = CTipoTarea::findOrFail($id);
+            // echo (json_encode($tareas));
+
+            $dataRe = DB::transaction(function () use ($cTarea, $id, $tareas) {
+                CTipoTarea::where('id', $id)
+                    ->update([
+                        'nombre' => $cTarea['nombre'],
+                        'estado' => $cTarea['estado']
+                    ]);
+
+                    //echo('guardado: '.json_encode($tareas));
+
+                for ($i = 0; $i < sizeof($tareas); $i++) {
+
+
+                    if($tareas[$i]['id']>0){
+                        DTipoTarea::where('id', $tareas[$i]['id'])
+                        ->update($tareas[$i]);
+                    }else{
+                        $d = DTipoTarea::create([
+                            "ctt_id" => $id,
+                            "nombre" => $tareas[$i]['nombre'],
+                            "requerido" => $tareas[$i]['requerido'],
+                            "estado" => $tareas[$i]['estado']
+                        ]); 
+                    }
+
+
+                    // // $dTipoTarea = DTipoTarea::where('ctt_id', $id)->where('ctt_id', $tareas[$i])->first();
+                    // //echo($tareas[$i]['id']);
+                    // $dt = DTipoTarea::find($tareas[$i]['id']);
+                    // if ($dt) {
+                    //     //DB::update('UPDATE crm.dtipo_tarea (id) values (?)', [$tareas[$i]['ctt_id'], $id]);
+                    //     $dt->updated([$tareas[$i]]);
+                    // }
+                    //echo('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'.$dt);
+                }
+
+                // echo (json_encode($cTarea));
+               // return CTipoTarea::with('dTipoTarea')->where('id', $id)->get();
+            });
+
+            //return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo la Tarea con éxito', $dataRe));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+        // UPDATE crm.dtipo_tarea
+        // SET ctt_id=80, nombre='ULLOA VICENTE', requerido=true, estado=true, created_at='2023-07-10 10:15:51.000', updated_at='2023-07-10 10:15:51.000', deleted_at=NULL
+        // WHERE id=23;
     }
 
 }
