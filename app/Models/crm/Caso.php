@@ -39,6 +39,14 @@ class Caso extends Model
     {
         return $this->belongsTo(Entidad::class, "ent_id");
     }
+    public function Tareas()
+    {
+        return $this->hasMany(Tareas::class, "caso_id");
+    }
+    public function Actividad()
+    {
+        return $this->hasMany(Actividad::class, "caso_id");
+    }
     public function Etiqueta()
     {
         return $this->hasMany(Etiqueta::class, "caso_id");
