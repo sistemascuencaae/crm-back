@@ -19,7 +19,7 @@ class DTipoTarea extends Model implements Auditable
 
     protected $table = 'crm.dtipo_tarea';
 
-    protected $fillable = ["nombre", "requerido", "estado", "ctti_id"];
+    protected $fillable = ["nombre", "requerido", "estado", "ctt_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -38,8 +38,4 @@ class DTipoTarea extends Model implements Auditable
         $this->attributes["deleted_at"] = Carbon::now();
     }
 
-    // public function tableroUsuario()
-    // {
-    //     return $this->hasMany(TableroUsuario::class, "tab_id");
-    // }
 }

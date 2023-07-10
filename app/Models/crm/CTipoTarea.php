@@ -38,8 +38,8 @@ class CTipoTarea extends Model implements Auditable
         $this->attributes["deleted_at"] = Carbon::now();
     }
 
-    // public function tableroUsuario()
-    // {
-    //     return $this->hasMany(TableroUsuario::class, "tab_id");
-    // }
+    public function dTipoTarea()
+    {
+        return $this->hasMany(DTipoTarea::class, "ctt_id");
+    }
 }
