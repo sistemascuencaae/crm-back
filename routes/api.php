@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\crm\BitacoraController;
+use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
@@ -200,6 +201,15 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addCTarea', [CTareaController::class, 'addCTarea']); // guardar
     Route::get('/listTareasByIdTablero/{tab_id}', [CTareaController::class, 'listTareasByIdTablero']); // guardar
+    Route::post('/updateCTarea/{id}', [CTareaController::class, 'updateCTarea']); // Edita la tarea
+
+    // CACTIVIDAD
+
+    // Route::post('/addCActividad', [CActividadController::class, 'addCActividad']); // guardar
+    Route::post('/addCTipoActividad', [CActividadController::class, 'addCTipoActividad']); // guardar
+    // Route::get('listActividadesByIdTablero/{tab_id}', [CActividadController::class, 'listActividadesByIdTablero']); // listar
+    Route::get('allCTipoActividades', [CActividadController::class, 'allCTipoActividades']); // listar todo
+    Route::post('/updateCActividad/{id}', [CActividadController::class, 'updateCActividad']); // Edita la actividad
 
 
 });

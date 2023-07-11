@@ -9,9 +9,21 @@ use App\Models\crm\DTipoTarea;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Mockery\Undefined;
 
 class CTareaController extends Controller
 {
+    public function listTareasByIdTablero($tab_id)
+    {
+        try {
+            $tareas = CTipoTarea::where('tab_id', $tab_id)->with('DTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las tareas del tablero con éxito', $tareas));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function addCTarea(Request $request)
     {
         try {
@@ -26,9 +38,10 @@ class CTareaController extends Controller
                         "estado" => $cTar['tareas'][$i]['estado']
                     ]);
                 }
-                return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->where('id', $cTarea->id)->get();
+                // return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->where('id', $cTarea->id)->get();
+                return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->get();
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la Tarea con éxito', $data));
 
         } catch (Exception $e) {
@@ -36,16 +49,44 @@ class CTareaController extends Controller
         }
     }
 
-
-    public function listTareasByIdTablero($tab_id)
+    public function updateCTarea(Request $request, $id)
     {
         try {
-            $tareas = CTipoTarea::where('tab_id', $tab_id)->with('DTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $tareas = $request->input('tareas');
+            $cTarea = $request->all();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las tareas del tablero con éxito', $tareas));
+            $dataRe = DB::transaction(function () use ($cTarea, $id, $tareas) {
+                CTipoTarea::where('id', $id)
+                    ->update([
+                        'nombre' => $cTarea['nombre'],
+                        'estado' => $cTarea['estado']
+                    ]);
+
+                for ($i = 0; $i < sizeof($tareas); $i++) {
+                    if ($tareas[$i]['id']) {
+                        DTipoTarea::where('id', $tareas[$i]['id'])
+                            ->update($tareas[$i]);
+                    } else {
+                        DTipoTarea::create([
+                            "ctt_id" => $id,
+                            "nombre" => $tareas[$i]['nombre'],
+                            "requerido" => $tareas[$i]['requerido'],
+                            "estado" => $tareas[$i]['estado']
+                        ]);
+                    }
+                }
+
+                // return CTipoTarea::with('dTipoTarea')->orderBy('id', 'DESC')->get();
+                return CTipoTarea::with('dTipoTarea')->get();
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo la Tarea con éxito', $dataRe));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
+        // UPDATE crm.dtipo_tarea
+        // SET ctt_id=80, nombre='ULLOA VICENTE', requerido=true, estado=true, created_at='2023-07-10 10:15:51.000', updated_at='2023-07-10 10:15:51.000', deleted_at=NULL
+        // WHERE id=23;
     }
 
 }
