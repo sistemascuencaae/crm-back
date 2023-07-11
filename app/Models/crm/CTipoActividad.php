@@ -20,7 +20,7 @@ class CTipoActividad extends Model implements Auditable
 
     protected $table = 'crm.ctipo_actividad';
 
-    protected $fillable = ["nombre", "estado", "tab_id"];
+    protected $fillable = ["nombre", "estado"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -39,8 +39,8 @@ class CTipoActividad extends Model implements Auditable
         $this->attributes["deleted_at"] = Carbon::now();
     }
 
-    public function dTipoActividad()
-    {
-        return $this->hasMany(DTipoActividad::class, "cta_id");
-    }
+    // public function dTipoActividad()
+    // {
+    //     return $this->hasMany(DTipoActividad::class, "cta_id");
+    // }
 }

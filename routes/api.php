@@ -205,8 +205,10 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // CACTIVIDAD
 
-    Route::post('/addCActividad', [CActividadController::class, 'addCActividad']); // guardar
-    Route::get('listActividadesByIdTablero/{tab_id}', [CActividadController::class, 'listActividadesByIdTablero']); // guardar
+    // Route::post('/addCActividad', [CActividadController::class, 'addCActividad']); // guardar
+    Route::post('/addCTipoActividad', [CActividadController::class, 'addCTipoActividad']); // guardar
+    // Route::get('listActividadesByIdTablero/{tab_id}', [CActividadController::class, 'listActividadesByIdTablero']); // listar
+    Route::get('allCTipoActividades', [CActividadController::class, 'allCTipoActividades']); // listar todo
     Route::post('/updateCActividad/{id}', [CActividadController::class, 'updateCActividad']); // Edita la actividad
 
 
