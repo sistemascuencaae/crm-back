@@ -20,7 +20,7 @@ class CTipoActividad extends Model implements Auditable
 
     protected $table = 'crm.ctipo_actividad';
 
-    protected $fillable = ["nombre", "estado"];
+    protected $fillable = ["nombre", "estado", "tab_id"];
 
     public function setCreatedAtAttribute($value)
     {

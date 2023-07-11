@@ -12,34 +12,38 @@ use Illuminate\Http\Request;
 
 class CActividadController extends Controller
 {
-    // public function listActividadesByIdTablero($tab_id)
-    // {
-    //     try {
-    //         $actividades = CTipoActividad::where('tab_id', $tab_id)->with('DTipoActividad')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades del tablero con éxito', $actividades));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
-
-    public function allCTipoActividades()
+    public function listActividadesByIdTablero($tab_id)
     {
         try {
-            $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $actividades = CTipoActividad::where('tab_id', $tab_id)->with('DTipoActividad')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades con éxito', $actividades));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades del tablero con éxito', $actividades));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
+
+    // Si vale este listar todos los tableros, solo esta de descomentar aqui, en el api y front
+    // public function allCTipoActividades()
+    // {
+    //     try {
+    //         $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades con éxito', $actividades));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
     public function addCTipoActividad(Request $request)
     {
         try {
-            $tipoActividad = CTipoActividad::create($request->all());
+            CTipoActividad::create($request->all());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tipo de Actividad con éxito', $tipoActividad));
+            $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tipo de Actividad con éxito', $actividades));
 
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -76,4 +80,17 @@ class CActividadController extends Controller
     //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
     //     }
     // }
+
+    public function updateCTipoActividad(Request $request, $id)
+    {
+        try {
+            $actividad = CTipoActividad::findOrFail($id);
+
+            $actividad->update($request->all());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó el tipo de Actividad con éxito', $actividad));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }
