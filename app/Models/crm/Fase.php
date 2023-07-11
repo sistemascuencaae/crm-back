@@ -22,6 +22,7 @@ class Fase extends Model
         "generar_caso",
         "estado",
         "orden",
+        "color_id",
     ];
 
     public function Caso()
@@ -40,3 +41,4 @@ class Fase extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 }
+
