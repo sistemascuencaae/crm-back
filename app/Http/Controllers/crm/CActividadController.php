@@ -15,7 +15,7 @@ class CActividadController extends Controller
     public function listActividadesByIdTablero($tab_id)
     {
         try {
-            $actividades = CTipoActividad::where('tab_id', $tab_id)->with('DTipoActividad')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $actividades = CTipoActividad::where('tab_id', $tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades del tablero con éxito', $actividades));
         } catch (Exception $e) {
