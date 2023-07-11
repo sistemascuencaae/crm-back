@@ -93,4 +93,17 @@ class CActividadController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function deleteCTipoActividad($id)
+    {
+        try {
+            $actividad = CTipoActividad::findOrFail($id);
+
+            $actividad->delete();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito el tipo de actividad', $actividad));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }
