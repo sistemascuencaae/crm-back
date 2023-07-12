@@ -4,6 +4,7 @@ namespace App\Models\crm;
 
 use App\Models\User;
 use App\Models\crm\Entidad;
+use App\Models\crm\AVResumenCaso;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -38,6 +39,10 @@ class Caso extends Model
     public function entidad()
     {
         return $this->belongsTo(Entidad::class, "ent_id");
+    }
+    public function resumen()
+    {
+        return $this->belongsTo(AVResumenCaso::class, "id");
     }
     public function Tareas()
     {
