@@ -42,14 +42,10 @@ class DActividadController extends Controller
         try {
             $actividad = DTipoActividad::findOrFail($id);
 
-            // $nota->update([
-            //     "nombre" => $request->nombre,
-            // ]);
-
             $actividad->update($request->all());
 
-            // return response()->json(["notas" => $nota]);
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades de este caso con éxito', $actividad));
+            $data = DTipoActividad::where('id', $id)->with('cTipoActividad')->first();
+            return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
