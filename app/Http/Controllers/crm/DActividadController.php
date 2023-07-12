@@ -15,9 +15,11 @@ class DActividadController extends Controller
         try {
             DTipoActividad::create($request->all());
 
-            $actividades = DTipoActividad::orderBy('id', 'DESC')->get();
+            // $actividades = DTipoActividad::orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la Actividad con éxito', $actividades));
+            $data = DTipoActividad::with('cTipoActividad')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la Actividad con éxito', $data));
 
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
