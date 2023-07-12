@@ -36,4 +36,23 @@ class DActividadController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function updateDActividad(Request $request, $id)
+    {
+        try {
+            $actividad = DTipoActividad::findOrFail($id);
+
+            // $nota->update([
+            //     "nombre" => $request->nombre,
+            // ]);
+
+            $actividad->update($request->all());
+
+            // return response()->json(["notas" => $nota]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades de este caso con éxito', $actividad));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
