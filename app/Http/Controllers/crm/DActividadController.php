@@ -17,7 +17,7 @@ class DActividadController extends Controller
 
             $actividades = DTipoActividad::orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo LA Actividad con éxito', $actividades));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la Actividad con éxito', $actividades));
 
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));

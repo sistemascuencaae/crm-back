@@ -217,7 +217,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // DACTIVIDAD
 
-    Route::post('/addDTipoActividad', [DActividadController::class, 'addCTipoActividad']); // guardar
+    Route::post('/addDTipoActividad', [DActividadController::class, 'addDTipoActividad']); // guardar
     Route::get('listActividadesByIdCasoId/{caso_id}', [DActividadController::class, 'listActividadesByIdCasoId']); // listar
     // Route::post('/updateCTipoActividad/{id}', [DActividadController::class, 'updateCTipoActividad']); // Edita la actividad
     // Route::delete('/deleteCTipoActividad/{id}', [DActividadController::class, 'deleteCTipoActividad']); // Eliminar
