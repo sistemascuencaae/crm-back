@@ -11,6 +11,7 @@ use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\CTareaController;
+use App\Http\Controllers\crm\DActividadController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FaseController;
@@ -192,25 +193,34 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listNotaByCasoId/{id}', [NotaController::class, 'listNotaByCasoId']); // listar
     Route::post('/updateNota/{id}', [NotaController::class, 'updateNota']); // Editar
     Route::delete('/deleteNota/{id}', [NotaController::class, 'deleteNota']); // Eliminar
-    
+
     // CASO
 
     Route::get('/listCasoById/{id}', [CasoController::class, 'listCasoById']); // listar
-    
+
     // CTAREA
-    
+
     Route::post('/addCTarea', [CTareaController::class, 'addCTarea']); // guardar
     Route::get('/listTareasByIdTablero/{tab_id}', [CTareaController::class, 'listTareasByIdTablero']); // guardar
     Route::post('/updateCTarea/{id}', [CTareaController::class, 'updateCTarea']); // Edita la tarea
-    
+
     // CACTIVIDAD
-    
+
     // Route::post('/addCActividad', [CActividadController::class, 'addCActividad']); // guardar
     Route::post('/addCTipoActividad', [CActividadController::class, 'addCTipoActividad']); // guardar
     Route::get('listActividadesByIdTablero/{tab_id}', [CActividadController::class, 'listActividadesByIdTablero']); // listar
+    Route::get('listActividadesByIdTableroEstadoActivo/{tab_id}', [CActividadController::class, 'listActividadesByIdTableroEstadoActivo']); // listar
+    Route::get('listActividadesByIdCasoId/{caso_id}', [CActividadController::class, 'listActividadesByIdCasoId']); // listar
     // Route::get('allCTipoActividades', [CActividadController::class, 'allCTipoActividades']); // listar todo
     Route::post('/updateCTipoActividad/{id}', [CActividadController::class, 'updateCTipoActividad']); // Edita la actividad
     Route::delete('/deleteCTipoActividad/{id}', [CActividadController::class, 'deleteCTipoActividad']); // Eliminar
+
+    // DACTIVIDAD
+
+    Route::post('/addDTipoActividad', [DActividadController::class, 'addCTipoActividad']); // guardar
+    Route::get('listActividadesByIdCasoId/{caso_id}', [DActividadController::class, 'listActividadesByIdCasoId']); // listar
+    // Route::post('/updateCTipoActividad/{id}', [DActividadController::class, 'updateCTipoActividad']); // Edita la actividad
+    // Route::delete('/deleteCTipoActividad/{id}', [DActividadController::class, 'deleteCTipoActividad']); // Eliminar
 
 
 });

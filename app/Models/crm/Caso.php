@@ -76,4 +76,9 @@ class Caso extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
+
+    public function dTipoActividades()
+    {
+        return $this->hasMany(DTipoActividad::class, "caso_id");
+    }
 }
