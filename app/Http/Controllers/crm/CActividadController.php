@@ -12,30 +12,6 @@ use Illuminate\Http\Request;
 
 class CActividadController extends Controller
 {
-    public function listActividadesByIdTablero($tab_id)
-    {
-        try {
-            $actividades = CTipoActividad::where('tab_id', $tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades del tablero con éxito', $actividades));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
-    }
-
-
-    // Si vale este listar todos los tableros, solo esta de descomentar aqui, en el api y front
-    // public function allCTipoActividades()
-    // {
-    //     try {
-    //         $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades con éxito', $actividades));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
-
     public function addCTipoActividad(Request $request)
     {
         try {
@@ -49,6 +25,42 @@ class CActividadController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function listActividadesByIdTablero($tab_id)
+    {
+        try {
+            $actividades = CTipoActividad::where('tab_id', $tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades del tablero con éxito', $actividades));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listActividadesByIdTableroEstadoActivo($tab_id)
+    {
+        try {
+            $actividades = CTipoActividad::where('tab_id', $tab_id)->where('estado', true)->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades del tablero con éxito', $actividades));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // Si vale este listar todos los tableros, solo esta de descomentar aqui, en el api y front
+    // public function allCTipoActividades()
+    // {
+    //     try {
+    //         $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades con éxito', $actividades));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
+
 
     // public function addCActividad(Request $request)
     // {
