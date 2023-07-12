@@ -39,8 +39,8 @@ class CTipoActividad extends Model implements Auditable
         $this->attributes["deleted_at"] = Carbon::now();
     }
 
-    public function dTipoActvidad()
+    public function dTipoActividad()
     {
-        return $this->hasMany(DTipoActividad::class, 'cta_id');
+        return $this->hasMany(DTipoActividad::class, 'id', 'cta_id');
     }
 }

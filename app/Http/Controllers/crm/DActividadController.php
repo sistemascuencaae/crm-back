@@ -27,7 +27,7 @@ class DActividadController extends Controller
     public function listActividadesByIdCasoId($caso_id)
     {
         try {
-            $actividades = DTipoActividad::where('caso_id', $caso_id)->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('caso_id', $caso_id)->with('cTipoActividad')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades de este caso con éxito', $actividades));
         } catch (Exception $e) {
