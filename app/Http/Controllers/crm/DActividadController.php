@@ -17,7 +17,7 @@ class DActividadController extends Controller
 
             // $actividades = DTipoActividad::orderBy('id', 'DESC')->get();
 
-            $data = DTipoActividad::with('cTipoActividad')->orderBy('id', 'DESC')->get();
+            $data = DTipoActividad::with('cTipoActividad', 'cTipoResultadoCierre')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la Actividad con éxito', $data));
 
@@ -29,7 +29,7 @@ class DActividadController extends Controller
     public function listActividadesByIdCasoId($caso_id)
     {
         try {
-            $actividades = DTipoActividad::where('caso_id', $caso_id)->with('cTipoActividad')->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('caso_id', $caso_id)->with('cTipoActividad', 'cTipoResultadoCierre')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades de este caso con éxito', $actividades));
         } catch (Exception $e) {
@@ -44,7 +44,7 @@ class DActividadController extends Controller
 
             $actividad->update($request->all());
 
-            $data = DTipoActividad::where('id', $id)->with('cTipoActividad')->first();
+            $data = DTipoActividad::where('id', $id)->with('cTipoActividad', 'cTipoResultadoCierre')->first();
             return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
