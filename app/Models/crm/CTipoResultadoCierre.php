@@ -2,7 +2,7 @@
 
 namespace App\Models\crm;
 
-use App\Models\crm\CTipoActividad;
+// use App\Models\crm\CTipoResultadoCierre;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class DTipoActividad extends Model implements Auditable
+class CTipoResultadoCierre extends Model implements Auditable
 {
     use AuditableTrait;
 
@@ -18,16 +18,15 @@ class DTipoActividad extends Model implements Auditable
 
     use SoftDeletes;
 
-    protected $table = 'crm.dtipo_actividad';
+    protected $table = 'crm.ctipo_resultado_cierre';
 
-    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "estado_actividad", "pos_descripcion", "cta_id", "caso_id"];
+    protected $fillable = ["nombre", "estado", "tab_id"];
 
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["created_at"] = Carbon::now();
     }
-
     public function setUpdatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
@@ -40,8 +39,8 @@ class DTipoActividad extends Model implements Auditable
         $this->attributes["deleted_at"] = Carbon::now();
     }
 
-    public function cTipoActividad()
-    {
-        return $this->belongsTo(CTipoActividad::class, 'cta_id', 'id');
-    }
+    // public function dTipoActividad()
+    // {
+    //     return $this->hasMany(DTipoActividad::class, 'id', 'cta_id');
+    // }
 }
