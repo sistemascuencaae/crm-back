@@ -119,18 +119,21 @@ class CTareaController extends Controller
                 //     }
                 // }
                 for ($i = 0; $i < sizeof($tareas); $i++) {
-                    DTipoTarea::create([
-                        "ctt_id" => $id,
-                        "nombre" => $tareas[$i]['nombre'],
-                        "requerido" => $tareas[$i]['requerido'],
-                        "estado" => $tareas[$i]['estado']
-                    ]);
+                    $tabl = DTipoTarea::where('ctt_id', $id)->where('id', $tareas[$i])->first();
+                    if (!$tabl) {
+                        DTipoTarea::create([
+                            "ctt_id" => $id,
+                            "nombre" => $tareas[$i]['nombre'],
+                            "requerido" => $tareas[$i]['requerido'],
+                            "estado" => $tareas[$i]['estado']
+                        ]);
+                    }
                 }
 
                 return $ctarea;
             });
 
-            $dataRe = CTipoTarea::with('dTipoTarea')->where('id', $id)->get();
+            $dataRe = CTipoTarea::with('dTipoTarea')->where('id', $id)->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo el tablero con éxito', $dataRe));
         } catch (Exception $e) {
