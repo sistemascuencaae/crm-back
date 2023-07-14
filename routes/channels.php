@@ -32,8 +32,6 @@ Broadcast::channel('App.User.{id}', function ($user, $id) {
 
 Broadcast::channel('caso.comentarios.{id}', function ($user, $id) {
 
-    // echo('INGRESAMOS AL ACASO COMENTARIOS');
-
     $usuario = User::where("id", $user->id)->get();
     $comenTarea = Caso::where("id", $id)->get();
 
@@ -44,10 +42,12 @@ Broadcast::channel('caso.comentarios.{id}', function ($user, $id) {
     }
 });
 
-Broadcast::channel('tablero.casos.{id}', function ($user, $id) {
+Broadcast::channel('tablero.{id}', function ($user, $id) {
 
-    $tablero = Tablero::where("id", $id)->first();
-    if ($tablero) {
+    $usuario = User::where("id", $user->id)->get();
+    $tablero = Tablero::where("id", $id)->get();
+    // echo('ingresamos al chanel'.json_encode($tablero));
+    if ($tablero[0] && $usuario[0]) {
         return true;
     } else {
         return false;

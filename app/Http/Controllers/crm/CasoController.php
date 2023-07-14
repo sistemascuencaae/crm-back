@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\crm;
 
-use App\Events\crm\CasosEvent;
-use App\Events\crm\FaseEvent;
-use App\Events\crm\TableroEvent;
+use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Caso;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CasoController extends Controller
 {
@@ -39,7 +38,6 @@ class CasoController extends Controller
         try {
             $caso = Caso::find($request->input('id'));
             $caso->update($request->all());
-            broadcast(new FaseEvent($caso));
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $caso));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
@@ -55,34 +53,37 @@ class CasoController extends Controller
 
     public function bloqueoCaso(Request $request)
     {
-
+        $data = [];
         $casoId = $request->input("casoId");
         $tabId = $request->input("tableroId");
         $userId = $request->input("userId");
         $bloqueado = $request->input("bloqueado");
         $bloqueado_user = $request->input("bloqueado_user");
-
-
-
         $caso = Caso::find($casoId);
         if ($caso) {
             $caso->bloqueado = $bloqueado;
             $caso->bloqueado_user = $bloqueado_user;
             $caso->save();
-            broadcast(new TableroEvent($caso));
-            return response()->json([
-                "res" => 200,
-                "data" => $caso
-            ]);
+            $data = DB::select('SELECT ca.*, ta.id as tablero_id FROM public.users us
+            inner join crm.caso ca on ca.user_id = us.id
+            INNER JOIN crm.fase fa on fa.id = ca.fas_id
+            INNER JOIN crm.tablero ta on ta.id = fa.tab_id
+            where ca.id = '.$casoId);
         }
-
+        broadcast(new TableroEvent($data));
         return response()->json([
-            "res" => 400,
-            "data" => $caso
+            "res" => 200,
+            "data" => $data
         ]);
-
-        // $coment = Comentarios::create($request->all());
-        // $data = DB::select('select * from crm.comentarios where caso_id = '.$coment->caso_id);
-        // broadcast(new ComentariosEvent($data));
     }
 }
+
+
+
+
+
+
+
+
+
+
