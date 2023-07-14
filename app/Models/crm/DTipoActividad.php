@@ -21,7 +21,7 @@ class DTipoActividad extends Model implements Auditable
 
     protected $table = 'crm.dtipo_actividad';
 
-    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "estado_actividad", "pos_descripcion", "cta_id", "ctr_id", "caso_id"];
+    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "estado_actividad", "pos_descripcion", "cta_id", "ctr_id", "caso_id", "id_padre"];
 
     public function setCreatedAtAttribute($value)
     {
