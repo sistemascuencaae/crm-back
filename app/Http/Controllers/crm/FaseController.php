@@ -17,7 +17,7 @@ class FaseController extends Controller
 
     public function list()
     {
-        $data = Fase::with('caso.user','caso.entidad', 'caso.tareas','caso.actividad')->get();
+        $data = Fase::with('caso.user','caso.entidad', 'caso.resumen', 'caso.tareas','caso.actividad')->get();
         return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigion con exito', $data));
     }
     public function add(Request $request)

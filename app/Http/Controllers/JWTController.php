@@ -115,12 +115,13 @@ class JWTController extends Controller
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 900000*80000000,
+            'expires_in' => auth()->factory()->getTTL() * 60 *60 * 24*2000000,
             'user' => [
                 "id" => auth('api')->user()->id,
                 "name" => auth('api')->user()->name,
                 "surname" => auth('api')->user()->surname,
-                "email" => auth('api')->user()->email
+                "email" => auth('api')->user()->email,
+                "usu_tipo_analista" => auth('api')->user()->usu_tipo_analista
             ]
         ]);
     }
