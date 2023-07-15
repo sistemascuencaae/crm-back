@@ -49,24 +49,78 @@ class CTareaController extends Controller
         }
     }
 
+    // public function updateCTarea(Request $request, $id)
+    // {
+    //     try {
+    //         $tareas = $request->input('tareas');
+    //         $cTarea = $request->all();
+
+    //         $dataRe = DB::transaction(function () use ($cTarea, $id, $tareas) {
+    //             CTipoTarea::where('id', $id)
+    //                 ->update([
+    //                     'nombre' => $cTarea['nombre'],
+    //                     'estado' => $cTarea['estado']
+    //                 ]);
+
+    //             for ($i = 0; $i < sizeof($tareas); $i++) {
+    //                 if ($tareas[$i]['id']) {
+    //                     DTipoTarea::where('id', $tareas[$i]['id'])
+    //                         ->update($tareas[$i]);
+    //                 } else {
+    //                     DTipoTarea::create([
+    //                         "ctt_id" => $id,
+    //                         "nombre" => $tareas[$i]['nombre'],
+    //                         "requerido" => $tareas[$i]['requerido'],
+    //                         "estado" => $tareas[$i]['estado']
+    //                     ]);
+    //                 }
+    //             }
+
+    //             // return CTipoTarea::with('dTipoTarea')->orderBy('id', 'DESC')->get();
+    //             return CTipoTarea::with('dTipoTarea')->get();
+    //         });
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo la Tarea con éxito', $dataRe));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+    //     }
+    //     // UPDATE crm.dtipo_tarea
+    //     // SET ctt_id=80, nombre='ULLOA VICENTE', requerido=true, estado=true, created_at='2023-07-10 10:15:51.000', updated_at='2023-07-10 10:15:51.000', deleted_at=NULL
+    //     // WHERE id=23;
+    // }
+
     public function updateCTarea(Request $request, $id)
     {
         try {
+            $eliminados = $request->input('eliminados');
             $tareas = $request->input('tareas');
-            $cTarea = $request->all();
+            $ctarea = $request->all();
 
-            $dataRe = DB::transaction(function () use ($cTarea, $id, $tareas) {
+            //echo(json_encode($eliminados[0]['id']));
+            $tab = DB::transaction(function () use ($ctarea, $id, $eliminados, $tareas) {
                 CTipoTarea::where('id', $id)
                     ->update([
-                        'nombre' => $cTarea['nombre'],
-                        'estado' => $cTarea['estado']
+                        // 'ctt_id' => $ctarea['ctt_id'],
+                        'nombre' => $ctarea['nombre'],
+                        // 'requerido' => $ctarea['requerido'],
+                        'estado' => $ctarea['estado'],
                     ]);
 
+                for ($i = 0; $i < sizeof($eliminados); $i++) {
+                    if ($id && $eliminados[$i]['id']) {
+                        DB::delete("DELETE FROM crm.dtipo_tarea WHERE ctt_id = " . $id . " and id = " . $eliminados[$i]['id']);
+                    }
+                }
+
+                // for ($i = 0; $i < sizeof($tareas); $i++) {
+                //     $tabl = DTipoTarea::where('ctt_id', $id)->where('id', $tareas[$i])->first();
+                //     if (!$tabl) {
+                //         DB::insert('INSERT INTO crm.dtipo_tarea (id, ctt_id) values (?, ?)', [$tareas[$i]['id'], $id]);
+                //     }
+                // }
                 for ($i = 0; $i < sizeof($tareas); $i++) {
-                    if ($tareas[$i]['id']) {
-                        DTipoTarea::where('id', $tareas[$i]['id'])
-                            ->update($tareas[$i]);
-                    } else {
+                    $tabl = DTipoTarea::where('ctt_id', $id)->where('id', $tareas[$i])->first();
+                    if (!$tabl) {
                         DTipoTarea::create([
                             "ctt_id" => $id,
                             "nombre" => $tareas[$i]['nombre'],
@@ -76,17 +130,16 @@ class CTareaController extends Controller
                     }
                 }
 
-                // return CTipoTarea::with('dTipoTarea')->orderBy('id', 'DESC')->get();
-                return CTipoTarea::with('dTipoTarea')->get();
+                return $ctarea;
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo la Tarea con éxito', $dataRe));
+            $dataRe = CTipoTarea::with('dTipoTarea')->where('id', $id)->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo el tablero con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
-        // UPDATE crm.dtipo_tarea
-        // SET ctt_id=80, nombre='ULLOA VICENTE', requerido=true, estado=true, created_at='2023-07-10 10:15:51.000', updated_at='2023-07-10 10:15:51.000', deleted_at=NULL
-        // WHERE id=23;
     }
+
 
 }
