@@ -29,6 +29,8 @@ class Caso extends Model
         "ent_id",
         "user_id",
         "fecha_vencimiento",
+        "bloqueado",
+        "bloqueado_user"
     ];
 
     public function user()

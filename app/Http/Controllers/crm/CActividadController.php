@@ -12,13 +12,28 @@ use Illuminate\Http\Request;
 
 class CActividadController extends Controller
 {
+
+   public  $resMenapp = app()->make('App\Http\Resources\RespuestaApi');
+
+
+
+
+
+
     public function addCTipoActividad(Request $request)
     {
+
+
+    //$this->$resMenapp->metodo2();
+
+
+
         try {
             CTipoActividad::create($request->all());
 
             $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
+//            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tipo de Actividad con éxito', $actividades));
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tipo de Actividad con éxito', $actividades));
 
         } catch (Exception $e) {

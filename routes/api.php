@@ -105,6 +105,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     //------------------------------------------------------------------>CASO
     Route::put('/editCaso', [CasoController::class, 'edit']);
     Route::post('/addCaso', [CasoController::class, 'add']);
+    Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
+
 
 
 
