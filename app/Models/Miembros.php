@@ -36,6 +36,6 @@ class Miembros extends Model
 
     public function usuario()
     {
-        return $this->hasMany(User::class, "id", "user_id");
+        return $this->belongsTo(User::class, "user_id");
     }
 }
