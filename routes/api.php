@@ -239,7 +239,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
     Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
-
+    Route::post('/editChatGrupal/{id}', [ChatController::class, 'editChatGrupal']); // Editar
 
 });
 
