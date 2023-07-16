@@ -29,4 +29,15 @@ class ChatController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function listChatByCasoId($id)
+    {
+        try {
+            $chatGroup = ChatGroups::where('caso_id', $id)->with('chatMiembros.usuario')->orderBy("id", "desc")->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $chatGroup));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }

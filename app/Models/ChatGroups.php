@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Miembros;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,7 +27,7 @@ class ChatGroups extends Model
 
     public function chatMiembros()
     {
-        return $this->hasMany(Miembros::class, "id");
+        return $this->hasMany(Miembros::class, "chat_group_id", "id");
     }
 
 }

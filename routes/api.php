@@ -234,10 +234,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('listCTipoResultadoCierreByIdCasoId/{caso_id}', [CTipoResultadoCierreController::class, 'listCTipoResultadoCierreByIdCasoId']); // listar
     Route::post('/editCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'editCTipoResultadoCierre']); // Edita la actividad
     Route::delete('/deleteCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'deleteCTipoResultadoCierre']); // Eliminar
-    
+
     // CHAT GRUPAL
-    
+
     Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
+    Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
 
 
 });

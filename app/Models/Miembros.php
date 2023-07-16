@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,7 +31,11 @@ class Miembros extends Model
 
     public function miembros()
     {
-        return $this->hasMany(Miembros::class, "id", "id");
+        return $this->hasMany(Miembros::class);
     }
 
+    public function usuario()
+    {
+        return $this->hasMany(User::class, "id", "user_id");
+    }
 }
