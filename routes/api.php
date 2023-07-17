@@ -98,7 +98,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 
     //------------------------------------------------------------------>FASE
-    Route::get('/listFase', [FaseController::class, 'list']);
+    Route::get('/listFase/{tableroId}', [FaseController::class, 'list']);
     Route::post('/addFase', [FaseController::class, 'add']);
     // Route::put('/update-flujo', [FlujoController::class, 'update']);
     // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
@@ -123,7 +123,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
 
-    Route::get('/listAnalistas', [UsersOpenceoController::class, 'listAnalistas']);
+    Route::get('/listAnalistas/{tableroId}', [UsersOpenceoController::class, 'listAnalistas']);
     Route::get('/listUsuariosActivos', [UsersOpenceoController::class, 'listUsuariosActivos']);
 
     /************************  OPENCEO   *********************** */

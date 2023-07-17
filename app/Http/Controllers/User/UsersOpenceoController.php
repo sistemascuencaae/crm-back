@@ -5,12 +5,17 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class UsersOpenceoController extends Controller
 {
-    public function listAnalistas()
+    public function listAnalistas($tableroId)
     {
-        $data = User::with('UsuarioDynamo')->where('usu_tipo_analista', 1)->get();
+        //$data = User::with('UsuarioDynamo')->where('usu_tipo_analista', 1)->get();
+        $data = DB::select('SELECT u.* from crm.tablero ta
+        inner join crm.tablero_user tu on tu.tab_id = ta.id
+        inner join public.users u on u.id  = tu.user_id
+        where ta.id = '.$tableroId);
         return response()->json(RespuestaApi::returnResultado('success', 'Lista de usuarios analistas', $data));
     }
 
