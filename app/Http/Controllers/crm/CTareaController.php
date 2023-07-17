@@ -112,12 +112,6 @@ class CTareaController extends Controller
                     }
                 }
 
-                // for ($i = 0; $i < sizeof($tareas); $i++) {
-                //     $tabl = DTipoTarea::where('ctt_id', $id)->where('id', $tareas[$i])->first();
-                //     if (!$tabl) {
-                //         DB::insert('INSERT INTO crm.dtipo_tarea (id, ctt_id) values (?, ?)', [$tareas[$i]['id'], $id]);
-                //     }
-                // }
                 for ($i = 0; $i < sizeof($tareas); $i++) {
                     $tabl = DTipoTarea::where('ctt_id', $id)->where('id', $tareas[$i])->first();
                     if (!$tabl) {

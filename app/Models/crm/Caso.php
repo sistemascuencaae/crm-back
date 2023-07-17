@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\crm\CTipoTarea;
 use App\Models\User;
 use App\Models\crm\Entidad;
 use App\Models\crm\AVResumenCaso;
@@ -30,7 +31,8 @@ class Caso extends Model
         "user_id",
         "fecha_vencimiento",
         "bloqueado",
-        "bloqueado_user"
+        "bloqueado_user",
+        "ctt_id"
     ];
 
     public function user()
@@ -87,5 +89,10 @@ class Caso extends Model
     public function dTipoActividades()
     {
         return $this->hasMany(DTipoActividad::class, "caso_id");
+    }
+
+    public function cTipoTarea()
+    {
+        return $this->belongsTo(CTipoTarea::class, "ctt_id", 'id');
     }
 }

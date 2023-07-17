@@ -12,22 +12,8 @@ use Illuminate\Http\Request;
 
 class CActividadController extends Controller
 {
-
-   public  $resMenapp = app()->make('App\Http\Resources\RespuestaApi');
-
-
-
-
-
-
     public function addCTipoActividad(Request $request)
     {
-
-
-    //$this->$resMenapp->metodo2();
-
-
-
         try {
             CTipoActividad::create($request->all());
 

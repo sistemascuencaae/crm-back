@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
@@ -234,6 +235,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'editCTipoResultadoCierre']); // Edita la actividad
     Route::delete('/deleteCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'deleteCTipoResultadoCierre']); // Eliminar
 
+    // CHAT GRUPAL
+
+    Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
+    Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
+    Route::post('/editChatGrupal/{id}', [ChatController::class, 'editChatGrupal']); // Editar
 
 });
 
