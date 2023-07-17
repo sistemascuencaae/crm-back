@@ -12,52 +12,38 @@ use Illuminate\Http\Request;
 
 class CActividadController extends Controller
 {
-
-   public  $resMenapp = app()->make('App\Http\Resources\RespuestaApi');
-
-
-
-
-
-
     public function addCTipoActividad(Request $request)
     {
-
-
-    //$this->$resMenapp->metodo2();
-
-
-
         try {
             CTipoActividad::create($request->all());
 
             $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-//            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tipo de Actividad con éxito', $actividades));
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tipo de Actividad con éxito', $actividades));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tipo registro con éxito', $actividades));
 
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function listActividadesByIdTablero($tab_id)
+    public function listCTipoActividadByIdTablero($tab_id)
     {
         try {
             $actividades = CTipoActividad::where('tab_id', $tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades del tablero con éxito', $actividades));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo los registros con éxito', $actividades));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function listActividadesByIdTableroEstadoActivo($tab_id)
+    public function listCTipoActividadByIdTableroEstadoActivo($tab_id)
     {
         try {
             $actividades = CTipoActividad::where('tab_id', $tab_id)->where('estado', true)->orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades del tablero con éxito', $actividades));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo los registros con éxito', $actividades));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -108,14 +94,14 @@ class CActividadController extends Controller
     //     }
     // }
 
-    public function updateCTipoActividad(Request $request, $id)
+    public function editCTipoActividad(Request $request, $id)
     {
         try {
             $actividad = CTipoActividad::findOrFail($id);
 
             $actividad->update($request->all());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó el tipo de Actividad con éxito', $actividad));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó el registro con éxito', $actividad));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -128,7 +114,7 @@ class CActividadController extends Controller
 
             $actividad->delete();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito el tipo de actividad', $actividad));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito el registro', $actividad));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }

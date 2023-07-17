@@ -46,7 +46,7 @@ class CasoController extends Controller
 
     public function listCasoById($id)
     {
-        $data = Caso::with('user', 'entidad')->where('id', $id)->get();
+        $data = Caso::with('user', 'entidad', 'cTipoTarea.dTipoTarea')->where('id', $id)->get();
         return response()->json(RespuestaApi::returnResultado('success', 'El caso se listo con éxito', $data));
     }
 
@@ -76,6 +76,7 @@ class CasoController extends Controller
             "data" => $data
         ]);
     }
+
 }
 
 

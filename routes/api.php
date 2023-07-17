@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\CTareaController;
+use App\Http\Controllers\crm\CTipoResultadoCierreController;
 use App\Http\Controllers\crm\DActividadController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
@@ -210,11 +212,11 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // Route::post('/addCActividad', [CActividadController::class, 'addCActividad']); // guardar
     Route::post('/addCTipoActividad', [CActividadController::class, 'addCTipoActividad']); // guardar
-    Route::get('listActividadesByIdTablero/{tab_id}', [CActividadController::class, 'listActividadesByIdTablero']); // listar
-    Route::get('listActividadesByIdTableroEstadoActivo/{tab_id}', [CActividadController::class, 'listActividadesByIdTableroEstadoActivo']); // listar
-    Route::get('listActividadesByIdCasoId/{caso_id}', [CActividadController::class, 'listActividadesByIdCasoId']); // listar
+    Route::get('listCTipoActividadByIdTablero/{tab_id}', [CActividadController::class, 'listCTipoActividadByIdTablero']); // listar
+    Route::get('listCTipoActividadByIdTableroEstadoActivo/{tab_id}', [CActividadController::class, 'listCTipoActividadByIdTableroEstadoActivo']); // listar
+    Route::get('listCTipoActividadByIdCasoId/{caso_id}', [CActividadController::class, 'listCTipoActividadByIdCasoId']); // listar
     // Route::get('allCTipoActividades', [CActividadController::class, 'allCTipoActividades']); // listar todo
-    Route::post('/updateCTipoActividad/{id}', [CActividadController::class, 'updateCTipoActividad']); // Edita la actividad
+    Route::post('/editCTipoActividad/{id}', [CActividadController::class, 'editCTipoActividad']); // Edita la actividad
     Route::delete('/deleteCTipoActividad/{id}', [CActividadController::class, 'deleteCTipoActividad']); // Eliminar
 
     // DACTIVIDAD
@@ -224,6 +226,20 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/updateDActividad/{id}', [DActividadController::class, 'updateDActividad']); // Edita la actividad
     // Route::delete('/deleteCTipoActividad/{id}', [DActividadController::class, 'deleteCTipoActividad']); // Eliminar
 
+    // CTIPORESULTADOCIERRE
+
+    Route::post('/addCTipoResultadoCierre', [CTipoResultadoCierreController::class, 'addCTipoResultadoCierre']); // guardar
+    Route::get('listCTipoResultadoCierreByIdTablero/{tab_id}', [CTipoResultadoCierreController::class, 'listCTipoResultadoCierreByIdTablero']); // listar
+    Route::get('listCTipoResultadoCierreByIdTableroEstadoActivo/{tab_id}', [CTipoResultadoCierreController::class, 'listCTipoResultadoCierreByIdTableroEstadoActivo']); // listar
+    Route::get('listCTipoResultadoCierreByIdCasoId/{caso_id}', [CTipoResultadoCierreController::class, 'listCTipoResultadoCierreByIdCasoId']); // listar
+    Route::post('/editCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'editCTipoResultadoCierre']); // Edita la actividad
+    Route::delete('/deleteCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'deleteCTipoResultadoCierre']); // Eliminar
+
+    // CHAT GRUPAL
+
+    Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
+    Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
+    Route::post('/editChatGrupal/{id}', [ChatController::class, 'editChatGrupal']); // Editar
 
 });
 
