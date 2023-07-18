@@ -21,6 +21,7 @@ use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
+use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UsersOpenceoController;
 use App\Http\Controllers\JWTController;
@@ -182,6 +183,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTablero', [TableroController::class, 'addTablero']); // guardar
     Route::get('/listTableroByUser', [TableroController::class, 'listTableroByUser']); // listar
     Route::get('/listTableroInactivos', [TableroController::class, 'listTableroInactivos']); // listar tableros inactivos
+    Route::get('/listTableroMisCasos/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
     Route::post('/updateTablero/{id}', [TableroController::class, 'updateTablero']); // Editar
 
     // DEPARTAMENTO
@@ -241,6 +243,16 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
     Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
     Route::post('/editChatGrupal/{id}', [ChatController::class, 'editChatGrupal']); // Editar
+
+    // TIPO CASO
+
+    Route::post('/addTipoCaso', [TipoCasoController::class, 'addTipoCaso']); // guardar
+    Route::get('listTipoCasoByIdTablero/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTablero']); // listar
+    Route::get('listTipoCasoByIdTableroEstadoActivo/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTableroEstadoActivo']); // listar
+    Route::get('listTipoCasoByIdCasoId/{caso_id}', [TipoCasoController::class, 'listTipoCasoByIdCasoId']); // listar
+    Route::post('/editTipoCaso/{id}', [TipoCasoController::class, 'editTipoCaso']); // Edita la actividad
+    Route::delete('/deleteTipoCaso/{id}', [TipoCasoController::class, 'deleteTipoCaso']); // Eliminar
+
 
 });
 
