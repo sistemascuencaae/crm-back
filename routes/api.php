@@ -106,9 +106,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
 
     //------------------------------------------------------------------>CASO
-    Route::put('/editCaso', [CasoController::class, 'edit']);
+    Route::put('/editCasoFase', [CasoController::class, 'editFase']);
     Route::post('/addCaso', [CasoController::class, 'add']);
     Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
+    Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
 
 
 

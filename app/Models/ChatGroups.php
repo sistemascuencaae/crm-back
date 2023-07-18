@@ -12,7 +12,7 @@ class ChatGroups extends Model
     use HasFactory;
 
     protected $table = 'crm.chat_groups';
-    protected $fillable = ["nombre", "uniqd", "caso_id"];
+    protected $fillable = ["nombre", "uniqd"];
 
     public function setCreatedAtAttribute($value)
     {

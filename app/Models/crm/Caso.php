@@ -25,14 +25,19 @@ class Caso extends Model
         "nombre",
         "descripcion",
         "estado",
-        "prioridad",
         "orden",
+        "created_at",
+        "updated_at",
+        "deleted_at",
         "ent_id",
         "user_id",
         "fecha_vencimiento",
+        "prioridad",
+        "tar_id",
         "bloqueado",
         "bloqueado_user",
-        "ctt_id"
+        "ctt_id",
+        "fase_anterior_id",
     ];
 
     public function user()
@@ -48,9 +53,13 @@ class Caso extends Model
     {
         return $this->belongsTo(AVResumenCaso::class, "id");
     }
-    public function Tareas()
+    public function tareas()
     {
         return $this->hasMany(Tareas::class, "caso_id");
+    }
+    public function miembros()
+    {
+        return $this->hasMany(Miembros::class, "caso_id");
     }
     public function Actividad()
     {
