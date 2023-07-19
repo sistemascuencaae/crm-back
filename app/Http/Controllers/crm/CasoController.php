@@ -54,6 +54,7 @@ class CasoController extends Controller
                 $newGrupo->save();
 
                 $caso->nombre = 'CASO # '.$caso->id;
+                $caso->descripcion = 'CASO # '.$caso->id;
                 $caso->save();
 
                 for ($i=0; $i < sizeof($miembros); $i++) {
