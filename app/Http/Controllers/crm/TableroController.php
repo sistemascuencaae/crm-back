@@ -112,7 +112,7 @@ class TableroController extends Controller
             // where u.id = " . $user_id);
 
             $data = DB::select("select
-            u.id as id_usuario_miembro,  u.name as usuario_miembro,u2.name as dueno_caso, cs.nombre as nombre_caso, cs.id as caso_id,
+            u.id as id_usuario_miembro,  u.name as usuario_miembro,u2.name as dueno_caso, cs.nombre as nombre, cs.id as caso_id,
            cs.fecha_vencimiento, cs.created_at,ent.ent_id, (ent.ent_apellidos || ' '|| ent.ent_nombres) as cliente, f.nombre  as fase_nombre, f.color_id as fase_color, cs.prioridad,
            cg.uniqd, cg.nombre as nombre_grupo_chat, f.tab_id
            from crm.miembros m 
