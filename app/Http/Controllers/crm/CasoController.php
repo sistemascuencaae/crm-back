@@ -66,7 +66,7 @@ class CasoController extends Controller
                 return $caso;
             });
 
-            $data = Caso::with('user', 'entidad', 'resumen')->where('id', $casoCreado['id'])->first();
+            $data = Caso::with('user', 'entidad', 'resumen', 'miembros')->where('id', $casoCreado['id'])->first();
             return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar datos', $th->getMessage()));
