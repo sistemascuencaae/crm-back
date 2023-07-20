@@ -14,20 +14,15 @@ class Tareas extends Model implements Auditable
     use AuditableTrait;
 
     protected $table = 'crm.tareas';
-    use SoftDeletes;
+
     protected $fillable = [
         "caso_id",
         "nombre",
         "requerido",
         "estado",
-        "created_at",
-        "updated_at",
-        "deleted_at",
-        "ctti_id",
+        "ctt_id",
         "marcado",
     ];
-
-
 
     public function setCreatedAtAttribute($value)
     {
@@ -39,6 +34,5 @@ class Tareas extends Model implements Auditable
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-
 
 }
