@@ -23,7 +23,7 @@ class TareaController extends Controller
         }
     }
 
-    public function editTareas(Request $request, $id)
+    public function editTareas(Request $request, $caso_id)
     {
         try {
             $eliminados = $request->input('eliminados');
@@ -31,36 +31,29 @@ class TareaController extends Controller
             $ctarea = $request->all();
 
             //echo(json_encode($eliminados[0]['id']));
-            DB::transaction(function () use ($ctarea, $id, $eliminados, $tareas) {
-                // CTipoTarea::where('id', $id)
-                //     ->update([
-                //         // 'ctt_id' => $ctarea['ctt_id'],
-                //         'nombre' => $ctarea['nombre'],
-                //         // 'requerido' => $ctarea['requerido'],
-                //         'estado' => $ctarea['estado'],
-                //     ]);
+            DB::transaction(function () use ($ctarea, $caso_id, $eliminados, $tareas) {
+
+                for ($i = 0; $i < sizeof($tareas); $i++) {
+                    // echo(json_encode($tareas[$i]['id']));
+                    $tar = Tareas::find($tareas[$i]['id']);
+                    if ($tar) {
+                        $tar->update([
+                            'marcado' => $tareas[$i]['marcado'],
+                        ]);
+                    }
+                }
 
                 for ($i = 0; $i < sizeof($eliminados); $i++) {
-                    if ($id && $eliminados[$i]['id']) {
-                        DB::delete("DELETE FROM crm.tareas WHERE caso_id = " . $id . " and id = " . $eliminados[$i]['id']);
+                    if ($caso_id && $eliminados[$i]['id']) {
+                        DB::delete("DELETE FROM crm.tareas WHERE caso_id = " . $caso_id . " and id = " . $eliminados[$i]['id']);
                     }
                 }
 
                 for ($i = 0; $i < sizeof($tareas); $i++) {
-                    $tabl = Tareas::where('caso_id', $id)->where('id', $tareas[$i])->first();
+                    $tabl = Tareas::where('caso_id', $caso_id)->where('id', $tareas[$i])->first();
                     if (!$tabl) {
-                        // id
-                        // caso_id
-                        // nombre
-                        // requerido
-                        // estado
-                        // created_at
-                        // updated_at
-                        // deleted_at
-                        // ctt_id
-                        // marcado
                         Tareas::create([
-                            "caso_id" => $id,
+                            "caso_id" => $caso_id,
                             "nombre" => $tareas[$i]['nombre'],
                             "requerido" => $tareas[$i]['requerido'],
                             "estado" => $tareas[$i]['estado'],
@@ -69,7 +62,6 @@ class TareaController extends Controller
                         ]);
                     }
                 }
-                // echo (json_encode($ctarea));
                 return $ctarea;
             });
 
