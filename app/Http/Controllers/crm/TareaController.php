@@ -69,13 +69,13 @@ class TareaController extends Controller
                         ]);
                     }
                 }
-                echo (json_encode($ctarea));
+                // echo (json_encode($ctarea));
                 return $ctarea;
             });
 
-            // $dataRe = CTipoTarea::with('dTipoTarea')->where('id', $id)->first();
+            $dataRe = Tareas::orderBy('id', 'DESC')->get();
 
-            // return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo el tablero con éxito', $dataRe));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
