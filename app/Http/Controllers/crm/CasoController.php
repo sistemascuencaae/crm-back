@@ -5,9 +5,11 @@ namespace App\Http\Controllers\crm;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Http\Resources\RespuestaApi2;
 use App\Models\ChatGroups;
 use App\Models\crm\Caso;
 use App\Models\crm\DTipoTarea;
+use App\Models\crm\Fase;
 use App\Models\crm\Miembros;
 use App\Models\crm\Tareas;
 use Exception;
@@ -41,7 +43,7 @@ class CasoController extends Controller
                     $tarea->nombre = $dtt->nombre;
                     $tarea->requerido = $dtt->requerido;
                     $tarea->estado = $dtt->estado;
-                    $tarea->ctti_id = $caso->ctt_id;
+                    $tarea->ctt_id = $caso->ctt_id;
                     $tarea->marcado = false;
                     $caso->tareas()->save($tarea);
                 }
@@ -63,28 +65,14 @@ class CasoController extends Controller
                     $miembro->chat_group_id = $newGrupo->id;
                     $caso->miembros()->save($miembro);
                 }
-                return $caso;
+
+                return  Caso::with('user', 'entidad', 'resumen', 'miembros','tareas')->where('id', $caso->id)->first();
             });
 
-            $data = Caso::with('user', 'entidad', 'resumen', 'miembros','tareas')->where('id', $casoCreado['id'])->first();
-            return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $casoCreado));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar datos', $th->getMessage()));
         }
-
-
-
-
-
-
-        // try {
-        //     $result = Caso::create($request->all());
-        //     $tareas = $request->input('tarea');
-        //     $data = Caso::with('user', 'entidad', 'resumen')->where('id', $result['id'])->first();
-        //     return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito', $data));
-        // } catch (\Throwable $th) {
-        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar datos', $th->getMessage()));
-        // }
     }
 
     public function list()
