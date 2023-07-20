@@ -253,7 +253,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editTipoCaso/{id}', [TipoCasoController::class, 'editTipoCaso']); // Edita la actividad
     Route::delete('/deleteTipoCaso/{id}', [TipoCasoController::class, 'deleteTipoCaso']); // Eliminar
 
+    // TAREAS INDIVIDUALES
 
+    // Route::post('/addTareas', [TareaController::class, 'addTareas']); // guardar
+    Route::get('listTareasCasoById/{caso_id}', [TareaController::class, 'listTareasCasoById']); // by caso_id
+    Route::post('/editTareas/{caso_id}', [TareaController::class, 'editTareas']); // Editar
 });
 
 Route::group(["prefix" => "credito"], function ($router) {
