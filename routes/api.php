@@ -262,7 +262,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // MIEMBROS DEL CASO
 
-    Route::get('editMiembrosCasoById/{caso_id}', [CasoController::class, 'editMiembrosCasoById']); // by caso_id
+    Route::get('listMiembrosCasoById/{caso_id}', [CasoController::class, 'listMiembrosCasoById']); // by caso_id
 });
 
 Route::group(["prefix" => "credito"], function ($router) {
