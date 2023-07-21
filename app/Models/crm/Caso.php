@@ -33,7 +33,6 @@ class Caso extends Model
         "user_id",
         "fecha_vencimiento",
         "prioridad",
-        "tar_id",
         "bloqueado",
         "bloqueado_user",
         "ctt_id",
