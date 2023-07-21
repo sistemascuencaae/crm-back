@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -40,5 +41,10 @@ class Miembros extends Model implements Auditable
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["deleted_at"] = Carbon::now();
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, "user_id", "id");
     }
 }
