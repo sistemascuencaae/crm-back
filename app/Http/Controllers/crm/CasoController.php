@@ -66,7 +66,7 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
 
-                return  Caso::with('user', 'entidad', 'resumen', 'miembros','tareas')->where('id', $caso->id)->first();
+                return Caso::with('user', 'entidad', 'resumen', 'miembros', 'tareas')->where('id', $caso->id)->first();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $casoCreado));
@@ -142,14 +142,14 @@ class CasoController extends Controller
         return $data;
     }
 
-    public function editMiembrosCasoById($caso_id)
+    public function listMiembrosCasoById($caso_id)
     {
         try {
-            $caso = Caso::findOrFail($caso_id);
-            $data = $caso->miembros;
-            return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
+            $miembros = Miembros::where('caso_id', $caso_id)->with('usuario')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $miembros));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 }
