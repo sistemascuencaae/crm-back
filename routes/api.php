@@ -255,9 +255,14 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // TAREAS INDIVIDUALES
 
-    // Route::post('/addTareas', [TareaController::class, 'addTareas']); // guardar
     Route::get('listTareasCasoById/{caso_id}', [TareaController::class, 'listTareasCasoById']); // by caso_id
-    Route::post('/editTareas/{caso_id}', [TareaController::class, 'editTareas']); // Editar
+    Route::post('/addTareas', [TareaController::class, 'addTareas']); // guardar
+    Route::post('/editTareas/{id}', [TareaController::class, 'editTareas']); // Editar
+    Route::delete('/deleteTareas/{id}', [TareaController::class, 'deleteTareas']); // Eliminar
+
+    // MIEMBROS DEL CASO
+
+    Route::get('editMiembrosCasoById/{caso_id}', [CasoController::class, 'editMiembrosCasoById']); // by caso_id
 });
 
 Route::group(["prefix" => "credito"], function ($router) {

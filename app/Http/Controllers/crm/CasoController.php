@@ -51,15 +51,15 @@ class CasoController extends Controller
 
 
                 $newGrupo = new ChatGroups();
-                $newGrupo->nombre = 'GRUPO CASO '.$caso->id;
-                $newGrupo->uniqd = 'caso.grupo.'.$caso->id;
+                $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
+                $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
                 $newGrupo->save();
 
-                $caso->nombre = 'CASO # '.$caso->id;
-                $caso->descripcion = 'CASO # '.$caso->id;
+                $caso->nombre = 'CASO # ' . $caso->id;
+                $caso->descripcion = 'CASO # ' . $caso->id;
                 $caso->save();
 
-                for ($i=0; $i < sizeof($miembros); $i++) {
+                for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
                     $miembro->user_id = $miembros[$i];
                     $miembro->chat_group_id = $newGrupo->id;
@@ -140,5 +140,16 @@ class CasoController extends Controller
         INNER JOIN crm.tablero ta on ta.id = fa.tab_id
         where ca.id = ' . $casoId);
         return $data;
+    }
+
+    public function editMiembrosCasoById($caso_id)
+    {
+        try {
+            $caso = Caso::findOrFail($caso_id);
+            $data = $caso->miembros;
+            return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
+        }
     }
 }
