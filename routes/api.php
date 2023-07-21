@@ -237,27 +237,28 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('listCTipoResultadoCierreByIdCasoId/{caso_id}', [CTipoResultadoCierreController::class, 'listCTipoResultadoCierreByIdCasoId']); // listar
     Route::post('/editCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'editCTipoResultadoCierre']); // Edita la actividad
     Route::delete('/deleteCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'deleteCTipoResultadoCierre']); // Eliminar
-
+    
     // CHAT GRUPAL
-
+    
     Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
     Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
     Route::post('/editChatGrupal/{id}', [ChatController::class, 'editChatGrupal']); // Editar
-
+    
     // TIPO CASO
-
+    
     Route::post('/addTipoCaso', [TipoCasoController::class, 'addTipoCaso']); // guardar
     Route::get('listTipoCasoByIdTablero/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTablero']); // listar
     Route::get('listTipoCasoByIdTableroEstadoActivo/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTableroEstadoActivo']); // listar
     Route::get('listTipoCasoByIdCasoId/{caso_id}', [TipoCasoController::class, 'listTipoCasoByIdCasoId']); // listar
     Route::post('/editTipoCaso/{id}', [TipoCasoController::class, 'editTipoCaso']); // Edita la actividad
     Route::delete('/deleteTipoCaso/{id}', [TipoCasoController::class, 'deleteTipoCaso']); // Eliminar
-
+    
     // TAREAS INDIVIDUALES
-
-    // Route::post('/addTareas', [TareaController::class, 'addTareas']); // guardar
+    
     Route::get('listTareasCasoById/{caso_id}', [TareaController::class, 'listTareasCasoById']); // by caso_id
-    Route::post('/editTareas/{caso_id}', [TareaController::class, 'editTareas']); // Editar
+    Route::post('/addTareas', [TareaController::class, 'addTareas']); // guardar
+    Route::post('/editTareas/{id}', [TareaController::class, 'editTareas']); // Editar
+    Route::delete('/deleteTareas/{id}', [TareaController::class, 'deleteTareas']); // Eliminar
 });
 
 Route::group(["prefix" => "credito"], function ($router) {
