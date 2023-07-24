@@ -37,6 +37,7 @@ class Caso extends Model
         "bloqueado_user",
         "ctt_id",
         "fase_anterior_id",
+        "tc_id",
     ];
 
     public function user()
@@ -44,6 +45,10 @@ class Caso extends Model
         return $this->belongsTo(User::class, "user_id", "id");
     }
 
+    public function tipocaso()
+    {
+        return $this->belongsTo(TipoCaso::class, "user_id", "id");
+    }
     public function entidad()
     {
         return $this->belongsTo(Entidad::class, "ent_id");
