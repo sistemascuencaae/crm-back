@@ -158,4 +158,42 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+
+    public function editMiembrosCaso(Request $request, $caso_id)
+    {
+        try {
+            $eliminados = $request->input('eliminados');
+            $usuarios = $request->input('usuarios');
+            $miembros = $request->all();
+
+            //echo(json_encode($eliminados[0]['id']));
+            DB::transaction(function () use ($miembros, $caso_id, $eliminados, $usuarios, $request) {
+
+                for ($i = 0; $i < sizeof($eliminados); $i++) {
+                    if ($caso_id && $eliminados[$i]['id']) {
+                        DB::delete("DELETE FROM crm.miembros WHERE caso_id = " . $caso_id . " and user_id = " . $eliminados[$i]['id']);
+                    }
+                }
+
+                for ($i = 0; $i < sizeof($usuarios); $i++) {
+                    $tabl = Miembros::where('caso_id', $caso_id)->where('user_id', $usuarios[$i])->first();
+                    if (!$tabl) {
+                        Miembros::create([
+                            "caso_id" => $caso_id,
+                            "user_id" => $usuarios[$i]['id'],
+                            "chat_group_id" => $request->chat_group_id
+                        ]);
+                    }
+                }
+                return $miembros;
+            });
+
+            $dataRe = Miembros::orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 }
