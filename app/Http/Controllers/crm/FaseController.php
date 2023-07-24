@@ -18,7 +18,7 @@ class FaseController extends Controller
     public function list($tableroId)
     {
         $data = Fase::with('caso.user','caso.entidad', 'caso.resumen', 'caso.tareas','caso.actividad','caso.miembros.usuario')->where('tab_id',$tableroId)->get();
-        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigion con exito', $data));
+        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $data));
     }
 
     public function edit(Request $request)
@@ -35,7 +35,7 @@ class FaseController extends Controller
             "generar_caso" => $request->input('generar_caso'),
             "color_id" => $request->input('color_id'),
         ]);
-        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigion con exito', $data));
+        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error al actualizar fase.', $th->getMessage()));
         }
