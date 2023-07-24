@@ -21,7 +21,7 @@ class FlujoController extends Controller
     public function list()
     {
         $data = Flujo::with('tarea','tarea.User','tarea.Entidad')->get();
-        return response()->json(RespuestaApi::returnResultado('success', 'El listado de flujos se consigion con exito', $data));
+        return response()->json(RespuestaApi::returnResultado('success', 'El listado de flujos se consigiocon exito', $data));
     }
     public function create(Request $request)
     {
@@ -57,7 +57,7 @@ class FlujoController extends Controller
     }
 
 
-    public function updateFlujos(Request $request){ 
+    public function updateFlujos(Request $request){
         $listaIds = $request->input('listaIds');
         try {
             for ($i = 0; $i < sizeof($listaIds); $i++) {

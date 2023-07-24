@@ -69,6 +69,11 @@ class CasoController extends Controller
                 return Caso::with('user', 'entidad', 'resumen', 'miembros', 'tareas')->where('id', $caso->id)->first();
             });
 
+            //$data = $this->getCasoJoinTablero($casoCreado->id);
+            //$data = Caso::with('user','entidad', 'resumen', 'tareas','actividad')->where('id',$caso->id)->get();
+            //echo('ESTA ES LA DATA:'.json_encode($data));
+            broadcast(new TableroEvent($casoCreado));
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $casoCreado));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar datos', $th->getMessage()));
@@ -78,12 +83,12 @@ class CasoController extends Controller
     public function list()
     {
         $data = Caso::with('caso.user', 'caso.entidad')->get();
-        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigion con exito', $data));
+        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigio con exito', $data));
     }
     public function casoById($id)
     {
         $data = Caso::with('user', 'entidad', 'resumen')->where('id', $id)->first();
-        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigion con exito', $data));
+        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigio con exito', $data));
     }
     public function editFase(Request $request)
     {
@@ -139,7 +144,8 @@ class CasoController extends Controller
         INNER JOIN crm.fase fa on fa.id = ca.fas_id
         INNER JOIN crm.tablero ta on ta.id = fa.tab_id
         where ca.id = ' . $casoId);
-        return $data;
+        //echo('<-------------------------------->                 '.json_encode($data).'            <-------------------------------->');
+        return $data[0];
     }
 
     public function listMiembrosCasoById($caso_id)
@@ -152,6 +158,7 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
 
     public function editMiembrosCaso(Request $request, $caso_id)
     {
@@ -189,6 +196,8 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+}
+
 
     public function editPrioridadCaso(Request $request, $caso_id)
     {

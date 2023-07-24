@@ -9,6 +9,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 
 class TableroEvent implements ShouldBroadcastNow
 {
@@ -34,7 +35,7 @@ class TableroEvent implements ShouldBroadcastNow
         // echo(json_encode($this->data));
         // echo('aaaaaa--------------------------------');
         return [
-            'data' => $this->data[0]
+            'data' => $this->data
         ];
     }
 
@@ -53,7 +54,24 @@ class TableroEvent implements ShouldBroadcastNow
 
     public function broadcastOn()
     {
-        //echo('estamos en el lugar'.$this->tablero_id);
-        return new PrivateChannel('tablero.'.$this->data[0]->tablero_id );
+
+
+        $tableroId = DB::select('SELECT ta.id FROM crm.fase fa
+        INNER JOIN crm.tablero ta on ta.id = fa.tab_id
+        where fa.id = ' . $this->data->fas_id.' limit 1');
+
+        if(isset($this->data->tablero_id)){
+            return new PrivateChannel('tablero.'.$this->data->tablero_id );
+        }else{
+
+            return new PrivateChannel('tablero.'.$tableroId[0]->id);
+        }
+
+
+
+
+
+
+
     }
 }
