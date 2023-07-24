@@ -204,6 +204,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // CASO
 
     Route::get('/listCasoById/{id}', [CasoController::class, 'listCasoById']); // listar
+    Route::post('/editPrioridadCaso/{id}', [CasoController::class, 'editPrioridadCaso']); // Edita la tarea
 
     // CTAREA
 

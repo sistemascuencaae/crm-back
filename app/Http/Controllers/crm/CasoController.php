@@ -189,4 +189,26 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    public function editPrioridadCaso(Request $request, $caso_id)
+    {
+        try {
+            $caso = $request->all();
+
+            DB::transaction(function () use ($caso, $caso_id, $request) {
+
+                $caso = Caso::findOrFail($caso_id);
+
+                $caso->update([
+                    "prioridad" => $request->prioridad,
+                ]);
+            });
+
+            $data = Caso::with('user', 'entidad', 'resumen', 'miembros', 'tareas')->where('id', $caso_id)->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 }
