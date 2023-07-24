@@ -6,6 +6,7 @@ use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
+use App\Http\Controllers\crm\CondicionesController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
@@ -19,7 +20,6 @@ use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FaseController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
-use App\Http\Controllers\crm\parametroController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
@@ -267,9 +267,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('listMiembrosCasoById/{caso_id}', [CasoController::class, 'listMiembrosCasoById']); // by caso_id
     Route::post('/editMiembrosCaso/{id}', [CasoController::class, 'editMiembrosCaso']); // Editar
 
-    // PARAMETRO
+    // CONDICIONES
 
-    Route::get('/listParametro', [parametroController::class, 'listParametro']); // all
+    Route::get('/listCondiciones', [CondicionesController::class, 'listCondiciones']); // all
 });
 
 Route::group(["prefix" => "credito"], function ($router) {

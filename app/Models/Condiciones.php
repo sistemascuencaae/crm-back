@@ -7,14 +7,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class parametro extends Model
+class Condiciones extends Model
 {
     use HasFactory;
 
     use SoftDeletes;
 
-    protected $table = 'crm.parametros';
-    protected $fillable = ["variable1", "condicion", "variable2"];
+    protected $table = 'crm.condiciones';
+    protected $fillable = ["tipo", "fase_id", "parametro"];
 
     public function setCreatedAtAttribute($value)
     {
