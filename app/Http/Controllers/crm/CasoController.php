@@ -196,8 +196,6 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-}
-
 
     public function editPrioridadCaso(Request $request, $caso_id)
     {
