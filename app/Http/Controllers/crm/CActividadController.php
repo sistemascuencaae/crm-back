@@ -15,10 +15,11 @@ class CActividadController extends Controller
     public function addCTipoActividad(Request $request)
     {
         try {
-            CTipoActividad::create($request->all());
+            $cta = CTipoActividad::create($request->all());
 
-            $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            // $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
+            $actividades = CTipoActividad::where('tab_id',$cta->tab_id)->where('estado',true)->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tipo registro con éxito', $actividades));
 
