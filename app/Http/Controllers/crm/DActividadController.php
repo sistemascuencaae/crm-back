@@ -13,11 +13,11 @@ class DActividadController extends Controller
     public function addDTipoActividad(Request $request)
     {
         try {
-            DTipoActividad::create($request->all());
+            $dta = DTipoActividad::create($request->all());
 
             // $actividades = DTipoActividad::orderBy('id', 'DESC')->get();
 
-            $data = DTipoActividad::with('cTipoActividad', 'cTipoResultadoCierre')->orderBy('id', 'DESC')->get();
+            $data = DTipoActividad::with('cTipoActividad', 'cTipoResultadoCierre')->where('caso_id',$dta->caso_id)->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la Actividad con éxito', $data));
 
