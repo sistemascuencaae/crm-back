@@ -6,6 +6,7 @@ use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
+use App\Http\Controllers\crm\CondicionesController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
@@ -204,6 +205,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // CASO
 
     Route::get('/listCasoById/{id}', [CasoController::class, 'listCasoById']); // listar
+    Route::post('/editPrioridadCaso/{id}', [CasoController::class, 'editPrioridadCaso']); // Edita la tarea
 
     // CTAREA
 
@@ -264,6 +266,10 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::get('listMiembrosCasoById/{caso_id}', [CasoController::class, 'listMiembrosCasoById']); // by caso_id
     Route::post('/editMiembrosCaso/{id}', [CasoController::class, 'editMiembrosCaso']); // Editar
+
+    // CONDICIONES
+
+    Route::get('/listCondiciones', [CondicionesController::class, 'listCondiciones']); // all
 });
 
 Route::group(["prefix" => "credito"], function ($router) {
