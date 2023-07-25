@@ -33,4 +33,9 @@ class Tablero extends Model implements Auditable
     {
         return $this->hasMany(TableroUsuario::class, "tab_id");
     }
+
+    public function fase()
+    {
+        return $this->hasMany(Fase::class, "tab_id");
+    }
 }

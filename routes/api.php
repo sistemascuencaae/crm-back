@@ -12,6 +12,7 @@ use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
+use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
 use App\Http\Controllers\crm\CTipoResultadoCierreController;
 use App\Http\Controllers\crm\DActividadController;
@@ -82,6 +83,8 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 
 //cambios felipe sin actualizar
 Route::group(["prefix" => "crm"], function ($router) {
+    //CRM CONTROLLER PRINCIPAL
+    Route::get('/crmTablero/{id}', [CrmController::class, 'list']);
 
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
