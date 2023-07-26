@@ -168,7 +168,7 @@ class CasoController extends Controller
             $miembros = $request->all();
 
             //echo(json_encode($eliminados[0]['id']));
-            DB::transaction(function () use ($miembros, $caso_id, $eliminados, $usuarios, $request) {
+            $miembros = DB::transaction(function () use ($miembros, $caso_id, $eliminados, $usuarios, $request) {
 
                 for ($i = 0; $i < sizeof($eliminados); $i++) {
                     if ($caso_id && $eliminados[$i]['id']) {
@@ -189,8 +189,9 @@ class CasoController extends Controller
                 return $miembros;
             });
 
-            $dataRe = Miembros::orderBy('id', 'DESC')->get();
+            // $dataRe = Miembros::orderBy('id', 'DESC')->get();
 
+            $dataRe = Caso::with('user', 'entidad', 'resumen', 'miembros', 'tareas')->where('id', $caso_id)->first();
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
@@ -211,7 +212,7 @@ class CasoController extends Controller
                 ]);
             });
 
-            $data = Caso::with('user', 'entidad', 'resumen', 'miembros', 'tareas')->where('id', $caso_id)->first();
+            $data = Caso::with('user', 'entidad', 'resumen', 'miembros.usuario', 'tareas')->where('id', $caso_id)->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
