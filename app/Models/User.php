@@ -14,17 +14,41 @@ class User extends Authenticatable implements JWTSubject
 {
     protected $table = 'public.users';
     use HasFactory, Notifiable;
-    
+
     /**
      * The attributes that are mass assignable.
      *
      * @var array
      */
+    // protected $fillable = [
+    //     'name',
+    //     'email',
+    //     'password',
+    //     'usu_id',
+    // ];
     protected $fillable = [
         'name',
         'email',
+        'email_verified_at',
         'password',
+        'remember_token',
+        'created_at',
+        'updated_at',
+        'phone',
+        'birthdate',
+        'website',
+        'address',
+        'surname',
+        'avatar',
+        'fb',
+        'tw',
+        'inst',
+        'linke',
         'usu_id',
+        'usu_dep_id',
+        'usu_tipo_analista',
+        'dep_id',
+        'estado',
     ];
 
     /**
@@ -46,7 +70,7 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at' => 'datetime',
     ];
 
-    
+
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *
@@ -69,10 +93,11 @@ class User extends Authenticatable implements JWTSubject
 
     public function UsuarioDynamo()
     {
-       return $this->belongsTo(UsuarioDynamo::class,"usu_id");
+        return $this->belongsTo(UsuarioDynamo::class, "usu_id");
     }
     public function Departamento()
     {
-       return $this->belongsTo(Departamento::class,"dep_id");
+        return $this->belongsTo(Departamento::class, "dep_id", "id");
     }
+
 }
