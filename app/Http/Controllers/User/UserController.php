@@ -9,7 +9,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
-class UsersOpenceoController extends Controller
+class UserController extends Controller
 {
     public function listAnalistas($tableroId)
     {
@@ -42,4 +42,28 @@ class UsersOpenceoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function allUsers()
+    {
+        try {
+            $usuarios = User::orderBy("id", "asc")->with('Departamento')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuarios));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    public function addUser()
+    {
+
+    }
+    public function editUser($user_id)
+    {
+
+    }
+    public function deleteUser($user_id)
+    {
+
+    }
+
 }

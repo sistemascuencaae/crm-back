@@ -25,7 +25,7 @@ use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TipoTableroController;
-use App\Http\Controllers\User\UsersOpenceoController;
+use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\User\ProfileUserController;
 use Illuminate\Support\Facades\Route;
@@ -130,8 +130,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
 
-    Route::get('/listAnalistas/{tableroId}', [UsersOpenceoController::class, 'listAnalistas']);
-    Route::get('/listUsuariosActivos', [UsersOpenceoController::class, 'listUsuariosActivos']);
+    Route::get('/listAnalistas/{tableroId}', [UserController::class, 'listAnalistas']);
+    Route::get('/listUsuariosActivos', [UserController::class, 'listUsuariosActivos']);
 
     /************************  OPENCEO   *********************** */
 
@@ -270,6 +270,13 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::get('listMiembrosCasoById/{caso_id}', [CasoController::class, 'listMiembrosCasoById']); // by caso_id
     Route::post('/editMiembrosCaso/{id}', [CasoController::class, 'editMiembrosCaso']); // Editar
+
+    // USUARIOS
+
+    Route::get('allUsers', [UserController::class, 'allUsers']); // by caso_id
+    Route::post('/addUser', [UserController::class, 'addUser']); // guardar
+    Route::post('/editUser/{id}', [UserController::class, 'editUser']); // Editar
+    Route::delete('/deleteUser/{id}', [UserController::class, 'deleteUser']); // Eliminar
 
     // CONDICIONES
 

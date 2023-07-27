@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\crm\UsuarioDynamo;
 use App\Models\crm\Departamento;
+use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -15,27 +16,21 @@ class User extends Authenticatable implements JWTSubject
     protected $table = 'public.users';
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     // protected $fillable = [
     //     'name',
     //     'email',
     //     'password',
     //     'usu_id',
     // ];
+
     protected $fillable = [
         'name',
         'email',
         'email_verified_at',
         'password',
         'remember_token',
-        'created_at',
-        'updated_at',
         'phone',
-        'birthdate',
+        'fecha_nacimiento',
         'website',
         'address',
         'surname',
@@ -50,43 +45,23 @@ class User extends Authenticatable implements JWTSubject
         'dep_id',
         'estado',
         'usu_tipo',
+        'usu_alias',
     ];
 
-    /**
-     * The attributes that should be hidden for arrays.
-     *
-     * @var array
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast to native types.
-     *
-     * @var array
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
 
-
-    /**
-     * Get the identifier that will be stored in the subject claim of the JWT.
-     *
-     * @return mixed
-     */
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
-    /**
-     * Return a key value array, containing any custom claims to be added to the JWT.
-     *
-     * @return array
-     */
     public function getJWTCustomClaims()
     {
         return [];
@@ -96,33 +71,26 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->belongsTo(UsuarioDynamo::class, "usu_id");
     }
+
     public function Departamento()
     {
         return $this->belongsTo(Departamento::class, "dep_id", "id");
     }
 
+    public function setCreatedAtAttribute($value)
+    {
+        date_default_timezone_set("America/Guayaquil");
+        $this->attributes["created_at"] = Carbon::now();
+    }
+    public function setUpdatedAtAttribute($value)
+    {
+        date_default_timezone_set("America/Guayaquil");
+        $this->attributes["updated_at"] = Carbon::now();
+    }
+    public function setDeletedAtAttribute($value)
+    {
+        date_default_timezone_set("America/Guayaquil");
+        $this->attributes["deleted_at"] = Carbon::now();
+    }
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
