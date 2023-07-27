@@ -13,9 +13,9 @@ class TipoCasoController extends Controller
     public function addTipoCaso(Request $request)
     {
         try {
-            TipoCaso::create($request->all());
+            $tipoCaso = TipoCaso::create($request->all());
 
-            $resultado = TipoCaso::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $resultado = TipoCaso::where('tab_id', $tipoCaso->tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
 
