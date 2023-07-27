@@ -5,30 +5,36 @@ namespace App\Http\Controllers\crm;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Tablero;
-use App\Models\crm\TableroUsuario;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class TableroController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware('auth:api');
+    // }
 
-    public function listTableroByUser()
+    public function listTableroByUser($user_id)
     {
-        $tableros = Tablero::with('tableroUsuario.usuario')->where('estado', true)->orderBy("id", "desc")->get();
-
-        return response()->json([
-            "tableros" => $tableros,
-        ]);
+        try {
+            // $tableros = Tablero::where("tableroUsuario", $user_id)->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("id", "desc")->get();
+            $tableros = Tablero::whereHas('tableroUsuario', function ($query) use ($user_id) {
+                $query->where('user_id', $user_id);
+            })->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy('id', 'desc')->get();
+            // return response()->json([
+            //     "tableros" => $tableros,
+            // ]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     public function listTableroInactivos()
     {
-        $tableros = Tablero::with('tableroUsuario.usuario')->where('estado', false)->orderBy("id", "desc")->get();
+        $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("id", "desc")->get();
 
         return response()->json([
             "tableros" => $tableros,
@@ -39,16 +45,18 @@ class TableroController extends Controller
     {
         try {
             $tab = $request->all();
-            DB::transaction(function () use ($tab) {
+            $t = DB::transaction(function () use ($tab) {
                 $tablero = Tablero::create($tab);
                 for ($i = 0; $i < sizeof($tab['usuarios']); $i++) {
                     DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
                 }
+
+                return $tablero;
             });
 
-            $dataRe = Tablero::with('tableroUsuario.usuario')->orderBy("id", "desc")->get();
+            $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $t->id)->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tablero con éxito', $dataRe));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -88,9 +96,10 @@ class TableroController extends Controller
                 return $tablero;
             });
 
-            $dataRe = Tablero::with('tableroUsuario.usuario')->where('id', $id)->get();
+            // $dataRe = Tablero::with('tableroUsuario.usuario')->where('id', $id)->get();
+            $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $tab['id'])->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo el tablero con éxito', $dataRe));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
