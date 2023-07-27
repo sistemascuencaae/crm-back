@@ -185,7 +185,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // TABLERO
 
     Route::post('/addTablero', [TableroController::class, 'addTablero']); // guardar
-    Route::get('/listTableroByUser', [TableroController::class, 'listTableroByUser']); // listar
+    Route::get('/listTableroByUser/{user_id}', [TableroController::class, 'listTableroByUser']); // listar
     Route::get('/listTableroInactivos', [TableroController::class, 'listTableroInactivos']); // listar tableros inactivos
     Route::get('/listTableroMisCasos/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
     Route::post('/updateTablero/{id}', [TableroController::class, 'updateTablero']); // Editar
