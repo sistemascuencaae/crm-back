@@ -69,6 +69,7 @@ Route::group(['middleware' => 'api'], function ($router) {
 
 Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
     Route::post('/profile-user', [ProfileUserController::class, 'profile_user']);
+    Route::put('/profile', [ProfileUserController::class, 'profile_user']);
 });
 
 
