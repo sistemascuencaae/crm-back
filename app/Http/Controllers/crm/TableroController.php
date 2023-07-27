@@ -53,8 +53,8 @@ class TableroController extends Controller
                 }
 
                 DB::insert("INSERT INTO crm.fase
-                (tab_id, nombre, descripcion, estado, orden, created_at, updated_at, generar_caso, color_id)
-                VALUES(?, 'BANDEJA DE ENTRADA', 'SE CARGARAN TODAS LOS CASOS SIN ASIGNAR', true, 1, ?, ?, false, 22);",[$tablero->id, $tablero->created_at, $tablero->updated_at]);
+                (tab_id, nombre, descripcion, estado, orden, created_at, updated_at, generar_caso, color_id, fase_tipo)
+                VALUES(?, 'BANDEJA DE ENTRADA', 'SE CARGARAN TODAS LOS CASOS SIN ASIGNAR', true, 1, ?, ?, false, 22, 1);",[$tablero->id, $tablero->created_at, $tablero->updated_at]);
                 return $tablero;
             });
 
