@@ -23,6 +23,7 @@ class Fase extends Model
         "estado",
         "orden",
         "color_id",
+        "fase_tipo"
     ];
 
     public function Caso()

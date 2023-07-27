@@ -52,6 +52,9 @@ class TableroController extends Controller
                     DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
                 }
 
+                DB::insert("INSERT INTO crm.fase
+                (tab_id, nombre, descripcion, estado, orden, created_at, updated_at, generar_caso, color_id, fase_tipo)
+                VALUES(?, 'BANDEJA DE ENTRADA', 'SE CARGARAN TODAS LOS CASOS SIN ASIGNAR', true, 1, ?, ?, false, 22, 1);",[$tablero->id, $tablero->created_at, $tablero->updated_at]);
                 return $tablero;
             });
 
@@ -118,18 +121,18 @@ class TableroController extends Controller
             // inner join crm.caso c on c.id  = m.caso_id
             // inner join public.users uprin on uprin.id = c.user_id
             // inner join public.entidad ent on ent.ent_id = c.ent_id
-            // inner join crm.fase f on f.id = c.fas_id 
+            // inner join crm.fase f on f.id = c.fas_id
             // where u.id = " . $user_id);
 
             $data = DB::select("select
             u.id as id_usuario_miembro,  u.name as usuario_miembro,u2.name as dueno_caso, cs.nombre as nombre, cs.id as caso_id,
            cs.fecha_vencimiento, cs.created_at,ent.ent_id, (ent.ent_apellidos || ' '|| ent.ent_nombres) as cliente, f.nombre  as fase_nombre, f.color_id as fase_color, cs.prioridad,
            cg.uniqd, cg.nombre as nombre_grupo_chat, f.tab_id
-           from crm.miembros m 
+           from crm.miembros m
            inner join crm.caso cs on cs.id = m.caso_id
-           inner join public.users u on u.id = m.user_id 
+           inner join public.users u on u.id = m.user_id
            inner join public.users u2 on u2.id = cs.user_id
-           inner join crm.fase f on f.id = cs.fas_id 
+           inner join crm.fase f on f.id = cs.fas_id
            inner join public.entidad ent on ent.ent_id = cs.ent_id
            inner join crm.chat_groups cg on cg.id = m.chat_group_id
            where u.id = " . $user_id . "
