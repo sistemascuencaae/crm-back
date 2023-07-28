@@ -4,9 +4,9 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\Tablero;
 use App\Models\User;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
@@ -53,17 +53,44 @@ class UserController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-    public function addUser()
-    {
 
-    }
-    public function editUser($user_id)
+    public function addUser(Request $request)
     {
+        try {
+            User::create($request->all());
 
+            $usuarios = User::orderBy("id", "desc")->with('Departamento')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $usuarios));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
+
+    public function editUser(Request $request, $user_id)
+    {
+        try {
+            $usuario = User::findOrFail($user_id);
+
+            $usuario->update($request->all());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $usuario));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function deleteUser($user_id)
     {
+        try {
+            $usuario = User::findOrFail($user_id);
 
+            $usuario->delete();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $usuario));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
 }
