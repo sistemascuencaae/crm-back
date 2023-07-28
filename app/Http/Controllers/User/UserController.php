@@ -74,7 +74,9 @@ class UserController extends Controller
 
             $usuario->update($request->all());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $usuario));
+            $data = User::where('id', $usuario->id)->with('Departamento')->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
