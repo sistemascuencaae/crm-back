@@ -21,9 +21,9 @@ class NotaController extends Controller
         try {
             $nota = Nota::create($request->all());
 
-            $data = DB::select('select * from crm.nota where caso_id ='.$request->caso_id);
+            $data = DB::select('select * from crm.nota where caso_id =' . $request->caso_id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la nota con éxito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -31,11 +31,13 @@ class NotaController extends Controller
 
     public function listNotaByCasoId($caso_id)
     {
-        $notas = Nota::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
+        try {
+            $notas = Nota::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
 
-        return response()->json([
-            "notas" => $notas
-        ]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notas));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     public function updateNota(Request $request, $id)
@@ -49,7 +51,7 @@ class NotaController extends Controller
 
             $nota->update($request->all());
 
-            return response()->json(["notas" => $nota]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $nota));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -62,9 +64,7 @@ class NotaController extends Controller
 
             $nota->delete();
 
-            // return response()->json(["message" => 200]);
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito la nota', $nota));
-
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $nota));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
