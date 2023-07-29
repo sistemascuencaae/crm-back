@@ -21,7 +21,7 @@ class EtiquetaController extends Controller
         try {
             $etiqueta = Etiqueta::create($request->all());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la etiqueta con éxito', $etiqueta));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $etiqueta));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -29,11 +29,13 @@ class EtiquetaController extends Controller
 
     public function listEtiquetaByCasoId($caso_id)
     {
-        $etiquetas = Etiqueta::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
+        try {
+            $etiquetas = Etiqueta::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
 
-        return response()->json([
-            "etiquetas" => $etiquetas,
-        ]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $etiquetas));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     // public function updateEtiqueta(Request $request, $id)
@@ -59,7 +61,7 @@ class EtiquetaController extends Controller
 
             $etiqueta->delete();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito la etiqueta', $etiqueta));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $etiqueta));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
