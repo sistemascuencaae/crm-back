@@ -250,11 +250,13 @@ class CasoController extends Controller
                     $caso->fas_id = $faseNuevaId->id;
                     $caso->fase_anterior_id = $request->fase_anterior_id;
                     $caso->save();
+                    $miembro = new Miembros();
+                    $miembro->user_id = $request->user_id;
+                    $miembro->caso_id = $caso_id;
+                    $miembro->save();
                 }
 
-                $miembro = new Miembros();
-                $miembro->user_id = $request->user_id;
-                $miembro->caso_id = $caso_id;
+
             });
 
             $data = Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros', 'Galeria', 'Archivo')->where('id', $caso_id)->first();
