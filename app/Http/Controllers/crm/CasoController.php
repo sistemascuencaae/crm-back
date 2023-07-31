@@ -99,8 +99,9 @@ class CasoController extends Controller
                 'fas_id' => $request->input('fas_id'),
                 'fase_anterior_id' => $request->input('fase_anterior_id'),
             ]);
-            $data = $this->getCasoJoinTablero($caso->id);
-            //$data = Caso::with('user','entidad', 'resumen', 'tareas','actividad')->where('id',$caso->id)->get();
+            //$data = $this->getCasoJoinTablero($caso->id);
+            $data = Caso::with('user','entidad', 'resumen', 'tareas','actividad','Etiqueta','miembros','Galeria','Archivo')->where('id',$caso->id)->first();
+
             //echo('ESTA ES LA DATA:'.json_encode($data));
             broadcast(new TableroEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
@@ -123,24 +124,26 @@ class CasoController extends Controller
     }
     public function bloqueoCaso(Request $request)
     {
-        $data = [];
-        $casoId = $request->input("casoId");
-        $tabId = $request->input("tableroId");
-        $userId = $request->input("userId");
-        $bloqueado = $request->input("bloqueado");
-        $bloqueado_user = $request->input("bloqueado_user");
-        $caso = Caso::find($casoId);
-        if ($caso) {
-            $caso->bloqueado = $bloqueado;
-            $caso->bloqueado_user = $bloqueado_user;
-            $caso->save();
-            $data = $this->getCasoJoinTablero($casoId);
-        }
-        broadcast(new TableroEvent($data));
-        return response()->json([
-            "res" => 200,
-            "data" => $data
-        ]);
+try {
+    $data = [];
+    $casoId = $request->input("casoId");
+    $tabId = $request->input("tableroId");
+    $userId = $request->input("userId");
+    $bloqueado = $request->input("bloqueado");
+    $bloqueado_user = $request->input("bloqueado_user");
+    $caso = Caso::find($casoId);
+    if ($caso) {
+        $caso->bloqueado = $bloqueado;
+        $caso->bloqueado_user = $bloqueado_user;
+        $caso->save();
+        $data = $this->getCasoJoinTablero($casoId);
+    }
+    $data = Caso::with('user','entidad', 'resumen', 'tareas','actividad','Etiqueta','miembros','Galeria','Archivo')->where('id',$casoId)->first();
+    broadcast(new TableroEvent($data));
+    return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
+} catch (\Throwable $th) {
+    return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $th->getMessage()));
+}
     }
 
 
@@ -226,4 +229,28 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+
+    public function editCasosUsuarioAsignado(Request $request, $caso_id)
+    {
+        try {
+            $caso = $request->all();
+
+            DB::transaction(function () use ($caso, $caso_id, $request) {
+
+                $caso = Caso::where('id',$caso_id)->first();
+
+                $caso->update([
+                    "user_id" => $request->user_id,
+                ]);
+            });
+
+            $data = Caso::with('user','entidad', 'resumen', 'tareas','actividad','Etiqueta','miembros','Galeria','Archivo')->where('id',$caso_id)->first();
+            broadcast(new TableroEvent($data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }
