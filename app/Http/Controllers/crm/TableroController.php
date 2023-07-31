@@ -17,6 +17,18 @@ class TableroController extends Controller
     //     $this->middleware('auth:api');
     // }
 
+
+    //LISTA DE TODOS LOS TABLEROS
+    public function listAll()
+    {
+        try {
+            $tableros = Tablero::with('tableroUsuario')->orderBy('id', 'desc')->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function listTableroByUser($user_id)
     {
         try {
