@@ -9,7 +9,6 @@ use App\Models\crm\DTipoTarea;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Mockery\Undefined;
 
 class CTareaController extends Controller
 {
@@ -18,7 +17,7 @@ class CTareaController extends Controller
         try {
             $tareas = CTipoTarea::where('tab_id', $tab_id)->with('DTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo las tareas del tablero con éxito', $tareas));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tareas));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -31,19 +30,19 @@ class CTareaController extends Controller
             $data = DB::transaction(function () use ($cTar) {
                 $cTarea = CTipoTarea::create($cTar);
                 for ($i = 0; $i < sizeof($cTar['tareas']); $i++) {
-                    $d = DTipoTarea::create([
+                    DTipoTarea::create([
                         "ctt_id" => $cTarea['id'],
                         "nombre" => $cTar['tareas'][$i]['nombre'],
                         "requerido" => $cTar['tareas'][$i]['requerido'],
                         "estado" => $cTar['tareas'][$i]['estado']
                     ]);
                 }
-                // return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->where('id', $cTarea->id)->get();
-                return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->get();
+
+                // return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->get();
+                return CTipoTarea::where('tab_id', $cTarea['tab_id'])->with('dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la Tarea con éxito', $data));
-
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -129,7 +128,7 @@ class CTareaController extends Controller
 
             $dataRe = CTipoTarea::with('dTipoTarea')->where('id', $id)->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo el tablero con éxito', $dataRe));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
