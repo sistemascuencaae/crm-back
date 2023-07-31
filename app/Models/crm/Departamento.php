@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -24,8 +25,8 @@ class Departamento extends Model implements Auditable
         'updated_at',
     ];
 
-    public function Flujo()
+    public function users()
     {
-        return $this->hasMany(Flujo::class, "dep_id");
+        return $this->hasMany(User::class, "dep_id");
     }
 }
