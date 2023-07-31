@@ -5,8 +5,6 @@ namespace App\Http\Controllers\crm;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\CTipoActividad;
-use App\Models\crm\DTipoActividad;
-use Illuminate\Support\Facades\DB;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -19,10 +17,9 @@ class CActividadController extends Controller
 
             // $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            $actividades = CTipoActividad::where('tab_id',$cta->tab_id)->where('estado',true)->orderBy('id', 'DESC')->get();
+            $actividades = CTipoActividad::where('tab_id', $cta->tab_id)->where('estado', true)->orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo el tipo registro con éxito', $actividades));
-
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $actividades));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -33,7 +30,7 @@ class CActividadController extends Controller
         try {
             $actividades = CTipoActividad::where('tab_id', $tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo los registros con éxito', $actividades));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -44,25 +41,11 @@ class CActividadController extends Controller
         try {
             $actividades = CTipoActividad::where('tab_id', $tab_id)->where('estado', true)->orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo los registros con éxito', $actividades));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-    // Si vale este listar todos los tableros, solo esta de descomentar aqui, en el api y front
-    // public function allCTipoActividades()
-    // {
-    //     try {
-    //         $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo las actividades con éxito', $actividades));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
-
-
 
     // public function addCActividad(Request $request)
     // {
@@ -102,7 +85,7 @@ class CActividadController extends Controller
 
             $actividad->update($request->all());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó el registro con éxito', $actividad));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $actividad));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -115,7 +98,7 @@ class CActividadController extends Controller
 
             $actividad->delete();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito el registro', $actividad));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $actividad));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
