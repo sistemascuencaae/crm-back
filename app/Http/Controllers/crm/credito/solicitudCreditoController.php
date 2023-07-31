@@ -15,7 +15,7 @@ class solicitudCreditoController extends Controller
         try {
             $solicitudCredito = solicitudCredito::create($request->all());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo la solicitud de crédito con éxito', $solicitudCredito));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $solicitudCredito));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -23,20 +23,30 @@ class solicitudCreditoController extends Controller
 
     public function listSolicitudCreditoByEntidadId($ent_id)
     {
-        $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ent_id', $ent_id)->get();
+        try {
+            $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ent_id', $ent_id)->get();
 
-        return response()->json([
-            "solicitudesCredito" => $solicitudesCredito,
-        ]);
+            // return response()->json([
+            //     "solicitudesCredito" => $solicitudesCredito,
+            // ]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     public function listSolicitudCreditoByRucCedula($ruc_cedula)
     {
-        $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ruc_cedula', $ruc_cedula)->get();
+        try {
+            $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ruc_cedula', $ruc_cedula)->get();
 
-        return response()->json([
-            "solicitudesCredito" => $solicitudesCredito,
-        ]);
+            // return response()->json([
+            //     "solicitudesCredito" => $solicitudesCredito,
+            // ]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
 }
