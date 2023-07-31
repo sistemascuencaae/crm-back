@@ -111,8 +111,15 @@ class CasoController extends Controller
 
     public function listCasoById($id)
     {
-        $data = Caso::with('user', 'entidad', 'cTipoTarea.dTipoTarea')->where('id', $id)->get();
-        return response()->json(RespuestaApi::returnResultado('success', 'El caso se listo con éxito', $data));
+        // $data = Caso::with('user', 'entidad', 'cTipoTarea.dTipoTarea')->where('id', $id)->get();
+        // return response()->json(RespuestaApi::returnResultado('success', 'El caso se listo con éxito', $data));
+        try {
+            $data = Caso::with('user', 'entidad', 'cTipoTarea.dTipoTarea')->where('id', $id)->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
     public function bloqueoCaso(Request $request)
     {

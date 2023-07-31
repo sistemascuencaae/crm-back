@@ -5,7 +5,6 @@ namespace App\Http\Controllers\crm\credito;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
-use Error;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -13,10 +12,10 @@ use Exception;
 
 class ArchivoController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->middleware('auth:api');
-    // }
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
 
     public function addArchivo(Request $request)
     {
@@ -24,19 +23,20 @@ class ArchivoController extends Controller
             $file = $request->file("archivo");
             $titulo = $file->getClientOriginalName();
 
-            $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA CATEGORIAS
-            $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta de la imagen en la que se encuentra
+            $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
+            $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta del archivo en la que se encuentra
 
-            $archivo = Archivo::create([
+            Archivo::create([
                 "titulo" => $titulo,
                 "observacion" => $request->observacion,
                 "archivo" => $path,
                 "caso_id" => $request->caso_id
             ]);
 
-            $data = DB::select('select * from crm.archivos where caso_id ='.$request->caso_id);
+            // $data = DB::select('select * from crm.archivos where caso_id =' . $request->caso_id);
+            $archivos = Archivo::where('caso_id', $request->caso_id)->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo los archivos con éxito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivos));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -45,19 +45,23 @@ class ArchivoController extends Controller
     public function listArchivoByCasoId($caso_id)
     {
         try {
-            $archivos = Archivo::orderBy("id", "desc")->where('caso_id',$caso_id)->get();
+            $archivos = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
-                "archivos" => $archivos->map(function ($archivo) {
-                    return [
-                        "id" => $archivo->id,
-                        "titulo" => $archivo->titulo,
-                        "observacion" => $archivo->observacion,
-                        "archivo" => $archivo->archivo,
-                        "caso_id" => $archivo->caso_id
-                    ];
-                }),
-            ]));
+            return response()->json(
+                RespuestaApi::returnResultado(
+                    'success',
+                    'Se listo con éxito',
+                    $archivos->map(function ($archivo) {
+                        return [
+                            "id" => $archivo->id,
+                            "titulo" => $archivo->titulo,
+                            "observacion" => $archivo->observacion,
+                            "archivo" => $archivo->archivo,
+                            "caso_id" => $archivo->caso_id
+                        ];
+                    }),
+                )
+            );
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -84,7 +88,7 @@ class ArchivoController extends Controller
                 // "archivo" => $path,
             ]);
 
-            return response()->json(["archivo" => $archivo,]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $archivo));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -100,8 +104,7 @@ class ArchivoController extends Controller
 
             $archivo->delete();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito el archivo', $archivo));
-
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $archivo));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
