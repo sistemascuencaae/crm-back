@@ -222,4 +222,33 @@ try {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+
+    public function editCasosUsuarioAsignado(Request $request, $caso_id)
+    {
+        try {
+            $caso = $request->all();
+
+            DB::transaction(function () use ($caso, $caso_id, $request) {
+
+                $caso = Caso::where('id',$caso_id)->first();
+
+                $caso->update([
+                    "user_id" => $request->user_id,
+                ]);
+            });
+
+            $data = Caso::with('user','entidad', 'resumen', 'tareas','actividad','Etiqueta','miembros','Galeria','Archivo')->where('id',$caso_id)->first();
+            broadcast(new TableroEvent($data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+
+
+
+
 }
