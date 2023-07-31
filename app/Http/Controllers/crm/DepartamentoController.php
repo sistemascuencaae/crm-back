@@ -10,6 +10,14 @@ use Illuminate\Http\Request;
 
 class DepartamentoController extends Controller
 {
+
+    public function listAllUser(){
+        try {
+            $departamentos = Departamento::with('')->where('estado', true)->get();
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+    }
     public function allDepartamento()
     {
         try {

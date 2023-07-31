@@ -38,6 +38,7 @@ class Caso extends Model
         "ctt_id",
         "fase_anterior_id",
         "tc_id",
+        "user_anterior_id",
     ];
 
     public function user()

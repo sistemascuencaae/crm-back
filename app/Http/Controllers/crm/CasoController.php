@@ -12,6 +12,7 @@ use App\Models\crm\DTipoTarea;
 use App\Models\crm\Fase;
 use App\Models\crm\Miembros;
 use App\Models\crm\Tareas;
+use App\Models\Miembros as ModelsMiembros;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -100,7 +101,7 @@ class CasoController extends Controller
                 'fase_anterior_id' => $request->input('fase_anterior_id'),
             ]);
             //$data = $this->getCasoJoinTablero($caso->id);
-            $data = Caso::with('user','entidad', 'resumen', 'tareas','actividad','Etiqueta','miembros','Galeria','Archivo')->where('id',$caso->id)->first();
+            $data = Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros', 'Galeria', 'Archivo')->where('id', $caso->id)->first();
 
             //echo('ESTA ES LA DATA:'.json_encode($data));
             broadcast(new TableroEvent($data));
@@ -124,26 +125,26 @@ class CasoController extends Controller
     }
     public function bloqueoCaso(Request $request)
     {
-try {
-    $data = [];
-    $casoId = $request->input("casoId");
-    $tabId = $request->input("tableroId");
-    $userId = $request->input("userId");
-    $bloqueado = $request->input("bloqueado");
-    $bloqueado_user = $request->input("bloqueado_user");
-    $caso = Caso::find($casoId);
-    if ($caso) {
-        $caso->bloqueado = $bloqueado;
-        $caso->bloqueado_user = $bloqueado_user;
-        $caso->save();
-        $data = $this->getCasoJoinTablero($casoId);
-    }
-    $data = Caso::with('user','entidad', 'resumen', 'tareas','actividad','Etiqueta','miembros','Galeria','Archivo')->where('id',$casoId)->first();
-    broadcast(new TableroEvent($data));
-    return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
-} catch (\Throwable $th) {
-    return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $th->getMessage()));
-}
+        try {
+            $data = [];
+            $casoId = $request->input("casoId");
+            $tabId = $request->input("tableroId");
+            $userId = $request->input("userId");
+            $bloqueado = $request->input("bloqueado");
+            $bloqueado_user = $request->input("bloqueado_user");
+            $caso = Caso::find($casoId);
+            if ($caso) {
+                $caso->bloqueado = $bloqueado;
+                $caso->bloqueado_user = $bloqueado_user;
+                $caso->save();
+                $data = $this->getCasoJoinTablero($casoId);
+            }
+            $data = Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros', 'Galeria', 'Archivo')->where('id', $casoId)->first();
+            broadcast(new TableroEvent($data));
+            return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $th->getMessage()));
+        }
     }
 
 
@@ -233,24 +234,36 @@ try {
 
     public function editCasosUsuarioAsignado(Request $request, $caso_id)
     {
+
         try {
-            $caso = $request->all();
 
-            DB::transaction(function () use ($caso, $caso_id, $request) {
+            DB::transaction(function () use ($caso_id, $request) {
 
-                $caso = Caso::where('id',$caso_id)->first();
+                $caso = Caso::where('id', $caso_id)->first();
 
-                $caso->update([
-                    "user_id" => $request->user_id,
-                ]);
+                $faseNuevaId = DB::select('SELECT f.id from crm.tablero t
+                inner join crm.fase f on f.tab_id = t.id and f.tab_id = ? and f.fase_tipo = 1', [$request->tab_id])[0];
+                //echo(json_encode($request->user_id));
+                if ($faseNuevaId->id) {
+                    $caso->user_id = $request->user_id;
+                    $caso->user_anterior_id = $request->user_actual_id;
+                    $caso->fas_id = $faseNuevaId->id;
+                    $caso->fase_anterior_id = $request->fase_anterior_id;
+                    $caso->save();
+                    $miembro = new Miembros();
+                    $miembro->user_id = $request->user_id;
+                    $miembro->caso_id = $caso_id;
+                    $miembro->save();
+                }
+
+
             });
 
-            $data = Caso::with('user','entidad', 'resumen', 'tareas','actividad','Etiqueta','miembros','Galeria','Archivo')->where('id',$caso_id)->first();
+            $data = Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros', 'Galeria', 'Archivo')->where('id', $caso_id)->first();
             broadcast(new TableroEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
 }
