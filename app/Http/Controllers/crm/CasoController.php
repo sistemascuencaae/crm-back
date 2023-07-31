@@ -234,9 +234,7 @@ class CasoController extends Controller
 
     public function editCasosUsuarioAsignado(Request $request, $caso_id)
     {
-
         try {
-
             DB::transaction(function () use ($caso_id, $request) {
 
                 $caso = Caso::where('id', $caso_id)->first();
@@ -264,6 +262,22 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+    public function depUserTablero($casoId){
+        try {
+            $data = DB::select('SELECT d.id as dep_id, c.user_id, t.id as tab_id  from crm.caso c
+            inner join crm.fase f on f.id = c.fas_id
+            inner join crm.tablero t on t.id = f.tab_id
+            inner join crm.departamento d on d.id = t.dep_id
+            where c.id = ? limit 1;', [$casoId])[0];
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Exito', $data));
+            
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $th->getMessage()));
         }
     }
 }
