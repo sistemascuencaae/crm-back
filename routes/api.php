@@ -115,7 +115,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addCaso', [CasoController::class, 'add']);
     Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
-    Route::put('/editCaUsAs/{id}', [CasoController::class, 'editCasosUsuarioAsignado']);//
+    Route::put('/editCaUsAs/{id}', [CasoController::class, 'editCasosUsuarioAsignado']);
+    Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);//
 
 
 
