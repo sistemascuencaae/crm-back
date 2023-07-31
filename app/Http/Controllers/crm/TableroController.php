@@ -12,10 +12,10 @@ use Illuminate\Support\Facades\DB;
 
 class TableroController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->middleware('auth:api');
-    // }
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
 
     public function listTableroByUser($user_id)
     {
@@ -35,11 +35,16 @@ class TableroController extends Controller
 
     public function listTableroInactivos()
     {
-        $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("id", "desc")->get();
+        try {
+            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("id", "desc")->get();
 
-        return response()->json([
-            "tableros" => $tableros,
-        ]);
+            // return response()->json([
+            //     "tableros" => $tableros,
+            // ]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     public function addTablero(Request $request)
