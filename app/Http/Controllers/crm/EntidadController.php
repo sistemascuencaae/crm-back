@@ -15,10 +15,15 @@ class EntidadController extends Controller
 {
     public function searchById($id)
     {
+        try{
         $data = Entidad::with('cliente', 'direccion', 'clientefae', 'referenanexo')->where('ent_id', $id)->first();
         //$clifae = DB::select("select * from public.av_clientes_reiterativos c where c.cedula = '0100091560';");
 
-        return response()->json(["message" => 200, "data" => $data]);
+        // return response()->json(["message" => 200, "data" => $data]);
+        return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {    
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     // public function searchByCedula($cedula)
@@ -36,7 +41,7 @@ class EntidadController extends Controller
         $cliente = DB::select("select * from public.av_info_cliente where numerodocumento = '" . $cedula . "'");
 
         if ($cliente) {
-            return response()->json(RespuestaApi::returnResultado('success', 'El cliente encontrado', $cliente));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $cliente));
         } else {
             return response()->json(RespuestaApi::returnResultado('error', 'El cliente no existe', []));
         }
