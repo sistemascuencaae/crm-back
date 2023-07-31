@@ -67,7 +67,7 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
 
-                return Caso::with('user', 'entidad', 'resumen', 'miembros', 'tareas')->where('id', $caso->id)->first();
+                return Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo')->where('id', $caso->id)->first();
             });
 
             //$data = $this->getCasoJoinTablero($casoCreado->id);
