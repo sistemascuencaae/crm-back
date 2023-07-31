@@ -201,7 +201,7 @@ try {
 
             // $dataRe = Miembros::orderBy('id', 'DESC')->get();
 
-            $dataRe = Caso::with('user', 'entidad', 'resumen', 'miembros', 'tareas')->where('id', $caso_id)->first();
+            $dataRe = Caso::with('user', 'entidad', 'resumen', 'miembros.usuario.departamento', 'tareas')->where('id', $caso_id)->first();
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
