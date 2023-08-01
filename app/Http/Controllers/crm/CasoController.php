@@ -243,6 +243,8 @@ class CasoController extends Controller
                 inner join crm.fase f on f.tab_id = t.id and f.tab_id = ? and f.fase_tipo = 1', [$request->tab_id])[0];
                 //echo(json_encode($request->user_id));
                 if ($faseNuevaId->id) {
+                    $caso->bloqueado = false;
+                    $caso->bloqueado_user = '';
                     $caso->user_id = $request->user_id;
                     $caso->user_anterior_id = $request->user_actual_id;
                     $caso->fas_id = $faseNuevaId->id;
@@ -275,7 +277,7 @@ class CasoController extends Controller
             $tableros = DB::select("SELECT * from crm.tablero where estado = true");
             $departamentos = DB::select("SELECT * from crm.departamento where estado = true");
             $depUserTablero = DB::select('SELECT d.id as dep_id, c.user_anterior_id, t.id as tab_id  from crm.caso c
-            inner join crm.fase f on f.id = c.fas_id
+            inner join crm.fase f on f.id = c.fase_anterior_id
             inner join crm.tablero t on t.id = f.tab_id
             inner join crm.departamento d on d.id = t.dep_id
             where c.id = ? limit 1;', [$casoId]);
