@@ -67,7 +67,7 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
 
-                return Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo')->where('id', $caso->id)->first();
+                return $this->getCaso($caso->id);
             });
 
             //$data = $this->getCasoJoinTablero($casoCreado->id);
@@ -88,7 +88,7 @@ class CasoController extends Controller
     }
     public function casoById($id)
     {
-        $data = Caso::with('user', 'entidad', 'resumen')->where('id', $id)->first();
+        $data = $this->getCaso($id);
         return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigio con exito', $data));
     }
     public function editFase(Request $request)
@@ -101,7 +101,7 @@ class CasoController extends Controller
                 'fase_anterior_id' => $request->input('fase_anterior_id'),
             ]);
             //$data = $this->getCasoJoinTablero($caso->id);
-            $data = Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros', 'Galeria', 'Archivo')->where('id', $caso->id)->first();
+            $data = $this->getCaso($caso->id);
 
             //echo('ESTA ES LA DATA:'.json_encode($data));
             broadcast(new TableroEvent($data));
@@ -116,7 +116,8 @@ class CasoController extends Controller
         // $data = Caso::with('user', 'entidad', 'cTipoTarea.dTipoTarea')->where('id', $id)->get();
         // return response()->json(RespuestaApi::returnResultado('success', 'El caso se listo con éxito', $data));
         try {
-            $data = Caso::with('user', 'entidad', 'cTipoTarea.dTipoTarea')->where('id', $id)->first();
+
+            $data = $this->getCaso($id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -139,7 +140,7 @@ class CasoController extends Controller
                 $caso->save();
                 $data = $this->getCasoJoinTablero($casoId);
             }
-            $data = Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros', 'Galeria', 'Archivo')->where('id', $casoId)->first();
+            $data = $this->getCaso($casoId);
             broadcast(new TableroEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (\Throwable $th) {
@@ -200,9 +201,7 @@ class CasoController extends Controller
                 return $miembros;
             });
 
-            // $dataRe = Miembros::orderBy('id', 'DESC')->get();
-
-            $dataRe = Caso::with('user', 'entidad', 'resumen', 'miembros.usuario.departamento', 'tareas')->where('id', $caso_id)->first();
+            $dataRe = $this->getCaso($caso_id);
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
@@ -223,7 +222,7 @@ class CasoController extends Controller
                 ]);
             });
 
-            $data = Caso::with('user', 'entidad', 'resumen', 'miembros.usuario', 'tareas')->where('id', $caso_id)->first();
+            $data = $this->getCaso($caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
@@ -260,7 +259,7 @@ class CasoController extends Controller
                 }
             });
 
-            $data = Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros', 'Galeria', 'Archivo')->where('id', $caso_id)->first();
+            $data = $this->getCaso($caso_id);
             broadcast(new TableroEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
@@ -295,5 +294,9 @@ class CasoController extends Controller
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $th->getMessage()));
         }
+    }
+
+    public function getCaso($casoId){
+        return Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo')->where('id', $casoId)->first();
     }
 }
