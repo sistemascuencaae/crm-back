@@ -39,7 +39,13 @@ class Caso extends Model
         "fase_anterior_id",
         "tc_id",
         "user_anterior_id",
+        "user_creador_id",
+        "estado_2",
     ];
+
+    public function userCreador(){
+        return $this->belongsTo(User::class, "user_creador_id", "id");
+    }
 
     public function user()
     {

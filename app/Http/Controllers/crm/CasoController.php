@@ -58,6 +58,8 @@ class CasoController extends Controller
 
                 $caso->nombre = 'CASO # ' . $caso->id;
                 $caso->descripcion = 'CASO # ' . $caso->id;
+                $caso->estado_2 = 1;
+                $caso->user_creador_id = $caso->user_id;
                 $caso->save();
 
                 for ($i = 0; $i < sizeof($miembros); $i++) {
@@ -242,6 +244,7 @@ class CasoController extends Controller
                 inner join crm.fase f on f.tab_id = t.id and f.tab_id = ? and f.fase_tipo = 1', [$request->tab_id])[0];
                 //echo(json_encode($request->user_id));
                 if ($faseNuevaId->id) {
+                    $caso->estado_2 = $request->estado_2;
                     $caso->bloqueado = false;
                     $caso->bloqueado_user = '';
                     $caso->user_id = $request->user_id;
@@ -297,6 +300,6 @@ class CasoController extends Controller
     }
 
     public function getCaso($casoId){
-        return Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo')->where('id', $casoId)->first();
+        return Caso::with('user','userCreador', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo')->where('id', $casoId)->first();
     }
 }

@@ -23,7 +23,7 @@ class FaseController extends Controller
 
         try {
             $user = auth('api')->user();
-            $data = Fase::with('caso.user','caso.entidad', 'caso.resumen', 'caso.tareas','caso.actividad','caso.miembros.usuario.departamento','caso.Etiqueta')->where('tab_id',$tableroId)->get();
+            $data = Fase::with('caso.user','caso.userCreador','caso.entidad', 'caso.resumen', 'caso.tareas','caso.actividad','caso.miembros.usuario.departamento','caso.Etiqueta')->where('tab_id',$tableroId)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $data));
             } catch (\Throwable $th) {
                 return response()->json(RespuestaApi::returnResultado('exception', 'Al listar', $th->getMessage()));
