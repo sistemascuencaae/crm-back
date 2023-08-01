@@ -243,18 +243,21 @@ class CasoController extends Controller
                 inner join crm.fase f on f.tab_id = t.id and f.tab_id = ? and f.fase_tipo = 1', [$request->tab_id])[0];
                 //echo(json_encode($request->user_id));
                 if ($faseNuevaId->id) {
+                    $caso->bloqueado = false;
+                    $caso->bloqueado_user = '';
                     $caso->user_id = $request->user_id;
                     $caso->user_anterior_id = $request->user_actual_id;
                     $caso->fas_id = $faseNuevaId->id;
                     $caso->fase_anterior_id = $request->fase_anterior_id;
                     $caso->save();
-                    $miembro = new Miembros();
-                    $miembro->user_id = $request->user_id;
-                    $miembro->caso_id = $caso_id;
-                    $miembro->save();
+                    $meimbroExiste = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?',[$request->user_id, $caso_id]);
+                    if(sizeof($meimbroExiste) == 0){
+                        $miembro = new Miembros();
+                        $miembro->user_id = $request->user_id;
+                        $miembro->caso_id = $caso_id;
+                        $miembro->save();
+                    }
                 }
-
-
             });
 
             $data = Caso::with('user', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros', 'Galeria', 'Archivo')->where('id', $caso_id)->first();
@@ -266,16 +269,29 @@ class CasoController extends Controller
     }
 
 
-    public function depUserTablero($casoId){
+    public function depUserTablero($casoId)
+    {
         try {
-            $data = DB::select('SELECT d.id as dep_id, c.user_id, t.id as tab_id  from crm.caso c
-            inner join crm.fase f on f.id = c.fas_id
+
+            $usuarios = DB::select("SELECT * from public.users where estado  = true");
+            $tableros = DB::select("SELECT * from crm.tablero where estado = true");
+            $departamentos = DB::select("SELECT * from crm.departamento where estado = true");
+            $depUserTablero = DB::select('SELECT d.id as dep_id, c.user_anterior_id, t.id as tab_id  from crm.caso c
+            inner join crm.fase f on f.id = c.fase_anterior_id
             inner join crm.tablero t on t.id = f.tab_id
             inner join crm.departamento d on d.id = t.dep_id
-            where c.id = ? limit 1;', [$casoId])[0];
+            where c.id = ? limit 1;', [$casoId]);
+            $data = (object) [
+                "usuarios" => $usuarios,
+                "departamentos" => $departamentos,
+                "tableros" => $tableros,
+                "depUserTablero"=>null
+            ];
 
+            if ($depUserTablero) {
+                $data->depUserTablero = $depUserTablero[0];
+            }
             return response()->json(RespuestaApi::returnResultado('success', 'Exito', $data));
-            
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $th->getMessage()));
         }
