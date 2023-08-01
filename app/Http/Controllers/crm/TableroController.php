@@ -17,7 +17,6 @@ class TableroController extends Controller
         $this->middleware('auth:api');
     }
 
-
     //LISTA DE TODOS LOS TABLEROS
     public function listAll()
     {
@@ -29,13 +28,23 @@ class TableroController extends Controller
         }
     }
 
-    public function listTableroByUser($user_id)
+    // start para superUsuario
+    public function listAllTablerosActivos()
     {
         try {
-            // $tableros = Tablero::where("tableroUsuario", $user_id)->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("id", "desc")->get();
-            $tableros = Tablero::whereHas('tableroUsuario', function ($query) use ($user_id) {
-                $query->where('user_id', $user_id);
-            })->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy('id', 'desc')->get();
+            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("id", "desc")->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listAllTablerosInactivos()
+    {
+        try {
+            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("id", "desc")->get();
+
             // return response()->json([
             //     "tableros" => $tableros,
             // ]);
@@ -44,12 +53,15 @@ class TableroController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+    // end para superUsuario
 
-    public function listTableroInactivos()
+    public function listTableroByUser($user_id)
     {
         try {
-            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("id", "desc")->get();
-
+            // $tableros = Tablero::where("tableroUsuario", $user_id)->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("id", "desc")->get();
+            $tableros = Tablero::whereHas('tableroUsuario', function ($query) use ($user_id) {
+                $query->where('user_id', $user_id);
+            })->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy('id', 'desc')->get();
             // return response()->json([
             //     "tableros" => $tableros,
             // ]);
