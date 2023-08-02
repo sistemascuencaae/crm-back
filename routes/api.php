@@ -21,6 +21,7 @@ use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\FaseController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
+use App\Http\Controllers\crm\NotificacionesController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
@@ -86,6 +87,8 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 Route::group(["prefix" => "crm"], function ($router) {
     //CRM CONTROLLER PRINCIPAL
     Route::get('/crmTablero/{id}', [CrmController::class, 'list']);
+    //notificaciones
+    Route::post('/addNotificacion', [NotificacionesController::class, 'add']);
 
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);

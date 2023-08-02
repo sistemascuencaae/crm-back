@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\crm;
 
+use App\Events\NotificacionesCrmEvent;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
