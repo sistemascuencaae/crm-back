@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\crm;
 
+use App\Events\NotificacionesCrmEvent;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
@@ -11,11 +12,13 @@ use App\Models\crm\Caso;
 use App\Models\crm\DTipoTarea;
 use App\Models\crm\Fase;
 use App\Models\crm\Miembros;
+use App\Models\crm\Notificaciones;
 use App\Models\crm\Tareas;
 use App\Models\Miembros as ModelsMiembros;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use PhpParser\Node\Stmt\TryCatch;
 
 class CasoController extends Controller
 {
@@ -106,7 +109,12 @@ class CasoController extends Controller
             $data = $this->getCaso($caso->id);
 
             //echo('ESTA ES LA DATA:'.json_encode($data));
+
+            $noti = $this->getNotificacion('CAMBIO DE FASE', 'CAMBIO', 'CAMBIO FASE',  $caso->id, $caso->user_id, $caso->fas_id);
             broadcast(new TableroEvent($data));
+            if($noti){
+                broadcast(new NotificacionesCrmEvent($noti));
+            }
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
@@ -236,7 +244,7 @@ class CasoController extends Controller
     public function editCasosUsuarioAsignado(Request $request, $caso_id)
     {
         try {
-            DB::transaction(function () use ($caso_id, $request) {
+            $notificacion = DB::transaction(function () use ($caso_id, $request) {
 
                 $caso = Caso::where('id', $caso_id)->first();
 
@@ -252,17 +260,24 @@ class CasoController extends Controller
                     $caso->fas_id = $faseNuevaId->id;
                     $caso->fase_anterior_id = $request->fase_anterior_id;
                     $caso->save();
-                    $meimbroExiste = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?',[$request->user_id, $caso_id]);
-                    if(sizeof($meimbroExiste) == 0){
+                    $meimbroExiste = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?', [$request->user_id, $caso_id]);
+                    if (sizeof($meimbroExiste) == 0) {
                         $miembro = new Miembros();
                         $miembro->user_id = $request->user_id;
                         $miembro->caso_id = $caso_id;
                         $miembro->save();
                     }
                 }
+
+                $noti = $this->getNotificacion('Reasignacion de caso', 'Nuevo caso asignado', 'Nuevo caso asignado',  $caso_id, $caso->user_id, $caso->fas_id);
+                return $noti;
             });
 
             $data = $this->getCaso($caso_id);
+            if($notificacion){
+                broadcast(new NotificacionesCrmEvent($notificacion));
+             }
+
             broadcast(new TableroEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
@@ -287,7 +302,7 @@ class CasoController extends Controller
                 "usuarios" => $usuarios,
                 "departamentos" => $departamentos,
                 "tableros" => $tableros,
-                "depUserTablero"=>null
+                "depUserTablero" => null
             ];
 
             if ($depUserTablero) {
@@ -299,7 +314,36 @@ class CasoController extends Controller
         }
     }
 
-    public function getCaso($casoId){
-        return Caso::with('user','userCreador', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo')->where('id', $casoId)->first();
+    public function getCaso($casoId)
+    {
+        return Caso::with('user', 'userCreador', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo')->where('id', $casoId)->first();
+    }
+
+    public function getNotificacion($descripcion, $tipo, $usuarioAccion,  $casoId, $userId, $faseId)
+    {
+
+        try {
+
+            $tableroId = DB::select('SELECT t.id FROM crm.tablero t inner join crm.fase f on f.tab_id = t.id where f.id = ? limit 1;', [$faseId]);
+            $crearNotificacion = Notificaciones::create([
+                "titulo" => 'CRM NOTIFICACION',
+                "descripcion" => $descripcion,
+                "estado" => true,
+                "color" => '#FF0000',
+                "caso_id" => $casoId,
+                "tipo" => $tipo,
+                "usuario_accion" => $usuarioAccion,
+                "usuario_destino_id" => $userId,
+                "tab_id" => sizeof($tableroId) > 0 ? $tableroId[0]->id : null,
+            ]);
+
+
+            $data = Notificaciones::with('caso', 'tablero', 'user_destino')->where('id', $crearNotificacion->id)->first();
+
+            return $data;
+        } catch (\Throwable $th) {
+            return null;
+        }
+
     }
 }
