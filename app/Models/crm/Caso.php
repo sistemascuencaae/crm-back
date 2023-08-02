@@ -115,4 +115,8 @@ class Caso extends Model
     {
         return $this->belongsTo(CTipoTarea::class, "ctt_id", 'id');
     }
+
+    public function user_anterior(){
+        return $this->belongsTo(User::class, "user_anterior_id", "id");
+    }
 }

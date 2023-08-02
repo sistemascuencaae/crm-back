@@ -169,7 +169,7 @@ class TableroController extends Controller
             $data = DB::select("select
             u.id as id_usuario_miembro,  u.name as usuario_miembro,u2.name as dueno_caso, cs.nombre as nombre, cs.id as caso_id,
             cs.fecha_vencimiento, cs.created_at,ent.ent_id, (ent.ent_apellidos || ' '|| ent.ent_nombres) as cliente, f.nombre  as fase_nombre, f.color_id as fase_color, cs.prioridad,
-            cg.uniqd, cg.nombre as nombre_grupo_chat, f.tab_id
+            cg.uniqd, cg.nombre as nombre_grupo_chat, f.tab_id, cs.estado_2
             from crm.miembros m
             inner join crm.caso cs on cs.id = m.caso_id
             inner join public.users u on u.id = m.user_id
