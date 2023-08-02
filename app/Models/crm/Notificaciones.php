@@ -2,11 +2,12 @@
 
 namespace App\Models\crm;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Notificacion extends Model
+class Notificaciones extends Model
 {
     use HasFactory;
 
@@ -18,13 +19,36 @@ class Notificacion extends Model
         "descripcion",
         "estado",
         "orden",
-        "color_id"
+        "color",
+        "caso_id",
+        "tipo",
+        "usuario_accion",
+        "tab_id",
+        "usuario_destino_id",
     ];
 
-    public function Caso()
+    public function caso()
     {
-        return $this->hasMany(Caso::class, "fas_id");
+        return $this->belongsTo(Caso::class,"caso_id","id");
     }
+    public function tablero()
+    {
+        return $this->belongsTo(Tablero::class,"tab_id","id");
+    }
+
+    public function user_destino()
+    {
+        return $this->belongsTo(User::class,"usuario_destino_id","id");
+    }
+
+
+
+
+
+
+
+
+
 
     public function setCreatedAtAttribute($value)
     {
