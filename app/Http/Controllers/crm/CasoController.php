@@ -338,7 +338,7 @@ class CasoController extends Controller
             ]);
 
 
-            $data = Notificaciones::with('caso', 'tablero', 'user_destino')->where('id', $crearNotificacion->id)->first();
+            $data = Notificaciones::with('caso', 'tablero', 'user_destino')->where('tab_id', sizeof($tableroId) > 0 ? $tableroId[0]->id : 0)->get();
 
             return $data;
         } catch (\Throwable $th) {
