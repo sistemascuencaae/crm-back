@@ -30,12 +30,6 @@ class NotificacionesCrmEvent implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        echo('aaaaaa--------------------------------');
-        echo(json_encode($this->data));
-         echo('aaaaaa--------------------------------');
-
-
-
         return [
             'data' => $this->data
         ];

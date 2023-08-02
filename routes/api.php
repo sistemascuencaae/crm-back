@@ -89,6 +89,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/crmTablero/{id}', [CrmController::class, 'list']);
     //notificaciones
     Route::post('/addNotificacion', [NotificacionesController::class, 'add']);
+    Route::get('/listNotificacion', [NotificacionesController::class, 'listAll']);
 
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
