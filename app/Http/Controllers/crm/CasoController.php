@@ -112,7 +112,7 @@ class CasoController extends Controller
             //echo('ESTA ES LA DATA:'.json_encode($data));
 
             // $noti = $this->getNotificacion('CAMBIO DE FASE', 'CAMBIO', 'CAMBIO FASE', $caso->id, $caso->user_id, $caso->fas_id);
-            // broadcast(new TableroEvent($data));
+            broadcast(new TableroEvent($data));
             // if ($noti) {
             //     broadcast(new NotificacionesCrmEvent($noti));
             // }
