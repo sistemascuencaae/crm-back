@@ -29,10 +29,24 @@ class NotificacionesController extends Controller
         }
     }
 
-    public function listAll()
+    public function listByDepartamento($dep_id)
     {
         try {
-            $notificacion = Notificaciones::with('caso', 'tablero', 'user_destino')->get();
+            $notificacion = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+                ->where('dep_id', $dep_id)->where('leido', false)->orderBy('id', 'DESC')
+                ->latest()->take(10)->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notificacion));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function allByDepartamento($dep_id)
+    {
+        try {
+            $notificacion = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+                ->where('dep_id', $dep_id)->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notificacion));
         } catch (Exception $e) {
