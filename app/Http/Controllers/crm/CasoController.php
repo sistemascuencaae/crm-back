@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Events\NotificacionesCrmEvent;
+use App\Events\ReasignarCasoEvent;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
@@ -110,11 +111,11 @@ class CasoController extends Controller
 
             //echo('ESTA ES LA DATA:'.json_encode($data));
 
-            $noti = $this->getNotificacion('CAMBIO DE FASE', 'CAMBIO', 'CAMBIO FASE', $caso->id, $caso->user_id, $caso->fas_id);
+            // $noti = $this->getNotificacion('CAMBIO DE FASE', 'CAMBIO', 'CAMBIO FASE', $caso->id, $caso->user_id, $caso->fas_id);
             broadcast(new TableroEvent($data));
-            if ($noti) {
-                broadcast(new NotificacionesCrmEvent($noti));
-            }
+            // if ($noti) {
+            //     broadcast(new NotificacionesCrmEvent($noti));
+            // }
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
@@ -278,7 +279,7 @@ class CasoController extends Controller
                 broadcast(new NotificacionesCrmEvent($notificacion));
             }
 
-            broadcast(new TableroEvent($data));
+            broadcast(new ReasignarCasoEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
