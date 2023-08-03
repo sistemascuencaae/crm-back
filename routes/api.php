@@ -89,8 +89,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/crmTablero/{id}', [CrmController::class, 'list']);
     //notificaciones
     Route::post('/addNotificacion', [NotificacionesController::class, 'add']);
-    Route::get('/listNotificacion', [NotificacionesController::class, 'listAll']);
-
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
     Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']);
@@ -286,6 +284,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addUser', [UserController::class, 'addUser']); // guardar
     Route::post('/editUser/{id}', [UserController::class, 'editUser']); // Editar
     Route::delete('/deleteUser/{id}', [UserController::class, 'deleteUser']); // Eliminar
+
+    // NOTIFICACIONES
+
+    Route::get('/allByDepartamento/{id}', [NotificacionesController::class, 'allByDepartamento']);
+    Route::get('/listByDepartamento/{id}', [NotificacionesController::class, 'listByDepartamento']);
 
     // CONDICIONES
 
