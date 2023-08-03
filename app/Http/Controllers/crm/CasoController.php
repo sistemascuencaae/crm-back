@@ -335,7 +335,7 @@ class CasoController extends Controller
                 "tab_id" => sizeof($tableroId) > 0 ? $tableroId[0]->id : null,
             ]);
 
-            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')->where('tab_id', sizeof($tableroId) > 0 ? $tableroId[0]->id : 0)->orderBy('id', 'DESC')->get();
+            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')->where('caso_id', $casoId)->orderBy('id', 'DESC')->first();
 
             //     return $data;
             // } catch (\Throwable $th) {

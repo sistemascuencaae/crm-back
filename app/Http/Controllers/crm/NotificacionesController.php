@@ -29,10 +29,11 @@ class NotificacionesController extends Controller
         }
     }
 
-    public function listAll()
+    public function listByTablero($tab_id)
     {
         try {
-            $notificacion = Notificaciones::with('caso', 'tablero', 'user_destino')->get();
+            $notificacion = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+                ->where('tab_id', $tab_id)->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notificacion));
         } catch (Exception $e) {
