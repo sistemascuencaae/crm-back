@@ -8,6 +8,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Notificaciones;
 use Illuminate\Http\Request;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class NotificacionesController extends Controller
 {
@@ -51,6 +52,30 @@ class NotificacionesController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notificacion));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function editLeidoNotificacion(Request $request, $notificacion_id)
+    {
+        try {
+            $notificacion = $request->all();
+
+            $data = DB::transaction(function () use ($notificacion, $notificacion_id, $request) {
+
+                $notificacion = Notificaciones::findOrFail($notificacion_id);
+
+                $notificacion->update([
+                    "leido" => $request->leido,
+                ]);
+
+                return Notificaciones::where('id', $notificacion->id)
+                    ->with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+                    ->orderBy('id', 'DESC')->first();
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 }
