@@ -270,7 +270,16 @@ class CasoController extends Controller
                     }
                 }
 
-                $noti = $this->getNotificacion('reasigno el caso #', 'Reasignar', $caso->user_anterior->name, $caso_id, $caso->user_id, $caso->fas_id, $caso->user->name);
+                $noti = $this->getNotificacion(
+                    'reasigno el caso #',
+                    'Reasignar',
+                    $caso->user_anterior->name,
+                    $caso->id,
+                    $caso->user_id,
+                    $caso->fas_id,
+                    $caso->user->name
+                );
+
                 return $noti;
             });
 
@@ -323,20 +332,26 @@ class CasoController extends Controller
     public function getNotificacion($descripcion, $tipo, $usuarioAccion, $casoId, $userId, $faseId, $user_name_actual)
     {
         try {
-            $tableroId = DB::select('SELECT t.id FROM crm.tablero t inner join crm.fase f on f.tab_id = t.id where f.id = ? limit 1;', [$faseId]);
-            Notificaciones::create([
+            $tabDepa = DB::select('SELECT t.id as tab_id, d.id as dep_id FROM crm.tablero t inner join crm.fase f on f.tab_id = t.id 
+            inner join crm.departamento d on d.id = t.dep_id
+            where f.id = ? limit 1;', [$faseId]);
+
+            $noti = Notificaciones::create([
                 "titulo" => 'CRM NOTIFICACION',
                 "descripcion" => $descripcion,
                 "estado" => true,
                 "color" => '#5DADE2',
                 "caso_id" => $casoId,
+                "dep_id" => sizeof($tabDepa) > 0 ? $tabDepa[0]->dep_id : null,
                 "tipo" => $tipo,
                 "usuario_accion" => $usuarioAccion,
                 "usuario_destino_id" => $userId,
-                "tab_id" => sizeof($tableroId) > 0 ? $tableroId[0]->id : null,
+                "tab_id" => sizeof($tabDepa) > 0 ? $tabDepa[0]->tab_id : null,
             ]);
 
-            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')->where('caso_id', $casoId)->orderBy('id', 'DESC')->first();
+            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+                ->where('id', $noti->id)
+                ->orderBy('id', 'DESC')->first();
 
             //     return $data;
             // } catch (\Throwable $th) {

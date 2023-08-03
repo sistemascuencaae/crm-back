@@ -287,7 +287,8 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // NOTIFICACIONES
 
-    Route::get('/listByTablero/{id}', [NotificacionesController::class, 'listByTablero']);
+    Route::get('/allByDepartamento/{id}', [NotificacionesController::class, 'allByDepartamento']);
+    Route::get('/listByDepartamento/{id}', [NotificacionesController::class, 'listByDepartamento']);
 
     // CONDICIONES
 

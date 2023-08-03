@@ -123,7 +123,8 @@ class JWTController extends Controller
                 "email" => auth('api')->user()->email,
                 "usu_tipo_analista" => auth('api')->user()->usu_tipo_analista,
                 "usu_tipo" => auth('api')->user()->usu_tipo,
-                "usu_alias" => auth('api')->user()->usu_alias
+                "usu_alias" => auth('api')->user()->usu_alias,
+                "dep_id" => auth('api')->user()->dep_id,
             ]
         ]);
     }
