@@ -83,14 +83,14 @@ class TableroController extends Controller
 
                 DB::insert("INSERT INTO crm.fase
                 (tab_id, nombre, descripcion, estado, orden, created_at, updated_at, generar_caso, color_id, fase_tipo)
-                VALUES(?, 'BANDEJA DE ENTRADA', 'SE CARGARAN TODAS LOS CASOS SIN ASIGNAR', true, 1, ?, ?, false, 22, 1);", [$tablero->id, $tablero->created_at, $tablero->updated_at]);
+                VALUES(?, 'BANDEJA DE ENTRADA', 'SE CARGARAN TODOS LOS CASOS SIN ASIGNAR', true, 1, ?, ?, true, 22, 1);", [$tablero->id, $tablero->created_at, $tablero->updated_at]);
 
                 DB::insert("INSERT INTO public.users
-                (name, estado, surname, usu_alias, email, 
-                password, created_at, updated_at, phone, fecha_nacimiento, 
+                (name, estado, surname, usu_alias, email,
+                password, created_at, updated_at, phone, fecha_nacimiento,
                 address, usu_tipo_analista, dep_id, usu_tipo)
-                VALUES('USUARIO GENERAL {$tablero->nombre} {$tablero->id}', true, 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}', 'USUARIOGENERAL{$tablero->id}', 'usuariogeneral{$tablero->id}@gmail.com', 
-                '123456', '{$tablero->created_at}', '{$tablero->updated_at}', '9999999999', '{$tablero->created_at}', 
+                VALUES('USUARIO GENERAL {$tablero->nombre} {$tablero->id}', true, 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}', 'USUARIOGENERAL{$tablero->id}', 'usuariogeneral{$tablero->id}@gmail.com',
+                '123456', '{$tablero->created_at}', '{$tablero->updated_at}', '9999999999', '{$tablero->created_at}',
                 'USUARIO GENERAL', NULL, $tablero->dep_id, 1);");
 
                 $usuGeneral = DB::select("SELECT * FROM public.users WHERE name = 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}'");
