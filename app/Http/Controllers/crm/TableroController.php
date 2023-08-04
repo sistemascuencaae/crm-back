@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
+use App\Models\crm\VistaMisCasos;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -154,31 +155,33 @@ class TableroController extends Controller
     public function listTableroMisCasos($user_id)
     {
         try {
-            // $data = DB::select("select cg.uniqd as clave_chat, c.id as id_caso,c.nombre as caso_nombre,
-            // f.nombre  as fase_nombre, f.color_id as fase_color, c.prioridad,c.created_at, c.fecha_vencimiento , uprin.name as u_principal, uprin.id as id_uprincipal,
-            // (ent.ent_apellidos || ' '|| ent.ent_nombres) as cliente
-            // from crm.chat_groups cg
-            // inner join crm.miembros m on m.chat_group_id = cg.id
-            // inner join public.users u on u.id = m.user_id
-            // inner join crm.caso c on c.id  = m.caso_id
-            // inner join public.users uprin on uprin.id = c.user_id
-            // inner join public.entidad ent on ent.ent_id = c.ent_id
-            // inner join crm.fase f on f.id = c.fas_id
-            // where u.id = " . $user_id);
 
-            $data = DB::select("select
-            u.id as id_usuario_miembro,  u.name as usuario_miembro,u2.name as dueno_caso, cs.nombre as nombre, cs.id as caso_id,
-            cs.fecha_vencimiento, cs.created_at,ent.ent_id, (ent.ent_apellidos || ' '|| ent.ent_nombres) as cliente, f.nombre  as fase_nombre, f.color_id as fase_color, cs.prioridad,
-            cg.uniqd, cg.nombre as nombre_grupo_chat, f.tab_id, cs.estado_2
-            from crm.miembros m
-            inner join crm.caso cs on cs.id = m.caso_id
-            inner join public.users u on u.id = m.user_id
-            inner join public.users u2 on u2.id = cs.user_id
-            inner join crm.fase f on f.id = cs.fas_id
-            inner join public.entidad ent on ent.ent_id = cs.ent_id
-            inner join crm.chat_groups cg on cg.id = m.chat_group_id
-            where u.id = " . $user_id . "
-            order By caso_id DESC");
+            $data = VistaMisCasos::with('miembros.usuario')->where('id_usuario_miembro',$user_id)->get();
+
+            // $data1 = DB::select("select
+            // u.id as id_usuario_miembro,  u.name as usuario_miembro,u2.name as dueno_caso, cs.nombre as nombre, cs.id as caso_id,
+            // cs.fecha_vencimiento, cs.created_at,ent.ent_id, (ent.ent_apellidos || ' '|| ent.ent_nombres) as cliente, f.nombre  as fase_nombre, f.color_id as fase_color, cs.prioridad,
+            // cg.uniqd, cg.nombre as nombre_grupo_chat, f.tab_id,tab.nombre, cs.estado_2
+            // from crm.miembros m
+            // inner join crm.caso cs on cs.id = m.caso_id
+            // inner join public.users u on u.id = m.user_id
+            // inner join public.users u2 on u2.id = cs.user_id
+            // inner join crm.fase f on f.id = cs.fas_id
+            // inner join crm.tablero tab on tab.id = f.tab_id
+            // inner join public.entidad ent on ent.ent_id = cs.ent_id
+            // inner join crm.chat_groups cg on cg.id = m.chat_group_id
+            // where u.id = " . $user_id . "
+            // order By caso_id DESC");
+
+
+
+
+            // $data = (object) [
+            //     "miscasos" => $usuarios,
+            //     "miembros" => $departamentos,
+            //     "tableros" => $tableros,
+            //     "depUserTablero" => null
+            // ];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
