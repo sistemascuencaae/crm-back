@@ -241,6 +241,29 @@ class CasoController extends Controller
         }
     }
 
+    public function editarTipoCaso(Request $request, $caso_id)
+    {
+        try {
+            $caso = $request->all();
+            
+            DB::transaction(function () use ($caso, $caso_id, $request) {
+                
+                $caso = Caso::findOrFail($caso_id);
+                echo(json_encode($caso));
+
+                $caso->update([
+                    "tc_id" => $request->tc_id,
+                ]);
+            });
+
+            $data = $this->getCaso($caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 
     public function editCasosUsuarioAsignado(Request $request, $caso_id)
     {
