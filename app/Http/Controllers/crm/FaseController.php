@@ -16,71 +16,23 @@ class FaseController extends Controller
         $this->middleware('auth:api');
     }
 
-    public function list($tableroId)
+    public function list(Request $request)
     {
 
 
-
+        $tabId = $request->input('tabId');
+        $userId = $request->input('userId');
+        $usuTipo = $request->input('usuTipo');
+        //echo json_encode($tabId);
         try {
             $user = auth('api')->user();
             $data = Fase::with('caso.user','caso.userCreador','caso.entidad', 'caso.resumen', 'caso.tareas','caso.actividad','caso.miembros.usuario.departamento','caso.Etiqueta')
-            ->where('tab_id',$tableroId)->get();
-
-            // $data = Fase::with('caso.user','caso.userCreador','caso.entidad', 'caso.resumen', 'caso.tareas','caso.actividad','caso.miembros.usuario.departamento','caso.Etiqueta')
-            // ->where('tab_id',$tableroId)
-            // ->whereHas('caso', function ($query) {
-            //     $query->where('estado', true);
-            // })->get();
+            ->where('tab_id',$tabId)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $data));
             } catch (\Throwable $th) {
                 return response()->json(RespuestaApi::returnResultado('exception', 'Al listar', $th->getMessage()));
             }
 
-
-
-
-
-
-        // $user = auth('api')->user();
-        // $id = 0;
-        // $id = $user->id;
-        // $fases = Fase::with('caso.user','caso.entidad', 'caso.resumen', 'caso.tareas','caso.actividad','caso.miembros.usuario','caso.Etiqueta')->where('tab_id',$tableroId)->get();
-
-
-        // $arrayFiltrado = array();
-        // for($i = 0; $i < sizeof($fases); $i++){
-        //     // $fase = $fases[$i]['caso'];
-        //     // array_push($fase,);
-        //     $fases[$i]['caso'] = $fases[$i]['caso']->filter(function ($caso) {
-        //         $user = auth('api')->user();
-        //         $id = $user->id;
-        //         return $caso['user_id'] == $id;
-        //     });
-        //     array_push($arrayFiltrado,$fases[$i]);
-
-
-        //     echo('comparacinL '.json_encode($fases[$i]['caso']));
-            // $a = array_filter($fases[$i]['caso'], function($caso) {
-            //     $user = auth('api')->user();
-            //     $id = $user->id;
-            //     return $caso->id == $id;
-            // });
-            //echo('fcaxs casos: '.json_encode($a));
-            // array_push($arrayFiltrado,);
-
-        //}
-
-
-
-
-
-
-
-
-
-
-
-        //return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $arrayFiltrado));
     }
 
     public function edit(Request $request)
