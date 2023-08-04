@@ -245,9 +245,9 @@ class CasoController extends Controller
     {
         try {
             $caso = $request->all();
-            
+
             DB::transaction(function () use ($caso, $caso_id, $request) {
-                
+
                 $caso = Caso::findOrFail($caso_id);
 
                 $caso->update([
@@ -283,7 +283,7 @@ class CasoController extends Controller
                     $caso->fas_id = $faseNuevaId->id;
                     $caso->fase_anterior_id = $request->fase_anterior_id;
                     $caso->save();
-                    $meimbroExiste = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?', [$request->user_id, $caso_id]);
+                    $meimbroExiste = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?', [$request->user_actual_id, $caso_id]);
                     if (sizeof($meimbroExiste) == 0) {
                         $miembro = new Miembros();
                         $miembro->user_id = $request->user_id;
@@ -354,7 +354,7 @@ class CasoController extends Controller
     public function getNotificacion($descripcion, $tipo, $usuarioAccion, $casoId, $userId, $faseId, $user_name_actual)
     {
         try {
-            $tabDepa = DB::select('SELECT t.id as tab_id, d.id as dep_id FROM crm.tablero t inner join crm.fase f on f.tab_id = t.id 
+            $tabDepa = DB::select('SELECT t.id as tab_id, d.id as dep_id FROM crm.tablero t inner join crm.fase f on f.tab_id = t.id
             inner join crm.departamento d on d.id = t.dep_id
             where f.id = ? limit 1;', [$faseId]);
 
