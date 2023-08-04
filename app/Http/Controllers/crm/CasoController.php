@@ -249,7 +249,6 @@ class CasoController extends Controller
             DB::transaction(function () use ($caso, $caso_id, $request) {
 
                 $caso = Caso::findOrFail($caso_id);
-                echo(json_encode($caso));
 
                 $caso->update([
                     "tc_id" => $request->tc_id,
