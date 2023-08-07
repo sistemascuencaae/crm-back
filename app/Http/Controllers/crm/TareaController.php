@@ -12,10 +12,10 @@ use Illuminate\Support\Facades\DB;
 class TareaController extends Controller
 {
 
-    public function listTareasCasoById($caso_id)
+    public function listTareasCasoById($caso_id, $tab_id)
     {
         try {
-            $tareas = Tareas::where('caso_id', $caso_id)->orderBy('marcado', 'DESC')->orderBy('id', 'DESC')->get();
+            $tareas = Tareas::where('caso_id', $caso_id)->where('tab_id', $tab_id)->orderBy('marcado', 'DESC')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tareas));
         } catch (Exception $e) {

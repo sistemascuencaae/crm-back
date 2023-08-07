@@ -270,7 +270,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // TAREAS INDIVIDUALES
 
-    Route::get('listTareasCasoById/{caso_id}', [TareaController::class, 'listTareasCasoById']); // by caso_id
+    Route::get('listTareasCasoById/{caso_id}/{tab_id}', [TareaController::class, 'listTareasCasoById']); // by caso_id
     Route::post('/addTareas', [TareaController::class, 'addTareas']); // guardar
     Route::post('/editTareas/{id}', [TareaController::class, 'editTareas']); // Editar
     Route::delete('/deleteTareas/{id}', [TareaController::class, 'deleteTareas']); // Eliminar
