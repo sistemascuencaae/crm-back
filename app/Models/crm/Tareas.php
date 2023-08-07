@@ -22,6 +22,7 @@ class Tareas extends Model implements Auditable
         "estado",
         "ctt_id",
         "marcado",
+        "tab_id",
     ];
 
     public function setCreatedAtAttribute($value)
