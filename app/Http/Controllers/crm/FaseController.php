@@ -26,7 +26,16 @@ class FaseController extends Controller
         //echo json_encode($tabId);
         try {
             $user = auth('api')->user();
-            $data = Fase::with('caso.user','caso.userCreador','caso.entidad', 'caso.resumen', 'caso.tareas','caso.actividad','caso.miembros.usuario.departamento','caso.Etiqueta')
+            $data = Fase::with(
+                'caso.user',
+                'caso.userCreador',
+                'caso.entidad',
+                'caso.resumen',
+                'caso.tareas',
+                'caso.actividad',
+                'caso.miembros.usuario.departamento',
+                'caso.Etiqueta',
+                'caso.requerimientosCaso')
             ->where('tab_id',$tabId)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $data));
             } catch (\Throwable $th) {
