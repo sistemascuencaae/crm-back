@@ -34,7 +34,8 @@ class CTareaController extends Controller
                         "ctt_id" => $cTarea['id'],
                         "nombre" => $cTar['tareas'][$i]['nombre'],
                         "requerido" => $cTar['tareas'][$i]['requerido'],
-                        "estado" => $cTar['tareas'][$i]['estado']
+                        "estado" => $cTar['tareas'][$i]['estado'],
+                        "tab_id" => $cTar['tareas'][$i]['tab_id'],
                     ]);
                 }
 
@@ -118,7 +119,8 @@ class CTareaController extends Controller
                             "ctt_id" => $id,
                             "nombre" => $tareas[$i]['nombre'],
                             "requerido" => $tareas[$i]['requerido'],
-                            "estado" => $tareas[$i]['estado']
+                            "estado" => $tareas[$i]['estado'],
+                            "tab_id" => $tareas[$i]['tab_id'],
                         ]);
                     }
                 }
@@ -130,7 +132,7 @@ class CTareaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
