@@ -19,7 +19,7 @@ class DTipoTarea extends Model implements Auditable
 
     protected $table = 'crm.dtipo_tarea';
 
-    protected $fillable = ["nombre", "requerido", "estado", "ctt_id"];
+    protected $fillable = ["nombre", "requerido", "estado", "ctt_id", "tab_id"];
 
     public function setCreatedAtAttribute($value)
     {
