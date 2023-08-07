@@ -156,7 +156,7 @@ class TableroController extends Controller
     {
         try {
 
-            $data = VistaMisCasos::with('miembros.usuario')->where('id_usuario_miembro',$user_id)->get();
+            $data = VistaMisCasos::with('miembros.usuario.departamento')->where('id_usuario_miembro', $user_id)->get();
 
             // $data1 = DB::select("select
             // u.id as id_usuario_miembro,  u.name as usuario_miembro,u2.name as dueno_caso, cs.nombre as nombre, cs.id as caso_id,

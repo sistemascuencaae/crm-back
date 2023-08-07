@@ -22,6 +22,7 @@ use App\Http\Controllers\crm\FaseController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\NotificacionesController;
+use App\Http\Controllers\crm\RequerimientoController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
@@ -291,6 +292,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/allByDepartamento/{id}', [NotificacionesController::class, 'allByDepartamento']);
     Route::get('/listByDepartamento/{id}', [NotificacionesController::class, 'listByDepartamento']);
     Route::post('/editLeidoNotificacion/{id}', [NotificacionesController::class, 'editLeidoNotificacion']);
+
+    // REQUERIMIENTOS
+
+    Route::get('listRequerimientosCasoById/{caso_id}', [RequerimientoController::class, 'listRequerimientosCasoById']); // by caso_id
+    Route::post('/addRequerimientos', [RequerimientoController::class, 'addRequerimientos']); // guardar
+    Route::post('/editRequerimientos/{id}', [RequerimientoController::class, 'editRequerimientos']); // Editar
+    Route::delete('/deleteRequerimientos/{id}', [RequerimientoController::class, 'deleteRequerimientos']); // Eliminar
 
     // CONDICIONES
 
