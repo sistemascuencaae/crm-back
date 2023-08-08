@@ -13,9 +13,9 @@ class CTipoResultadoCierreController extends Controller
     public function addCTipoResultadoCierre(Request $request)
     {
         try {
-            CTipoResultadoCierre::create($request->all());
+            $ctra = CTipoResultadoCierre::create($request->all());
 
-            $resultado = CTipoResultadoCierre::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $resultado = CTipoResultadoCierre::where('tab_id', $ctra->tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
 
