@@ -287,7 +287,7 @@ class CasoController extends Controller
                     $meimbroExiste = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?', [$request->user_actual_id, $caso_id]);
                     if (sizeof($meimbroExiste) == 0) {
                         $miembro = new Miembros();
-                        $miembro->user_id = $request->user_id;
+                        $miembro->user_id = $request->user_actual_id;
                         $miembro->caso_id = $caso_id;
                         $miembro->save();
                     }
@@ -349,7 +349,7 @@ class CasoController extends Controller
 
     public function getCaso($casoId)
     {
-        return Caso::with('user', 'userCreador', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo')->where('id', $casoId)->first();
+        return Caso::with('user', 'userCreador', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo', 'requerimientosCaso')->where('id', $casoId)->first();
     }
 
     public function getNotificacion($descripcion, $tipo, $usuarioAccion, $casoId, $userId, $faseId, $user_name_actual)
