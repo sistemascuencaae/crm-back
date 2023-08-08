@@ -49,6 +49,7 @@ class CasoController extends Controller
                     $tarea->requerido = $dtt->requerido;
                     $tarea->estado = $dtt->estado;
                     $tarea->ctt_id = $caso->ctt_id;
+                    $tarea->tab_id = $dtt->tab_id;
                     $tarea->marcado = false;
                     $caso->tareas()->save($tarea);
                 }
@@ -81,9 +82,9 @@ class CasoController extends Controller
             //echo('ESTA ES LA DATA:'.json_encode($data));
             broadcast(new TableroEvent($casoCreado));
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $casoCreado));
+            return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito.', $casoCreado));
         } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar datos', $th->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $th->getMessage()));
         }
     }
 
