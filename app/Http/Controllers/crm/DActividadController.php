@@ -50,4 +50,15 @@ class DActividadController extends Controller
         }
     }
 
+    public function listActividadesByUserId($user_id)
+    {
+        try {
+            $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad', 'cTipoResultadoCierre')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
