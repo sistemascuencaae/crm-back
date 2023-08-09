@@ -265,7 +265,7 @@ class CasoController extends Controller
     }
 
 
-    public function editCasosUsuarioAsignado(Request $request, $caso_id)
+    public function reasignarCaso(Request $request, $caso_id)
     {
         try {
             $notificacion = DB::transaction(function () use ($caso_id, $request) {
@@ -349,7 +349,28 @@ class CasoController extends Controller
 
     public function getCaso($casoId)
     {
-        return Caso::with('user', 'userCreador', 'entidad', 'resumen', 'tareas', 'actividad', 'Etiqueta', 'miembros.usuario.departamento', 'Galeria', 'Archivo', 'requerimientosCaso')->where('id', $casoId)->first();
+
+
+        $tabId = DB::select('SELECT t.id FROM crm.caso co
+         inner join crm.fase fa on fa.id = co.fas_id
+         inner join crm.tablero t on t.id = fa.tab_id
+        where co.id = '.$casoId)[0];
+
+
+
+        return Caso::with([
+        'user',
+        'userCreador',
+        'entidad',
+        'resumen',
+        'tareas' => function ($query) use ($tabId) { $query->where('tab_id', $tabId->id); },
+        'actividad',
+        'Etiqueta',
+        'miembros.usuario.departamento',
+        'Galeria',
+        'Archivo',
+        'requerimientosCaso'
+        ])->where('id', $casoId)->first();
     }
 
     public function getNotificacion($descripcion, $tipo, $usuarioAccion, $casoId, $userId, $faseId, $user_name_actual)
