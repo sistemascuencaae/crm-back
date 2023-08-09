@@ -41,6 +41,7 @@ class Caso extends Model
         "user_anterior_id",
         "user_creador_id",
         "estado_2",
+        "fase_creacion_id"
     ];
 
     public function userCreador(){
