@@ -100,23 +100,19 @@ class CasoController extends Controller
     }
     public function editFase(Request $request)
     {
+        $casoId = $request->input('casoId');
+        $faseId = $request->input('faseId');
+        $faseAnteriorId = $request->input('faseAnteriorId');
+
 
         try {
-            $caso = Caso::find($request->input('id'));
+            $caso = Caso::find($casoId);
             $caso->update([
-                'fas_id' => $request->input('fas_id'),
-                'fase_anterior_id' => $request->input('fase_anterior_id'),
+                'fas_id' => $faseId,
+                'fase_anterior_id' => $faseAnteriorId
             ]);
-            //$data = $this->getCasoJoinTablero($caso->id);
             $data = $this->getCaso($caso->id);
-
-            //echo('ESTA ES LA DATA:'.json_encode($data));
-
-            // $noti = $this->getNotificacion('CAMBIO DE FASE', 'CAMBIO', 'CAMBIO FASE', $caso->id, $caso->user_id, $caso->fas_id);
             broadcast(new TableroEvent($data));
-            // if ($noti) {
-            //     broadcast(new NotificacionesCrmEvent($noti));
-            // }
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
