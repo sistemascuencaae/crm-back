@@ -141,8 +141,6 @@ class CasoController extends Controller
         try {
             $data = [];
             $casoId = $request->input("casoId");
-            $tabId = $request->input("tableroId");
-            $userId = $request->input("userId");
             $bloqueado = $request->input("bloqueado");
             $bloqueado_user = $request->input("bloqueado_user");
             $caso = Caso::find($casoId);
