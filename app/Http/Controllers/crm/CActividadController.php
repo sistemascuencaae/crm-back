@@ -17,7 +17,7 @@ class CActividadController extends Controller
 
             // $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            $actividades = CTipoActividad::where('tab_id', $cta->tab_id)->where('estado', true)->orderBy('id', 'DESC')->get();
+            $actividades = CTipoActividad::where('tab_id', $cta->tab_id)->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $actividades));
         } catch (Exception $e) {
