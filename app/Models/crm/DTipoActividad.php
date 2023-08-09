@@ -4,6 +4,7 @@ namespace App\Models\crm;
 
 use App\Models\crm\CTipoActividad;
 use App\Models\crm\CTipoResultadoCierre;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -49,5 +50,10 @@ class DTipoActividad extends Model implements Auditable
     public function cTipoResultadoCierre()
     {
         return $this->belongsTo(CTipoResultadoCierre::class, 'ctr_id', 'id');
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 }

@@ -95,4 +95,20 @@ class UserController extends Controller
         }
     }
 
+    public function listUsuariosByTableroId($tablero_id)
+    {
+        try {
+            $usuarios = User::whereHas('tablero.usuario', function ($query) use ($tablero_id) {
+                $query->where('tab_id', $tablero_id);
+            })
+                ->orderBy("id", "asc")
+                ->with('Departamento')
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuarios));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
