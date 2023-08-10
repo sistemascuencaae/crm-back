@@ -5,8 +5,10 @@ namespace App\Http\Controllers\crm;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\DTipoActividad;
+use App\Models\crm\Miembros;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DActividadController extends Controller
 {
@@ -21,14 +23,60 @@ class DActividadController extends Controller
         }
     }
 
+    // public function addDTipoActividad(Request $request)
+    // {
+    //     try {
+    //         $dta = DTipoActividad::create($request->all());
+
+    //         // $actividades = DTipoActividad::orderBy('id', 'DESC')->get();
+
+    //         $data = DTipoActividad::with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->where('caso_id', $dta->caso_id)->orderBy('id', 'DESC')->get();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
+    // public function updateDActividad(Request $request, $id)
+    // {
+    //     try {
+    //         $actividad = DTipoActividad::findOrFail($id);
+
+    //         $actividad->update($request->all());
+
+    //         $data = DTipoActividad::where('id', $id)->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
     public function addDTipoActividad(Request $request)
     {
         try {
-            $dta = DTipoActividad::create($request->all());
+            $usuarioMiembro = $request->input('usuario');
 
-            // $actividades = DTipoActividad::orderBy('id', 'DESC')->get();
+            $data = DB::transaction(function () use ($usuarioMiembro, $request) {
+                $dta = DTipoActividad::create($request->all());
 
-            $data = DTipoActividad::with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->where('caso_id', $dta->caso_id)->orderBy('id', 'DESC')->get();
+                $data = DTipoActividad::with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                    ->where('caso_id', $dta->caso_id)
+                    ->orderBy('id', 'DESC')
+                    ->get();
+
+                $miembro = new Miembros();
+
+                $miembro->user_id = $usuarioMiembro['id'];
+                $miembro->caso_id = $dta->caso_id;
+
+                $miemb = Miembros::where('user_id', $miembro->user_id)->first();
+                if (!$miemb) {
+                    $miembro->save();
+                }
+
+                return $data;
+            });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
@@ -39,11 +87,28 @@ class DActividadController extends Controller
     public function updateDActividad(Request $request, $id)
     {
         try {
+            $usuarioMiembro = $request->input('usuario');
             $actividad = DTipoActividad::findOrFail($id);
 
-            $actividad->update($request->all());
+            $data = DB::transaction(function () use ($usuarioMiembro, $actividad, $request) {
 
-            $data = DTipoActividad::where('id', $id)->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+                $actividad->update($request->all());
+
+                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+
+                $miembro = new Miembros();
+
+                $miembro->user_id = $usuarioMiembro['id'];
+                $miembro->caso_id = $actividad->caso_id;
+
+                $miemb = Miembros::where('user_id', $miembro->user_id)->first();
+                if (!$miemb) {
+                    $miembro->save();
+                }
+
+                return $data;
+            });
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -77,7 +142,7 @@ class DActividadController extends Controller
         }
     }
 
-    public function updateDActividadTabla(Request $request, $id, $user_id) 
+    public function updateDActividadTabla(Request $request, $id, $user_id)
     {
         try {
             $actividad = DTipoActividad::findOrFail($id);
