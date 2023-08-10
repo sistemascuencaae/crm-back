@@ -4,6 +4,7 @@ namespace App\Models\crm;
 
 use App\Models\crm\CTipoActividad;
 use App\Models\crm\CTipoResultadoCierre;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -21,7 +22,7 @@ class DTipoActividad extends Model implements Auditable
 
     protected $table = 'crm.dtipo_actividad';
 
-    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "estado_actividad", "pos_descripcion", "cta_id", "ctr_id", "caso_id", "id_padre"];
+    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "estado_actividad", "pos_descripcion", "cta_id", "ctr_id", "caso_id", "id_padre", "user_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -49,5 +50,10 @@ class DTipoActividad extends Model implements Auditable
     public function cTipoResultadoCierre()
     {
         return $this->belongsTo(CTipoResultadoCierre::class, 'ctr_id', 'id');
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 }

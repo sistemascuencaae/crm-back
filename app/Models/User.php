@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\crm\Tablero;
+use App\Models\crm\TableroUsuario;
 use App\Models\crm\UsuarioDynamo;
 use App\Models\crm\Departamento;
 use Carbon\Carbon;
@@ -82,6 +84,11 @@ class User extends Authenticatable implements JWTSubject
     public function Departamento()
     {
         return $this->belongsTo(Departamento::class, "dep_id", "id");
+    }
+
+    public function tablero()
+    {
+        return $this->hasMany(TableroUsuario::class, "user_id", "id");
     }
 
     public function setCreatedAtAttribute($value)

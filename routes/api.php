@@ -242,7 +242,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addDTipoActividad', [DActividadController::class, 'addDTipoActividad']); // guardar
     Route::get('listActividadesByIdCasoId/{caso_id}', [DActividadController::class, 'listActividadesByIdCasoId']); // listar
     Route::post('/updateDActividad/{id}', [DActividadController::class, 'updateDActividad']); // Edita la actividad
+    Route::get('listActividadesByUserId/{user_id}', [DActividadController::class, 'listActividadesByUserId']); // listar
     // Route::delete('/deleteCTipoActividad/{id}', [DActividadController::class, 'deleteCTipoActividad']); // Eliminar
+    Route::post('/addDTipoActividadTabla/{user_id}', [DActividadController::class, 'addDTipoActividadTabla']); // guardar
+    Route::post('/updateDActividadTabla/{id}/{user_id}', [DActividadController::class, 'updateDActividadTabla']); // Edita la actividad
 
     // CTIPORESULTADOCIERRE
 
@@ -286,6 +289,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addUser', [UserController::class, 'addUser']); // guardar
     Route::post('/editUser/{id}', [UserController::class, 'editUser']); // Editar
     Route::delete('/deleteUser/{id}', [UserController::class, 'deleteUser']); // Eliminar
+    Route::get('/listUsuariosByTableroId/{tablero_id}', [UserController::class, 'listUsuariosByTableroId']); // listar usuarios del tablero
 
     // NOTIFICACIONES
 
