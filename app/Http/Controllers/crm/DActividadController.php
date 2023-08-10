@@ -215,4 +215,17 @@ class DActividadController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    // LISTA PARA EL CALENDARIO
+    public function listActividadesIniciadasByUserId($user_id)
+    {
+        try {
+            $actividades = DTipoActividad::where('user_id', $user_id)->where('estado_actividad', 'Iniciado')->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }

@@ -246,6 +246,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // Route::delete('/deleteCTipoActividad/{id}', [DActividadController::class, 'deleteCTipoActividad']); // Eliminar
     Route::post('/addDTipoActividadTabla/{user_id}', [DActividadController::class, 'addDTipoActividadTabla']); // guardar
     Route::post('/updateDActividadTabla/{id}/{user_id}', [DActividadController::class, 'updateDActividadTabla']); // Edita la actividad
+    Route::get('listActividadesIniciadasByUserId/{user_id}', [DActividadController::class, 'listActividadesIniciadasByUserId']); // listar para el calendario
 
     // CTIPORESULTADOCIERRE
 
