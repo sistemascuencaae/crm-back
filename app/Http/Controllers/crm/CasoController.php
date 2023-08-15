@@ -65,6 +65,7 @@ class CasoController extends Controller
                 $caso->descripcion = 'CASO # ' . $caso->id;
                 $caso->estado_2 = 1;
                 $caso->user_creador_id = $caso->user_id;
+
                 $caso->save();
 
                 for ($i = 0; $i < sizeof($miembros); $i++) {
@@ -77,9 +78,6 @@ class CasoController extends Controller
                 return $this->getCaso($caso->id);
             });
 
-            //$data = $this->getCasoJoinTablero($casoCreado->id);
-            //$data = Caso::with('user','entidad', 'resumen', 'tareas','actividad')->where('id',$caso->id)->get();
-            //echo('ESTA ES LA DATA:'.json_encode($data));
             broadcast(new TableroEvent($casoCreado));
 
             return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito.', $casoCreado));
@@ -259,46 +257,54 @@ class CasoController extends Controller
     }
 
 
-    public function reasignarCaso(Request $request, $caso_id)
+    public function reasignarCaso(Request $request)
     {
+        $caso_id = $request->input('caso_id');
         try {
-            $notificacion = DB::transaction(function () use ($caso_id, $request) {
+            $notificacion = DB::transaction(function () use ($request) {
+                $caso_id = $request->input('caso_id');
+                $estado_2 = $request->input('estado_2');
+                $user_anterior_id = $request->input('user_anterior_id');
+                $fase_anterior_id = $request->input('fase_anterior_id');
+                $tablero_anterior_id = $request->input('tablero_anterior_id');
+                $dep_anterior_id = $request->input('dep_anterior_id');
+                $new_user_id = $request->input('new_user_id');
+                $new_fase_id = $request->input('new_fase_id');
+                $new_dep_id = $request->input('new_dep_id');
+                $new_tablero_id = $request->input('new_tablero_id');
 
-                $caso = Caso::where('id', $caso_id)->first();
 
-                $faseNuevaId = DB::select('SELECT f.id from crm.tablero t
-                inner join crm.fase f on f.tab_id = t.id and f.tab_id = ? and f.fase_tipo = 1', [$request->tab_id])[0];
-                //echo(json_encode($request->user_id));
-                if ($faseNuevaId->id) {
-                    $caso->estado_2 = $request->estado_2;
-                    $caso->bloqueado = false;
-                    $caso->bloqueado_user = '';
-                    $caso->user_id = $request->user_id;
-                    $caso->user_anterior_id = $request->user_actual_id;
-                    $caso->fas_id = $faseNuevaId->id;
-                    $caso->fase_anterior_id = $request->fase_anterior_id;
-                    $caso->save();
-                    $meimbroExiste = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?', [$request->user_actual_id, $caso_id]);
-                    if (sizeof($meimbroExiste) == 0) {
-                        $miembro = new Miembros();
-                        $miembro->user_id = $request->user_actual_id;
-                        $miembro->caso_id = $caso_id;
-                        $miembro->save();
-                    }
+
+                //try {
+                $casoEnProceso = Caso::find($caso_id);
+                $casoEnProceso->fas_id = $new_fase_id;
+                $casoEnProceso->user_id = $new_user_id;
+                $casoEnProceso->estado_2 = $estado_2;
+                $casoEnProceso->bloqueado = false;
+                $casoEnProceso->bloqueado_user = '';
+                $casoEnProceso->fase_anterior_id = $fase_anterior_id;
+                $casoEnProceso->user_anterior_id = $user_anterior_id;
+                $casoEnProceso->save();
+                $miemExist = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?', [$new_user_id, $caso_id]);
+                if (sizeof($miemExist) == 0) {
+                    $miembro = new Miembros();
+                    $miembro->user_id = $new_user_id;
+                    $miembro->caso_id = $caso_id;
+                    $miembro->save();
                 }
 
                 $noti = $this->getNotificacion(
                     'reasigno el caso #',
                     'Reasignar',
-                    $caso->user_anterior->name,
-                    $caso->id,
-                    $caso->user_id,
-                    $caso->fas_id,
-                    $caso->user->name
+                    $casoEnProceso->user_anterior->name,
+                    $casoEnProceso->id,
+                    $casoEnProceso->user_id,
+                    $casoEnProceso->fas_id,
+                    $casoEnProceso->user->name
                 );
-
                 return $noti;
             });
+
 
             $data = $this->getCaso($caso_id);
             if ($notificacion) {
@@ -310,6 +316,72 @@ class CasoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
+
+
+        // echo json_encode($caso_id);
+        // echo json_encode($user_anterior_id);
+        // echo json_encode($fase_anterior_id);
+        // echo json_encode($tablero_anterior_id);
+        // echo json_encode($dep_anterior_id);
+        // echo json_encode($new_user_id);
+        // echo json_encode($new_fase_id);
+        // echo json_encode($new_dep_id);
+        // echo json_encode($new_tablero_id);
+
+
+
+
+
+
+        // try {
+        //     $notificacion = DB::transaction(function () use ($caso_id, $request) {
+
+        //         $caso = Caso::where('id', $caso_id)->first();
+
+        //         // $faseNuevaId = DB::select('SELECT f.id from crm.tablero t
+        //         // inner join crm.fase f on f.tab_id = t.id and f.tab_id = ? and f.fase_tipo = 1', [$request->tab_id])[0];
+        //         //echo(json_encode($request->user_id));
+        //         if ($faseNuevaId->id) {
+        //             $caso->fas_id = $faseNuevaId->id;
+        //             $caso->estado_2 = $request->estado_2;
+        //             $caso->bloqueado = false;
+        //             $caso->bloqueado_user = '';
+        //             $caso->user_id = $request->user_id;
+        //             $caso->user_anterior_id = $request->user_actual_id;
+        //             $caso->fase_anterior_id = $request->fase_anterior_id;
+        //             $caso->save();
+        //             $meimbroExiste = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?', [$request->user_actual_id, $caso_id]);
+        //             if (sizeof($meimbroExiste) == 0) {
+        //                 $miembro = new Miembros();
+        //                 $miembro->user_id = $request->user_actual_id;
+        //                 $miembro->caso_id = $caso_id;
+        //                 $miembro->save();
+        //             }
+        //         }
+
+        //         $noti = $this->getNotificacion(
+        //             'reasigno el caso #',
+        //             'Reasignar',
+        //             $caso->user_anterior->name,
+        //             $caso->id,
+        //             $caso->user_id,
+        //             $caso->fas_id,
+        //             $caso->user->name
+        //         );
+
+        //         return $noti;
+        //     });
+
+        //     $data = $this->getCaso($caso_id);
+        //     if ($notificacion) {
+        //         broadcast(new NotificacionesCrmEvent($notificacion));
+        //     }
+
+        //     broadcast(new ReasignarCasoEvent($data));
+        //     return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        // } catch (Exception $e) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        // }
     }
 
 
@@ -320,15 +392,33 @@ class CasoController extends Controller
             $usuarios = DB::select("SELECT * from public.users where estado  = true");
             $tableros = DB::select("SELECT * from crm.tablero where estado = true");
             $departamentos = DB::select("SELECT * from crm.departamento where estado = true");
-            $depUserTablero = DB::select('SELECT d.id as dep_id, c.user_anterior_id, t.id as tab_id  from crm.caso c
+            $fases = DB::select("SELECT * from crm.fase where estado = true");
+            $depUserTablero = DB::select(
+                'SELECT
+            d.id as dep_anterior_id,
+            t.id as tablero_anterior_id,
+            c.fase_anterior_id,
+            c.user_anterior_id,
+            c.estado_2,
+            c.fase_creacion_id,
+            c.dep_creacion_id,
+            c.tablero_creacion_id,
+            c.user_creador_id,
+            usant.usu_tipo
+            from crm.caso c
             inner join crm.fase f on f.id = c.fase_anterior_id
             inner join crm.tablero t on t.id = f.tab_id
             inner join crm.departamento d on d.id = t.dep_id
-            where c.id = ? limit 1;', [$casoId]);
+            inner join public.users us on us.id = c.user_creador_id
+            inner join public.users usant on usant.id = c.user_anterior_id
+            where c.id = ? limit 1;',
+                [$casoId]
+            );
             $data = (object) [
                 "usuarios" => $usuarios,
                 "departamentos" => $departamentos,
                 "tableros" => $tableros,
+                "fases" => $fases,
                 "depUserTablero" => null
             ];
 
@@ -348,22 +438,24 @@ class CasoController extends Controller
         $tabId = DB::select('SELECT t.id FROM crm.caso co
          inner join crm.fase fa on fa.id = co.fas_id
          inner join crm.tablero t on t.id = fa.tab_id
-        where co.id = '.$casoId)[0];
+        where co.id = ' . $casoId)[0];
 
 
 
         return Caso::with([
-        'user',
-        'userCreador',
-        'entidad',
-        'resumen',
-        'tareas' => function ($query) use ($tabId) { $query->where('tab_id', $tabId->id); },
-        'actividad',
-        'Etiqueta',
-        'miembros.usuario.departamento',
-        'Galeria',
-        'Archivo',
-        'requerimientosCaso'
+            'user',
+            'userCreador',
+            'entidad',
+            'resumen',
+            'tareas' => function ($query) use ($tabId) {
+                $query->where('tab_id', $tabId->id);
+            },
+            'actividad',
+            'Etiqueta',
+            'miembros.usuario.departamento',
+            'Galeria',
+            'Archivo',
+            'requerimientosCaso'
         ])->where('id', $casoId)->first();
     }
 
@@ -401,3 +493,15 @@ class CasoController extends Controller
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
