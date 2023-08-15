@@ -118,7 +118,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addCaso', [CasoController::class, 'add']);
     Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
-    Route::put('/editCaUsAs/{id}', [CasoController::class, 'reasignarCaso']);
+    Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']); //
 
 
@@ -142,6 +142,8 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
     Route::get('/listClientes/{parametro}', [ClienteOpenceoController::class, 'list']);
+    Route::get('/clienteCasoList', [ClienteOpenceoController::class, 'clienteCasoList']);
+
 
 });
 
