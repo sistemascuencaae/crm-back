@@ -3,6 +3,7 @@
 namespace App\Models\crm;
 
 use App\Models\crm\DTipoActividad;
+use App\Models\crm\Tablero;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -42,5 +43,10 @@ class CTipoActividad extends Model implements Auditable
     public function dTipoActividad()
     {
         return $this->hasMany(DTipoActividad::class, 'id', 'cta_id');
+    }
+
+    public function tablero()
+    {
+        return $this->belongsTo(Tablero::class, 'tab_id', 'id');
     }
 }
