@@ -142,6 +142,8 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
     Route::get('/listClientes/{parametro}', [ClienteOpenceoController::class, 'list']);
+    Route::get('/clienteCasoList', [ClienteOpenceoController::class, 'clienteCasoList']);
+
 
 });
 
