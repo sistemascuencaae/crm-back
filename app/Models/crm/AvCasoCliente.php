@@ -32,6 +32,9 @@ class AvCasoCliente extends Model
         "tab_nombre",
         "dep_id",
         "dep_nombre",
+        "numero_casos",
+        "color_fase"
+
     ];
 
 }
