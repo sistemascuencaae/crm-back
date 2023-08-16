@@ -9,6 +9,7 @@ use App\Models\crm\credito\ReferenciasAnexoOpenceo;
 use App\Models\crm\credito\solicitudCredito;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class solicitudCreditoController extends Controller
 {
@@ -52,14 +53,34 @@ class solicitudCreditoController extends Controller
     }
 
 
-    public function solicitudByEntId($ent_id){
+    public function solicitudByEntId($entIdentificacion,$userId)
+    {
         try {
-            $solicitudesCredito = AvSolicitudCredito::with('referencias')->where('ent_id',$ent_id)->get(); //ReferenciasAnexoOpenceo
-            //$solicitudesCredito = ReferenciasAnexoOpenceo::limit(20)->get();//ReferenciasAnexoOpenceo
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
+
+            $alm = DB::select('SELECT alm.alm_nombre, us.name as usu_nombre FROM public.users us
+            inner join public.puntoventa pve on pve.pve_id = us.pve_id
+            inner join public.almacen alm on alm.alm_id = pve.alm_id where us.id = ? limit 1', [$userId]);
+
+            $almNombre = '';
+            $userName = '';
+
+            if(sizeof($alm) == 1){
+                $almNombre = $alm[0]->alm_nombre;
+                $userName = $alm[0]->usu_nombre;
+            }
+            $solicitudesCredito = AvSolicitudCredito::with('referencias')->where('ent_identificacion', $entIdentificacion)->get();
+
+            $data = (object) [
+                "solicitudesCredito" => $solicitudesCredito,
+                "almNombre" => $almNombre,
+                "userName" => $userName
+            ];
+
+
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 }
