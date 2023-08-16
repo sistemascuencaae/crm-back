@@ -6,6 +6,7 @@ use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\crm\UsuarioDynamo;
 use App\Models\crm\Departamento;
+use App\Models\openCeo\PuntoVenta;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -48,7 +49,8 @@ class User extends Authenticatable implements JWTSubject
         'estado',
         'usu_tipo',
         'usu_alias',
-        "tab_id"
+        "tab_id",
+        "pve_id",
     ];
 
     protected $hidden = [
@@ -108,4 +110,8 @@ class User extends Authenticatable implements JWTSubject
         $this->attributes["deleted_at"] = Carbon::now();
     }
 
+    public function puntoVenta()
+    {
+        return $this->belongsTo(PuntoVenta::class, "pve_id", "pve_id");
+    }
 }
