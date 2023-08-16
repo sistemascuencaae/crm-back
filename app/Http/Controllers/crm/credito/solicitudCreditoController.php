@@ -4,6 +4,8 @@ namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\credito\AvSolicitudCredito;
+use App\Models\crm\credito\ReferenciasAnexoOpenceo;
 use App\Models\crm\credito\solicitudCredito;
 use Exception;
 use Illuminate\Http\Request;
@@ -43,6 +45,17 @@ class solicitudCreditoController extends Controller
             // return response()->json([
             //     "solicitudesCredito" => $solicitudesCredito,
             // ]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
+    public function solicitudByEntId($ent_id){
+        try {
+            $solicitudesCredito = AvSolicitudCredito::with('referencias')->where('ent_id',$ent_id)->get(); //ReferenciasAnexoOpenceo
+            //$solicitudesCredito = ReferenciasAnexoOpenceo::limit(20)->get();//ReferenciasAnexoOpenceo
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
