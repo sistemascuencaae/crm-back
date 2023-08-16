@@ -15,7 +15,7 @@ class DActividadController extends Controller
     public function listActividadesByIdCasoId($caso_id)
     {
         try {
-            $actividades = DTipoActividad::where('caso_id', $caso_id)->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('caso_id', $caso_id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
@@ -30,7 +30,7 @@ class DActividadController extends Controller
 
     //         // $actividades = DTipoActividad::orderBy('id', 'DESC')->get();
 
-    //         $data = DTipoActividad::with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->where('caso_id', $dta->caso_id)->orderBy('id', 'DESC')->get();
+    //         $data = DTipoActividad::with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->where('caso_id', $dta->caso_id)->orderBy('id', 'DESC')->get();
 
     //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
     //     } catch (Exception $e) {
@@ -45,7 +45,7 @@ class DActividadController extends Controller
 
     //         $actividad->update($request->all());
 
-    //         $data = DTipoActividad::where('id', $id)->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+    //         $data = DTipoActividad::where('id', $id)->with('cTipoActividad.tablero.tablero.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->first();
     //         return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
     //     } catch (Exception $e) {
     //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -60,7 +60,7 @@ class DActividadController extends Controller
             $data = DB::transaction(function () use ($usuarioMiembro, $request) {
                 $dta = DTipoActividad::create($request->all());
 
-                $data = DTipoActividad::with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                $data = DTipoActividad::with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')
                     ->where('caso_id', $dta->caso_id)
                     ->orderBy('id', 'DESC')
                     ->get();
@@ -94,7 +94,7 @@ class DActividadController extends Controller
 
                 $actividad->update($request->all());
 
-                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->first();
 
                 $miembro = new Miembros();
 
@@ -120,7 +120,7 @@ class DActividadController extends Controller
     public function listActividadesByUserId($user_id)
     {
         try {
-            $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
@@ -134,7 +134,7 @@ class DActividadController extends Controller
     //         $dta = DTipoActividad::create($request->all());
 
     //         $data = DTipoActividad::where('user_id', $user_id)
-    //             ->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->where('caso_id', $dta->caso_id)->orderBy('id', 'DESC')->get();
+    //             ->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->where('caso_id', $dta->caso_id)->orderBy('id', 'DESC')->get();
 
     //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
     //     } catch (Exception $e) {
@@ -150,7 +150,7 @@ class DActividadController extends Controller
     //         $actividad->update($request->all());
 
     //         $data = DTipoActividad::where('user_id', $user_id)
-    //             ->where('id', $id)->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+    //             ->where('id', $id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->first();
     //         return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
     //     } catch (Exception $e) {
     //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -166,7 +166,7 @@ class DActividadController extends Controller
                 $dta = DTipoActividad::create($request->all());
 
                 $data = DTipoActividad::where('user_id', $user_id)
-                    ->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+                    ->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
                 // ->where('caso_id', $dta->caso_id)
                 $miembro = new Miembros();
 
@@ -197,7 +197,7 @@ class DActividadController extends Controller
                 $actividad->update($request->all());
 
                 $data = DTipoActividad::where('user_id', $user_id)
-                    ->where('id', $actividad->id)->with('cTipoActividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+                    ->where('id', $actividad->id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->first();
                 $miembro = new Miembros();
 
                 $miembro->user_id = $usuarioMiembro['id'];
@@ -215,4 +215,17 @@ class DActividadController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    // LISTA PARA EL CALENDARIO
+    public function listActividadesIniciadasByUserId($user_id)
+    {
+        try {
+            $actividades = DTipoActividad::where('user_id', $user_id)->where('estado_actividad', 'Iniciado')->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
