@@ -455,7 +455,7 @@ class CasoController extends Controller
             'miembros.usuario.departamento',
             'Galeria',
             'Archivo',
-            'requerimientosCaso'
+            'requerimientosCaso',
         ])->where('id', $casoId)->first();
     }
 
