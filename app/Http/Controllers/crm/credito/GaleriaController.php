@@ -66,7 +66,8 @@ class GaleriaController extends Controller
                             "descripcion" => $galeria->descripcion,
                             "imagen" => $galeria->imagen,
                             "caso_id" => $galeria->caso_id,
-                            "tipo_gal_id" => $galeria->tipo_gal_id
+                            "tipo_gal_id" => $galeria->tipo_gal_id,
+                            "sc_id" => $galeria->sc_id,
                         ];
                     })
                 )
