@@ -12,9 +12,9 @@ use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Caso extends Model
+class Caso extends Model implements Auditable
 {
-    // use AuditableTrait;
+    use AuditableTrait;
 
     use HasFactory;
 
@@ -46,7 +46,8 @@ class Caso extends Model
         "dep_creacion_id"
     ];
 
-    public function userCreador(){
+    public function userCreador()
+    {
         return $this->belongsTo(User::class, "user_creador_id", "id");
     }
 
@@ -123,7 +124,8 @@ class Caso extends Model
         return $this->belongsTo(CTipoTarea::class, "ctt_id", 'id');
     }
 
-    public function user_anterior(){
+    public function user_anterior()
+    {
         return $this->belongsTo(User::class, "user_anterior_id", "id");
     }
 }
