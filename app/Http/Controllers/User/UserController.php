@@ -98,7 +98,8 @@ class UserController extends Controller
     public function listUsuariosByTableroId($tablero_id)
     {
         try {
-            $usuarios = User::whereHas('tablero.usuario', function ($query) use ($tablero_id) {
+            // $usuarios = User::whereHas('tablero.usuario', function ($query) use ($tablero_id) {
+            $usuarios = User::whereHas('tablero', function ($query) use ($tablero_id) {
                 $query->where('tab_id', $tablero_id);
             })
                 ->orderBy("id", "asc")
