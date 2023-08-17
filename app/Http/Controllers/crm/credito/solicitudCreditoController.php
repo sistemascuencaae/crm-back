@@ -24,6 +24,19 @@ class solicitudCreditoController extends Controller
         }
     }
 
+    public function editSolicitudCredito(Request $request, $id)
+    {
+        try {
+            $solicitudCredito = solicitudCredito::findOrFail($id);
+
+            $solicitudCredito->update($request->all());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $solicitudCredito));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function listSolicitudCreditoByEntidadId($ent_id)
     {
         try {
@@ -53,7 +66,7 @@ class solicitudCreditoController extends Controller
     }
 
 
-    public function solicitudByEntId($entIdentificacion,$userId)
+    public function solicitudByIdentificacion($entIdentificacion, $userId)
     {
         try {
 
@@ -64,7 +77,7 @@ class solicitudCreditoController extends Controller
             $almNombre = '';
             $userName = '';
 
-            if(sizeof($alm) == 1){
+            if (sizeof($alm) == 1) {
                 $almNombre = $alm[0]->alm_nombre;
                 $userName = $alm[0]->usu_nombre;
             }
