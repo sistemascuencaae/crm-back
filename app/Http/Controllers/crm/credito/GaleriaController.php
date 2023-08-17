@@ -114,4 +114,23 @@ class GaleriaController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function listGaleriaBySolicitudCreditoId($sc_id)
+    {
+        try {
+            $ultimaFoto = Galeria::where('sc_id', $sc_id)->latest('id')->first();
+
+            return response()->json(
+                RespuestaApi::returnResultado(
+                    'success',
+                    'Se listo con éxito',
+                    $ultimaFoto
+                )
+            );
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
 }
