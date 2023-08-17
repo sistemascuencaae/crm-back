@@ -57,6 +57,8 @@ class solicitudCreditoController extends Controller
     {
         try {
 
+            $user = DB::selectOne('SELECT * FROM public.users WHERE id = ?', [$userId]);
+
             $alm = DB::select('SELECT alm.alm_nombre, us.name as usu_nombre FROM public.users us
             inner join public.puntoventa pve on pve.pve_id = us.pve_id
             inner join public.almacen alm on alm.alm_id = pve.alm_id where us.id = ? limit 1', [$userId]);
