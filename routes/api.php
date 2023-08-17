@@ -12,6 +12,7 @@ use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\User\UsersController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\User\ProfileUserController;
+use App\Http\Controllers\crm\garantias\PartesController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -144,6 +145,13 @@ Route::group(["prefix" => "crm"], function ($router) { // Listar
 //----------------------- START RUTAS JAIRO  ----------------------------------------------
 Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byCedulaProveedor/{cedula}', [EntidadController::class, 'byCedulaProveedor']);
+
     Route::post('/buscaProducto', [ProductoController::class, 'buscaProducto']);
+    
+    //Partes
+    Route::get('/listado', [PartesController::class, 'listado']);
+    Route::get('/byParte/{parte}', [PartesController::class, 'byParte']);
+    Route::post('/grabaParte', [PartesController::class, 'grabaParte']);
+    Route::get('/eliminaParte/{parte}', [PartesController::class, 'eliminaParte']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------
