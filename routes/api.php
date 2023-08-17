@@ -4,6 +4,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Controllers\crm\CFormularioController;
 use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\CondicionesController;
@@ -120,7 +121,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']); //
-
+    /************************  FORMULARIOS   *********************** */
+    Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
 
 
 

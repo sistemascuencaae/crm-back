@@ -34,12 +34,15 @@ class AvSolicitudCredito extends Model
         "numero_casa",
         "calle_secundaria",
         "referencias_direccion",
-        "telefono_lugar_trabajo",
+        "telefono_lugar_trabajo1",
+        "telefono_lugar_trabajo2",
         "fecha_ingreso",
         "ingresos_totales",
         "gastos_totales",
         "activos_totales",
         "pasivos_totales",
+        "prv_nombre",
+        "trabajo_direccion"
     ];
     public function referencias()
     {
