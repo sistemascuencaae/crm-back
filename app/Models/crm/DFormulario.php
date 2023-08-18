@@ -14,7 +14,7 @@ class DFormulario extends Model
         "id",
         "cform_id",
         "titulo",
-        "tip_cam_form_id",
+        "tipo_campo",
         "requerido",
         "estado",
         "created_at",
@@ -27,6 +27,8 @@ class DFormulario extends Model
         "valor_decimal",
         "html_render",
         "valor",
+        "form_control_name",
+        "descripcion"
 
     ];
 
