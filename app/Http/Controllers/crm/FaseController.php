@@ -35,7 +35,7 @@ class FaseController extends Controller
             'caso.actividad',
             'caso.miembros.usuario.departamento',
             'caso.Etiqueta',
-            'caso.requerimientosCaso'
+            // 'caso.requerimientosCaso'
         ])->where('tab_id',$tabId)->get();
 
 

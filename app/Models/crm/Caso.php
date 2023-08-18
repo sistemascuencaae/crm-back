@@ -94,10 +94,10 @@ class Caso extends Model implements Auditable
     {
         return $this->hasMany(Archivo::class, "caso_id");
     }
-    public function requerimientosCaso()
-    {
-        return $this->hasMany(Requerimientos::class, "caso_id");
-    }
+    // public function requerimientosCaso()
+    // {
+    //     // return $this->hasMany(Requerimientos::class, "caso_id");
+    // }
     // public function setfechaVencimientoAttribute($value)
     // {
     //     date_default_timezone_set("America/Guayaquil");
