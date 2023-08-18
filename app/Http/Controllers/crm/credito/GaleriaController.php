@@ -59,16 +59,18 @@ class GaleriaController extends Controller
                 RespuestaApi::returnResultado(
                     'success',
                     'Se listo con éxito',
-                    $galerias->map(function ($galeria) {
-                        return [
-                            "id" => $galeria->id,
-                            "titulo" => $galeria->titulo,
-                            "descripcion" => $galeria->descripcion,
-                            "imagen" => $galeria->imagen,
-                            "caso_id" => $galeria->caso_id,
-                            "tipo_gal_id" => $galeria->tipo_gal_id
-                        ];
-                    })
+                    $galerias
+                    // $galerias->map(function ($galeria) {
+                    //     return [
+                    //         "id" => $galeria->id,
+                    //         "titulo" => $galeria->titulo,
+                    //         "descripcion" => $galeria->descripcion,
+                    //         "imagen" => $galeria->imagen,
+                    //         "caso_id" => $galeria->caso_id,
+                    //         "tipo_gal_id" => $galeria->tipo_gal_id,
+                    //         "sc_id" => $galeria->sc_id,
+                    //     ];
+                    // })
                 )
             );
         } catch (Exception $e) {
@@ -113,4 +115,23 @@ class GaleriaController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function listGaleriaBySolicitudCreditoId($sc_id)
+    {
+        try {
+            $ultimaFoto = Galeria::where('sc_id', $sc_id)->latest('id')->first();
+
+            return response()->json(
+                RespuestaApi::returnResultado(
+                    'success',
+                    'Se listo con éxito',
+                    $ultimaFoto
+                )
+            );
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
 }

@@ -43,7 +43,8 @@ class solicitudCredito extends Model implements Auditable
         "nombre_empresa",
         "tipo_empresa",
         "direccion",
-        "telefono_trabajo",
+        "telefono_trabajo1",
+        "telefono_trabajo2",
         "fecha_ingreso",
         // Informacion economica
         "total_ingresos",

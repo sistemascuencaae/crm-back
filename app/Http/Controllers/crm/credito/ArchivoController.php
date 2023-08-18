@@ -57,7 +57,9 @@ class ArchivoController extends Controller
                             "titulo" => $archivo->titulo,
                             "observacion" => $archivo->observacion,
                             "archivo" => $archivo->archivo,
-                            "caso_id" => $archivo->caso_id
+                            "caso_id" => $archivo->caso_id,
+                            "created_at" => $archivo->created_at,
+                            "updated_at" => $archivo->updated_at,
                         ];
                     }),
                 )
