@@ -11,10 +11,10 @@ use Illuminate\Http\Request;
 class RequerimientoController extends Controller
 {
 
-    public function listRequerimientosCasoById($caso_id)
+    public function listRequerimientosByFaseId($fase_id)
     {
         try {
-            $requerimientos = Requerimientos::where('caso_id', $caso_id)->orderBy('marcado', 'DESC')->orderBy('id', 'DESC')->get();
+            $requerimientos = Requerimientos::where('fase_id', $fase_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $requerimientos));
         } catch (Exception $e) {
@@ -27,7 +27,9 @@ class RequerimientoController extends Controller
         try {
             $requerimiento = Requerimientos::create($request->all());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $requerimiento));
+            $resultado = Requerimientos::where('fase_id', $requerimiento->fase_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }

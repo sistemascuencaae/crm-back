@@ -10,15 +10,15 @@ class Requerimientos extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.requerimientos_caso';
+    protected $table = 'crm.requerimientos_predefinidos';
 
     protected $fillable = [
-        "descripcion",
-        "caso_id",
-        "marcado",
+        "nombre",
         "estado",
-        "tipo_req_id",
-        "user_requiere_id",
+        "tipo",
+        "fase_id",
+        "tab_id",
+        "user_id"
     ];
 
     public function setCreatedAtAttribute($value)
