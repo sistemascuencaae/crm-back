@@ -123,6 +123,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']); //
     /************************  FORMULARIOS   *********************** */
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
+    Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
 
 
 

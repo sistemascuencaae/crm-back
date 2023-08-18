@@ -14,6 +14,7 @@ class CFormulario extends Model
         "fas_id",
         "descripcion",
         "estado",
+        "form_control",
         "created_at",
         "updated_at",
         "deleted_at",
