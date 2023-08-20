@@ -15,7 +15,7 @@ class Etiqueta extends Model implements Auditable
 
     use HasFactory;
 
-    use SoftDeletes;
+    // use SoftDeletes;
 
     protected $table = 'crm.etiquetas';
     protected $fillable = ["nombre", "color", "caso_id"];
