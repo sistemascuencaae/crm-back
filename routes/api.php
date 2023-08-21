@@ -23,6 +23,7 @@ use App\Http\Controllers\crm\FaseController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\NotificacionesController;
+use App\Http\Controllers\crm\ReqCasoController;
 use App\Http\Controllers\crm\RequerimientoController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
@@ -124,7 +125,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     /************************  FORMULARIOS   *********************** */
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
     Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
-
+    /************************  REQUERIMIENTOS CASO   *********************** */
+    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll'] ); //
 
 
 
