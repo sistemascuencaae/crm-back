@@ -307,7 +307,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // REQUERIMIENTOS
 
-    Route::get('listRequerimientosCasoById/{caso_id}', [RequerimientoController::class, 'listRequerimientosCasoById']); // by caso_id
+    Route::get('listRequerimientosByFaseId/{fase_id}', [RequerimientoController::class, 'listRequerimientosByFaseId']); // by caso_id
     Route::post('/addRequerimientos', [RequerimientoController::class, 'addRequerimientos']); // guardar
     Route::post('/editRequerimientos/{id}', [RequerimientoController::class, 'editRequerimientos']); // Editar
     Route::delete('/deleteRequerimientos/{id}', [RequerimientoController::class, 'deleteRequerimientos']); // Eliminar
