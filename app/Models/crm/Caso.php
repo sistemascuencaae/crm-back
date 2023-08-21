@@ -128,4 +128,8 @@ class Caso extends Model implements Auditable
     {
         return $this->belongsTo(User::class, "user_anterior_id", "id");
     }
+    public function req_caso()
+    {
+        return $this->hasMany(RequerimientoCaso::class, "caso_id", "id");
+    }
 }
