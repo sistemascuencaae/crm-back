@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Validator;
+use Illuminate\Support\Facades\DB;
 
 class JWTController extends Controller
 {
@@ -112,16 +113,36 @@ class JWTController extends Controller
      */
     protected function respondWithToken($token)
     {
+
+
+        $alm = DB::select('SELECT alm.alm_nombre FROM public.puntoventa pve
+        inner join public.almacen alm on alm.alm_id = pve.alm_id where pve.pve_id = ?', [auth('api')->user()->pve_id,]);
+
+        $alm_nombre = '';
+
+        if (sizeof($alm) > 0) {
+            $alm_nombre = $alm[0]->alm_nombre;
+        }
+
+        // echo (json_encode($alm_nombre[0]->alm_nombre));
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 900000,
+            'expires_in' => auth()->factory()->getTTL() * 60 * 60 * 24 * 2000000,
             'user' => [
                 "id" => auth('api')->user()->id,
                 "name" => auth('api')->user()->name,
                 "surname" => auth('api')->user()->surname,
-                "email" => auth('api')->user()->email
+                "email" => auth('api')->user()->email,
+                "usu_tipo_analista" => auth('api')->user()->usu_tipo_analista,
+                "usu_tipo" => auth('api')->user()->usu_tipo,
+                "usu_alias" => auth('api')->user()->usu_alias,
+                "dep_id" => auth('api')->user()->dep_id,
+                "alm_nombre" => $alm_nombre,
             ]
         ]);
+
+
+
     }
 }

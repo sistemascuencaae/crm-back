@@ -4,36 +4,72 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\Flujo;
+use App\Models\crm\Flujo;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class FlujoController extends Controller
 {
-    
-    
+
+
     public function __construct()
     {
         $this->middleware('auth:api');
     }
 
-    public function actualizarFlujo(request $request) {
-        DB::transaction(function() use ($request) {
-            $flujo_id = $request->input('flujo_id');
-            $posision = $request->input('posision');
-        });
+    public function list()
+    {
+        $data = Flujo::with('tarea','tarea.User','tarea.Entidad')->get();
+        return response()->json(RespuestaApi::returnResultado('success', 'El listado de flujos se consigiocon exito', $data));
+    }
+    public function create(Request $request)
+    {
+        try {
+            $flujoCreado = Flujo::create($request->all());
+            $data = Flujo::with('tarea')->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Flujo creado con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e));
+        }
+    }
+    public function update(request $request)
+    {
+        $id = $request->input('id');
+        Flujo::where('id', '=', $id)->update($request->all());
 
-        
         $data = Flujo::with('tarea')->get();
-        return response()->json(RespuestaApi::returnResultado('success','El listado de flujos se consigion con exito',$data));
+        return response()->json(RespuestaApi::returnResultado('success', 'Flujo actualizado', $data));
+    }
+
+    public function delete($id)
+    {
+        try {
+            $flujo = Flujo::find($id);
+            $flujo->orden = null;
+            $flujo->save();
+            $flujo->delete();
+            $data = Flujo::with('tarea')->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Flujo eliminado', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e));
+        }
     }
 
 
-
-    public function listarFlujos() {
-        $data = Flujo::with('tarea')->get();
-        return response()->json(RespuestaApi::returnResultado('success','El listado de flujos se consigion con exito',$data));
+    public function updateFlujos(Request $request){
+        $listaIds = $request->input('listaIds');
+        try {
+            for ($i = 0; $i < sizeof($listaIds); $i++) {
+                if($listaIds[$i] != null){
+                    DB::update('update flujo set orden = ' . ($i + 1) . ' where id = ' . $listaIds[$i]);
+                }
+            }
+            $data = Flujo::with('tarea')->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Tareas actualizadas', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error interno',$e->getMessage()));
+        }
     }
-
 
 }

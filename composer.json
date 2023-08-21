@@ -12,6 +12,7 @@
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^8.54",
         "laravel/tinker": "^2.5",
+        "owen-it/laravel-auditing": "^13.5",
         "pusher/pusher-php-server": "~3.0",
         "tymon/jwt-auth": "^1.0"
     },

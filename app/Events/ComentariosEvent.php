@@ -2,14 +2,13 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ComentariosEvent implements ShouldBroadcastNow
+class ComentariosEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -28,12 +27,7 @@ class ComentariosEvent implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-    
-        //$dato1 = $this->trade->dato1;
-        
-        // DB::insert('insert into div_movil (dato1) values(?)',[$dato1]);
-        // $results = DB::select('select * from div_movil order by div_id desc limit 1');
-        
+
         return [
             'data' => $this->data
         ];
@@ -47,8 +41,13 @@ class ComentariosEvent implements ShouldBroadcastNow
      *
      * @return \Illuminate\Broadcasting\Channel|array
      */
+    // public function broadcastOn()
+    // {
+    //     return new Channel('comentarios');
+    // }
+
     public function broadcastOn()
     {
-        return new Channel('comentarios');
+        return new PrivateChannel('caso.comentarios.' .$this->data[0]->caso_id);
     }
 }
