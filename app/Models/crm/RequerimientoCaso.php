@@ -35,5 +35,6 @@ class RequerimientoCaso extends Model
        "form_control_name",
        "valor_multiple",
        "orden",
+       "valor_lista"
     ];
 }
