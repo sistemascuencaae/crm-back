@@ -11,18 +11,18 @@ use Illuminate\Http\Request;
 
 class FaseController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware('auth:api');
+    // }
 
     public function list(Request $request)
     {
 
 
         $tabId = $request->input('tabId');
-        $userId = $request->input('userId');
-        $usuTipo = $request->input('usuTipo');
+        // $userId = $request->input('userId');
+        // $usuTipo = $request->input('usuTipo');
         //echo json_encode($tabId);
         try {
         $user = auth('api')->user();
@@ -35,7 +35,7 @@ class FaseController extends Controller
             'caso.actividad',
             'caso.miembros.usuario.departamento',
             'caso.Etiqueta',
-            // 'caso.requerimientosCaso'
+            'caso.req_caso'
         ])->where('tab_id',$tabId)->get();
 
 

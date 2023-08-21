@@ -6,14 +6,15 @@ use App\Events\NotificacionesCrmEvent;
 use App\Events\ReasignarCasoEvent;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
-use App\Http\Resources\RespuestaApi2;
 use App\Models\ChatGroups;
 use App\Models\crm\Caso;
 use App\Models\crm\DTipoTarea;
 use App\Models\crm\Fase;
 use App\Models\crm\Miembros;
 use App\Models\crm\Notificaciones;
+use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tareas;
 use App\Models\Miembros as ModelsMiembros;
 use Exception;
@@ -32,8 +33,6 @@ class CasoController extends Controller
     {
         $casoInput = $request->all();
         $miembros = $request->input('miembros');
-
-
         try {
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros) {
                 $caso = new Caso($casoInput);
@@ -75,6 +74,23 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
 
+                /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
+                $reqFase = DB::select('SELECT rp.* from crm.requerimientos_predefinidos rp
+                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+                WHERE rc.titulo IS null and rp.fase_id = ?',
+                [$caso->id,$caso->fas_id]);
+                for ($i = 0; $i < sizeof($reqFase); $i++) {
+                    $reqCaso = new RequerimientoCaso();
+                    $reqCaso->user_requiere_id = $caso->user_creador_id;
+                    $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
+                    $reqCaso->titulo = $reqFase[$i]->nombre;
+                    $reqCaso->fas_id = $reqFase[$i]->fase_id;
+                    $reqCaso->tab_id = $reqFase[$i]->tab_id;
+                    $reqCaso->tipo_campo = $reqFase[$i]->tipo;
+                    $reqCaso->caso_id = $caso->id;
+                    $reqCaso->save();
+                }
+
                 return $this->getCaso($caso->id);
             });
 
@@ -109,6 +125,23 @@ class CasoController extends Controller
                 'fas_id' => $faseId,
                 'fase_anterior_id' => $faseAnteriorId
             ]);
+            $reqFase = DB::select(
+                'SELECT rp.* from crm.requerimientos_predefinidos rp
+                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+                WHERE rc.titulo IS null and rp.fase_id = ?',
+                [$casoId, $faseId]
+            );
+            for ($i = 0; $i < sizeof($reqFase); $i++) {
+                $reqCaso = new RequerimientoCaso();
+                $reqCaso->user_requiere_id = $caso->user_creador_id;
+                $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
+                $reqCaso->titulo = $reqFase[$i]->nombre;
+                $reqCaso->fas_id = $reqFase[$i]->fase_id;
+                $reqCaso->tab_id = $reqFase[$i]->tab_id;
+                $reqCaso->tipo_campo = $reqFase[$i]->tipo;
+                $reqCaso->caso_id = $caso->id;
+                $reqCaso->save();
+            }
             $data = $this->getCaso($caso->id);
             broadcast(new TableroEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
@@ -455,7 +488,7 @@ class CasoController extends Controller
             'miembros.usuario.departamento',
             'Galeria',
             'Archivo',
-            // 'requerimientosCaso',
+            'req_caso',
         ])->where('id', $casoId)->first();
     }
 
