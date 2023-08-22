@@ -131,6 +131,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editReqCaso',[ReqCasoController::class, 'edit']);
 
 
+
     Route::post('/addTarea', [TareaController::class, 'add']);
     Route::get('/listTareas', [TareaController::class, 'list']);
     Route::get('/byCedula/{cedula}', [EntidadController::class, 'byCedula']); // Listar
@@ -229,6 +230,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listCasoById/{id}', [CasoController::class, 'listCasoById']); // listar
     Route::post('/editPrioridadCaso/{id}', [CasoController::class, 'editPrioridadCaso']);
     Route::post('/editarTipoCaso/{id}', [CasoController::class, 'editarTipoCaso']);
+    Route::post('/editObservacion/{id}', [CasoController::class, 'editObservacion']); // Editar la observación del caso
 
     // CTAREA
 

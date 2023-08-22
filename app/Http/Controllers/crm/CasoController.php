@@ -78,7 +78,8 @@ class CasoController extends Controller
                 $reqFase = DB::select('SELECT rp.* from crm.requerimientos_predefinidos rp
                 left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
                 WHERE rc.titulo IS null and rp.fase_id = ?',
-                [$caso->id,$caso->fas_id]);
+                    [$caso->id, $caso->fas_id]
+                );
                 for ($i = 0; $i < sizeof($reqFase); $i++) {
                     $reqCaso = new RequerimientoCaso();
                     $reqCaso->user_requiere_id = $caso->user_creador_id;
@@ -279,6 +280,28 @@ class CasoController extends Controller
 
                 $caso->update([
                     "tc_id" => $request->tc_id,
+                ]);
+            });
+
+            $data = $this->getCaso($caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function editObservacion(Request $request, $caso_id) // Este campo se llama descripcion en la Base hay q cambiarlo por observacion
+    {
+        try {
+            $caso = $request->all();
+
+            DB::transaction(function () use ($caso, $caso_id, $request) {
+
+                $caso = Caso::findOrFail($caso_id);
+
+                $caso->update([
+                    "descripcion" => $request->descripcion,
                 ]);
             });
 
@@ -527,15 +550,3 @@ class CasoController extends Controller
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
