@@ -69,29 +69,18 @@ class solicitudCreditoController extends Controller
     public function solicitudByIdentificacion($entIdentificacion, $userId)
     {
         try {
+            $user = DB::selectOne('SELECT u.name, alm.alm_nombre  from public.users u
+            inner join public.puntoventa pve on pve.pve_id = u.pve_id
+            inner join public.almacen alm on alm.alm_id = pve.alm_id
+            where u.id = ?', [$userId]);
 
-            $user = DB::selectOne('SELECT * FROM public.users WHERE id = ?', [$userId]);
-
-            $alm = DB::select('SELECT alm.alm_nombre, us.name as usu_nombre FROM public.users us
-            inner join public.puntoventa pve on pve.pve_id = us.pve_id
-            inner join public.almacen alm on alm.alm_id = pve.alm_id where us.id = ? limit 1', [$userId]);
-
-            $almNombre = '';
-            $userName = '';
-
-            if (sizeof($alm) == 1) {
-                $almNombre = $alm[0]->alm_nombre;
-                $userName = $alm[0]->usu_nombre;
-            }
             $solicitudesCredito = AvSolicitudCredito::with('referencias')->where('ent_identificacion', $entIdentificacion)->get();
 
             $data = (object) [
                 "solicitudesCredito" => $solicitudesCredito,
-                "almNombre" => $almNombre,
-                "userName" => $userName
+                "almNombre" => $user->alm_nombre,
+                "userName" => $user->name
             ];
-
-
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
