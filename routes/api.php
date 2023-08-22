@@ -126,9 +126,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
     Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
     /************************  REQUERIMIENTOS CASO   *********************** */
-    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll'] ); //
-    Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile'] ); //
-
+    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll'] );
+    Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile'] );
+    Route::post('/editReqCaso',[ReqCasoController::class, 'edit']);
 
 
     Route::post('/addTarea', [TareaController::class, 'add']);
@@ -318,7 +318,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     // CONDICIONES
 
     Route::get('/listCondiciones', [CondicionesController::class, 'listCondiciones']); // all
+    Route::get('/solicitudByIdentificacion/{cedula}/{id_user_creador}', [solicitudCreditoController::class, 'solicitudByIdentificacion']); // Listar por cedula
 });
+
+
 
 Route::group(["prefix" => "credito"], function ($router) {
 
