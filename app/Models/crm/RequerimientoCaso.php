@@ -11,8 +11,7 @@ class RequerimientoCaso extends Model
     protected $table = 'crm.requerimientos_caso';
 
 
-    protected $fillable = [
-       "id",
+    protected $fillable = [ 
        "descripcion",
        "caso_id",
        "created_at",
@@ -35,6 +34,7 @@ class RequerimientoCaso extends Model
        "form_control_name",
        "valor_multiple",
        "orden",
-       "valor_lista"
+       "valor_lista",
+       'esimagen'
     ];
 }

@@ -141,6 +141,7 @@ class CasoController extends Controller
                 $reqCaso->tab_id = $reqFase[$i]->tab_id;
                 $reqCaso->tipo_campo = $reqFase[$i]->tipo;
                 $reqCaso->caso_id = $caso->id;
+                $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
                 $reqCaso->save();
             }
             $data = $this->getCaso($caso->id);
