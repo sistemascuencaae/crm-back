@@ -126,8 +126,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
     Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
     /************************  REQUERIMIENTOS CASO   *********************** */
-    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll'] ); //
-    Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile'] ); //
+    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll']); //
+    Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']); //
 
 
 
@@ -229,6 +229,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listCasoById/{id}', [CasoController::class, 'listCasoById']); // listar
     Route::post('/editPrioridadCaso/{id}', [CasoController::class, 'editPrioridadCaso']);
     Route::post('/editarTipoCaso/{id}', [CasoController::class, 'editarTipoCaso']);
+    Route::post('/editObservacion/{id}', [CasoController::class, 'editObservacion']); // Editar la observación del caso
 
     // CTAREA
 
