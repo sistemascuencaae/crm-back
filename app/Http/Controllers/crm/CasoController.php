@@ -36,7 +36,11 @@ class CasoController extends Controller
         try {
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros) {
                 $caso = new Caso($casoInput);
+                $caso->estado_2 = 1;
                 $caso->save();
+
+
+
 
                 //buscar las tareas predefinidas
                 $arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
@@ -62,11 +66,9 @@ class CasoController extends Controller
 
                 $caso->nombre = 'CASO # ' . $caso->id;
                 $caso->descripcion = 'CASO # ' . $caso->id;
-                $caso->estado_2 = 1;
                 $caso->user_creador_id = $caso->user_id;
 
                 $caso->save();
-
                 for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
                     $miembro->user_id = $miembros[$i];

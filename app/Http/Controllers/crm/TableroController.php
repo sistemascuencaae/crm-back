@@ -89,10 +89,10 @@ class TableroController extends Controller
                 DB::insert("INSERT INTO public.users
                 (name, estado, surname, usu_alias, email,
                 password, created_at, updated_at, phone, fecha_nacimiento,
-                address, usu_tipo_analista, dep_id, usu_tipo)
+                address, usu_tipo_analista, dep_id, usu_tipo, tab_id)
                 VALUES('USUARIO GENERAL {$tablero->nombre} {$tablero->id}', true, 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}', 'USUARIOGENERAL{$tablero->id}', 'usuariogeneral{$tablero->id}@gmail.com',
                 '123456', '{$tablero->created_at}', '{$tablero->updated_at}', '9999999999', '{$tablero->created_at}',
-                'USUARIO GENERAL', NULL, $tablero->dep_id, 1);");
+                'USUARIO GENERAL', NULL, $tablero->dep_id, 1, $tablero->id);");
 
                 $usuGeneral = DB::select("SELECT * FROM public.users WHERE name = 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}'");
 
