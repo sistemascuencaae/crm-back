@@ -36,6 +36,13 @@ class CasoController extends Controller
         try {
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros) {
                 $caso = new Caso($casoInput);
+                //$caso->save();
+
+                $caso->nombre = 'CASO # ' . $caso->id;
+                $caso->descripcion = 'CASO # ' . $caso->id;
+                $caso->estado_2 = 1;
+                $caso->user_creador_id = $caso->user_id;
+
                 $caso->save();
 
                 //buscar las tareas predefinidas
@@ -60,12 +67,7 @@ class CasoController extends Controller
                 $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
                 $newGrupo->save();
 
-                $caso->nombre = 'CASO # ' . $caso->id;
-                $caso->descripcion = 'CASO # ' . $caso->id;
-                $caso->estado_2 = 1;
-                $caso->user_creador_id = $caso->user_id;
 
-                $caso->save();
 
                 for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
