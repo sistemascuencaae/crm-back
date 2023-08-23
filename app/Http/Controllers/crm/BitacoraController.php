@@ -25,21 +25,25 @@ class BitacoraController extends Controller
             // where cas.id = " . $caso_id . "
             // order By 1 DESC");
 
-            $bitacora = DB::select("select adi.*,ur.name,gal.titulo, fas.nombre as fase_actual_nombre, tab.nombre as tablero_actual_nombre, fas1.nombre as fase_anterior_nombre, tab1.nombre as tablero_anterior_nombre from public.audits adi
-        left join crm.archivos arc on arc.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Archivo'
-        left join crm.galerias gal on gal.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Galeria'
-        left join crm.comentarios c on c.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Comentarios'
-        left join crm.etiquetas e on e.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Etiqueta'
-        left join crm.nota n on n.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Nota'
-        left join crm.caso caso on caso.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Caso'
-        left join crm.caso cas on cas.id = arc.caso_id or cas.id = gal.caso_id or cas.id = c.caso_id or cas.id = e.caso_id or cas.id = n.caso_id or cas.id = caso.id
-        left join crm.fase fas on fas.id = cas.fas_id
-        left join crm.tablero tab on tab.id = fas.tab_id 
-        left join crm.fase fas1 on fas1.id = cas.fase_anterior_id 
-        left join crm.tablero tab1 on tab1.id = fas1.tab_id 
-        left join public.users ur on ur.id = adi.user_id
-        where cas.id = " . $caso_id . "
-        order By 1 DESC");
+            $bitacora = DB::select("select adi.*,ur.name,gal.titulo, fas.nombre as fase_actual_nombre, tab.nombre as tablero_actual_nombre, fas1.nombre as fase_anterior_nombre, tab1.nombre as tablero_anterior_nombre,
+                                    u1.name as usuario_anterior, u2.name as usuario_actual 
+                                    from public.audits adi
+                                    left join crm.archivos arc on arc.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Archivo'
+                                    left join crm.galerias gal on gal.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Galeria'
+                                    left join crm.comentarios c on c.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Comentarios'
+                                    left join crm.etiquetas e on e.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Etiqueta'
+                                    left join crm.nota n on n.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Nota'
+                                    left join crm.caso caso on caso.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Caso'
+                                    left join crm.caso cas on cas.id = arc.caso_id or cas.id = gal.caso_id or cas.id = c.caso_id or cas.id = e.caso_id or cas.id = n.caso_id or cas.id = caso.id
+                                    left join crm.fase fas on fas.id = cas.fas_id
+                                    left join crm.tablero tab on tab.id = fas.tab_id 
+                                    left join crm.fase fas1 on fas1.id = cas.fase_anterior_id 
+                                    left join crm.tablero tab1 on tab1.id = fas1.tab_id 
+                                    left join public.users u1 on u1.id = cas.user_id -- Esto es correcto No modificcar
+                                    left join public.users u2 on u2.id = cas.user_anterior_id -- Esto es correcto No modificcar
+                                    left join public.users ur on ur.id = adi.user_id
+                                    where cas.id = " . $caso_id . "
+                                    order By 1 DESC");
 
             // return response()->json([
             //     "bitacora" => $bitacora,
