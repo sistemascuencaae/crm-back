@@ -567,7 +567,6 @@ class CasoController extends Controller
         // }
     }
 
-
     public function depUserTablero($casoId)
     {
         try {
