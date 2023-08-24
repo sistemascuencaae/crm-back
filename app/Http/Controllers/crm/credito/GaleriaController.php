@@ -169,8 +169,6 @@ class GaleriaController extends Controller
             $audit->save();
             // END Auditoria
 
-
-
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $galeria));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
