@@ -145,8 +145,7 @@ class GaleriaController extends Controller
         try {
             $galeria = Galeria::findOrFail($id);
             // Obtener el old_values (valor antiguo)
-            $audit = new Audits();
-            $audit->old_values = json_encode($galeria);
+            $valorAntiguo = $galeria;
 
             $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
             Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
@@ -154,6 +153,7 @@ class GaleriaController extends Controller
             $galeria->delete();
 
             // START Bloque de código que genera un registro de auditoría manualmente
+            $audit = new Audits();
             $audit->user_id = Auth::id();
             $audit->event = 'deleted';
             $audit->auditable_type = Galeria::class;
@@ -162,12 +162,15 @@ class GaleriaController extends Controller
             $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
             $audit->url = $request->fullUrl();
             // Establecer old_values y new_values
+            $audit->old_values = json_encode($valorAntiguo);
             $audit->new_values = json_encode([]);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'deleteGaleria';
             $audit->save();
             // END Auditoria
 
+
+            
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $galeria));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
