@@ -39,7 +39,7 @@ class GaleriaController extends Controller
             $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
             $audit->url = $request->fullUrl();
             // Establecer old_values y new_values
-            $audit->old_values = json_encode([$galeria]);
+            $audit->old_values = json_encode($galeria);
             $audit->new_values = json_encode([]);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'addGaleria';
@@ -170,7 +170,7 @@ class GaleriaController extends Controller
             // END Auditoria
 
 
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $galeria));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
