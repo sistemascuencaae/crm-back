@@ -145,8 +145,8 @@ class CasoController extends Controller
 
             $audit = new Audits();
             // Obtener el old_values (valor antiguo)
-            // $valorAntiguo = $caso->fas_id;
-            $audit->old_values = json_encode(['fas_id' => $faseId, 'fase_anterior_id' => $faseAnteriorId]); // json_encode para convertir en string ese array
+            $valorAntiguo = $caso;
+            $audit->old_values = json_encode(['fas_id' => $valorAntiguo->fas_id, 'fase_anterior_id' => $valorAntiguo->fase_anterior_id]); // json_encode para convertir en string ese array
 
             $caso->update([
                 'fas_id' => $faseId,
@@ -164,6 +164,9 @@ class CasoController extends Controller
             $audit->url = $request->fullUrl();
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'editFase';
+            // Establecer old_values y new_values
+            $audit->new_values = json_encode(['fas_id' => $caso->fas_id, 'fase_anterior_id' => $caso->fase_anterior_id]); // json_encode para convertir en string ese array
+            $audit->save();
             // END Auditoria
 
 
@@ -188,10 +191,6 @@ class CasoController extends Controller
 
             $data = $this->getCaso($caso->id);
             broadcast(new TableroEvent($data));
-
-            // Establecer old_values y new_values
-            $audit->new_values = json_encode(['fas_id' => $data['fas_id'], 'fase_anterior_id' => $data['fase_anterior_id']]); // json_encode para convertir en string ese array
-            $audit->save();
 
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (Exception $e) {
