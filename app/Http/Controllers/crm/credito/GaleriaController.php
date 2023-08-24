@@ -4,9 +4,12 @@ namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Audits;
 use App\Models\crm\Galeria;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class GaleriaController extends Controller
@@ -25,6 +28,23 @@ class GaleriaController extends Controller
             }
 
             $galeria = Galeria::create($request->all());
+
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit = new Audits();
+            $audit->user_id = Auth::id();
+            $audit->event = 'created';
+            $audit->auditable_type = Galeria::class;
+            $audit->auditable_id = $galeria->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->old_values = json_encode($galeria);
+            $audit->new_values = json_encode([]);
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'addGaleria';
+            $audit->save();
+            // END Auditoria
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
         } catch (Exception $e) {
@@ -84,6 +104,11 @@ class GaleriaController extends Controller
         try {
             $galeria = Galeria::findOrFail($id);
 
+            // Obtener el old_values (valor antiguo)
+            $audit = new Audits();
+            $valorAntiguo = $galeria;
+            $audit->old_values = json_encode($valorAntiguo);
+
             if ($request->hasFile("imagen_file")) {
                 if ($galeria->imagen) { //Aqui eliminamos la imagen anterior
                     Storage::delete($galeria->imagen); //Aqui pasa la rta de la imagen para eliminarlo
@@ -94,21 +119,57 @@ class GaleriaController extends Controller
 
             $galeria->update($request->all());
 
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit->user_id = Auth::id();
+            $audit->event = 'updated';
+            $audit->auditable_type = Galeria::class;
+            $audit->auditable_id = $galeria->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->new_values = json_encode($galeria);
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'editGaleria';
+            $audit->save();
+            // END Auditoria
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function deleteGaleria($id)
+    public function deleteGaleria(Request $request, $id)
     {
         try {
             $galeria = Galeria::findOrFail($id);
+            // Obtener el old_values (valor antiguo)
+            $valorAntiguo = $galeria;
 
             $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
             Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
 
             $galeria->delete();
+
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit = new Audits();
+            $audit->user_id = Auth::id();
+            $audit->event = 'deleted';
+            $audit->auditable_type = Galeria::class;
+            $audit->auditable_id = $galeria->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->old_values = json_encode($valorAntiguo);
+            $audit->new_values = json_encode([]);
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'deleteGaleria';
+            $audit->save();
+            // END Auditoria
+
+
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $galeria));
         } catch (Exception $e) {

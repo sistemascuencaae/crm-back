@@ -7,10 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Cliente extends Model implements Auditable
+class Cliente extends Model
 {
-    use AuditableTrait;
-
     use HasFactory;
 
     protected $table = 'public.cliente';

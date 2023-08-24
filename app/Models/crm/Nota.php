@@ -9,9 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Nota extends Model implements Auditable
+class Nota extends Model
 {
-    use AuditableTrait;
 
     use HasFactory;
 
