@@ -9,18 +9,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\ChatGroups;
+use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\DTipoTarea;
-use App\Models\crm\Fase;
 use App\Models\crm\Miembros;
 use App\Models\crm\Notificaciones;
 use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tareas;
-use App\Models\Miembros as ModelsMiembros;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use PhpParser\Node\Stmt\TryCatch;
+use Illuminate\Support\Facades\Auth;
 
 class CasoController extends Controller
 {
@@ -291,28 +291,44 @@ class CasoController extends Controller
         }
     }
 
-    public function editObservacion(Request $request, $caso_id) // Este campo se llama descripcion en la Base hay q cambiarlo por observacion
+    public function editObservacion(Request $request, $caso_id)
     {
         try {
-            $caso = $request->all();
+            $caso = Caso::findOrFail($caso_id);
 
-            DB::transaction(function () use ($caso, $caso_id, $request) {
+            // Obtener el old_values (valor antiguo)
+            $valorAntiguo = $caso->descripcion;
 
-                $caso = Caso::findOrFail($caso_id);
-
+            DB::transaction(function () use ($caso, $request, $valorAntiguo) {
                 $caso->update([
-                    "descripcion" => $request->descripcion,
+                    "descripcion" => $request->descripcion
                 ]);
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = Caso::class;
+                $audit->auditable_id = $caso->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->old_values = json_encode(['descripcion' => $valorAntiguo]); // json_encode para convertir en string ese array
+                $audit->new_values = json_encode(['descripcion' => $caso->descripcion]); // json_encode para convertir en string ese array
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'editar_observacion';
+                $audit->save();
+                // END Auditoria
             });
 
             $data = $this->getCaso($caso_id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
 
     public function reasignarCaso(Request $request)
     {

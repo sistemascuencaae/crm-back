@@ -9,9 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Tareas extends Model implements Auditable
+class Tareas extends Model
 {
-    use AuditableTrait;
 
     protected $table = 'crm.tareas';
 

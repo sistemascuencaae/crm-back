@@ -11,9 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Entidad extends Model implements Auditable
+class Entidad extends Model
 {
-    use AuditableTrait;
 
     use HasFactory;
     protected $table = 'public.entidad';

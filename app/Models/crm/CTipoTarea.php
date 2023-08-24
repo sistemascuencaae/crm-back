@@ -9,10 +9,8 @@ use Illuminate\Support\Carbon;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class CTipoTarea extends Model implements Auditable
+class CTipoTarea extends Model
 {
-    use AuditableTrait;
-
     use HasFactory;
 
     use SoftDeletes;

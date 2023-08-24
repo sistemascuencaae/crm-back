@@ -9,8 +9,6 @@ use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 class Fase extends Model
 {
-    // use AuditableTrait;
-
     use HasFactory;
 
     protected $table = 'crm.fase';
