@@ -8,10 +8,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Comentarios extends Model implements Auditable
+class Comentarios extends Model
 {
-    use AuditableTrait;
-
     protected $table = 'crm.comentarios';
     protected $primaryKey = 'id';
     use SoftDeletes;

@@ -10,10 +10,8 @@ use Illuminate\Support\Carbon;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class CTipoResultadoCierre extends Model implements Auditable
+class CTipoResultadoCierre extends Model
 {
-    use AuditableTrait;
-
     use HasFactory;
 
     use SoftDeletes;

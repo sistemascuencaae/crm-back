@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReferenciasAnexoOpenceo extends Model
 {
-    // use AuditableTrait;
-
     use HasFactory;
 
     protected $table = 'public.referencias_anexo';

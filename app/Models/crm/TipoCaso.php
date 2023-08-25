@@ -10,9 +10,8 @@ use Illuminate\Support\Carbon;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class TipoCaso extends Model implements Auditable
+class TipoCaso extends Model
 {
-    use AuditableTrait;
 
     use HasFactory;
 

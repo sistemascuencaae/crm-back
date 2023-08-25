@@ -9,9 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Etiqueta extends Model implements Auditable
+class Etiqueta extends Model
 {
-    use AuditableTrait;
 
     use HasFactory;
 

@@ -8,10 +8,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Flujo extends Model implements Auditable
+class Flujo extends Model
 {
-    use AuditableTrait;
-
     protected $table = 'crm.flujo';
     protected $primaryKey = 'id';
     use SoftDeletes;
