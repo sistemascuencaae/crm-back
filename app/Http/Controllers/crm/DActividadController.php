@@ -132,7 +132,7 @@ class DActividadController extends Controller
                 $audit->new_values = json_encode($actividad);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 // $audit->accion = 'editDActividad';
-                $audit->accion = 'editDActividad';
+                $audit->accion = 'editDTipoActividad';
                 $audit->save();
                 // END Auditoria
 
@@ -271,7 +271,7 @@ class DActividadController extends Controller
                 // Establecer old_values y new_values
                 $audit->new_values = json_encode($actividad);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-                $audit->accion = 'editDActividadTableroMisActividades';
+                $audit->accion = 'editDTipoActividadTableroMisActividades';
                 $audit->save();
                 // END Auditoria
 
