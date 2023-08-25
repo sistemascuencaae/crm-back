@@ -15,6 +15,7 @@ use App\Models\crm\DTipoTarea;
 use App\Models\crm\Miembros;
 use App\Models\crm\Notificaciones;
 use App\Models\crm\RequerimientoCaso;
+use App\Models\crm\Tablero;
 use App\Models\crm\Tareas;
 use App\Models\User;
 use Exception;
@@ -579,7 +580,8 @@ class CasoController extends Controller
         try {
 
             $usuarios = DB::select("SELECT * from public.users where estado  = true");
-            $tableros = DB::select("SELECT * from crm.tablero where estado = true");
+            //$tableros = DB::select("SELECT * from crm.tablero where estado = true");
+            $tableros = Tablero::with('tableroUsuario.usuario')->where('estado',true)->get();
             $departamentos = DB::select("SELECT * from crm.departamento where estado = true");
             $fases = DB::select("SELECT * from crm.fase where estado = true");
             $depUserTablero = DB::select(
