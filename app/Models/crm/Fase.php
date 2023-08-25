@@ -23,12 +23,17 @@ class Fase extends Model
         "estado",
         "orden",
         "color_id",
-        "fase_tipo"
+        "fase_tipo",
+        "cnd_mover_id"
     ];
 
     public function Caso()
     {
         return $this->hasMany(Caso::class, "fas_id");
+    }
+    public function condicionFaseMover()
+    {
+        return $this->belongsTo(CondicionesFaseMover::class, "cnd_mover_id","id");
     }
 
     public function tablero()
