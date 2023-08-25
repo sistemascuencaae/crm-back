@@ -2,10 +2,12 @@
 
 namespace App\Models\crm;
 
+use App\Models\crm\Tablero;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
 class Fase extends Model
 {
@@ -34,6 +36,11 @@ class Fase extends Model
         return $this->belongsTo(CondicionesFaseMover::class, "cnd_mover_id","id");
     }
 
+    public function tablero()
+    {
+        return $this->belongsTo(Tablero::class, "tab_id", "id");
+    }
+
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
@@ -45,4 +52,3 @@ class Fase extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 }
-

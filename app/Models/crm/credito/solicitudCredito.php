@@ -49,7 +49,9 @@ class solicitudCredito extends Model
         "total_egresos",
         "total_ingresos_egresos",
         //Referencias
-        "referencias"
+        "referencias",
+
+        "caso_id"
     ];
 
     public function setCreatedAtAttribute($value)
