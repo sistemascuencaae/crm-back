@@ -72,8 +72,8 @@ class FaseController extends Controller
 
             $data = DB::transaction(function () use ($request) {
                 $idFase = $request->input('id');
-                $data = Fase::find($idFase);
-                $data->update([
+                $faseUpd = Fase::find($idFase);
+                $faseUpd->update([
                     "nombre" => $request->input('nombre'),
                     "descripcion" => $request->input('descripcion'),
                     "estado" => $request->input('estado'),
@@ -83,18 +83,25 @@ class FaseController extends Controller
                 ]);
 
                 $condicion = CondicionesFaseMover::find($request->input('condicionId'));
+                $idsFaseMover = json_encode($request->input('idsFaseMover'));
                 if ($condicion) {
-                    $condicion->parametro = $request->input('idsFaseMover');
+                    $condicion->parametro = $idsFaseMover;
                     $condicion->save();
+                }  else {
+                    $condiDos = CondicionesFaseMover::create([
+                        "parametro" => $idsFaseMover,
+                    ]);
+
+                    $faseUpd->cnd_mover_id = $condiDos->id;
+                    $faseUpd->save();
                 }
-                $fase = Fase::with([
+                $faseSave = Fase::with([
                     'caso.req_caso',
                     'condicionFaseMover'
                 ])->find($idFase);
 
 
-                return $fase;
-
+                return $faseSave;
             });
 
 
