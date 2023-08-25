@@ -39,9 +39,6 @@ class CasoController extends Controller
                 $caso->estado_2 = 1;
                 $caso->save();
 
-
-
-
                 //buscar las tareas predefinidas
                 $arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
 
@@ -56,7 +53,6 @@ class CasoController extends Controller
                     $tarea->marcado = false;
                     $caso->tareas()->save($tarea);
                 }
-
 
                 $newGrupo = new ChatGroups();
                 $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
@@ -92,7 +88,6 @@ class CasoController extends Controller
                     $reqCaso->caso_id = $caso->id;
                     $reqCaso->save();
                 }
-
                 return $this->getCaso($caso->id);
             });
 
@@ -142,32 +137,22 @@ class CasoController extends Controller
 
         try {
             $caso = Caso::find($casoId);
+            $casoAudit = Caso::with(
+                'user',
+                'userCreador',
+                'entidad',
+                'fase.tablero',
+            )->find($casoId); // Solo para el audits NADA MAS
 
             $audit = new Audits();
             // Obtener el old_values (valor antiguo)
-            $valorAntiguo = $caso;
-            $audit->old_values = json_encode(['fas_id' => $valorAntiguo->fas_id, 'fase_anterior_id' => $valorAntiguo->fase_anterior_id]); // json_encode para convertir en string ese array
+            $valorAntiguo = $casoAudit;
+            $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
 
             $caso->update([
                 'fas_id' => $faseId,
                 'fase_anterior_id' => $faseAnteriorId
             ]);
-
-
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit->user_id = Auth::id();
-            $audit->event = 'updated';
-            $audit->auditable_type = Caso::class;
-            $audit->auditable_id = $caso->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->accion = 'editFase';
-            // Establecer old_values y new_values
-            $audit->new_values = json_encode(['fas_id' => $caso->fas_id, 'fase_anterior_id' => $caso->fase_anterior_id]); // json_encode para convertir en string ese array
-            $audit->save();
-            // END Auditoria
 
 
             $reqFase = DB::select(
@@ -191,6 +176,21 @@ class CasoController extends Controller
 
             $data = $this->getCaso($caso->id);
             broadcast(new TableroEvent($data));
+
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit->user_id = Auth::id();
+            $audit->event = 'updated';
+            $audit->auditable_type = Caso::class;
+            $audit->auditable_id = $caso->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'editFase';
+            // Establecer old_values y new_values
+            $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
+            $audit->save();
+            // END Auditoria
 
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (Exception $e) {
@@ -438,8 +438,15 @@ class CasoController extends Controller
                 $casoEnProceso = Caso::find($caso_id);
 
                 // Obtener el old_values (valor antiguo)
-                $valorAntiguo = $casoEnProceso->fas_id;
-                $audit->old_values = json_encode(['fas_id' => $valorAntiguo]); // json_encode para convertir en string ese array
+                $casoAudit = Caso::with(
+                    'user',
+                    'userCreador',
+                    'entidad',
+                    'fase.tablero',
+                )->find($caso_id); // Solo para el audits NADA MAS
+
+                $valorAntiguo = $casoAudit;
+                $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
 
 
                 $casoEnProceso->fas_id = $new_fase_id;
@@ -492,7 +499,7 @@ class CasoController extends Controller
 
             broadcast(new ReasignarCasoEvent($data));
 
-            $audit->new_values = json_encode(['fas_id' => $data['fas_id']]); // json_encode para convertir en string ese array
+            $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
             $audit->save();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
@@ -618,8 +625,8 @@ class CasoController extends Controller
 
 
         $tabId = DB::select('SELECT t.id FROM crm.caso co
-         inner join crm.fase fa on fa.id = co.fas_id
-         inner join crm.tablero t on t.id = fa.tab_id
+            inner join crm.fase fa on fa.id = co.fas_id
+            inner join crm.tablero t on t.id = fa.tab_id
         where co.id = ' . $casoId)[0];
 
 
@@ -638,6 +645,10 @@ class CasoController extends Controller
             'Galeria',
             'Archivo',
             'req_caso',
+
+            'tablero',
+            'fase.tablero',
+
         ])->where('id', $casoId)->first();
     }
 
