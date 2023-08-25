@@ -4,11 +4,14 @@ namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Audits;
 use App\Models\crm\credito\AvSolicitudCredito;
 use App\Models\crm\credito\ReferenciasAnexoOpenceo;
 use App\Models\crm\credito\solicitudCredito;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class solicitudCreditoController extends Controller
@@ -17,6 +20,23 @@ class solicitudCreditoController extends Controller
     {
         try {
             $solicitudCredito = solicitudCredito::create($request->all());
+
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit = new Audits();
+            $audit->user_id = Auth::id();
+            $audit->event = 'created';
+            $audit->auditable_type = solicitudCredito::class;
+            $audit->auditable_id = $solicitudCredito->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->old_values = json_encode($solicitudCredito);
+            $audit->new_values = json_encode([]);
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'addSolicitudCredito';
+            $audit->save();
+            // END Auditoria
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $solicitudCredito));
         } catch (Exception $e) {
@@ -29,7 +49,28 @@ class solicitudCreditoController extends Controller
         try {
             $solicitudCredito = solicitudCredito::findOrFail($id);
 
+            // Obtener el old_values (valor antiguo)
+            $audit = new Audits();
+            $valorAntiguo = $solicitudCredito;
+            $audit->old_values = json_encode($valorAntiguo);
+
+
             $solicitudCredito->update($request->all());
+
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit->user_id = Auth::id();
+            $audit->event = 'updated';
+            $audit->auditable_type = solicitudCredito::class;
+            $audit->auditable_id = $solicitudCredito->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->new_values = json_encode($solicitudCredito);
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'editSolicitudCredito';
+            $audit->save();
+            // END Auditoria
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $solicitudCredito));
         } catch (Exception $e) {

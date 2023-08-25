@@ -5,7 +5,10 @@ namespace App\Http\Controllers\crm\credito;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
+use App\Models\crm\Audits;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Exception;
@@ -26,12 +29,29 @@ class ArchivoController extends Controller
             $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
             $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta del archivo en la que se encuentra
 
-            Archivo::create([
+            $archivo = Archivo::create([
                 "titulo" => $titulo,
                 "observacion" => $request->observacion,
                 "archivo" => $path,
                 "caso_id" => $request->caso_id
             ]);
+
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit = new Audits();
+            $audit->user_id = Auth::id();
+            $audit->event = 'created';
+            $audit->auditable_type = Archivo::class;
+            $audit->auditable_id = $archivo->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->old_values = json_encode($archivo);
+            $audit->new_values = json_encode([]);
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'addArchivo';
+            $audit->save();
+            // END Auditoria
 
             // $data = DB::select('select * from crm.archivos where caso_id =' . $request->caso_id);
             $archivos = Archivo::where('caso_id', $request->caso_id)->get();
@@ -74,6 +94,9 @@ class ArchivoController extends Controller
         try {
             $archivo = Archivo::findOrFail($id);
 
+            // Obtener el old_values (valor antiguo)
+            $valorAntiguo = $archivo->observacion;
+
             // $file = $request->file("archivo");
             // $titulo = $file->getClientOriginalName();
             // if ($request->hasFile("archivo")) {
@@ -90,21 +113,57 @@ class ArchivoController extends Controller
                 // "archivo" => $path,
             ]);
 
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit = new Audits();
+            $audit->user_id = Auth::id();
+            $audit->event = 'updated';
+            $audit->auditable_type = Archivo::class;
+            $audit->auditable_id = $archivo->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->old_values = json_encode(['observacion' => $valorAntiguo]); // json_encode para convertir en string ese array
+            $audit->new_values = json_encode(['observacion' => $archivo->observacion]); // json_encode para convertir en string ese array
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'editArchivo';
+            $audit->save();
+            // END Auditoria
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $archivo));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function deleteArchivo($id)
+    public function deleteArchivo(Request $request, $id)
     {
         try {
             $archivo = Archivo::findOrFail($id);
+            // Obtener el old_values (valor antiguo)
+            $valorAntiguo = $archivo;
 
             $url = str_replace("storage", "public", $archivo->archivo); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
             Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
 
             $archivo->delete();
+
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit = new Audits();
+            $audit->user_id = Auth::id();
+            $audit->event = 'deleted';
+            $audit->auditable_type = Archivo::class;
+            $audit->auditable_id = $archivo->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->old_values = json_encode($valorAntiguo);
+            $audit->new_values = json_encode([]);
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'deleteArchivo';
+            $audit->save();
+            // END Auditoria
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $archivo));
         } catch (Exception $e) {

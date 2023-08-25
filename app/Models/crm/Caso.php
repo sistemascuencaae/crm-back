@@ -3,6 +3,7 @@
 namespace App\Models\crm;
 
 use App\Models\crm\CTipoTarea;
+use App\Models\crm\Fase;
 use App\Models\User;
 use App\Models\crm\Entidad;
 use App\Models\crm\AVResumenCaso;
@@ -12,7 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Caso extends Model {
+class Caso extends Model
+{
 
     use HasFactory;
 
@@ -129,5 +131,15 @@ class Caso extends Model {
     public function req_caso()
     {
         return $this->hasMany(RequerimientoCaso::class, "caso_id", "id");
+    }
+
+    public function tablero()
+    {
+        return $this->belongsTo(Tablero::class, "tablero_creacion_id", "id");
+    }
+
+    public function fase()
+    {
+        return $this->belongsTo(Fase::class, "fas_id", "id");
     }
 }
