@@ -6,35 +6,16 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-
-class Fase extends Model
+class CondicionesFaseMover extends Model
 {
-    // use AuditableTrait;
-
     use HasFactory;
 
-    protected $table = 'crm.fase';
+    protected $table = 'crm.condicion_fase_mover';
 
     protected $fillable = [
-        "tab_id",
-        "nombre",
-        "descripcion",
-        "generar_caso",
-        "estado",
-        "orden",
-        "color_id",
-        "fase_tipo",
-        "cnd_mover_id"
+        "fas_id",
+        "parametro",
     ];
-
-    public function Caso()
-    {
-        return $this->hasMany(Caso::class, "fas_id");
-    }
-    public function condicionFaseMover()
-    {
-        return $this->belongsTo(CondicionesFaseMover::class, "cnd_mover_id","id");
-    }
 
     public function setCreatedAtAttribute($value)
     {
@@ -46,5 +27,11 @@ class Fase extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-}
 
+    public function setDeletedAtAttribute($value)
+    {
+        date_default_timezone_set("America/Guayaquil");
+        $this->attributes["deleted_at"] = Carbon::now();
+    }
+
+}
