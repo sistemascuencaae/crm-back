@@ -9,10 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Archivo extends Model implements Auditable
+class Archivo extends Model
 {
-    use AuditableTrait;
-
     use HasFactory;
 
     use SoftDeletes;

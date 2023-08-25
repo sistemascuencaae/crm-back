@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Fase extends Model
 {
-    // use AuditableTrait;
-
     use HasFactory;
 
     protected $table = 'crm.fase';

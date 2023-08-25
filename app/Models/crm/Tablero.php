@@ -8,10 +8,11 @@ use Illuminate\Support\Carbon;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Tablero extends Model implements Auditable
+// lineas para auditar automaticamente
+// implements Auditable 
+// use AuditableTrait;
+class Tablero extends Model
 {
-    use AuditableTrait;
-
     use HasFactory;
 
     protected $table = 'crm.tablero';

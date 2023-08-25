@@ -8,10 +8,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Departamento extends Model implements Auditable
+class Departamento extends Model
 {
-    use AuditableTrait;
-
     protected $table = 'crm.departamento';
     protected $primaryKey = 'dep_id';
 

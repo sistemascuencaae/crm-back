@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class AvSolicitudCredito extends Model
 {
-    // use AuditableTrait;
-
     use HasFactory;
 
     protected $table = 'crm.av_solicitud_credito';

@@ -9,9 +9,8 @@ use Illuminate\Support\Carbon;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Galeria extends Model implements Auditable
+class Galeria extends Model
 {
-    use AuditableTrait;
 
     use HasFactory;
 

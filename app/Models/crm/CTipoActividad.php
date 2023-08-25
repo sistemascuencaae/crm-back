@@ -11,10 +11,8 @@ use Illuminate\Support\Carbon;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class CTipoActividad extends Model implements Auditable
+class CTipoActividad extends Model
 {
-    use AuditableTrait;
-
     use HasFactory;
 
     use SoftDeletes;
