@@ -64,22 +64,24 @@ class DActividadController extends Controller
 
                 $dta = DTipoActividad::create($request->all());
 
+                $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($dta->id);
                 // START Bloque de código que genera un registro de auditoría manualmente
                 $audit = new Audits();
                 $audit->user_id = Auth::id();
                 $audit->event = 'created';
                 $audit->auditable_type = DTipoActividad::class;
-                $audit->auditable_id = $dta->id;
+                $audit->auditable_id = $AuditActividad['id'];
                 $audit->user_type = User::class;
                 $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
                 $audit->url = $request->fullUrl();
                 // Establecer old_values y new_values
-                $audit->old_values = json_encode($dta);
+                $audit->old_values = json_encode($AuditActividad);
                 $audit->new_values = json_encode([]);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'addDTipoActividad';
                 $audit->save();
                 // END Auditoria
+
 
                 $data = DTipoActividad::with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')
                     ->where('caso_id', $dta->caso_id)
@@ -98,6 +100,7 @@ class DActividadController extends Controller
                 return $data;
             });
 
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -111,9 +114,11 @@ class DActividadController extends Controller
 
             $actividad = DTipoActividad::findOrFail($id);
 
+            $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($id);
+
             // Obtener el old_values (valor antiguo)
             $audit = new Audits();
-            $valorAntiguo = $actividad;
+            $valorAntiguo = $AuditActividad;
             $audit->old_values = json_encode($valorAntiguo);
 
             $data = DB::transaction(function () use ($usuarioMiembro, $actividad, $request, $audit) {
@@ -128,15 +133,16 @@ class DActividadController extends Controller
                 $audit->user_type = User::class;
                 $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
                 $audit->url = $request->fullUrl();
+
+                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+
                 // Establecer old_values y new_values
-                $audit->new_values = json_encode($actividad);
+                $audit->new_values = json_encode($data);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 // $audit->accion = 'editDActividad';
                 $audit->accion = 'editDTipoActividad';
                 $audit->save();
                 // END Auditoria
-
-                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->first();
 
                 $miembro = new Miembros();
 
@@ -207,20 +213,21 @@ class DActividadController extends Controller
             $data = DB::transaction(function () use ($usuarioMiembro, $request, $user_id) {
                 $dta = DTipoActividad::create($request->all());
 
+                $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($dta->id);
                 // START Bloque de código que genera un registro de auditoría manualmente
                 $audit = new Audits();
                 $audit->user_id = Auth::id();
                 $audit->event = 'created';
                 $audit->auditable_type = DTipoActividad::class;
-                $audit->auditable_id = $dta->id;
+                $audit->auditable_id = $AuditActividad['id'];
                 $audit->user_type = User::class;
                 $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
                 $audit->url = $request->fullUrl();
                 // Establecer old_values y new_values
-                $audit->old_values = json_encode($dta);
+                $audit->old_values = json_encode($AuditActividad);
                 $audit->new_values = json_encode([]);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-                $audit->accion = 'addDTipoActividadTableroMisActividades';
+                $audit->accion = 'addDTipoActividad';
                 $audit->save();
                 // END Auditoria
 
@@ -251,9 +258,10 @@ class DActividadController extends Controller
             $usuarioMiembro = $request->input('usuario');
             $actividad = DTipoActividad::findOrFail($id);
 
+            $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($id);
             // Obtener el old_values (valor antiguo)
             $audit = new Audits();
-            $valorAntiguo = $actividad;
+            $valorAntiguo = $AuditActividad;
             $audit->old_values = json_encode($valorAntiguo);
 
             $data = DB::transaction(function () use ($usuarioMiembro, $actividad, $request, $user_id, $audit) {
@@ -268,17 +276,19 @@ class DActividadController extends Controller
                 $audit->user_type = User::class;
                 $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
                 $audit->url = $request->fullUrl();
-                // Establecer old_values y new_values
-                $audit->new_values = json_encode($actividad);
-                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-                $audit->accion = 'editDTipoActividadTableroMisActividades';
-                $audit->save();
-                // END Auditoria
 
                 $data = DTipoActividad::where('user_id', $user_id)
                     ->where('id', $actividad->id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->first();
-                $miembro = new Miembros();
 
+                // Establecer old_values y new_values
+                $audit->new_values = json_encode($data);
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                // $audit->accion = 'editDActividad';
+                $audit->accion = 'editDTipoActividad';
+                $audit->save();
+                // END Auditoria
+
+                $miembro = new Miembros();
                 $miembro->user_id = $usuarioMiembro['id'];
                 $miembro->caso_id = $actividad->caso_id;
 
