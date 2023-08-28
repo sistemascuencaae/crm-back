@@ -17,6 +17,7 @@ use App\Models\crm\Notificaciones;
 use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tablero;
 use App\Models\crm\Tareas;
+use App\Models\crm\TipoCaso;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
@@ -346,7 +347,10 @@ class CasoController extends Controller
                 $caso = Caso::findOrFail($caso_id);
 
                 // Obtener el old_values (valor antiguo)
-                $valorAntiguo = $caso->tc_id;
+                $casoAudit = TipoCaso::find($caso->tc_id); // Solo para el audits NADA MAS
+
+                // Obtener el old_values (valor antiguo)
+                $valorAntiguo = $casoAudit;
 
                 $caso->update([
                     "tc_id" => $request->tc_id,
@@ -362,8 +366,12 @@ class CasoController extends Controller
                 $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
                 $audit->url = $request->fullUrl();
                 // Establecer old_values y new_values
-                $audit->old_values = json_encode(['tc_id' => $valorAntiguo]); // json_encode para convertir en string ese array
-                $audit->new_values = json_encode(['tc_id' => $caso->tc_id]); // json_encode para convertir en string ese array
+                $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
+
+                // Obtener el old_values (valor antiguo)
+                $casoAuditNewValue = TipoCaso::find($caso->tc_id); // Solo para el audits NADA MAS
+
+                $audit->new_values = json_encode($casoAuditNewValue); // json_encode para convertir en string ese array
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'editTipoCaso';
                 $audit->save();
@@ -581,7 +589,7 @@ class CasoController extends Controller
 
             $usuarios = DB::select("SELECT * from public.users where estado  = true");
             //$tableros = DB::select("SELECT * from crm.tablero where estado = true");
-            $tableros = Tablero::with('tableroUsuario.usuario')->where('estado',true)->get();
+            $tableros = Tablero::with('tableroUsuario.usuario')->where('estado', true)->get();
             $departamentos = DB::select("SELECT * from crm.departamento where estado = true");
             $fases = DB::select("SELECT * from crm.fase where estado = true");
             $depUserTablero = DB::select(
