@@ -99,10 +99,12 @@ class ReqCasoController extends Controller
                 $requerimiento->orden = $request->input('orden');
                 $requerimiento->valor_lista = $request->input('valor_lista');
                 $requerimiento->esimagen = $request->input('esimagen');
-
-
                 $requerimiento->save();
-                return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $requerimiento));
+
+                $reqCaso = RequerimientoCaso::where('caso_id',$request->input('caso_id'))->get();
+
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $reqCaso));
             }else{
                 return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento no existe.', $requerimiento));
             }
