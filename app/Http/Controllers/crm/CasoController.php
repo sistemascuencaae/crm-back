@@ -678,7 +678,6 @@ class CasoController extends Controller
             'Galeria',
             'Archivo',
             'req_caso',
-
             'tablero',
             'fase.tablero',
 
