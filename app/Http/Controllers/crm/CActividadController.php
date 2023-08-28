@@ -20,22 +20,22 @@ class CActividadController extends Controller
 
             // $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit = new Audits();
-            $audit->user_id = Auth::id();
-            $audit->event = 'created';
-            $audit->auditable_type = CTipoActividad::class;
-            $audit->auditable_id = $actividad->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->old_values = json_encode($actividad);
-            $audit->new_values = json_encode([]);
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->accion = 'addCTipoActividad';
-            $audit->save();
-            // END Auditoria
+            // // START Bloque de código que genera un registro de auditoría manualmente
+            // $audit = new Audits();
+            // $audit->user_id = Auth::id();
+            // $audit->event = 'created';
+            // $audit->auditable_type = CTipoActividad::class;
+            // $audit->auditable_id = $actividad->id;
+            // $audit->user_type = User::class;
+            // $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            // $audit->url = $request->fullUrl();
+            // // Establecer old_values y new_values
+            // $audit->old_values = json_encode($actividad);
+            // $audit->new_values = json_encode([]);
+            // $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            // $audit->accion = 'addCTipoActividad';
+            // $audit->save();
+            // // END Auditoria
 
             $actividades = CTipoActividad::where('tab_id', $actividad->tab_id)->orderBy('id', 'DESC')->get();
 
@@ -103,27 +103,27 @@ class CActividadController extends Controller
         try {
             $actividad = CTipoActividad::findOrFail($id);
 
-            // Obtener el old_values (valor antiguo)
-            $audit = new Audits();
-            $valorAntiguo = $actividad;
-            $audit->old_values = json_encode($valorAntiguo);
+            // // Obtener el old_values (valor antiguo)
+            // $audit = new Audits();
+            // $valorAntiguo = $actividad;
+            // $audit->old_values = json_encode($valorAntiguo);
 
             $actividad->update($request->all());
 
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit->user_id = Auth::id();
-            $audit->event = 'updated';
-            $audit->auditable_type = CTipoActividad::class;
-            $audit->auditable_id = $actividad->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->new_values = json_encode($actividad);
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->accion = 'editCTipoActividad';
-            $audit->save();
-            // END Auditoria
+            // // START Bloque de código que genera un registro de auditoría manualmente
+            // $audit->user_id = Auth::id();
+            // $audit->event = 'updated';
+            // $audit->auditable_type = CTipoActividad::class;
+            // $audit->auditable_id = $actividad->id;
+            // $audit->user_type = User::class;
+            // $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            // $audit->url = $request->fullUrl();
+            // // Establecer old_values y new_values
+            // $audit->new_values = json_encode($actividad);
+            // $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            // $audit->accion = 'editCTipoActividad';
+            // $audit->save();
+            // // END Auditoria
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $actividad));
         } catch (Exception $e) {
@@ -136,27 +136,27 @@ class CActividadController extends Controller
         try {
             $actividad = CTipoActividad::findOrFail($id);
 
-            // Obtener el old_values (valor antiguo)
-            $valorAntiguo = $actividad;
+            // // Obtener el old_values (valor antiguo)
+            // $valorAntiguo = $actividad;
 
             $actividad->delete();
 
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit = new Audits();
-            $audit->user_id = Auth::id();
-            $audit->event = 'deleted';
-            $audit->auditable_type = CTipoActividad::class;
-            $audit->auditable_id = $actividad->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->old_values = json_encode($valorAntiguo);
-            $audit->new_values = json_encode([]);
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->accion = 'deleteCTipoActividad';
-            $audit->save();
-            // END Auditoria
+            // // START Bloque de código que genera un registro de auditoría manualmente
+            // $audit = new Audits();
+            // $audit->user_id = Auth::id();
+            // $audit->event = 'deleted';
+            // $audit->auditable_type = CTipoActividad::class;
+            // $audit->auditable_id = $actividad->id;
+            // $audit->user_type = User::class;
+            // $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            // $audit->url = $request->fullUrl();
+            // // Establecer old_values y new_values
+            // $audit->old_values = json_encode($valorAntiguo);
+            // $audit->new_values = json_encode([]);
+            // $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            // $audit->accion = 'deleteCTipoActividad';
+            // $audit->save();
+            // // END Auditoria
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $actividad));
         } catch (Exception $e) {
