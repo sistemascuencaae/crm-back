@@ -37,6 +37,7 @@ class CasoController extends Controller
         $miembros = $request->input('miembros');
         try {
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros) {
+                $userLoginId = auth('api')->user()->id;
                 $caso = new Caso($casoInput);
                 $caso->estado_2 = 1;
                 $caso->save();
@@ -63,7 +64,7 @@ class CasoController extends Controller
 
                 $caso->nombre = 'CASO # ' . $caso->id;
                 $caso->descripcion = 'CASO # ' . $caso->id;
-                $caso->user_creador_id = $caso->user_id;
+                $caso->user_creador_id = $userLoginId;
 
                 $caso->save();
                 for ($i = 0; $i < sizeof($miembros); $i++) {
@@ -497,6 +498,31 @@ class CasoController extends Controller
                     $casoEnProceso->fas_id,
                     $casoEnProceso->user->name
                 );
+
+
+                /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
+                $reqFase = DB::select(
+                    'SELECT rp.* from crm.requerimientos_predefinidos rp
+                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+                WHERE rc.titulo IS null and rp.fase_id = ?',
+                    [$casoEnProceso->id, $casoEnProceso->fas_id]
+                );
+                for ($i = 0; $i < sizeof($reqFase); $i++) {
+                    $reqCaso = new RequerimientoCaso();
+                    $reqCaso->user_requiere_id = $casoEnProceso->user_creador_id;
+                    $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
+                    $reqCaso->titulo = $reqFase[$i]->nombre;
+                    $reqCaso->fas_id = $reqFase[$i]->fase_id;
+                    $reqCaso->tab_id = $reqFase[$i]->tab_id;
+                    $reqCaso->tipo_campo = $reqFase[$i]->tipo;
+                    $reqCaso->caso_id = $casoEnProceso->id;
+                    $reqCaso->save();
+                }
+
+
+
+
+
                 return $noti;
             });
 
@@ -586,8 +612,6 @@ class CasoController extends Controller
     public function depUserTablero($casoId)
     {
         try {
-
-            $usuarios = DB::select("SELECT * from public.users where estado  = true");
             //$tableros = DB::select("SELECT * from crm.tablero where estado = true");
             $tableros = Tablero::with('tableroUsuario.usuario')->where('estado', true)->get();
             $departamentos = DB::select("SELECT * from crm.departamento where estado = true");
@@ -614,7 +638,6 @@ class CasoController extends Controller
                 [$casoId]
             );
             $data = (object) [
-                "usuarios" => $usuarios,
                 "departamentos" => $departamentos,
                 "tableros" => $tableros,
                 "fases" => $fases,
