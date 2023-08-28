@@ -35,6 +35,17 @@ class TipoCasoController extends Controller
         }
     }
 
+    public function listByIdTipoCasoActivo($tc_id)
+    {
+        try {
+            $resultado = TipoCaso::where('id', $tc_id)->where('estado', true)->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $resultado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function listTipoCasoByIdTableroEstadoActivo($tab_id)
     {
         try {
