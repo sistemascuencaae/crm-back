@@ -78,4 +78,29 @@ class NotificacionesController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    public function editLeidoAllNotificaciones(Request $request, $dep_id)
+    {
+        try {
+            $leido = $request->input('leido', true);
+
+            $data = DB::transaction(function () use ($leido, $dep_id) {
+                Notificaciones::where('dep_id', $dep_id)->update([
+                    "leido" => $leido,
+                ]);
+
+                $notificacionesActualizadas = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+                    ->where('dep_id', $dep_id)
+                    ->orderBy('id', 'DESC')
+                    ->get();
+
+                return $notificacionesActualizadas;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }
