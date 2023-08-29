@@ -310,6 +310,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/allByDepartamento/{id}', [NotificacionesController::class, 'allByDepartamento']);
     Route::get('/listByDepartamento/{id}', [NotificacionesController::class, 'listByDepartamento']);
     Route::post('/editLeidoNotificacion/{id}', [NotificacionesController::class, 'editLeidoNotificacion']);
+    Route::post('/editLeidoAllNotificaciones/{id}', [NotificacionesController::class, 'editLeidoAllNotificaciones']);
 
     // REQUERIMIENTOS
 

@@ -13,37 +13,34 @@ use Illuminate\Support\Facades\Storage;
 
 class ReqCasoController extends Controller
 {
-
-
-
+    // tipo archivo
     public function editReqTipoFile(Request $request)
     {
         $reqCaso = $request->input('reqCaso');
         $inputReq = json_decode($reqCaso);
         $tipoArchivo = $request->input('tipoArchivo');
-//echo ('$tipoArchivo : '.json_encode($tipoArchivo ));
+        //echo ('$tipoArchivo : '.json_encode($tipoArchivo ));
 
         $requerimiento = RequerimientoCaso::where('id', $inputReq->id)->first();
         if (!$requerimiento) {
             return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento no existe.', $inputReq->id));
         }
         try {
-             $path = '';
+            $path = '';
 
-
-             if($tipoArchivo == 'imagen_file'){
+            if ($tipoArchivo == 'imagen_file') {
                 if ($request->hasFile("imagen_file")) {
                     $path = Storage::putFile("galerias", $request->file("imagen_file"));
                 }
                 $requerimiento->esimagen = true;
-             }
+            }
 
-             if($tipoArchivo == 'archivo_file'){
+            if ($tipoArchivo == 'archivo_file') {
                 if ($request->hasFile("archivo_file")) {
                     $path = Storage::putFile("archivos", $request->file("archivo_file"));
                 }
                 $requerimiento->esimagen = false;
-             }
+            }
             $requerimiento->valor_varchar = $path;
             $requerimiento->descripcion = 'Requerimiento caso numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
             $requerimiento->marcado = true;
@@ -61,20 +58,13 @@ class ReqCasoController extends Controller
         }
     }
 
-
-
-
-    public function edit(Request $request){
+    public function edit(Request $request)
+    {
         try {
-
             $id = $request->input('id');
 
-
-
-
-            $requerimiento = RequerimientoCaso::where('id',$id)->first();
+            $requerimiento = RequerimientoCaso::where('id', $id)->first();
             if ($requerimiento) {
-
                 $requerimiento->descripcion = $request->input('descripcion');
                 $requerimiento->caso_id = $request->input('caso_id');
                 $requerimiento->created_at = $request->input('created_at');
@@ -101,20 +91,16 @@ class ReqCasoController extends Controller
                 $requerimiento->esimagen = $request->input('esimagen');
                 $requerimiento->save();
 
-                $reqCaso = RequerimientoCaso::where('caso_id',$request->input('caso_id'))->get();
-
+                $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))->get();
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $reqCaso));
-            }else{
+            } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento no existe.', $requerimiento));
             }
 
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), ''));
         }
-
-
-
     }
 
 
@@ -139,8 +125,6 @@ class ReqCasoController extends Controller
     public function add()
     {
     }
-
-
 
     public function uploadReqArchivo($inputFormData)
     {
