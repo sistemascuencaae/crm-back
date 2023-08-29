@@ -17,9 +17,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ReqCasoController extends Controller
 {
-
-
-
+    // tipo archivo
     public function editReqTipoFile(Request $request)
     {
         $reqCaso = $request->input('reqCaso');
@@ -37,17 +35,18 @@ class ReqCasoController extends Controller
                     $path = Storage::putFile("galerias", $request->file("imagen_file"));
                 }
                 $requerimiento->esimagen = true;
+            }
 
-
+            if ($tipoArchivo == 'archivo_file') {
 
                 $galeria = Galeria::find($requerimiento->galerias_id);
                 if ($galeria) {
                     $galeria->update([
-                    "titulo" => $requerimiento->titulo,
-                    "descripcion" => 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
-                    "imagen" => $path,
-                    "caso_id" => $inputReq->caso_id,
-                    "tipo_gal_id" => 1,
+                        "titulo" => $requerimiento->titulo,
+                        "descripcion" => 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        "imagen" => $path,
+                        "caso_id" => $inputReq->caso_id,
+                        "tipo_gal_id" => 1,
                     ]);
                 } else {
                     $newGaleria = new Galeria();
@@ -62,7 +61,6 @@ class ReqCasoController extends Controller
             }
 
             if ($tipoArchivo == 'archivo_file') {
-
                 if ($request->hasFile("archivo_file")) {
                     $path = Storage::putFile("archivos", $request->file("archivo_file"));
                 }
@@ -86,6 +84,7 @@ class ReqCasoController extends Controller
                     $newArchivo->save();
                     $requerimiento->archivos_id = $newArchivo->id;
                 }
+
             }
             $requerimiento->valor_varchar = $path;
             $requerimiento->valor = $requerimiento->titulo;
@@ -98,9 +97,47 @@ class ReqCasoController extends Controller
         }
     }
 
-//agregar edit
+    public function edit(Request $request)
+    {
+        try {
 
+            $id = $request->input('id');
 
+            $requerimiento = RequerimientoCaso::find($id);
+
+            // Obtener el old_values (valor antiguo)
+            $audit = new Audits();
+            $valorAntiguo = $requerimiento;
+            $audit->old_values = json_encode($valorAntiguo);
+
+            if ($requerimiento) {
+                $requerimiento->update($request->all());
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = RequerimientoCaso::class;
+                $audit->auditable_id = $requerimiento->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->new_values = json_encode($requerimiento);
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'editRequerimiento';
+                $audit->save();
+                // END Auditoria
+
+                $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))->get();
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $reqCaso));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento no existe.', $requerimiento));
+            }
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), ''));
+        }
+    }
 
     public function listAll($casoId)
     {
@@ -123,8 +160,6 @@ class ReqCasoController extends Controller
     public function add()
     {
     }
-
-
 
     public function uploadReqArchivo($inputFormData)
     {
