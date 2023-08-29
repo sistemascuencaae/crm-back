@@ -436,7 +436,7 @@ class CasoController extends Controller
                 $caso_id = $request->input('caso_id');
                 $estado_2 = $request->input('estado_2');
                 $user_anterior_id = $request->input('user_anterior_id');
-                $fase_anterior_id = $request->input('fase_anterior_id');
+                $fase_anterior_id_reasigna = $request->input('fase_anterior_id_reasigna');
                 $tablero_anterior_id = $request->input('tablero_anterior_id');
                 $dep_anterior_id = $request->input('dep_anterior_id');
                 $new_user_id = $request->input('new_user_id');
@@ -464,7 +464,7 @@ class CasoController extends Controller
                 $casoEnProceso->estado_2 = $estado_2;
                 $casoEnProceso->bloqueado = false;
                 $casoEnProceso->bloqueado_user = '';
-                $casoEnProceso->fase_anterior_id = $fase_anterior_id;
+                $casoEnProceso->fase_anterior_id_reasigna = $fase_anterior_id_reasigna;
                 $casoEnProceso->user_anterior_id = $user_anterior_id;
                 $casoEnProceso->save();
 
@@ -612,7 +612,6 @@ class CasoController extends Controller
     public function depUserTablero($casoId)
     {
         try {
-            //$tableros = DB::select("SELECT * from crm.tablero where estado = true");
             $tableros = Tablero::with('tableroUsuario.usuario')->where('estado', true)->get();
             $departamentos = DB::select("SELECT * from crm.departamento where estado = true");
             $fases = DB::select("SELECT * from crm.fase where estado = true");
