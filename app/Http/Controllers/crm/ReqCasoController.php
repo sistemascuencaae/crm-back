@@ -35,22 +35,18 @@ class ReqCasoController extends Controller
                     $path = Storage::putFile("galerias", $request->file("imagen_file"));
                 }
                 $requerimiento->esimagen = true;
-
             }
 
             if ($tipoArchivo == 'archivo_file') {
 
-
-
-
                 $galeria = Galeria::find($requerimiento->galerias_id);
                 if ($galeria) {
                     $galeria->update([
-                    "titulo" => $requerimiento->titulo,
-                    "descripcion" => 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
-                    "imagen" => $path,
-                    "caso_id" => $inputReq->caso_id,
-                    "tipo_gal_id" => 1,
+                        "titulo" => $requerimiento->titulo,
+                        "descripcion" => 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        "imagen" => $path,
+                        "caso_id" => $inputReq->caso_id,
+                        "tipo_gal_id" => 1,
                     ]);
                 } else {
                     $newGaleria = new Galeria();
@@ -65,13 +61,10 @@ class ReqCasoController extends Controller
             }
 
             if ($tipoArchivo == 'archivo_file') {
-
-
                 if ($request->hasFile("archivo_file")) {
                     $path = Storage::putFile("archivos", $request->file("archivo_file"));
                 }
                 $requerimiento->esimagen = false;
-
 
                 $archivo = Archivo::find($requerimiento->archivos_id);
 
@@ -104,39 +97,36 @@ class ReqCasoController extends Controller
         }
     }
 
-
     public function edit(Request $request)
     {
         try {
+
             $id = $request->input('id');
 
-            $requerimiento = RequerimientoCaso::where('id', $id)->first();
+            $requerimiento = RequerimientoCaso::find($id);
+
+            // Obtener el old_values (valor antiguo)
+            $audit = new Audits();
+            $valorAntiguo = $requerimiento;
+            $audit->old_values = json_encode($valorAntiguo);
+
             if ($requerimiento) {
-                $requerimiento->descripcion = $request->input('descripcion');
-                $requerimiento->caso_id = $request->input('caso_id');
-                $requerimiento->created_at = $request->input('created_at');
-                $requerimiento->updated_at = $request->input('updated_at');
-                $requerimiento->deleted_at = $request->input('deleted_at');
-                $requerimiento->marcado = $request->input('marcado');
-                $requerimiento->estado = $request->input('estado');
-                $requerimiento->tipo_req_id = $request->input('tipo_req_id');
-                $requerimiento->user_requiere_id = $request->input('user_requiere_id');
-                $requerimiento->titulo = $request->input('titulo');
-                $requerimiento->tipo_campo = $request->input('tipo_campo');
-                $requerimiento->requerido = $request->input('requerido');
-                $requerimiento->valor_date = $request->input('valor_date');
-                $requerimiento->valor_int = $request->input('valor_int');
-                $requerimiento->valor_boolean = $request->input('valor_boolean');
-                $requerimiento->valor_varchar = $request->input('valor_varchar');
-                $requerimiento->valor_decimal = $request->input('valor_decimal');
-                $requerimiento->html_render = $request->input('html_render');
-                $requerimiento->valor = $request->input('valor');
-                $requerimiento->form_control_name = $request->input('form_control_name');
-                $requerimiento->valor_multiple = $request->input('valor_multiple');
-                $requerimiento->orden = $request->input('orden');
-                $requerimiento->valor_lista = $request->input('valor_lista');
-                $requerimiento->esimagen = $request->input('esimagen');
-                $requerimiento->save();
+                $requerimiento->update($request->all());
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = RequerimientoCaso::class;
+                $audit->auditable_id = $requerimiento->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->new_values = json_encode($requerimiento);
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'editRequerimiento';
+                $audit->save();
+                // END Auditoria
 
                 $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))->get();
 
@@ -144,16 +134,10 @@ class ReqCasoController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento no existe.', $requerimiento));
             }
-
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), ''));
         }
     }
-
-//agregar edit
-
-
-
 
     public function listAll($casoId)
     {
