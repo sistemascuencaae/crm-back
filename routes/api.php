@@ -13,6 +13,7 @@ use App\Http\Controllers\User\UsersController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\User\ProfileUserController;
 use App\Http\Controllers\crm\garantias\PartesController;
+use App\Http\Controllers\crm\garantias\ConfigItemsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -153,5 +154,12 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byParte/{parte}', [PartesController::class, 'byParte']);
     Route::post('/grabaParte', [PartesController::class, 'grabaParte']);
     Route::get('/eliminaParte/{parte}', [PartesController::class, 'eliminaParte']);
+    
+    //Configuracion Items
+    Route::get('/listadoConfig', [ConfigItemsController::class, 'listado']);
+    Route::get('/listadoProductos', [ConfigItemsController::class, 'productos']);
+    Route::get('/listadoPartes', [ConfigItemsController::class, 'partes']);
+    Route::post('/grabaConfig', [ConfigItemsController::class, 'grabaConfig']);
+    Route::get('/byConfig/{producto}', [ConfigItemsController::class, 'byConfig']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------
