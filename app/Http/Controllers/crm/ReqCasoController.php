@@ -40,7 +40,14 @@ class ReqCasoController extends Controller
             if ($tipoArchivo == 'imagen_file') {
 
                 $galeria = Galeria::find($requerimiento->galerias_id);
+
                 if ($galeria) {
+
+                    // Obtener el old_values (valor antiguo)
+                    $audit = new Audits();
+                    $valorAntiguo = $galeria;
+                    $audit->old_values = json_encode($valorAntiguo);
+
                     $galeria->update([
                         "titulo" => $requerimiento->titulo,
                         "descripcion" => 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
@@ -48,6 +55,22 @@ class ReqCasoController extends Controller
                         "caso_id" => $inputReq->caso_id,
                         "tipo_gal_id" => 1,
                     ]);
+
+                    // START Bloque de código que genera un registro de auditoría manualmente
+                    $audit->user_id = Auth::id();
+                    $audit->event = 'updated';
+                    $audit->auditable_type = Galeria::class;
+                    $audit->auditable_id = $galeria->id;
+                    $audit->user_type = User::class;
+                    $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                    $audit->url = $request->fullUrl();
+                    // Establecer old_values y new_values
+                    $audit->new_values = json_encode($galeria);
+                    $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                    $audit->accion = 'editGaleriaReq';
+                    $audit->save();
+                    // END Auditoria
+
                 } else {
                     $newGaleria = new Galeria();
                     $newGaleria->titulo = $requerimiento->titulo;
@@ -57,6 +80,24 @@ class ReqCasoController extends Controller
                     $newGaleria->tipo_gal_id = 1;
                     $newGaleria->save();
                     $requerimiento->galerias_id = $newGaleria->id;
+
+                    // START Bloque de código que genera un registro de auditoría manualmente
+                    $audit = new Audits();
+                    $audit->user_id = Auth::id();
+                    $audit->event = 'created';
+                    $audit->auditable_type = Galeria::class;
+                    $audit->auditable_id = $newGaleria->id;
+                    $audit->user_type = User::class;
+                    $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                    $audit->url = $request->fullUrl();
+                    // Establecer old_values y new_values
+                    $audit->old_values = json_encode($newGaleria);
+                    $audit->new_values = json_encode([]);
+                    $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                    $audit->accion = 'addGaleriaReq';
+                    $audit->save();
+                    // END Auditoria
+
                 }
             }
 
@@ -69,12 +110,34 @@ class ReqCasoController extends Controller
                 $archivo = Archivo::find($requerimiento->archivos_id);
 
                 if ($archivo) {
+
+                    // Obtener el old_values (valor antiguo)
+                    $audit = new Audits();
+                    $valorAntiguo = $archivo;
+                    $audit->old_values = json_encode($valorAntiguo);
+
                     $archivo->update([
                         "titulo" => $requerimiento->titulo,
                         "observacion" => 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         "archivo" => $path,
                         "caso_id" => $inputReq->caso_id,
                     ]);
+
+                    // START Bloque de código que genera un registro de auditoría manualmente
+                    $audit->user_id = Auth::id();
+                    $audit->event = 'updated';
+                    $audit->auditable_type = Archivo::class;
+                    $audit->auditable_id = $archivo->id;
+                    $audit->user_type = User::class;
+                    $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                    $audit->url = $request->fullUrl();
+                    // Establecer old_values y new_values
+                    $audit->new_values = json_encode($archivo);
+                    $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                    $audit->accion = 'editArchivoReq';
+                    $audit->save();
+                    // END Auditoria
+
                 } else {
                     $newArchivo = new Archivo();
                     $newArchivo->titulo = $requerimiento->titulo;
@@ -83,6 +146,23 @@ class ReqCasoController extends Controller
                     $newArchivo->caso_id = $inputReq->caso_id;
                     $newArchivo->save();
                     $requerimiento->archivos_id = $newArchivo->id;
+
+                    // START Bloque de código que genera un registro de auditoría manualmente
+                    $audit = new Audits();
+                    $audit->user_id = Auth::id();
+                    $audit->event = 'created';
+                    $audit->auditable_type = Archivo::class;
+                    $audit->auditable_id = $newArchivo->id;
+                    $audit->user_type = User::class;
+                    $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                    $audit->url = $request->fullUrl();
+                    // Establecer old_values y new_values
+                    $audit->old_values = json_encode($newArchivo);
+                    $audit->new_values = json_encode([]);
+                    $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                    $audit->accion = 'addArchivoReq';
+                    $audit->save();
+                    // END Auditoria
                 }
 
             }
