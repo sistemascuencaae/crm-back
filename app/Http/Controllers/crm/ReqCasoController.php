@@ -37,7 +37,7 @@ class ReqCasoController extends Controller
                 $requerimiento->esimagen = true;
             }
 
-            if ($tipoArchivo == 'archivo_file') {
+            if ($tipoArchivo == 'imagen_file') {
 
                 $galeria = Galeria::find($requerimiento->galerias_id);
                 if ($galeria) {
