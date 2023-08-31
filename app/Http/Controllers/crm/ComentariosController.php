@@ -22,7 +22,7 @@ class ComentariosController extends Controller
     {
         //$userId = $request->input('user_id');
         $caso_id = $request->input('caso_id');
-        $data = DB::select('select * from crm.comentarios where caso_id = ' . $caso_id);
+        $data = DB::select('select * from crm.comentarios where caso_id = ' . $caso_id.' order by 1 desc');
         //broadcast(new ComentariosEvent($data));
         return response()->json([
             "res" => 200,
@@ -53,7 +53,7 @@ class ComentariosController extends Controller
         $audit->save();
         // END Auditoria
 
-        $data = DB::select('select * from crm.comentarios where caso_id = ' . $coment->caso_id);
+        $data = DB::select('select * from crm.comentarios where caso_id = ' . $coment->caso_id.' order by 1 desc');
         broadcast(new ComentariosEvent($data));
         return response()->json([
             "res" => 200,
