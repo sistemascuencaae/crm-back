@@ -50,7 +50,7 @@ class ReqCasoController extends Controller
 
                     $galeria->update([
                         "titulo" => $requerimiento->titulo,
-                        "descripcion" => 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        "descripcion" => $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id ,
                         "imagen" => $path,
                         "caso_id" => $inputReq->caso_id,
                         "tipo_gal_id" => 1,
@@ -74,7 +74,7 @@ class ReqCasoController extends Controller
                 } else {
                     $newGaleria = new Galeria();
                     $newGaleria->titulo = $requerimiento->titulo;
-                    $newGaleria->descripcion = 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
+                    $newGaleria->descripcion = $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id ;
                     $newGaleria->imagen = $path;
                     $newGaleria->caso_id = $inputReq->caso_id;
                     $newGaleria->tipo_gal_id = 1;
@@ -118,7 +118,7 @@ class ReqCasoController extends Controller
 
                     $archivo->update([
                         "titulo" => $requerimiento->titulo,
-                        "observacion" => 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        "observacion" => $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         "archivo" => $path,
                         "caso_id" => $inputReq->caso_id,
                     ]);
@@ -141,7 +141,7 @@ class ReqCasoController extends Controller
                 } else {
                     $newArchivo = new Archivo();
                     $newArchivo->titulo = $requerimiento->titulo;
-                    $newArchivo->observacion = 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
+                    $newArchivo->observacion = $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
                     $newArchivo->archivo = $path;
                     $newArchivo->caso_id = $inputReq->caso_id;
                     $newArchivo->save();
@@ -168,7 +168,6 @@ class ReqCasoController extends Controller
             }
             $requerimiento->valor_varchar = $path;
             $requerimiento->valor = $requerimiento->titulo;
-            $requerimiento->descripcion = 'Requerimiento caso numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
             $requerimiento->marcado = true;
             $requerimiento->save();
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $requerimiento));
