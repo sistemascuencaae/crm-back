@@ -320,6 +320,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editRequerimientos/{id}', [RequerimientoController::class, 'editRequerimientos']); // Editar
     Route::delete('/deleteRequerimientos/{id}', [RequerimientoController::class, 'deleteRequerimientos']); // Eliminar
 
+
+    // CActividadCliente
+
+    Route::post('/addCActividadCliente', [CActividadClienteController::class, 'addCActividadCliente']); // guardar
+    Route::get('/listCActividadClienteByIdTablero/{tab_id}', [CActividadClienteController::class, 'listCActividadClienteByIdTablero']); // listar
+    Route::post('/editCActividadCliente/{id}', [CActividadClienteController::class, 'editCActividadCliente']); // Editar
+
     // CONDICIONES
 
     Route::get('/listCondiciones', [CondicionesController::class, 'listCondiciones']); // all
