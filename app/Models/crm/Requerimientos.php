@@ -19,7 +19,8 @@ class Requerimientos extends Model
         "fase_id",
         "tab_id",
         "user_id",
-        "valor_lista"
+        "valor_lista",
+        "requerido"
     ];
 
     public function setCreatedAtAttribute($value)

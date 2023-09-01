@@ -89,6 +89,7 @@ class CasoController extends Controller
                     $reqCaso->tab_id = $reqFase[$i]->tab_id;
                     $reqCaso->tipo_campo = $reqFase[$i]->tipo;
                     $reqCaso->caso_id = $caso->id;
+                    $reqCaso->requerido = $reqFase[$i]->requerido;
                     $reqCaso->save();
                 }
                 return $this->getCaso($caso->id);
@@ -179,6 +180,7 @@ class CasoController extends Controller
                     $reqCaso->tab_id = $reqFase[$i]->tab_id;
                     $reqCaso->tipo_campo = $reqFase[$i]->tipo;
                     $reqCaso->caso_id = $caso->id;
+                    $reqCaso->requerido = $reqFase[$i]->requerido;
                     $reqCaso->save();
                 }
                 return $this->getCaso($caso->id);
@@ -270,6 +272,7 @@ class CasoController extends Controller
                 $reqCaso->tipo_campo = $reqFase[$i]->tipo;
                 $reqCaso->caso_id = $caso->id;
                 $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
+                $reqCaso->requerido = $reqFase[$i]->requerido;
                 $reqCaso->save();
             }
 
