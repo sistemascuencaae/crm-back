@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\crm\BitacoraController;
+use App\Http\Controllers\crm\CActividadClienteController;
 use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Controllers\crm\CFormularioController;
@@ -319,6 +320,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addRequerimientos', [RequerimientoController::class, 'addRequerimientos']); // guardar
     Route::post('/editRequerimientos/{id}', [RequerimientoController::class, 'editRequerimientos']); // Editar
     Route::delete('/deleteRequerimientos/{id}', [RequerimientoController::class, 'deleteRequerimientos']); // Eliminar
+
+
+    // CActividadCliente
+
+    Route::post('/addCActividadCliente', [CActividadClienteController::class, 'addCActividadCliente']); // guardar
+    Route::get('/listCActividadClienteByIdTablero/{tab_id}', [CActividadClienteController::class, 'listCActividadClienteByIdTablero']); // listar
+    Route::post('/editCActividadCliente/{id}', [CActividadClienteController::class, 'editCActividadCliente']); // Editar
 
     // CONDICIONES
 
