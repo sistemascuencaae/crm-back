@@ -20,6 +20,7 @@ use App\Http\Controllers\crm\CTipoResultadoCierreController;
 use App\Http\Controllers\crm\DActividadController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
+use App\Http\Controllers\crm\EstadosController;
 use App\Http\Controllers\crm\FaseController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\crm\RequerimientoController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
+use App\Http\Controllers\crm\TipoEstadoController;
 use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
@@ -128,9 +130,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
     Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
     /************************  REQUERIMIENTOS CASO   *********************** */
-    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll'] );
-    Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile'] );
-    Route::post('/editReqCaso',[ReqCasoController::class, 'edit']);
+    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll']);
+    Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']);
+    Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
 
 
 
@@ -327,6 +329,15 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addCActividadCliente', [CActividadClienteController::class, 'addCActividadCliente']); // guardar
     Route::get('/listCActividadClienteByIdTablero/{tab_id}', [CActividadClienteController::class, 'listCActividadClienteByIdTablero']); // listar
     Route::post('/editCActividadCliente/{id}', [CActividadClienteController::class, 'editCActividadCliente']); // Editar
+
+    // Estados
+
+    Route::get('/listEstadosByTablero/{tab_id}', [EstadosController::class, 'listEstadosByTablero']); // listar
+    Route::post('/addEstado', [EstadosController::class, 'addEstado']); // guardar
+    Route::post('/editEstado/{id}', [EstadosController::class, 'editEstado']); // Editar
+    Route::delete('/deleteEstado/{id}', [EstadosController::class, 'deleteEstado']); // Eliminar
+
+    Route::get('/allTipoEstado', [TipoEstadoController::class, 'allTipoEstado']); // Listar los tipos de imagenes
 
     // CONDICIONES
 
