@@ -14,6 +14,8 @@ use App\Http\Controllers\JWTController;
 use App\Http\Controllers\User\ProfileUserController;
 use App\Http\Controllers\crm\garantias\PartesController;
 use App\Http\Controllers\crm\garantias\ConfigItemsController;
+use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
+use App\Http\Controllers\crm\garantias\ExepcionGexController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -161,5 +163,21 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listadoPartes', [ConfigItemsController::class, 'partes']);
     Route::post('/grabaConfig', [ConfigItemsController::class, 'grabaConfig']);
     Route::get('/byConfig/{producto}', [ConfigItemsController::class, 'byConfig']);
+    Route::get('/eliminaConfig/{producto}', [ConfigItemsController::class, 'eliminaConfig']);
+    
+    //Relacion Lineas Gex
+    Route::get('/listadoRelacion', [RelacionLineasGexController::class, 'listado']);
+    Route::get('/listadoProductosGex', [RelacionLineasGexController::class, 'productos']);
+    Route::get('/listadoLineas', [RelacionLineasGexController::class, 'lineas']);
+    Route::post('/grabaRela', [RelacionLineasGexController::class, 'grabaRela']);
+    Route::get('/byRela/{linea}/{producto}', [RelacionLineasGexController::class, 'byRela']);
+    Route::get('/eliminaRela/{linea}/{producto}', [RelacionLineasGexController::class, 'eliminaRela']);
+    
+    //Excepción Gex
+    Route::get('/listadoExepcion', [ExepcionGexController::class, 'listado']);
+    Route::get('/listadoProductosExcep', [ExepcionGexController::class, 'productos']);
+    Route::post('/grabaExep', [ExepcionGexController::class, 'grabaExep']);
+    Route::get('/byExcep/{excep}', [ExepcionGexController::class, 'byExcep']);
+    Route::get('/eliminaExep/{excep}', [ExepcionGexController::class, 'eliminaExep']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------

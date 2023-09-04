@@ -60,54 +60,58 @@ class ConfigItemsController extends Controller
     public function grabaConfig(Request $request)
     {
         try {
-            date_default_timezone_set("America/Guayaquil");
-            
-            $pro_id = $request->input('pro_id');
-            $tipo_servicio = $request->input('tipo_servicio');
-            $porc_gex = $request->input('porc_gex');
-            $meses_garantia = $request->input('meses_garantia');
-            $fecha_crea = null;
-            $fecha_modifica = null;
-
-            if ($request->input('modifica') == 'N') {
-                $fecha_crea = date("Y-m-d h:i:s");
-            } else {
-                $fecha_crea = $request->input('fecha_crea');
-                $fecha_modifica = date("Y-m-d h:i:s");
-            }
-
-            $usuario_crea = $request->input('usuario_crea');
-            $usuario_modifica = $request->input('usuario_modifica');
-
-            DB::table('gex.producto_config')->updateOrInsert(
-                ['pro_id' => $pro_id],
-                [
-                'pro_id' => $pro_id,
-                'tipo_servicio' => $tipo_servicio,
-                'porc_gex' => $porc_gex,
-                'meses_garantia' => $meses_garantia,
-                'usuario_crea' => $usuario_crea,
-                'fecha_crea' => $fecha_crea,
-                'usuario_modifica' => $usuario_modifica,
-                'fecha_modifica' => $fecha_modifica,
-                ]);
-            
-            $detalle = $request->input('partes');
-
-            foreach ($detalle as $d) {
-                DB::table('gex.producto_partes')->updateOrInsert(
+            DB::transaction(function() use ($request){
+                date_default_timezone_set("America/Guayaquil");
+                
+                $pro_id = $request->input('pro_id');
+                $tipo_servicio = $request->input('tipo_servicio');
+                $porc_gex = $request->input('porc_gex');
+                $meses_garantia = $request->input('meses_garantia');
+                $fecha_crea = null;
+                $fecha_modifica = null;
+    
+                if ($request->input('modifica') == 'N') {
+                    $fecha_crea = date("Y-m-d h:i:s");
+                } else {
+                    $fecha_crea = $request->input('fecha_crea');
+                    $fecha_modifica = date("Y-m-d h:i:s");
+                }
+    
+                $usuario_crea = $request->input('usuario_crea');
+                $usuario_modifica = $request->input('usuario_modifica');
+    
+                DB::table('gex.producto_config')->updateOrInsert(
+                    ['pro_id' => $pro_id],
                     [
-                        'pro_id' => $d['pro_id'],
-                        'parte_id' => $d['parte_id'],
-                    ],
-                    [
-                        'pro_id' => $d['pro_id'],
-                        'parte_id' => $d['parte_id'],
-                        'meses_garantia' => $d['meses_garantia'],
+                    'pro_id' => $pro_id,
+                    'tipo_servicio' => $tipo_servicio,
+                    'porc_gex' => $porc_gex,
+                    'meses_garantia' => $meses_garantia,
+                    'usuario_crea' => $usuario_crea,
+                    'fecha_crea' => $fecha_crea,
+                    'usuario_modifica' => $usuario_modifica,
+                    'fecha_modifica' => $fecha_modifica,
                     ]);
+            
+                $detalle = $request->input('partes');
+                
+                DB::table('gex.producto_partes')->where('pro_id',$pro_id)->delete();
 
-            }
+                foreach ($detalle as $d) {
+                    DB::table('gex.producto_partes')->updateOrInsert(
+                        [
+                            'pro_id' => $d['pro_id'],
+                            'parte_id' => $d['parte_id'],
+                        ],
+                        [
+                            'pro_id' => $d['pro_id'],
+                            'parte_id' => $d['parte_id'],
+                            'meses_garantia' => $d['meses_garantia'],
+                        ]);
 
+                }
+            });
+            
             return response()->json(RespuestaApi::returnResultado('success', 'Configuración grabada con exito', []));
             
         } catch (Exception $e) {
@@ -115,11 +119,14 @@ class ConfigItemsController extends Controller
         }
     }
 
-    public function eliminaParte($parte) {
+    public function eliminaConfig($producto) {
         try {
-            Partes::where('parte_id',$parte)->delete();
+            DB::transaction(function() use ($producto){
+                DB::table('gex.producto_partes')->where('pro_id',$producto)->delete();
+                DB::table('gex.producto_config')->where('pro_id',$producto)->delete();
+            });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Parte eliminada con exito', []));
+            return response()->json(RespuestaApi::returnResultado('success', 'Configuración eliminada con exito', []));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
