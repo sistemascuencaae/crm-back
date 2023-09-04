@@ -20,6 +20,17 @@ class EstadosController extends Controller
         $this->middleware('auth:api');
     }
 
+    public function listEstadosActivoByTablero($id)
+    {
+        try {
+            $estado = Estados::where('tab_id', $id)->where('estado', true)->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $estado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function listEstadosByTablero($id)
     {
         try {

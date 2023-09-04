@@ -27,6 +27,18 @@ class RespuestasCasoController extends Controller
         }
     }
 
+    public function listRespuestasCasoActivoByTablero($id)
+    {
+        try {
+            // $respuestas = RespuestasCaso::where('tab_id', $id)->with('tipo_estado')->get();
+            $respuestas = RespuestasCaso::where('tab_id', $id)->where('estado', true)->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuestas));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function addRespuestasCaso(Request $request)
     {
         try {
