@@ -6,12 +6,13 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class TipoEstado extends Model
+class RespuestasCaso extends Model
 {
     use HasFactory;
-    protected $table = 'crm.tipo_estado';
 
-    protected $fillable = ["nombre", "descripcion", "tipo", "estado"];
+    protected $table = 'crm.respuestas_caso';
+
+    protected $fillable = ["nombre", "estado", "tab_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -24,4 +25,9 @@ class TipoEstado extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
+    public function setDeletedAtAttribute($value)
+    {
+        date_default_timezone_set("America/Guayaquil");
+        $this->attributes["deleted_at"] = Carbon::now();
+    }
 }

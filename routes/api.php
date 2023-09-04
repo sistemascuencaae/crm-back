@@ -21,16 +21,17 @@ use App\Http\Controllers\crm\DActividadController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\EstadosController;
+use App\Http\Controllers\crm\EstadosFormulasController;
 use App\Http\Controllers\crm\FaseController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\NotificacionesController;
 use App\Http\Controllers\crm\ReqCasoController;
 use App\Http\Controllers\crm\RequerimientoController;
+use App\Http\Controllers\crm\RespuestasCasoController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
-use App\Http\Controllers\crm\TipoEstadoController;
 use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
@@ -212,6 +213,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllTableros', [TableroController::class, 'listAll']); // listar tablero mis casos
     Route::get('/listAllTablerosActivos', [TableroController::class, 'listAllTablerosActivos']); // listar tableros inactivos
     Route::get('/listAllTablerosInactivos', [TableroController::class, 'listAllTablerosInactivos']); // listar tableros inactivos
+    Route::get('/listAllTablerosWithFases', [TableroController::class, 'listAllTablerosWithFases']); // listar tableros con sus fases
 
     // DEPARTAMENTO
 
@@ -337,7 +339,19 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editEstado/{id}', [EstadosController::class, 'editEstado']); // Editar
     Route::delete('/deleteEstado/{id}', [EstadosController::class, 'deleteEstado']); // Eliminar
 
-    Route::get('/allTipoEstado', [TipoEstadoController::class, 'allTipoEstado']); // Listar los tipos de imagenes
+    // RespuestasCaso
+
+    Route::get('/listRespuestasCasoByTablero/{tab_id}', [RespuestasCasoController::class, 'listRespuestasCasoByTablero']); // listar
+    Route::post('/addRespuestasCaso', [RespuestasCasoController::class, 'addRespuestasCaso']); // guardar
+    Route::post('/editRespuestasCaso/{id}', [RespuestasCasoController::class, 'editRespuestasCaso']); // Editar
+    Route::delete('/deleteRespuestasCaso/{id}', [RespuestasCasoController::class, 'deleteRespuestasCaso']); // Eliminar
+
+    // EstadosFormulas
+
+    Route::get('/listEstadosFormulasByTablero/{tab_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTablero']); // listar
+    Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
+    Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
+    Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
 
     // CONDICIONES
 
