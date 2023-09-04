@@ -2,18 +2,17 @@
 
 namespace App\Models\crm;
 
-use App\Models\crm\TipoEstado;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Estados extends Model
+class EstadosFormulas extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.estados_caso';
+    protected $table = 'crm.estados_formulas';
 
-    protected $fillable = ["nombre", "estado", "tab_id", "tipo_estado_id"];
+    protected $fillable = ["estado_actual", "respuesta", "estado_proximo", "tab_id", "fas_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -26,8 +25,9 @@ class Estados extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function tipo_estado()
+    public function setDeletedAtAttribute($value)
     {
-        return $this->belongsTo(TipoEstado::class, "tipo_estado_id");
+        date_default_timezone_set("America/Guayaquil");
+        $this->attributes["deleted_at"] = Carbon::now();
     }
 }

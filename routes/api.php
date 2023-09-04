@@ -27,6 +27,7 @@ use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\NotificacionesController;
 use App\Http\Controllers\crm\ReqCasoController;
 use App\Http\Controllers\crm\RequerimientoController;
+use App\Http\Controllers\crm\RespuestasCasoController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
@@ -338,6 +339,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::delete('/deleteEstado/{id}', [EstadosController::class, 'deleteEstado']); // Eliminar
 
     Route::get('/allTipoEstado', [TipoEstadoController::class, 'allTipoEstado']); // Listar los tipos de imagenes
+
+    // RespuestasCaso
+
+    Route::get('/listRespuestasCasoByTablero/{tab_id}', [RespuestasCasoController::class, 'listRespuestasCasoByTablero']); // listar
+    Route::post('/addRespuestasCaso', [RespuestasCasoController::class, 'addRespuestasCaso']); // guardar
+    Route::post('/editRespuestasCaso/{id}', [RespuestasCasoController::class, 'editRespuestasCaso']); // Editar
+    Route::delete('/deleteRespuestasCaso/{id}', [RespuestasCasoController::class, 'deleteRespuestasCaso']); // Eliminar
 
     // CONDICIONES
 
