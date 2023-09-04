@@ -23,7 +23,7 @@ class EstadosController extends Controller
     public function listEstadosByTablero($id)
     {
         try {
-            $estado = Estados::where('tab_id', $id)->with('tipo_estado')->get();
+            $estado = Estados::where('tab_id', $id)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $estado));
         } catch (Exception $e) {
@@ -36,7 +36,7 @@ class EstadosController extends Controller
         try {
             $estado = Estados::create($request->all());
 
-            $resultado = Estados::where('tab_id', $estado->tab_id)->with('tipo_estado')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $resultado = Estados::where('tab_id', $estado->tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
         } catch (Exception $e) {
@@ -51,7 +51,7 @@ class EstadosController extends Controller
 
             $estado->update($request->all());
 
-            $resultado = Estados::where('id', $estado->id)->with('tipo_estado')->first();
+            $resultado = Estados::where('id', $estado->id)->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $resultado));
         } catch (Exception $e) {
