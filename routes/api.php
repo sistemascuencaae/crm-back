@@ -335,6 +335,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // Estados
 
     Route::get('/listEstadosByTablero/{tab_id}', [EstadosController::class, 'listEstadosByTablero']); // listar
+    Route::get('/listEstadosActivoByTablero/{tab_id}', [EstadosController::class, 'listEstadosActivoByTablero']); // listar
     Route::post('/addEstado', [EstadosController::class, 'addEstado']); // guardar
     Route::post('/editEstado/{id}', [EstadosController::class, 'editEstado']); // Editar
     Route::delete('/deleteEstado/{id}', [EstadosController::class, 'deleteEstado']); // Eliminar
@@ -342,6 +343,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // RespuestasCaso
 
     Route::get('/listRespuestasCasoByTablero/{tab_id}', [RespuestasCasoController::class, 'listRespuestasCasoByTablero']); // listar
+    Route::get('/listRespuestasCasoActivoByTablero/{tab_id}', [RespuestasCasoController::class, 'listRespuestasCasoActivoByTablero']); // listar
     Route::post('/addRespuestasCaso', [RespuestasCasoController::class, 'addRespuestasCaso']); // guardar
     Route::post('/editRespuestasCaso/{id}', [RespuestasCasoController::class, 'editRespuestasCaso']); // Editar
     Route::delete('/deleteRespuestasCaso/{id}', [RespuestasCasoController::class, 'deleteRespuestasCaso']); // Eliminar
