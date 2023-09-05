@@ -15,7 +15,7 @@ class DActividadCliente extends Model
 
     protected $table = 'crm.dactividad_cliente';
 
-    protected $fillable = ["nombre", "cuota", "entrada", "plazo", "cac_id", "tab_id"];
+    protected $fillable = ["nombre", "cuota", "entrada", "plazo", "cac_id", "tab_id", "descripcion"];
 
     public function setCreatedAtAttribute($value)
     {

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\Actividad;
 use App\Models\crm\CActividadCliente;
 use App\Models\crm\DActividadCliente;
 use Exception;
@@ -38,6 +37,7 @@ class CActividadClienteController extends Controller
                         "entrada" => $cAct['actividades'][$i]['entrada'],
                         "plazo" => $cAct['actividades'][$i]['plazo'],
                         "tab_id" => $cAct['actividades'][$i]['tab_id'],
+                        "descripcion" => $cAct['actividades'][$i]['descripcion'],
                     ]);
                 }
 
@@ -80,6 +80,7 @@ class CActividadClienteController extends Controller
                             "entrada" => $actividades[$i]['entrada'],
                             "plazo" => $actividades[$i]['plazo'],
                             "tab_id" => $actividades[$i]['tab_id'],
+                            "descripcion" => $actividades[$i]['descripcion'],
                         ]);
                     } else {
                         $tabl->update([
@@ -88,6 +89,7 @@ class CActividadClienteController extends Controller
                             "entrada" => $actividades[$i]['entrada'],
                             "plazo" => $actividades[$i]['plazo'],
                             "tab_id" => $actividades[$i]['tab_id'],
+                            "descripcion" => $actividades[$i]['descripcion'],
                         ]);
                     }
 
