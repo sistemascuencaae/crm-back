@@ -25,11 +25,23 @@ class RequerimientoController extends Controller
     public function addRequerimientos(Request $request)
     {
         try {
-            $requerimiento = Requerimientos::create($request->all());
+            // Verifica si ya existe un requerimiento con el tipo "perfil de cliente" en la misma fase
+            $existingRequerimiento = Requerimientos::where('fase_id', $request->input('fase_id'))
+                ->where('tipo', 'perfil de cliente')
+                ->first();
 
-            $resultado = Requerimientos::where('fase_id', $requerimiento->fase_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            if ($existingRequerimiento && $request->input('tipo') === 'perfil de cliente') {
+                // Si ya existe un requerimiento con tipo "perfil de cliente" en esta fase
+                return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE un registro de Perfil de cliente: ' . $existingRequerimiento->nombre, ''));
+            } else {
+                // Si no existe un requerimiento con tipo "perfil de cliente" o el nuevo tipo no es "perfil de cliente"
+                $requerimiento = Requerimientos::create($request->all());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
+                $resultado = Requerimientos::where('fase_id', $requerimiento->fase_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $resultado));
+            }
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -40,9 +52,20 @@ class RequerimientoController extends Controller
         try {
             $requerimiento = Requerimientos::findOrFail($id);
 
-            $requerimiento->update($request->all());
+            // Verifica si ya existe otro requerimiento con el tipo "perfil de cliente" en la misma fase
+            $existingRequerimiento = Requerimientos::where('fase_id', $requerimiento->fase_id)
+                ->where('tipo', 'perfil de cliente')
+                ->where('id', '!=', $id) // Excluye el propio requerimiento actual de la búsqueda
+                ->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $requerimiento));
+            if ($existingRequerimiento && $request->input('tipo') === 'perfil de cliente') {
+                return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE un registro de Perfil de cliente: ' . $existingRequerimiento->nombre, ''));
+            } else {
+
+                $requerimiento->update($request->all());
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $requerimiento));
+            }
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
