@@ -34,7 +34,7 @@ class NotificacionesController extends Controller
     {
         try {
             $notificacion = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
-                ->where('dep_id', $dep_id)->where('leido', false)->orderBy('id', 'DESC')
+                ->where('dep_id', $dep_id)->orderBy('id', 'DESC')
                 ->latest()->take(10)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notificacion));

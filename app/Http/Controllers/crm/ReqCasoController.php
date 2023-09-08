@@ -252,4 +252,13 @@ class ReqCasoController extends Controller
 
         return response()->json(['message' => 'No file uploaded'], 400);
     }
+
+    public function listaReqCasoId($casoId){
+        try {
+            $reqs = RequerimientoCaso::where('caso_id', $casoId)->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Datos obtenidos con exito', $reqs));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), ''));
+        }
+    }
 }
