@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\DB;
 
 class FaseController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->middleware('auth:api');
-    // }
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
 
     public function list(Request $request)
     {
@@ -51,7 +51,20 @@ class FaseController extends Controller
         }
     }
 
-    // public function filtrarTareasTablero(Request $request)
+    public function faseActualById($faseId)
+    {
+        try {
+            $faseActual = Fase::with('condicionFaseMover',)->where('id', $faseId)->first();
+            if ($faseActual) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Fase actual', $faseActual));
+            }
+            return response()->json(RespuestaApi::returnResultado('success', 'Error al obtener fase actual', $faseId));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error al obtener fase actual', $th->getMessage()));
+        }
+    }
+
+    // public function faseById($faseId)
     // {
     //     $jsonData = $request->input('jsonData');
     //     $decodedData = json_decode($jsonData);
@@ -87,7 +100,7 @@ class FaseController extends Controller
                 if ($condicion) {
                     $condicion->parametro = $idsFaseMover;
                     $condicion->save();
-                }  else {
+                } else {
                     $condiDos = CondicionesFaseMover::create([
                         "parametro" => $idsFaseMover,
                     ]);

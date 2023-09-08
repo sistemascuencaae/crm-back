@@ -116,6 +116,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/listFase', [FaseController::class, 'list']);
     Route::post('/addFase', [FaseController::class, 'add']);
     Route::put('/editFase', [FaseController::class, 'edit']);
+    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']);//
     // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
 
@@ -134,6 +135,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll']);
     Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']);
     Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
+    Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']);//
 
 
 
