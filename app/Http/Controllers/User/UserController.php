@@ -112,4 +112,15 @@ class UserController extends Controller
         }
     }
 
+    public function listUsuarioById($user_id)
+    {
+        try {
+            $usuario = User::where('id', $user_id)->with('Departamento')->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuario));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
