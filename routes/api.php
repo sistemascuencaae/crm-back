@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
+use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadClienteController;
 use App\Http\Controllers\crm\CActividadController;
@@ -162,6 +163,11 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 
 });
+
+Route::group( ["prefix" => "crm/audi"], function ($router) {
+    Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
+});
+
 
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
