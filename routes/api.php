@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadClienteController;
 use App\Http\Controllers\crm\CActividadController;
@@ -116,7 +117,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/listFase', [FaseController::class, 'list']);
     Route::post('/addFase', [FaseController::class, 'add']);
     Route::put('/editFase', [FaseController::class, 'edit']);
-    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']);//
+    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']); //
     // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
 
@@ -135,7 +136,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll']);
     Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']);
     Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
-    Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']);//
+    Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']); //
 
 
 
@@ -161,6 +162,11 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 
 });
+
+Route::group( ["prefix" => "crm/audi"], function ($router) {
+    Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
+});
+
 
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\CondicionesFaseMover;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\crm\VistaMisCasos;
@@ -93,9 +94,17 @@ class TableroController extends Controller
                     DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
                 }
 
+
+                $condicion = CondicionesFaseMover::create([
+                    "parametro" =>  '[]',
+                ]);
+
                 DB::insert("INSERT INTO crm.fase
-                (tab_id, nombre, descripcion, estado, orden, created_at, updated_at, generar_caso, color_id, fase_tipo)
-                VALUES(?, 'BANDEJA DE ENTRADA', 'SE CARGARAN TODOS LOS CASOS SIN ASIGNAR', true, 1, ?, ?, true, 22, 1);", [$tablero->id, $tablero->created_at, $tablero->updated_at]);
+                (tab_id, nombre, descripcion, estado, orden, created_at, updated_at, generar_caso, color_id, fase_tipo, cnd_mover_id)
+                VALUES(?, 'BANDEJA DE ENTRADA', 'SE CARGARAN TODOS LOS CASOS SIN ASIGNAR', true, 1, ?, ?, true, 22, 1, ?);", [$tablero->id, $tablero->created_at, $tablero->updated_at, $condicion->id]);
+
+
+
 
                 DB::insert("INSERT INTO public.users
                 (name, estado, surname, usu_alias, email,
