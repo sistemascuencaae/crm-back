@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadClienteController;
 use App\Http\Controllers\crm\CActividadController;
@@ -116,7 +117,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/listFase', [FaseController::class, 'list']);
     Route::post('/addFase', [FaseController::class, 'add']);
     Route::put('/editFase', [FaseController::class, 'edit']);
-    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']);//
+    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']); //
     // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
 
@@ -135,7 +136,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll']);
     Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']);
     Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
-    Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']);//
+    Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']); //
 
 
 
@@ -357,6 +358,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
     Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
     Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
+
+    // ActividadesFormulas
+
+    Route::get('/listActividadesFormulasByTablero/{tab_id}', [ActividadesFormulasController::class, 'listActividadesFormulasByTablero']); // listar
+    Route::post('/addActividadesFormulas', [ActividadesFormulasController::class, 'addActividadesFormulas']); // guardar
+    Route::post('/editActividadesFormulas/{id}', [ActividadesFormulasController::class, 'editActividadesFormulas']); // Editar
+    Route::delete('/deleteActividadesFormulas/{id}', [ActividadesFormulasController::class, 'deleteActividadesFormulas']); // Eliminar
+    Route::get('/listActividadFormulaById/{result_id_actual}/{result_id}', [ActividadesFormulasController::class, 'listActividadFormulaById']); // listar
 
     // CONDICIONES
 
