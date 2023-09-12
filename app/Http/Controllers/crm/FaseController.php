@@ -138,6 +138,7 @@ class FaseController extends Controller
                 $faseCreada->cnd_mover_id = $condicion->id;
                 $faseCreada->save();
 
+                
 
 
                 $fase = Fase::with([
