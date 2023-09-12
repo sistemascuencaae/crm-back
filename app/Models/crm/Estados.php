@@ -13,7 +13,7 @@ class Estados extends Model
 
     protected $table = 'crm.estados_caso';
 
-    protected $fillable = ["nombre", "estado", "tab_id", "tipo_estado_id"];
+    protected $fillable = ["nombre", "estado", "tab_id"];
 
     public function setCreatedAtAttribute($value)
     {
