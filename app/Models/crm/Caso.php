@@ -143,4 +143,8 @@ class Caso extends Model
     {
         return $this->belongsTo(Fase::class, "fas_id", "id");
     }
+    public function estadodos()
+    {
+        return $this->belongsTo(Estados::class, "estado_2", "id");
+    }
 }

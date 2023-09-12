@@ -40,7 +40,8 @@ class FaseController extends Controller
                 'caso.miembros.usuario.departamento',
                 'caso.Etiqueta',
                 'caso.req_caso',
-                'condicionFaseMover'
+                'condicionFaseMover',
+                'caso.estadodos'
             ])->where('tab_id', $tabId)->get();
 
 
@@ -138,7 +139,7 @@ class FaseController extends Controller
                 $faseCreada->cnd_mover_id = $condicion->id;
                 $faseCreada->save();
 
-                
+
 
 
                 $fase = Fase::with([

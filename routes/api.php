@@ -90,9 +90,6 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 //----------------------- RUTAS FELIPE ----------------------------------------------
 //----------------------- RUTAS FELIPE ----------------------------------------------
 //----------------------- RUTAS FELIPE ----------------------------------------------
-
-
-//cambios felipe sin actualizar
 Route::group(["prefix" => "crm"], function ($router) {
     //CRM CONTROLLER PRINCIPAL
     Route::get('/crmTablero/{id}', [CrmController::class, 'list']);
@@ -163,11 +160,12 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 
 });
-
 Route::group( ["prefix" => "crm/audi"], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
 });
-
+Route::group(["prefix" => "crm/robot"], function ($router) {
+    Route::post('/reasignarCaso', [ReasignarCasoController::class, 'reasignarCaso']);
+});
 
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
