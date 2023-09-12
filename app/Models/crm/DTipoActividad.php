@@ -21,7 +21,7 @@ class DTipoActividad extends Model
 
     protected $table = 'crm.dtipo_actividad';
 
-    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "estado_actividad", "pos_descripcion", "cta_id", "ctr_id", "caso_id", "id_padre", "user_id"];
+    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "ctrc_id", "pos_descripcion", "cta_id", "ctr_id", "caso_id", "id_padre", "user_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -47,6 +47,11 @@ class DTipoActividad extends Model
     }
 
     public function cTipoResultadoCierre()
+    {
+        return $this->belongsTo(CTipoResultadoCierre::class, 'ctrc_id', 'id');
+    }
+
+    public function estado_actividad()
     {
         return $this->belongsTo(CTipoResultadoCierre::class, 'ctr_id', 'id');
     }

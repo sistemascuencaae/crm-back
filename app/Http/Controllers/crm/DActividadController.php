@@ -18,7 +18,7 @@ class DActividadController extends Controller
     public function listActividadesByIdCasoId($caso_id)
     {
         try {
-            $actividades = DTipoActividad::where('caso_id', $caso_id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('caso_id', $caso_id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
@@ -64,7 +64,7 @@ class DActividadController extends Controller
 
                 $dta = DTipoActividad::create($request->all());
 
-                $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($dta->id);
+                $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'estado_actividad', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($dta->id);
                 // START Bloque de código que genera un registro de auditoría manualmente
                 $audit = new Audits();
                 $audit->user_id = Auth::id();
@@ -83,7 +83,7 @@ class DActividadController extends Controller
                 // END Auditoria
 
 
-                $data = DTipoActividad::with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')
+                $data = DTipoActividad::with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
                     ->where('caso_id', $dta->caso_id)
                     ->orderBy('id', 'DESC')
                     ->get();
@@ -114,7 +114,7 @@ class DActividadController extends Controller
 
             $actividad = DTipoActividad::findOrFail($id);
 
-            $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($id);
+            $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'estado_actividad', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($id);
 
             // Obtener el old_values (valor antiguo)
             $audit = new Audits();
@@ -134,7 +134,7 @@ class DActividadController extends Controller
                 $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
                 $audit->url = $request->fullUrl();
 
-                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
 
                 // Establecer old_values y new_values
                 $audit->new_values = json_encode($data);
@@ -168,7 +168,7 @@ class DActividadController extends Controller
     public function listActividadesByUserId($user_id)
     {
         try {
-            $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
@@ -213,7 +213,7 @@ class DActividadController extends Controller
             $data = DB::transaction(function () use ($usuarioMiembro, $request, $user_id) {
                 $dta = DTipoActividad::create($request->all());
 
-                $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($dta->id);
+                $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'estado_actividad', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($dta->id);
                 // START Bloque de código que genera un registro de auditoría manualmente
                 $audit = new Audits();
                 $audit->user_id = Auth::id();
@@ -232,7 +232,7 @@ class DActividadController extends Controller
                 // END Auditoria
 
                 $data = DTipoActividad::where('user_id', $user_id)
-                    ->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+                    ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
                 // ->where('caso_id', $dta->caso_id)
 
                 $miembro = new Miembros();
@@ -258,7 +258,7 @@ class DActividadController extends Controller
             $usuarioMiembro = $request->input('usuario');
             $actividad = DTipoActividad::findOrFail($id);
 
-            $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($id);
+            $AuditActividad = DTipoActividad::with('cTipoActividad.tablero', 'estado_actividad', 'usuario.departamento', 'cTipoResultadoCierre')->findOrFail($id);
             // Obtener el old_values (valor antiguo)
             $audit = new Audits();
             $valorAntiguo = $AuditActividad;
@@ -278,7 +278,7 @@ class DActividadController extends Controller
                 $audit->url = $request->fullUrl();
 
                 $data = DTipoActividad::where('user_id', $user_id)
-                    ->where('id', $actividad->id)->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+                    ->where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
 
                 // Establecer old_values y new_values
                 $audit->new_values = json_encode($data);
@@ -309,7 +309,7 @@ class DActividadController extends Controller
     public function listActividadesIniciadasByUserId($user_id)
     {
         try {
-            $actividades = DTipoActividad::where('user_id', $user_id)->where('estado_actividad', 'Iniciado')->with('cTipoActividad.tablero', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('user_id', $user_id)->where('ctr_id', 1)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {

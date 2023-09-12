@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadClienteController;
@@ -363,6 +364,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
     Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
     Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
+
+    // ActividadesFormulas
+
+    Route::get('/listActividadesFormulasByTablero/{tab_id}', [ActividadesFormulasController::class, 'listActividadesFormulasByTablero']); // listar
+    Route::post('/addActividadesFormulas', [ActividadesFormulasController::class, 'addActividadesFormulas']); // guardar
+    Route::post('/editActividadesFormulas/{id}', [ActividadesFormulasController::class, 'editActividadesFormulas']); // Editar
+    Route::delete('/deleteActividadesFormulas/{id}', [ActividadesFormulasController::class, 'deleteActividadesFormulas']); // Eliminar
+    Route::get('/listActividadFormulaById/{result_id_actual}/{result_id}', [ActividadesFormulasController::class, 'listActividadFormulaById']); // listar
 
     // CONDICIONES
 
