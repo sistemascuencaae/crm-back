@@ -122,102 +122,6 @@ class CasoController extends Controller
         }
     }
 
-    public function add2(Request $request)
-    {
-        $casoInput = $request->all();
-        $miembros = $request->input('miembros');
-        try {
-            $casoCreado = DB::transaction(function () use ($casoInput, $miembros) {
-                $userLoginId = auth('api')->user()->id;
-                $caso = new Caso($casoInput);
-                $caso->estado_2 = 1;
-                $caso->save();
-
-                //buscar las tareas predefinidas
-                $arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
-                //insertar en la tabla tareas
-                foreach ($arrayDtipoTareas as $dtt) {
-                    $tarea = new Tareas();
-                    $tarea->nombre = $dtt->nombre;
-                    $tarea->requerido = $dtt->requerido;
-                    $tarea->estado = $dtt->estado;
-                    $tarea->ctt_id = $caso->ctt_id;
-                    $tarea->tab_id = $dtt->tab_id;
-                    $tarea->marcado = false;
-                    $caso->tareas()->save($tarea);
-                }
-
-                $newGrupo = new ChatGroups();
-                $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
-                $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
-                $newGrupo->save();
-
-                $caso->nombre = 'CASO # ' . $caso->id;
-                $caso->descripcion = 'CASO # ' . $caso->id;
-                $caso->user_creador_id = $userLoginId;
-
-                $caso->save();
-                for ($i = 0; $i < sizeof($miembros); $i++) {
-                    $miembro = new Miembros();
-                    $miembro->user_id = $miembros[$i];
-                    $miembro->chat_group_id = $newGrupo->id;
-                    $caso->miembros()->save($miembro);
-                }
-
-                /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
-                $reqFase = DB::select(
-                    'SELECT rp.* from crm.requerimientos_predefinidos rp
-                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
-                WHERE rc.titulo IS null and rp.fase_id = ?',
-                    [$caso->id, $caso->fas_id]
-                );
-                for ($i = 0; $i < sizeof($reqFase); $i++) {
-                    $reqCaso = new RequerimientoCaso();
-                    $reqCaso->user_requiere_id = $caso->user_creador_id;
-                    $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
-                    $reqCaso->titulo = $reqFase[$i]->nombre;
-                    $reqCaso->fas_id = $reqFase[$i]->fase_id;
-                    $reqCaso->tab_id = $reqFase[$i]->tab_id;
-                    $reqCaso->tipo_campo = $reqFase[$i]->tipo;
-                    $reqCaso->caso_id = $caso->id;
-                    $reqCaso->requerido = $reqFase[$i]->requerido;
-                    $reqCaso->save();
-                }
-                return $this->getCaso($caso->id);
-            });
-
-
-
-
-
-
-
-
-
-            broadcast(new TableroEvent($casoCreado));
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit = new Audits();
-            $audit->user_id = Auth::id();
-            $audit->event = 'created';
-            $audit->auditable_type = Caso::class;
-            $audit->auditable_id = $casoCreado->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
-            $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->accion = 'addCaso';
-            $audit->save();
-            // END Auditoria
-            return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito.',
-                $casoCreado
-            ));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $th->getMessage()));
-        }
-    }
 
     public function list()
     {
@@ -726,6 +630,7 @@ class CasoController extends Controller
             'req_caso',
             'tablero',
             'fase.tablero',
+            'estadodos'
 
         ])->where('id', $casoId)->first();
     }
