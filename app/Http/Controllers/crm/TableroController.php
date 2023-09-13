@@ -22,7 +22,7 @@ class TableroController extends Controller
     public function listAllTablerosWithFases()
     {
         try {
-            $tableros = Tablero::where('estado', true)->with('fase')->orderBy('id', 'desc')->get();
+            $tableros = Tablero::where('estado', true)->with('fase', 'estados')->orderBy('id', 'desc')->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
