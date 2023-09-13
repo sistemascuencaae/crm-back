@@ -29,6 +29,16 @@ class TableroController extends Controller
         }
     }
 
+    public function listByTablerosIdWithFases($tab_id)
+    {
+        try {
+            $tablero = Tablero::where('id', $tab_id)->where('estado', true)->with('fase')->first();
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tablero));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 
     //LISTA DE TODOS LOS TABLEROS
     public function listAll()
@@ -96,7 +106,7 @@ class TableroController extends Controller
 
 
                 $condicion = CondicionesFaseMover::create([
-                    "parametro" =>  '[]',
+                    "parametro" => '[]',
                 ]);
 
                 DB::insert("INSERT INTO crm.fase
