@@ -13,6 +13,7 @@ use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\DTipoTarea;
 use App\Models\crm\Estados;
+use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Miembros;
 use App\Models\crm\Notificaciones;
 use App\Models\crm\RequerimientoCaso;
@@ -568,6 +569,37 @@ class CasoController extends Controller
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         // }
     }
+
+
+    public function respuestaCaso(Request $request){
+        try {
+
+            $estadoFormId = $request->input('estadoFormId');
+            $casoId = $request->input('casoId');
+
+
+            $formula = EstadosFormulas::find($estadoFormId);
+            if(!$formula){
+                return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La formula no existe.'));
+            }
+            $casoEnProceso = Caso::find($casoId);
+            if(!$casoEnProceso){
+                return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
+            }
+            $casoEnProceso->fas_id = $formula->fase_id;
+            $casoEnProceso->estado_2 = $formula->est_id_proximo;
+            $casoEnProceso->save();
+            $data = $this->getCaso($casoEnProceso->id);
+            broadcast(new ReasignarCasoEvent($data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+
+
     public function depUserTablero($casoId)
     {
         try {
@@ -614,8 +646,6 @@ class CasoController extends Controller
 
     public function getCaso($casoId)
     {
-
-
         $tabId = DB::select('SELECT t.id FROM crm.caso co
             inner join crm.fase fa on fa.id = co.fas_id
             inner join crm.tablero t on t.id = fa.tab_id
