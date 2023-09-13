@@ -12,7 +12,7 @@ class RespuestasCaso extends Model
 
     protected $table = 'crm.respuestas_caso';
 
-    protected $fillable = ["nombre", "estado", "tab_id"];
+    protected $fillable = ["nombre", "estado", "tab_id", "fase_id"];
 
     public function setCreatedAtAttribute($value)
     {
