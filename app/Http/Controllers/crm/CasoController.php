@@ -12,6 +12,7 @@ use App\Models\ChatGroups;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\DTipoTarea;
+use App\Models\crm\Estados;
 use App\Models\crm\Miembros;
 use App\Models\crm\Notificaciones;
 use App\Models\crm\RequerimientoCaso;
@@ -39,7 +40,7 @@ class CasoController extends Controller
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros) {
                 $userLoginId = auth('api')->user()->id;
                 $caso = new Caso($casoInput);
-                $caso->estado_2 = 1;
+                //$caso->estado_2 = 1;
                 $caso->save();
 
                 //buscar las tareas predefinidas
@@ -62,6 +63,14 @@ class CasoController extends Controller
                 $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
                 $newGrupo->save();
 
+                //buscar el estado de caso inicial que pertenece al tablero
+                $tablero = DB::selectOne('SELECT tb.* FROM crm.caso cas
+                inner join crm.fase fas on fas.id = cas.fas_id
+                inner join crm.tablero tb on tb.id = fas.tab_id
+                where cas.id = ?',[$caso->id]);
+                $estadoInicial = Estados::where('tab_id',$tablero->id)->where('tipo_estado_id',1)->first();
+                //--------------------
+                $caso->estado_2 = $estadoInicial->id;
                 $caso->nombre = 'CASO # ' . $caso->id;
                 $caso->descripcion = 'CASO # ' . $caso->id;
                 $caso->user_creador_id = $userLoginId;
