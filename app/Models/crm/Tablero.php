@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\crm\Estados;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -38,6 +39,11 @@ class Tablero extends Model
     public function fase()
     {
         return $this->hasMany(Fase::class, "tab_id");
+    }
+
+    public function estados()
+    {
+        return $this->hasMany(Estados::class, "tab_id");
     }
 
 
