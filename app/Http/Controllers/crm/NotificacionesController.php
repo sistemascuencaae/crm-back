@@ -24,7 +24,6 @@ class NotificacionesController extends Controller
     public function list()
     {
         try {
-
         } catch (\Throwable $th) {
             //throw $th;
         }
@@ -33,7 +32,7 @@ class NotificacionesController extends Controller
     public function listByDepartamento($dep_id)
     {
         try {
-            $notificacion = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+            $notificacion = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.estadodos', 'tablero', 'user_destino')
                 ->where('dep_id', $dep_id)->orderBy('id', 'DESC')
                 ->latest()->take(10)->get();
 
@@ -46,7 +45,7 @@ class NotificacionesController extends Controller
     public function allByDepartamento($dep_id)
     {
         try {
-            $notificacion = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+            $notificacion = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.estadodos','tablero', 'user_destino')
                 ->where('dep_id', $dep_id)->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notificacion));
@@ -69,7 +68,7 @@ class NotificacionesController extends Controller
                 ]);
 
                 return Notificaciones::where('id', $notificacion->id)
-                    ->with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+                    ->with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.estadodos', 'tablero', 'user_destino')
                     ->orderBy('id', 'DESC')->first();
             });
 
@@ -89,7 +88,7 @@ class NotificacionesController extends Controller
                     "leido" => $leido,
                 ]);
 
-                $notificacionesActualizadas = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+                $notificacionesActualizadas = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.estadodos', 'tablero', 'user_destino')
                     ->where('dep_id', $dep_id)
                     ->orderBy('id', 'DESC')
                     ->get();
@@ -102,5 +101,4 @@ class NotificacionesController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
 }
