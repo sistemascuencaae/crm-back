@@ -25,7 +25,7 @@ class UserController extends Controller
     public function listUsuariosActivos()
     {
         try {
-            $usuarios = User::orderBy("id", "asc")->where('estado', true)->with('Departamento')->get();
+            $usuarios = User::orderBy("id", "asc")->where('estado', true)->with('Departamento', 'perfil_analista')->get();
 
             // mapeado mapeo
             // return response()->json(RespuestaApi::returnResultado('success', 'Lista de usuarios activos', [
@@ -46,7 +46,7 @@ class UserController extends Controller
     public function allUsers()
     {
         try {
-            $usuarios = User::orderBy("id", "asc")->with('Departamento')->get();
+            $usuarios = User::orderBy("id", "asc")->with('Departamento', 'perfil_analista')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuarios));
         } catch (Exception $e) {
@@ -59,7 +59,7 @@ class UserController extends Controller
         try {
             User::create($request->all());
 
-            $usuarios = User::orderBy("id", "desc")->with('Departamento')->get();
+            $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $usuarios));
         } catch (Exception $e) {
@@ -74,7 +74,7 @@ class UserController extends Controller
 
             $usuario->update($request->all());
 
-            $data = User::where('id', $usuario->id)->with('Departamento')->first();
+            $data = User::where('id', $usuario->id)->with('Departamento', 'perfil_analista')->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
@@ -103,7 +103,7 @@ class UserController extends Controller
                 $query->where('tab_id', $tablero_id);
             })
                 ->orderBy("id", "asc")
-                ->with('Departamento')
+                ->with('Departamento', 'perfil_analista')
                 ->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuarios));
@@ -115,7 +115,7 @@ class UserController extends Controller
     public function listUsuarioById($user_id)
     {
         try {
-            $usuario = User::where('id', $user_id)->with('Departamento')->first();
+            $usuario = User::where('id', $user_id)->with('Departamento', 'perfil_analista')->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuario));
         } catch (Exception $e) {
