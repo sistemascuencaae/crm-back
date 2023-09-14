@@ -18,7 +18,7 @@ class PerfilAnalistasController extends Controller
     public function listAllPerfilAnalistas()
     {
         try {
-            $perfil = PerfilAnalistas::where('estado', true)->get();
+            $perfil = PerfilAnalistas::get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $perfil));
         } catch (Exception $e) {
