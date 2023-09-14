@@ -9,6 +9,7 @@ use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Tablero;
 use App\Models\User;
 use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -88,7 +89,7 @@ class RobotCasoController extends Controller
         //-------------------OPCION 1---------------------------------
         //------------------------------------------------------------
         //---Si el nuevo tablero es el tablero de creacio reasigna al creador
-        echo ('test: 1-> usuario creador activo tablero de creacion');
+        //echo ('test: 1-> usuario creador activo tablero de creacion');
         if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
             //---pregunta si el usuario sigue en el tablero
             $userTab = DB::selectOne('SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ?', [$casoEnProceso->user_creador_id, $casoEnProceso->tablero_creacion_id]);
@@ -105,17 +106,35 @@ class RobotCasoController extends Controller
         //------------------------------------------------------------
         //-------------------OPCION 2---------------------------------
         //------------------------------------------------------------
-        echo ('test: 2 -> no es el tablero de creacion');
+        //echo ('test: 2 -> no es el tablero de creacion');
         //--- Buscar usuarios del nuevo tablero
-        // $usuariosNuevoTablero = DB::select('SELECT usu.* FROM crm.tablero_user tu
-        // inner join public.users usu on usu.id = tu.user_id
-        // where tu.tab_id = ? and usu.en_linea = true;',[$formula->tablero_id]);
+        $newTablero = Tablero::find($formula->tablero_id)->with('tableroUsuario.usuario.perfil_analista')->firstOrFail();
+        $newTableroToString = json_encode($newTablero);
+        $tablero = json_decode($newTableroToString);
+        $usuariosNuevoTablero = $tablero->tablero_usuario;
 
-        $usuariosNuevoTablero = Tablero::with('tableroUsuario.usuario')->where('id', $formula->tablero_id)->get();//Tablero::with('tableroUsuario.usuario')->where('tableroUsuario.tab_id', $formula->tablero_id)->get();
+        foreach ($usuariosNuevoTablero as $tu) {
+            //--usuarios en lienea
+            if($tu->usuario->en_linea){
+
+
+
+
+
+
+
+
+
+
+
+                echo ('$tu->usuario: '.json_encode($tu->usuario));
+            }
+        }
+
 
         //--tengo todos los usuarios que estan en linea del nuevo tablero
         //echo ('$usuariosNuevoTablero: '.json_encode($usuariosNuevoTablero));
-        return $usuariosNuevoTablero;
+        //return $usuariosNuevoTablero;
         //---Valido usuario anterior del caso esta en linea --------------------------------   2
         $userAnterior = User::find($casoEnProceso->user_anterior_id);
 
