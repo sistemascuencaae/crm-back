@@ -71,4 +71,15 @@ class CTipoResultadoCierreController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function listResultadoIniciadoByTableroId($tab_id)
+    {
+        try {
+            $resultadoIniciado = CTipoResultadoCierre::where('tab_id', $tab_id)->where('nombre', 'Iniciado')->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $resultadoIniciado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }
