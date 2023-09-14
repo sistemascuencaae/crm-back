@@ -14,6 +14,7 @@ use App\Http\Controllers\crm\CondicionesController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
+use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\CrmController;
@@ -164,7 +165,7 @@ Route::group( ["prefix" => "crm/audi"], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
 });
 Route::group(["prefix" => "crm/robot"], function ($router) {
-    Route::post('/reasignarCaso', [ReasignarCasoController::class, 'reasignarCaso']);
+    Route::post('/reasignarCaso', [RobotCasoController::class, 'reasignarCaso']);
 });
 
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------

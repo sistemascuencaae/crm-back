@@ -52,6 +52,7 @@ class User extends Authenticatable implements JWTSubject
         "tab_id",
         "pve_id",
         "estado_sesion",
+        "en_linea"
     ];
 
     protected $hidden = [
