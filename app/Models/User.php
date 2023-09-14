@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\crm\PerfilAnalistas;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\crm\UsuarioDynamo;
@@ -115,5 +116,10 @@ class User extends Authenticatable implements JWTSubject
     public function puntoVenta()
     {
         return $this->belongsTo(PuntoVenta::class, "pve_id", "pve_id");
+    }
+
+    public function perfil_analista()
+    {
+        return $this->belongsTo(PerfilAnalistas::class, "usu_tipo_analista");
     }
 }

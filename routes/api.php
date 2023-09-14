@@ -29,6 +29,7 @@ use App\Http\Controllers\crm\FaseController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\NotificacionesController;
+use App\Http\Controllers\crm\PerfilAnalistasController;
 use App\Http\Controllers\crm\ReqCasoController;
 use App\Http\Controllers\crm\RequerimientoController;
 use App\Http\Controllers\crm\RespuestasCasoController;
@@ -161,7 +162,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 
 });
-Route::group( ["prefix" => "crm/audi"], function ($router) {
+Route::group(["prefix" => "crm/audi"], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
 });
 Route::group(["prefix" => "crm/robot"], function ($router) {
@@ -283,6 +284,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('listCTipoResultadoCierreByIdCasoId/{caso_id}', [CTipoResultadoCierreController::class, 'listCTipoResultadoCierreByIdCasoId']); // listar
     Route::post('/editCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'editCTipoResultadoCierre']); // Edita la actividad
     Route::delete('/deleteCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'deleteCTipoResultadoCierre']); // Eliminar
+    Route::get('listResultadoIniciadoByTableroId/{tab_id}', [CTipoResultadoCierreController::class, 'listResultadoIniciadoByTableroId']); // listar
 
     // CHAT GRUPAL
 
@@ -372,6 +374,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editActividadesFormulas/{id}', [ActividadesFormulasController::class, 'editActividadesFormulas']); // Editar
     Route::delete('/deleteActividadesFormulas/{id}', [ActividadesFormulasController::class, 'deleteActividadesFormulas']); // Eliminar
     Route::get('/listActividadFormulaById/{result_id_actual}/{result_id}', [ActividadesFormulasController::class, 'listActividadFormulaById']); // listar
+
+    // Perfil Analistas
+
+    Route::get('/listAllPerfilAnalistas', [PerfilAnalistasController::class, 'listAllPerfilAnalistas']); // listar
+    Route::post('/addPerfilAnalistas', [PerfilAnalistasController::class, 'addPerfilAnalistas']); // guardar
+    Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
+    Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
 
     // CONDICIONES
 
