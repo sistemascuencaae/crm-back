@@ -606,6 +606,7 @@ class CasoController extends Controller
             $tableros = Tablero::with('tableroUsuario.usuario')->where('estado', true)->get();
             $departamentos = DB::select("SELECT * from crm.departamento where estado = true");
             $fases = DB::select("SELECT * from crm.fase where estado = true");
+            $estados = Estados::all();
             $depUserTablero = DB::select(
                 'SELECT
             d.id as dep_anterior_id,
@@ -632,6 +633,7 @@ class CasoController extends Controller
                 "departamentos" => $departamentos,
                 "tableros" => $tableros,
                 "fases" => $fases,
+                "estados" => $estados,
                 "depUserTablero" => null
             ];
 
