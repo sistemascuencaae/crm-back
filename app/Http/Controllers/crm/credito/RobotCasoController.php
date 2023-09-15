@@ -86,6 +86,8 @@ class RobotCasoController extends Controller
         $casoEnProceso->fase_anterior_id_reasigna = $casoEnProceso->fas_id;
         $casoEnProceso->fas_id = $formula->fase_id;
         $casoEnProceso->estado_2 = $formula->est_id_proximo;
+        $casoEnProceso->bloqueado = false;
+        $casoEnProceso->bloqueado_user = '';
         //------------------------------------------------------------
         //-------------------OPCION 1---------------------------------
         //------------------------------------------------------------
