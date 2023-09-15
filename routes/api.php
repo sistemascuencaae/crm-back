@@ -16,6 +16,7 @@ use App\Http\Controllers\crm\garantias\PartesController;
 use App\Http\Controllers\crm\garantias\ConfigItemsController;
 use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
 use App\Http\Controllers\crm\garantias\ExepcionGexController;
+use App\Http\Controllers\crm\garantias\RubrosReservaController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -179,5 +180,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaExep', [ExepcionGexController::class, 'grabaExep']);
     Route::get('/byExcep/{excep}', [ExepcionGexController::class, 'byExcep']);
     Route::get('/eliminaExep/{excep}', [ExepcionGexController::class, 'eliminaExep']);
+    
+    //Rubro de Reserva
+    Route::get('/listadoRubros', [RubrosReservaController::class, 'listado']);
+    Route::post('/grabaRubro', [RubrosReservaController::class, 'grabaRubro']);
+    Route::get('/byRubro/{rubro}', [RubrosReservaController::class, 'byRubro']);
+    Route::get('/eliminaRubro/{rubro}', [RubrosReservaController::class, 'eliminaRubro']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------
