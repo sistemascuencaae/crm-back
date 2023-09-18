@@ -343,7 +343,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addCActividadCliente', [CActividadClienteController::class, 'addCActividadCliente']); // guardar
     Route::get('/listCActividadClienteByIdTablero/{tab_id}', [CActividadClienteController::class, 'listCActividadClienteByIdTablero']); // listar
     Route::post('/editCActividadCliente/{id}', [CActividadClienteController::class, 'editCActividadCliente']); // Editar
-
+    Route::get('/listCACReqCaso', [CActividadClienteController::class, 'listCACReqCaso']); //
     // Estados
 
     Route::get('/listEstadosByTablero/{tab_id}', [EstadosController::class, 'listEstadosByTablero']); // listar

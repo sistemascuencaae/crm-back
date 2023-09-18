@@ -5,9 +5,11 @@ namespace App\Http\Controllers\crm\credito;
 use App\Events\ReasignarCasoEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Caso;
 use App\Models\crm\EstadosFormulas;
+use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tablero;
 use App\Models\User;
 use Exception;
@@ -69,6 +71,25 @@ class RobotCasoController extends Controller
         $casoEnProceso->estado_2 = $formula->est_id_proximo;
         $casoEnProceso->bloqueado = false;
         $casoEnProceso->bloqueado_user = '';
+        /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
+        $reqFase = DB::select(
+            'SELECT rp.* from crm.requerimientos_predefinidos rp
+                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+                WHERE rc.titulo IS null and rp.fase_id = ?',
+            [$casoEnProceso->id, $casoEnProceso->fas_id]
+        );
+        for ($i = 0; $i < sizeof($reqFase); $i++) {
+            $reqCaso = new RequerimientoCaso();
+            $reqCaso->user_requiere_id = $casoEnProceso->user_creador_id;
+            $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
+            $reqCaso->titulo = $reqFase[$i]->nombre;
+            $reqCaso->fas_id = $reqFase[$i]->fase_id;
+            $reqCaso->tab_id = $reqFase[$i]->tab_id;
+            $reqCaso->tipo_campo = $reqFase[$i]->tipo;
+            $reqCaso->caso_id = $casoEnProceso->id;
+            $reqCaso->requerido = $reqFase[$i]->requerido;
+            $reqCaso->save();
+        }
         //------------------------------------------------------------
         //-------------------OPCION 1---------------------------------
         //------------------------------------------------------------
