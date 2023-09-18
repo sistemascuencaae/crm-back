@@ -73,7 +73,6 @@ class CasoController extends Controller
                 //--------------------
                 $caso->estado_2 = $estadoInicial->id;
                 $caso->nombre = 'CASO # ' . $caso->id;
-                $caso->descripcion = 'CASO # ' . $caso->id;
                 $caso->user_creador_id = $userLoginId;
 
                 $caso->save();
