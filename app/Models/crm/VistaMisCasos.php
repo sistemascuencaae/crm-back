@@ -33,7 +33,7 @@ class VistaMisCasos extends Model
     public function miembros(){
         return $this->hasMany(Miembros::class, "caso_id", "caso_id");
     }
-    public function estadosdos()
+    public function estadodos()
     {
         return $this->belongsTo(Estados::class, "estado_2", "id");
     }
