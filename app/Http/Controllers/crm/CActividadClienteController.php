@@ -22,7 +22,16 @@ class CActividadClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+    public function listCACReqCaso()
+    {
+        try {
+            $actividades = CActividadCliente::with('dActividadCliente')->get();
 
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
     public function addCActividadCliente(Request $request)
     {
         try {
