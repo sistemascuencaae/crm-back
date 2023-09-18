@@ -69,7 +69,7 @@ class CasoController extends Controller
                 inner join crm.fase fas on fas.id = cas.fas_id
                 inner join crm.tablero tb on tb.id = fas.tab_id
                 where cas.id = ?',[$caso->id]);
-                $estadoInicial = Estados::where('tab_id',$tablero->id)->where('tipo_estado_id',1)->first();
+                $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id',1)->first();
                 //--------------------
                 $caso->estado_2 = $estadoInicial->id;
                 $caso->nombre = 'CASO # ' . $caso->id;

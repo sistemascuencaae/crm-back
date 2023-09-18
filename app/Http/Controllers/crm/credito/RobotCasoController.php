@@ -5,9 +5,11 @@ namespace App\Http\Controllers\crm\credito;
 use App\Events\ReasignarCasoEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Caso;
 use App\Models\crm\EstadosFormulas;
+use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tablero;
 use App\Models\User;
 use Exception;
@@ -51,25 +53,6 @@ class RobotCasoController extends Controller
 
     private function validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId)
     {
-
-        '"antes": {
-        "id": 562,
-        "fas_id": 322,
-        "user_id": 2066,
-        "prioridad": 2,
-        "bloqueado": true,
-        "bloqueado_user": "Credito 1",
-        "fase_anterior_id": 321,
-        "tc_id": 55,
-        "user_anterior_id": 2066,
-        "user_creador_id": 2066,
-        "estado_2": 36,
-        "fase_creacion_id": 321,
-        "tablero_creacion_id": 157,
-        "dep_creacion_id": 1,
-        "fase_anterior_id_reasigna": 321
-        },';
-
         $formula = EstadosFormulas::find($estadoFormId);
         //---validacion formual
         if (!$formula) {
@@ -88,11 +71,29 @@ class RobotCasoController extends Controller
         $casoEnProceso->estado_2 = $formula->est_id_proximo;
         $casoEnProceso->bloqueado = false;
         $casoEnProceso->bloqueado_user = '';
+        /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
+        $reqFase = DB::select(
+            'SELECT rp.* from crm.requerimientos_predefinidos rp
+                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+                WHERE rc.titulo IS null and rp.fase_id = ?',
+            [$casoEnProceso->id, $casoEnProceso->fas_id]
+        );
+        for ($i = 0; $i < sizeof($reqFase); $i++) {
+            $reqCaso = new RequerimientoCaso();
+            $reqCaso->user_requiere_id = $casoEnProceso->user_creador_id;
+            $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
+            $reqCaso->titulo = $reqFase[$i]->nombre;
+            $reqCaso->fas_id = $reqFase[$i]->fase_id;
+            $reqCaso->tab_id = $reqFase[$i]->tab_id;
+            $reqCaso->tipo_campo = $reqFase[$i]->tipo;
+            $reqCaso->caso_id = $casoEnProceso->id;
+            $reqCaso->requerido = $reqFase[$i]->requerido;
+            $reqCaso->save();
+        }
         //------------------------------------------------------------
         //-------------------OPCION 1---------------------------------
         //------------------------------------------------------------
         //---Si el nuevo tablero es el tablero de creacio reasigna al creador
-        //echo ('test: 1-> usuario creador activo tablero de creacion');
         if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
             //---pregunta si el usuario sigue en el tablero
             $userTab = DB::selectOne('SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ?', [$casoEnProceso->user_creador_id, $casoEnProceso->tablero_creacion_id]);
@@ -106,37 +107,11 @@ class RobotCasoController extends Controller
             $casoEnProceso->save();
             return $casoEnProceso;
         }
-
-
-        $temp = '{
-	{
-		"id" : 2,
-		"name" : "MARIUXI LEMA",
-		"usu_tipo_analista" : 1,
-		"monto_inicial" : 0,
-		"monto_limite" : 0
-	},
-	{
-		"id" : 2068,
-		"name" : "Credito 3",
-		"usu_tipo_analista" : 3,
-		"monto_inicial" : 1,
-		"monto_limite" : 3500
-	},
-	{
-		"id" : 2116,
-		"name" : "USUARIO GENERAL TEST CREDITO 3 159",
-		"usu_tipo_analista" : 1,
-		"monto_inicial" : 0,
-		"monto_limite" : 0
-	}
-    ]}
-    ';
         //---Usuarios en linea del nuevo tablero y sus perfiles
         $usuariosNuevoTablero = DB::select("SELECT usu.id as usu_id,usu.usu_tipo, usu.name, usu.usu_tipo_analista, pa.nombre, pa.monto_inicial, pa.monto_limite from crm.tablero tab
         inner join crm.tablero_user tu on tu.tab_id = tab.id
         inner join public.users usu on usu.id = tu.user_id
-        inner join crm.perfil_analistas pa on pa.id = usu.usu_tipo_analista
+        left join crm.perfil_analistas pa on pa.id = usu.usu_tipo_analista
         where tab.id = ? and usu.estado = true and usu.en_linea = true", [$formula->tablero_id]);
 
         //---Temporalmente enviar al usuario general
@@ -148,7 +123,6 @@ class RobotCasoController extends Controller
                 break;
             }
         }
-
         return $casoEnProceso;
 
         //------------------------------------------------------------
