@@ -229,6 +229,10 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::get('/allDepartamento', [DepartamentoController::class, 'allDepartamento']); // listar
     Route::get('/listDepAllUser', [DepartamentoController::class, 'listAllUser']); // listar
+    Route::get('/listDepartamento', [DepartamentoController::class, 'listDepartamento']); // listar
+    Route::post('/addDepartamento', [DepartamentoController::class, 'addDepartamento']); // guardar
+    Route::post('/editDepartamento/{id}', [DepartamentoController::class, 'editDepartamento']); // Editar
+    Route::delete('/deleteDepartamento/{id}', [DepartamentoController::class, 'deleteDepartamento']); // Eliminar
 
     // TIPO_TABLERO
 
