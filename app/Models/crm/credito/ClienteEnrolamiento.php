@@ -72,14 +72,14 @@ class ClienteEnrolamiento extends Model
         "ReponseControlList",
         "Latitude",
         "Longitude",
-        "Images",
+        // "Images", no lo guardamos porque pesa mas de 8M en la base
         "SignedDocuments",
         "Scores",
         "Response_ANI",
         "Parameters",
         "StateSignatureDocument",
 
-        "cli_id", // Id del cliente que viene desde el caso
+        "ent_id", // Id del cliente que viene desde el caso
     ];
 
     public function setCreatedAtAttribute($value)
