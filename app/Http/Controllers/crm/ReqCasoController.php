@@ -236,10 +236,7 @@ class ReqCasoController extends Controller
     public function list()
     {
     }
-    public function add()
-    {
-    }
-
+  
     public function uploadReqArchivo($inputFormData)
     {
         if ($inputFormData->hasFile('file')) {
