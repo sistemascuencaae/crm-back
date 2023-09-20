@@ -180,6 +180,7 @@ Route::group(["prefix" => "crm/robot"], function ($router) {
 Route::group(["prefix" => "crm"], function ($router) {
 
     // GALERIA
+    Route::post('/addGaleriaEquifax', [GaleriaController::class, 'addGaleriaEquifax']); // Guardar la imagen
 
     Route::post('/addGaleria', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
     Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
