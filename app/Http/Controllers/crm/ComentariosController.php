@@ -106,7 +106,7 @@ class ComentariosController extends Controller
                 "tab_id" => sizeof($tabDepa) > 0 ? $tabDepa[0]->tab_id : null,
             ]);
 
-            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo','caso.estadodos', 'tablero', 'user_destino')
             ->where('id', $noti->id)
             ->orderBy('id', 'DESC')->first();
 

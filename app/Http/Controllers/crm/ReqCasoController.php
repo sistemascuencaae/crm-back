@@ -207,7 +207,7 @@ class ReqCasoController extends Controller
                 $audit->save();
                 // END Auditoria
 
-                $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))->get();
+                $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))->orderBy('id', 'desc')->get();
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $reqCaso));
             } else {
