@@ -54,33 +54,80 @@ class UserController extends Controller
         }
     }
 
+    // public function addUser(Request $request)
+    // {
+    //     try {
+    //         User::create($request->all());
+
+    //         $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista')->get();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $usuarios));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
     public function addUser(Request $request)
     {
         try {
+            // Verificar si ya existe un usuario con el mismo correo electrónico
+            $existingUser = User::where('email', $request->input('email'))->first();
+
+            if ($existingUser) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El usuario ya existe', ''));
+            }
+
+            // Si no existe, crea el nuevo usuario
             User::create($request->all());
 
             $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $usuarios));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $usuarios));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+
+    // public function editUser(Request $request, $user_id)
+    // {
+    //     try {
+    //         $usuario = User::findOrFail($user_id);
+
+    //         $usuario->update($request->all());
+
+    //         $data = User::where('id', $usuario->id)->with('Departamento', 'perfil_analista')->first();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
 
     public function editUser(Request $request, $user_id)
     {
         try {
             $usuario = User::findOrFail($user_id);
 
+            // Verificar si ya existe otro usuario con el mismo correo electrónico
+            $existingUser = User::where('email', $request->input('email'))
+                ->where('id', '!=', $usuario->id)
+                ->first();
+
+            if ($existingUser) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El correo electrónico ya está en uso por otro usuario', ''));
+            }
+
             $usuario->update($request->all());
 
             $data = User::where('id', $usuario->id)->with('Departamento', 'perfil_analista')->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
 
     public function deleteUser($user_id)
     {

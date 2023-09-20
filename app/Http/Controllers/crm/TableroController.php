@@ -224,4 +224,15 @@ class TableroController extends Controller
         }
     }
 
+    public function editMiembrosByTableroId($id)
+    {
+        try {
+            $tablero = Tablero::where('id', $id)->with('tableroUsuario.usuario.departamento')->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tablero));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
