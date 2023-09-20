@@ -83,24 +83,7 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
 
-                /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
-                $reqFase = DB::select('SELECT rp.* from crm.requerimientos_predefinidos rp
-                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
-                WHERE rc.titulo IS null and rp.fase_id = ?',
-                    [$caso->id, $caso->fas_id]
-                );
-                for ($i = 0; $i < sizeof($reqFase); $i++) {
-                    $reqCaso = new RequerimientoCaso();
-                    $reqCaso->user_requiere_id = $caso->user_creador_id;
-                    $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
-                    $reqCaso->titulo = $reqFase[$i]->nombre;
-                    $reqCaso->fas_id = $reqFase[$i]->fase_id;
-                    $reqCaso->tab_id = $reqFase[$i]->tab_id;
-                    $reqCaso->tipo_campo = $reqFase[$i]->tipo;
-                    $reqCaso->caso_id = $caso->id;
-                    $reqCaso->requerido = $reqFase[$i]->requerido;
-                    $reqCaso->save();
-                }
+                $this->addRequerimientosFase($caso->id,$caso->fas_id,$caso->user_creador_id);
                 return $this->getCaso($caso->id);
             });
 
@@ -667,7 +650,9 @@ class CasoController extends Controller
             'miembros.usuario.departamento',
             'Galeria',
             'Archivo',
-            'req_caso',
+            'req_caso' => function ($query) {
+                $query->orderBy('id', 'desc'); // Ordenar por la columna 'nombre' de manera descendente
+            },
             'tablero',
             'fase.tablero',
             'estadodos'
@@ -708,4 +693,30 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+
+
+    public function addRequerimientosFase($casoId,$faseId, $userCreadorId){
+        /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
+        $reqFase = DB::select(
+            'SELECT rp.* from crm.requerimientos_predefinidos rp
+                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+                WHERE rc.titulo IS null and rp.fase_id = ?',
+            [$casoId, $faseId]
+        );
+        for ($i = 0; $i < sizeof($reqFase); $i++) {
+            $reqCaso = new RequerimientoCaso();
+            $reqCaso->user_requiere_id = $userCreadorId;
+            $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
+            $reqCaso->titulo = $reqFase[$i]->nombre;
+            $reqCaso->fas_id = $reqFase[$i]->fase_id;
+            $reqCaso->tab_id = $reqFase[$i]->tab_id;
+            $reqCaso->tipo_campo = $reqFase[$i]->tipo;
+            $reqCaso->caso_id = $casoId;
+            $reqCaso->requerido = $reqFase[$i]->requerido;
+            $reqCaso->save();
+        }
+    }
+
+
 }
