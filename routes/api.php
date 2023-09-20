@@ -180,6 +180,7 @@ Route::group(["prefix" => "crm/robot"], function ($router) {
 Route::group(["prefix" => "crm"], function ($router) {
 
     // GALERIA
+    Route::post('/addGaleriaEquifax', [GaleriaController::class, 'addGaleriaEquifax']); // Guardar la imagen
 
     Route::post('/addGaleria', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
     Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
@@ -224,11 +225,16 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllTablerosInactivos', [TableroController::class, 'listAllTablerosInactivos']); // listar tableros inactivos
     Route::get('/listAllTablerosWithFases', [TableroController::class, 'listAllTablerosWithFases']); // listar tableros con sus fases
     Route::get('/listByTablerosIdWithFases/{tab_id}', [TableroController::class, 'listByTablerosIdWithFases']); // listar tableros con sus fases
+    Route::get('/editMiembrosByTableroId/{id}', [TableroController::class, 'editMiembrosByTableroId']); // Editar los miembros del tablero
 
     // DEPARTAMENTO
 
     Route::get('/allDepartamento', [DepartamentoController::class, 'allDepartamento']); // listar
     Route::get('/listDepAllUser', [DepartamentoController::class, 'listAllUser']); // listar
+    Route::get('/listDepartamento', [DepartamentoController::class, 'listDepartamento']); // listar
+    Route::post('/addDepartamento', [DepartamentoController::class, 'addDepartamento']); // guardar
+    Route::post('/editDepartamento/{id}', [DepartamentoController::class, 'editDepartamento']); // Editar
+    Route::delete('/deleteDepartamento/{id}', [DepartamentoController::class, 'deleteDepartamento']); // Eliminar
 
     // TIPO_TABLERO
 

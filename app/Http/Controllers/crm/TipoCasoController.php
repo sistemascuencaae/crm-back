@@ -10,12 +10,35 @@ use Illuminate\Http\Request;
 
 class TipoCasoController extends Controller
 {
+    // public function addTipoCaso(Request $request)
+    // {
+    //     try {
+    //         $tipoCaso = TipoCaso::create($request->all());
+
+    //         $resultado = TipoCaso::where('tab_id', $tipoCaso->tab_id)->with('cTipoTarea.dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
+
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
     public function addTipoCaso(Request $request)
     {
         try {
+            // Validar si ya existe un registro con el mismo ctt_id
+            $cttId = $request->input('ctt_id');
+            $existingTipoCaso = TipoCaso::where('ctt_id', $cttId)->first();
+
+            if ($existingTipoCaso) {
+                return response()->json(RespuestaApi::returnResultado('error', 'La Tarea ya esta asignada o un Tipo Caso', ''));
+            }
+
+            // Si no existe, crea un nuevo registro
             $tipoCaso = TipoCaso::create($request->all());
 
-            $resultado = TipoCaso::where('tab_id', $tipoCaso->tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $resultado = TipoCaso::where('tab_id', $tipoCaso->tab_id)->with('cTipoTarea.dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
 
@@ -24,10 +47,11 @@ class TipoCasoController extends Controller
         }
     }
 
+
     public function listTipoCasoByIdTablero($tab_id)
     {
         try {
-            $resultado = TipoCaso::where('tab_id', $tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $resultado = TipoCaso::where('tab_id', $tab_id)->with('cTipoTarea.dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $resultado));
         } catch (Exception $e) {
@@ -38,7 +62,7 @@ class TipoCasoController extends Controller
     public function listByIdTipoCasoActivo($tc_id)
     {
         try {
-            $resultado = TipoCaso::where('id', $tc_id)->where('estado', true)->first();
+            $resultado = TipoCaso::where('id', $tc_id)->with('cTipoTarea.dTipoTarea')->where('estado', true)->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $resultado));
         } catch (Exception $e) {
@@ -49,7 +73,7 @@ class TipoCasoController extends Controller
     public function listTipoCasoByIdTableroEstadoActivo($tab_id)
     {
         try {
-            $resultado = TipoCaso::where('tab_id', $tab_id)->where('estado', true)->orderBy('id', 'DESC')->get();
+            $resultado = TipoCaso::where('tab_id', $tab_id)->with('cTipoTarea.dTipoTarea')->where('estado', true)->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $resultado));
         } catch (Exception $e) {
@@ -57,18 +81,50 @@ class TipoCasoController extends Controller
         }
     }
 
+    // public function editTipoCaso(Request $request, $id)
+    // {
+    //     try {
+    //         $tipoCaso = TipoCaso::findOrFail($id);
+
+    //         $tipoCaso->update($request->all());
+
+    //         $resultado = TipoCaso::where('id', $tipoCaso->id)
+    //                 ->with('cTipoTarea.dTipoTarea')
+    //                 ->first();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $resultado));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
     public function editTipoCaso(Request $request, $id)
     {
         try {
-            $resultado = TipoCaso::findOrFail($id);
+            $tipoCaso = TipoCaso::findOrFail($id);
 
-            $resultado->update($request->all());
+            // Validar si ya existe un registro con el mismo ctt_id
+            $cttId = $request->input('ctt_id');
+            $existingTipoCaso = TipoCaso::where('ctt_id', $cttId)
+                ->where('id', '<>', $id) // Excluir el registro actual de la búsqueda
+                ->first();
+
+            if ($existingTipoCaso) {
+                return response()->json(RespuestaApi::returnResultado('error', 'La Tarea ya esta asignada o un Tipo Caso', ''));
+            }
+
+            $tipoCaso->update($request->all());
+
+            $resultado = TipoCaso::where('id', $tipoCaso->id)
+                ->with('cTipoTarea.dTipoTarea')
+                ->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $resultado));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
 
     public function deleteTipoCaso($id)
     {

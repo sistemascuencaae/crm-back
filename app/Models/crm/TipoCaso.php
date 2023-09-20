@@ -19,7 +19,7 @@ class TipoCaso extends Model
 
     protected $table = 'crm.tipo_caso';
 
-    protected $fillable = ["nombre", "estado", "tab_id"];
+    protected $fillable = ["nombre", "estado", "tab_id", "ctt_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -38,8 +38,8 @@ class TipoCaso extends Model
         $this->attributes["deleted_at"] = Carbon::now();
     }
 
-    // public function dTipoActividad()
-    // {
-    //     return $this->hasMany(DTipoActividad::class, 'id', 'ctr_id');
-    // }
+    public function cTipoTarea()
+    {
+        return $this->belongsTo(CTipoTarea::class, 'ctt_id');
+    }
 }
