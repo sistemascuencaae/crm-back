@@ -12,6 +12,7 @@ use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\CondicionesController;
 use App\Http\Controllers\crm\credito\ArchivoController;
+use App\Http\Controllers\crm\credito\ClienteEnrolamientoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
@@ -180,7 +181,6 @@ Route::group(["prefix" => "crm/robot"], function ($router) {
 Route::group(["prefix" => "crm"], function ($router) {
 
     // GALERIA
-    Route::post('/addGaleriaEquifax', [GaleriaController::class, 'addGaleriaEquifax']); // Guardar la imagen
 
     Route::post('/addGaleria', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
     Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
@@ -388,10 +388,16 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
     Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
 
-    // CONDICIONES
+    // EQUIFAX / CLIENTE ENROLAMIENTO
 
-    Route::get('/listCondiciones', [CondicionesController::class, 'listCondiciones']); // all
+    Route::post('/addClienteEnrolamiento', [ClienteEnrolamientoController::class, 'addClienteEnrolamiento']); // Guardar la imagen de equifax
+    Route::post('/addGaleriaEquifax', [ClienteEnrolamientoController::class, 'addGaleriaEquifax']); // Guardar la imagen de equifax
+    Route::post('/addVideoEquifax', [ClienteEnrolamientoController::class, 'addVideoEquifax']); // Guardar la imagen de equifax
+
+    // SOLICITUD CREDITO
+
     Route::get('/solicitudByIdentificacion/{cedula}/{id_user_creador}', [solicitudCreditoController::class, 'solicitudByIdentificacion']); // Listar por cedula
+
 });
 
 
