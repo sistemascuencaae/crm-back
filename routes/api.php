@@ -6,7 +6,6 @@ use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\EntidadController;
-use App\Http\Controllers\crm\ProductoController;
 use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\User\UsersController;
@@ -17,6 +16,7 @@ use App\Http\Controllers\crm\garantias\ConfigItemsController;
 use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
 use App\Http\Controllers\crm\garantias\ExepcionGexController;
 use App\Http\Controllers\crm\garantias\RubrosReservaController;
+use App\Http\Controllers\crm\series\PreIngresoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -148,10 +148,6 @@ Route::group(["prefix" => "crm"], function ($router) { // Listar
 
 //----------------------- START RUTAS JAIRO  ----------------------------------------------
 Route::group(["prefix" => "crm"], function ($router) {
-    Route::get('/byCedulaProveedor/{cedula}', [EntidadController::class, 'byCedulaProveedor']);
-
-    Route::post('/buscaProducto', [ProductoController::class, 'buscaProducto']);
-    
     //Partes
     Route::get('/listado', [PartesController::class, 'listado']);
     Route::get('/byParte/{parte}', [PartesController::class, 'byParte']);
@@ -186,5 +182,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaRubro', [RubrosReservaController::class, 'grabaRubro']);
     Route::get('/byRubro/{rubro}', [RubrosReservaController::class, 'byRubro']);
     Route::get('/eliminaRubro/{rubro}', [RubrosReservaController::class, 'eliminaRubro']);
+
+    //Preingreso de Series
+    Route::get('/listadoPreIngreso', [PreIngresoController::class, 'listado']);
+    Route::get('/listadoProdPI', [PreIngresoController::class, 'productos']);
+    Route::get('/listadoBodegas', [PreIngresoController::class, 'bodegas']);
+    Route::get('/listadoClientes', [PreIngresoController::class, 'clientes']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------
