@@ -20,7 +20,9 @@ class Requerimientos extends Model
         "tab_id",
         "user_id",
         "valor_lista",
-        "requerido"
+        "requerido",
+        "orden",
+        "acc_publico",
     ];
 
     public function setCreatedAtAttribute($value)
