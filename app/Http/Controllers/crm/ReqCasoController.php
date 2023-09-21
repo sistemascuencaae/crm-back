@@ -236,7 +236,7 @@ class ReqCasoController extends Controller
     public function list()
     {
     }
-  
+
     public function uploadReqArchivo($inputFormData)
     {
         if ($inputFormData->hasFile('file')) {
@@ -252,7 +252,10 @@ class ReqCasoController extends Controller
 
     public function listaReqCasoId($casoId){
         try {
-            $reqs = RequerimientoCaso::where('caso_id', $casoId)->orderBy('id', 'DESC')->get();
+            $reqs = RequerimientoCaso::where('caso_id', $casoId)
+            ->orderBy('id', 'DESC')
+            ->orderBy('orden', 'DESC')
+            ->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Datos obtenidos con exito', $reqs));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), ''));

@@ -44,7 +44,8 @@ class Caso extends Model
         "fase_creacion_id",
         "tablero_creacion_id",
         "dep_creacion_id",
-        "fase_anterior_id_reasigna"
+        "fase_anterior_id_reasigna",
+        "acc_publico"
     ];
 
     public function userCreador()

@@ -554,7 +554,7 @@ class CasoController extends Controller
             'Galeria',
             'Archivo',
             'req_caso' => function ($query) {
-                $query->orderBy('id', 'desc'); // Ordenar por la columna 'nombre' de manera descendente
+                $query->orderBy('id', 'desc')->orderBy('orden', 'desc'); // Ordenar por la columna 'nombre' de manera descendente
             },
             'tablero',
             'fase.tablero',
@@ -668,6 +668,8 @@ class CasoController extends Controller
             $reqCaso->caso_id = $casoId;
             $reqCaso->requerido = $reqFase[$i]->requerido;
             $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
+            $reqCaso->orden = $reqFase[$i]->orden;
+            $reqCaso->acc_publico = $reqFase[$i]->acc_publico;
             if ($reqCaso->tipo_campo == 'lista') {
                 $array = explode(',', $reqCaso->valor_lista);
                 $nuevoArray = array();

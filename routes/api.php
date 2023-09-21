@@ -40,6 +40,7 @@ use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
+use App\Http\Controllers\user\EquifaxController;
 use App\Http\Controllers\User\ProfileUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -169,6 +170,10 @@ Route::group(["prefix" => "crm/audi"], function ($router) {
 });
 Route::group(["prefix" => "crm/robot"], function ($router) {
     Route::post('/reasignarCaso', [RobotCasoController::class, 'reasignarCaso']);
+});
+
+Route::group([], function ($router) {
+    Route::post('/token', [EquifaxController::class, 'loginEquifax']);
 });
 
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
