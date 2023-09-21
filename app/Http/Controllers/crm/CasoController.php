@@ -63,7 +63,7 @@ class CasoController extends Controller
                 $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
                 $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
                 $newGrupo->save();
-                $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id',1)->first();
+                $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
                 //--------------------
                 $caso->estado_2 = $estadoInicial->id;
                 $caso->nombre = 'CASO # ' . $caso->id;
@@ -77,7 +77,7 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
 
-                $this->addRequerimientosFase($caso->id,$caso->fas_id,$caso->user_creador_id);
+                $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
                 return $this->getCaso($caso->id);
             });
 
@@ -450,7 +450,9 @@ class CasoController extends Controller
             }
 
             broadcast(new ReasignarCasoEvent($data));
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito',
+            return response()->json(RespuestaApi::returnResultado(
+                'success',
+                'Se actualizo con éxito',
                 $data
             ));
         } catch (Exception $e) {
@@ -459,7 +461,8 @@ class CasoController extends Controller
     }
 
 
-    public function respuestaCaso(Request $request){
+    public function respuestaCaso(Request $request)
+    {
         try {
 
             $estadoFormId = $request->input('estadoFormId');
@@ -467,11 +470,11 @@ class CasoController extends Controller
 
 
             $formula = EstadosFormulas::find($estadoFormId);
-            if(!$formula){
+            if (!$formula) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La formula no existe.'));
             }
             $casoEnProceso = Caso::find($casoId);
-            if(!$casoEnProceso){
+            if (!$casoEnProceso) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
             }
             $casoEnProceso->fas_id = $formula->fase_id;
@@ -554,7 +557,7 @@ class CasoController extends Controller
             'Galeria',
             'Archivo',
             'req_caso' => function ($query) {
-                $query->orderBy('id', 'desc')->orderBy('orden', 'desc'); // Ordenar por la columna 'nombre' de manera descendente
+                $query->orderBy('id', 'asc')->orderBy('orden', 'asc'); // Ordenar por la columna 'nombre' de manera descendente
             },
             'tablero',
             'fase.tablero',
@@ -599,7 +602,8 @@ class CasoController extends Controller
 
 
 
-    public function testControl($casoId, $faseId, $userCreadorId){
+    public function testControl($casoId, $faseId, $userCreadorId)
+    {
         $reqFase = DB::select(
             'SELECT rp.* from crm.requerimientos_predefinidos rp
                 left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
@@ -619,7 +623,7 @@ class CasoController extends Controller
             $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
             $reqCaso->requerido = $reqFase[$i]->requerido;
 
-            if($reqCaso->tipo_campo == 'lista'){
+            if ($reqCaso->tipo_campo == 'lista') {
                 $array = explode(',', $reqCaso->valor_lista);
                 $nuevoArray = array();
 
@@ -639,7 +643,7 @@ class CasoController extends Controller
 
 
 
-            array_push($arrayTest,$reqCaso);
+            array_push($arrayTest, $reqCaso);
             //echo ('$reqCaso: '.json_encode($reqCaso));
             //$reqCaso->save();
         }
@@ -648,13 +652,13 @@ class CasoController extends Controller
     }
 
 
-
-    public function addRequerimientosFase($casoId,$faseId, $userCreadorId){
+    public function addRequerimientosFase($casoId, $faseId, $userCreadorId)
+    {
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
         $reqFase = DB::select(
             'SELECT rp.* from crm.requerimientos_predefinidos rp
                 left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
-                WHERE rc.titulo IS null and rp.fase_id = ?',
+                WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden',
             [$casoId, $faseId]
         );
         for ($i = 0; $i < sizeof($reqFase); $i++) {
@@ -687,6 +691,4 @@ class CasoController extends Controller
             $reqCaso->save();
         }
     }
-
-
 }
