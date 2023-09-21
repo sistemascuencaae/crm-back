@@ -404,6 +404,9 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 });
 
+Route::group([], function ($router) {
+    Route::post('/getDocuments', [EquifaxController::class, 'getDocuments']);
+});
 
 
 Route::group(["prefix" => "credito"], function ($router) {
