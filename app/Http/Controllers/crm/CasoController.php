@@ -63,12 +63,6 @@ class CasoController extends Controller
                 $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
                 $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
                 $newGrupo->save();
-
-                //buscar el estado de caso inicial que pertenece al tablero
-                $tablero = DB::selectOne('SELECT tb.* FROM crm.caso cas
-                inner join crm.fase fas on fas.id = cas.fas_id
-                inner join crm.tablero tb on tb.id = fas.tab_id
-                where cas.id = ?',[$caso->id]);
                 $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id',1)->first();
                 //--------------------
                 $caso->estado_2 = $estadoInicial->id;
@@ -130,8 +124,6 @@ class CasoController extends Controller
         $casoId = $request->input('casoId');
         $faseId = $request->input('faseId');
         $faseAnteriorId = $request->input('faseAnteriorId');
-
-
         try {
             $caso = Caso::find($casoId);
             $casoAudit = Caso::with(
@@ -151,27 +143,7 @@ class CasoController extends Controller
                 'fase_anterior_id' => $faseAnteriorId
             ]);
 
-
-            $reqFase = DB::select(
-                'SELECT rp.* from crm.requerimientos_predefinidos rp
-                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
-                WHERE rc.titulo IS null and rp.fase_id = ?',
-                [$casoId, $faseId]
-            );
-            for ($i = 0; $i < sizeof($reqFase); $i++) {
-                $reqCaso = new RequerimientoCaso();
-                $reqCaso->user_requiere_id = $caso->user_creador_id;
-                $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
-                $reqCaso->titulo = $reqFase[$i]->nombre;
-                $reqCaso->fas_id = $reqFase[$i]->fase_id;
-                $reqCaso->tab_id = $reqFase[$i]->tab_id;
-                $reqCaso->tipo_campo = $reqFase[$i]->tipo;
-                $reqCaso->caso_id = $caso->id;
-                $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
-                $reqCaso->requerido = $reqFase[$i]->requerido;
-                $reqCaso->save();
-            }
-
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
             $data = $this->getCaso($caso->id);
             broadcast(new TableroEvent($data));
 
@@ -192,7 +164,7 @@ class CasoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e));
         }
     }
 
@@ -484,72 +456,6 @@ class CasoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
-
-
-        // echo json_encode($caso_id);
-        // echo json_encode($user_anterior_id);
-        // echo json_encode($fase_anterior_id);
-        // echo json_encode($tablero_anterior_id);
-        // echo json_encode($dep_anterior_id);
-        // echo json_encode($new_user_id);
-        // echo json_encode($new_fase_id);
-        // echo json_encode($new_dep_id);
-        // echo json_encode($new_tablero_id);
-
-
-
-
-
-
-        // try {
-        //     $notificacion = DB::transaction(function () use ($caso_id, $request) {
-
-        //         $caso = Caso::where('id', $caso_id)->first();
-
-        //         // $faseNuevaId = DB::select('SELECT f.id from crm.tablero t
-        //         // inner join crm.fase f on f.tab_id = t.id and f.tab_id = ? and f.fase_tipo = 1', [$request->tab_id])[0];
-        //         //echo(json_encode($request->user_id));
-        //         if ($faseNuevaId->id) {
-        //             $caso->fas_id = $faseNuevaId->id;
-        //             $caso->estado_2 = $request->estado_2;
-        //             $caso->bloqueado = false;
-        //             $caso->bloqueado_user = '';
-        //             $caso->user_id = $request->user_id;
-        //             $caso->user_anterior_id = $request->user_actual_id;
-        //             $caso->fase_anterior_id = $request->fase_anterior_id;
-        //             $caso->save();
-        //             $meimbroExiste = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?', [$request->user_actual_id, $caso_id]);
-        //             if (sizeof($meimbroExiste) == 0) {
-        //                 $miembro = new Miembros();
-        //                 $miembro->user_id = $request->user_actual_id;
-        //                 $miembro->caso_id = $caso_id;
-        //                 $miembro->save();
-        //             }
-        //         }
-
-        //         $noti = $this->getNotificacion(
-        //             'reasigno el caso #',
-        //             'Reasignar',
-        //             $caso->user_anterior->name,
-        //             $caso->id,
-        //             $caso->user_id,
-        //             $caso->fas_id,
-        //             $caso->user->name
-        //         );
-
-        //         return $noti;
-        //     });
-
-        //     $data = $this->getCaso($caso_id);
-        //     if ($notificacion) {
-        //         broadcast(new NotificacionesCrmEvent($notificacion));
-        //     }
-
-        //     broadcast(new ReasignarCasoEvent($data));
-        //     return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
-        // } catch (Exception $e) {
-        //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-        // }
     }
 
 
@@ -578,9 +484,6 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
-
-
 
     public function depUserTablero($casoId)
     {
@@ -696,6 +599,56 @@ class CasoController extends Controller
 
 
 
+    public function testControl($casoId, $faseId, $userCreadorId){
+        $reqFase = DB::select(
+            'SELECT rp.* from crm.requerimientos_predefinidos rp
+                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+                WHERE rc.titulo IS null and rp.fase_id = ?',
+            [$casoId, $faseId]
+        );
+        $arrayTest = [];
+        for ($i = 0; $i < sizeof($reqFase); $i++) {
+            $reqCaso = new RequerimientoCaso();
+            $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
+            $reqCaso->user_requiere_id = $userCreadorId;
+            $reqCaso->titulo = $reqFase[$i]->nombre;
+            $reqCaso->fas_id = $reqFase[$i]->fase_id;
+            $reqCaso->tab_id = $reqFase[$i]->tab_id;
+            $reqCaso->tipo_campo = $reqFase[$i]->tipo;
+            $reqCaso->caso_id = $casoId;
+            $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
+            $reqCaso->requerido = $reqFase[$i]->requerido;
+
+            if($reqCaso->tipo_campo == 'lista'){
+                $array = explode(',', $reqCaso->valor_lista);
+                $nuevoArray = array();
+
+                foreach ($array as $item) {
+                    $objeto = array(
+                        'id' => $item,
+                        'valor' => $item
+                    );
+                    $nuevoArray[] = $objeto;
+                }
+
+                $reqCaso->valor_multiple = $nuevoArray;
+            }
+
+
+
+
+
+
+            array_push($arrayTest,$reqCaso);
+            //echo ('$reqCaso: '.json_encode($reqCaso));
+            //$reqCaso->save();
+        }
+
+        return response()->json($arrayTest);
+    }
+
+
+
     public function addRequerimientosFase($casoId,$faseId, $userCreadorId){
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
         $reqFase = DB::select(
@@ -706,14 +659,29 @@ class CasoController extends Controller
         );
         for ($i = 0; $i < sizeof($reqFase); $i++) {
             $reqCaso = new RequerimientoCaso();
-            $reqCaso->user_requiere_id = $userCreadorId;
             $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
+            $reqCaso->user_requiere_id = $userCreadorId;
             $reqCaso->titulo = $reqFase[$i]->nombre;
             $reqCaso->fas_id = $reqFase[$i]->fase_id;
             $reqCaso->tab_id = $reqFase[$i]->tab_id;
             $reqCaso->tipo_campo = $reqFase[$i]->tipo;
             $reqCaso->caso_id = $casoId;
             $reqCaso->requerido = $reqFase[$i]->requerido;
+            $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
+            if ($reqCaso->tipo_campo == 'lista') {
+                $array = explode(',', $reqCaso->valor_lista);
+                $nuevoArray = array();
+
+                foreach ($array as $item) {
+                    $objeto = array(
+                        'id' => $item,
+                        'valor' => $item
+                    );
+                    $nuevoArray[] = $objeto;
+                }
+
+                $reqCaso->valor_multiple = json_encode($nuevoArray);
+            }
             $reqCaso->save();
         }
     }
