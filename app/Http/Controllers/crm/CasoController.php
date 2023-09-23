@@ -557,7 +557,7 @@ class CasoController extends Controller
             'Galeria',
             'Archivo',
             'req_caso' => function ($query) {
-                $query->orderBy('id', 'asc')->orderBy('orden', 'asc'); // Ordenar por la columna 'nombre' de manera descendente
+                $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
             },
             'tablero',
             'fase.tablero',
@@ -658,7 +658,7 @@ class CasoController extends Controller
         $reqFase = DB::select(
             'SELECT rp.* from crm.requerimientos_predefinidos rp
                 left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
-                WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden',
+                WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden asc',
             [$casoId, $faseId]
         );
         for ($i = 0; $i < sizeof($reqFase); $i++) {

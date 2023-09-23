@@ -207,7 +207,10 @@ class ReqCasoController extends Controller
                 $audit->save();
                 // END Auditoria
 
-                $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))->orderBy('id', 'desc')->get();
+                $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))
+                ->orderBy('id', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $reqCaso));
             } else {
@@ -253,8 +256,8 @@ class ReqCasoController extends Controller
     public function listaReqCasoId($casoId){
         try {
             $reqs = RequerimientoCaso::where('caso_id', $casoId)
-            ->orderBy('id', 'DESC')
-            ->orderBy('orden', 'DESC')
+            ->orderBy('id', 'asc')
+            ->orderBy('orden', 'asc')
             ->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Datos obtenidos con exito', $reqs));
         } catch (\Throwable $th) {
