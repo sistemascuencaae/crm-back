@@ -15,16 +15,37 @@ use Illuminate\Support\Facades\DB;
 
 class DActividadController extends Controller
 {
-    public function listActividadesByIdCasoId($caso_id)
-    {
-        try {
-            $actividades = DTipoActividad::where('caso_id', $caso_id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+    // public function listActividadesByIdCasoId($caso_id)
+    // {
+    //     try {
+    //         $actividades = DTipoActividad::where('caso_id', $caso_id)
+    //             ->with(
+    //                 'cTipoActividad.tablero',
+    //                 'estado_actividad',
+    //                 'cTipoResultadoCierre',
+    //                 'usuario.departamento'
+    //             )
+    //             ->orderBy('id', 'DESC')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
-    }
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
+    // public function listActividadesByIdCasoId($caso_id)
+    // {
+    //     try {
+    //         $actividades = DTipoActividad::where('caso_id', $caso_id)
+    //             ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+    //             ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+    //             ->orderBy('id', 'DESC')->get();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
 
     // public function addDTipoActividad(Request $request)
     // {
@@ -55,6 +76,25 @@ class DActividadController extends Controller
     //     }
     // }
 
+    public function listActividadesByIdCasoId($caso_id, $user_id)
+    {
+        try {
+            $actividades = DTipoActividad::where('caso_id', $caso_id)
+                ->where(function ($query) use ($user_id) {
+                    $query->where('user_id', $user_id)
+                        ->orWhere('acc_publico', true);
+                })
+                ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+                ->orderBy('id', 'DESC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
     public function addDTipoActividad(Request $request)
     {
         try {
@@ -83,8 +123,20 @@ class DActividadController extends Controller
                 // END Auditoria
 
 
-                $data = DTipoActividad::with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                // $data = DTipoActividad::with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                //     ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+                //     ->where('caso_id', $dta->caso_id)
+                //     ->orderBy('id', 'DESC')
+                //     ->get();
+
+                // Obtener la lista actualizada de actividades después de agregar una nueva
+                $data = DTipoActividad::where(function ($query) use ($request) {
+                    $query->where('user_id', $request->input('user_id'))
+                        ->orWhere('acc_publico', true);
+                })
+                    ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
                     ->where('caso_id', $dta->caso_id)
+                    ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
                     ->orderBy('id', 'DESC')
                     ->get();
 
@@ -134,7 +186,8 @@ class DActividadController extends Controller
                 $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
                 $audit->url = $request->fullUrl();
 
-                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                    ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")->first();
 
                 // Establecer old_values y new_values
                 $audit->new_values = json_encode($data);
@@ -316,5 +369,49 @@ class DActividadController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    public function editAccesoActividad(Request $request, $actividad_id)
+    {
+        try {
+            $actividad = $request->all();
+
+            $data = DB::transaction(function () use ($actividad, $actividad_id, $request) {
+
+                $actividad = DTipoActividad::findOrFail($actividad_id);
+
+                $actividad->update([
+                    "acc_publico" => $request->acc_publico,
+                ]);
+
+                return DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                    ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")->first();
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+
+
+
+
+
+
+
 
 }

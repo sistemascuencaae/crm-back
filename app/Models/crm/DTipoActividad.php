@@ -21,7 +21,7 @@ class DTipoActividad extends Model
 
     protected $table = 'crm.dtipo_actividad';
 
-    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "ctrc_id", "pos_descripcion", "cta_id", "ctr_id", "caso_id", "id_padre", "user_id"];
+    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "ctrc_id", "pos_descripcion", "cta_id", "ctr_id", "caso_id", "id_padre", "user_id", "acc_publico"];
 
     public function setCreatedAtAttribute($value)
     {
