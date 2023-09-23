@@ -1,68 +1,27 @@
-{
-    "Uid": "a6f46e545a354e3bb451e5d09ac02ca3",
-    "StartingDate": "2023-09-18T18:51:44.563",
-    "CreationDate": "2023-09-18T18:56:30.74",
-    "CreationIP": "172.26.11.29",
-    "DocumentType": 3,
-    "IdNumber": "0107199556",
-    "FirstName": "TOMAS",
-    "SecondName": "FELIPE",
-    "FirstSurname": "QUICHIMBO",
-    "SecondSurname": "PERALTA",
-    "Gender": "M",
-    "BirthDate": "1993-05-18T00:00:00",
-    "Street": "AV 10 DE AGOSTO",
-    "CedulateCondition": "CIUDADANO",
-    "Spouse": " ",
-    "Home": "AZUAY/CUENCA/SAN BLAS",
-    "MaritalStatus": "DIVORCIADO",
-    "DateOfIdentification": "2021-10-04T00:00:00",
-    "DateOfDeath": null,
-    "MarriageDate": "2015-09-17T00:00:00",
-    "Instruction": "BACHILLERATO",
-    "PlaceBirth": "",
-    "Nationality": "ECUATORIANA",
-    "MotherName": "PERALTA BARBA ROSA ALBA",
-    "FatherName": "QUICHIMBO SUMBA SERGIO MARIA",
-    "HouseNumber": "SN",
-    "Profession": "ESTUDIANTE          ",
-    "ExpeditionCity": null,
-    "ExpeditionDepartment": null,
-    "BirthCity": null,
-    "BirthDepartment": null,
-    "TransactionType": 1,
-    "TransactionTypeName": "Enroll",
-    "IssueDate": null,
-    "BarcodeText": null,
-    "OcrTextSideOne": null,
-    "OcrTextSideTwo": null,
-    "SideOneWrongAttempts": 0,
-    "SideTwoWrongAttempts": 0,
-    "FoundOnAdoAlert": false,
-    "AdoProjectId": "1",
-    "TransactionId": "8",
-    "ProductId": "1",
-    "ComparationFacesSuccesful": false,
-    "FaceFound": false,
-    "FaceDocumentFrontFound": false,
-    "BarcodeFound": false,
-    "ResultComparationFaces": 0.0,
-    "ResultCompareDocumentFaces": 0.0,
-    "ComparationFacesAproved": false,
-    "ThresholdCompareDocumentFaces": 0.0,
-    "CompareFacesDocumentResult": null,
-    "Extras": "",
-    "NumberPhone": null,
-    "CodFingerprint": null,
-    "ResultQRCode": null,
-    "DactilarCode": "V2343V",
-    "ReponseControlList": null,
-    "Latitude": null,
-    "Longitude": null,
-    "galeria_id": 0,
-    "SignedDocuments": "",
-    "Scores": "",
-    "Response_ANI": null,
-    "Parameters": null,
-    "StateSignatureDocument": false
-}
+[
+    {
+        "id": "item1",
+        "valor": "item1"
+    },
+    {
+        "id": "item2",
+        "valor": "item2"
+    },
+    {
+        "id": "item3",
+        "valor": "item3"
+    },
+    {
+        "id": "item4",
+        "valor": "item4"
+    }
+]
+
+
+SQLSTATE[22P02]: Invalid text representation: 7 ERROR:  sintaxis de entrada no válida para tipo json
+DETAIL:  La cadena de entrada terminó inesperadamente.
+CONTEXT:  Datos JSON, línea 1:  (SQL: insert into "crm"."requerimientos_caso" ("acc_publico", "caso_id", "fas_id", "form_control_name", "orden", "requerido", "tab_id", "tipo_campo", "titulo", "user_requiere_id", "valor_lista", "valor_multiple") values (1, 599, 360, ARCHIVO1, 10, 0, 170, archivo, ARCHIVO 1, 2069, ?, ), (1, 599, 360, ARCHIVO2, 9, 0, 170, archivo, ARCHIVO 2, 2069, ?, ), (1, 599, 360, ELENROLAMIENTOESSATISFACORIO, 8, 0, 170, verdadero o falso, EL ENROLAMIENTO ES SATISFACORIO, 2069, ?, ), (1, 599, 360, REVISASTELASOLICITUDDECREDITO, 7, 0, 170, verdadero o falso, REVISASTE LA SOLICITUD DE CREDITO?, 2069, ?, ), (1, 599, 360, TEST1, 6, 0, 170, texto, TEST 1, 2069, ?, ), (1, 599, 360, TESTPERFILDECLIENTE, 2, 0, 170, perfil de cliente, TEST PERFIL DE CLIENTE, 2069, ?, ), (1, 599, 360, TESTFECHA, 3, 0, 170, fecha, TEST FECHA, 2069, ?, ), (1, 599, 360, TESTDECIMAL, 4, 0, 170, decimal, TEST DECIMAL, 2069, ?, ), (1, 599, 360, TESTNUMERICO, 5, 0, 170, numerico, TEST NUMERICO, 2069, ?, ), (1, 599, 360, testlista, 1, 0, 170, lista, test lista, 2069, item1,item2,item3,item4, [{"id":"item1","valor":"item1"},{"id":"item2","valor":"item2"},{"id":"item3","valor":"item3"},{"id":"item4","valor":"item4"}]))
+
+SQLSTATE[22P02]: Invalid text representation: 7 ERROR:  sintaxis de entrada no válida para tipo json
+DETAIL:  La cadena de entrada terminó inesperadamente.
+CONTEXT:  Datos JSON, línea 1:  (SQL: insert into "crm"."requerimientos_caso" ("acc_publico", "caso_id", "fas_id", "form_control_name", "orden", "requerido", "tab_id", "tipo_campo", "titulo", "user_requiere_id", "valor_lista", "valor_multiple") values (1, 599, 362, Equifax, 4, 0, 170, equifax, Equifax, 2069, , ), (1, 599, 362, TESTARCHIVOFASE2, 5, 1, 170, archivo, TEST ARCHIVO FASE 2, 2069, , ), (1, 599, 362, TESTNUMFASE2, 1, 1, 170, numerico, TEST NUM FASE 2, 2069, , ), (1, 599, 362, TESTFECHAFASE2, 2, 1, 170, fecha, TEST FECHA FASE 2, 2069, , ), (1, 599, 362, TESTFAS2, 3, 1, 170, texto, TEST FAS 2, 2069, , ))

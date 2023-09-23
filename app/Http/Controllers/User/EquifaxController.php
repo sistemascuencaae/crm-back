@@ -69,6 +69,8 @@ class EquifaxController extends Controller
 
     public function getDocuments(Request $request)
     {
+
+        echo ('$request->all(): '.json_encode($request->all()));
         try {
             // Validar el token de autorización OAuth
             $token = $request->header('Authorization');
