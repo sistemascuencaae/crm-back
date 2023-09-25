@@ -22,23 +22,25 @@ class FaseController extends Controller
     {
         $tabId = $request->input('tabId');
         try {
-            $data = Fase::with([
-                'caso.user',
-                'caso.userCreador',
-                'caso.entidad',
-                'caso.resumen',
-                'caso.tareas' => function ($query) use ($tabId) {
-                    $query->where('tab_id', $tabId);
-                },
-                'caso.actividad',
-                'caso.miembros.usuario.departamento',
-                'caso.Etiqueta',
-                'caso.req_caso' => function ($query) {
-                    $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-                },
-                'condicionFaseMover',
-                'caso.estadodos'
-            ])->where('tab_id', $tabId)->get();
+
+            $data = $this->listarfases($tabId);
+            // $data = Fase::with([
+            //     'caso.user',
+            //     'caso.userCreador',
+            //     'caso.entidad',
+            //     'caso.resumen',
+            //     'caso.tareas' => function ($query) use ($tabId) {
+            //         $query->where('tab_id', $tabId);
+            //     },
+            //     'caso.actividad',
+            //     'caso.miembros.usuario.departamento',
+            //     'caso.Etiqueta',
+            //     'caso.req_caso' => function ($query) {
+            //         $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+            //     },
+            //     'condicionFaseMover',
+            //     'caso.estadodos'
+            // ])->where('tab_id', $tabId)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Al listar', $th->getMessage()));
@@ -149,5 +151,55 @@ class FaseController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error al crear fase', $e));
         }
+    }
+
+    public function actualizarOrdenFases(Request $request)
+    {
+        try {
+            $listaFases = $request->all();
+            
+            $id = DB::transaction(function () use ($listaFases) {
+                $tabId = 0;
+                foreach ($listaFases as $item) {
+                    $tabId = $item['tab_id'];
+                    $fase = Fase::find($item['id']);
+                    $fase->orden =  $item['orden'];
+                    $fase->save();
+                }
+
+                return $tabId;
+
+            });
+            $data = $this->listarFases($id);
+            return response()->json(RespuestaApi::returnResultado('success', 'Fase creada con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error al crear fase', $e));
+        }
+    }
+
+
+    public function listarfases($tabId)
+    {
+        $data = Fase::with([
+            'caso.user',
+            'caso.userCreador',
+            'caso.entidad',
+            'caso.resumen',
+            'caso.tareas' => function ($query) use ($tabId) {
+                $query->where('tab_id', $tabId);
+            },
+            'caso.actividad',
+            'caso.miembros.usuario.departamento',
+            'caso.Etiqueta',
+            'caso.req_caso' => function ($query) {
+                $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+            },
+            'condicionFaseMover',
+            'caso.estadodos'
+        ])->where('tab_id', $tabId)
+            ->orderBy('orden', 'asc')
+            ->get();
+
+        return $data;
     }
 }
