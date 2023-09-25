@@ -27,6 +27,7 @@ class PreIngreso extends Model implements Auditable
         "bod_id",
         "guia_remision",
         "cli_id",
+        "cmo_id",
         "usuario_crea",
         "fecha_crea",
         "usuario_modifica",

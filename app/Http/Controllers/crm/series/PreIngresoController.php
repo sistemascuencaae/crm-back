@@ -61,6 +61,14 @@ class PreIngresoController extends Controller
                                                 (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
                                         from cliente c join entidad e on c.ent_id = e.ent_id
                                         where c.cli_tipocli = 2 and c.cli_id = " . $data['cli_id'])[0];
+        if ($data['cmo_id'] == null) {
+            $data['doc_rela'] = null;    
+        } else {
+            $data['doc_rela'] = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
+                                        from cmovinv c join puntoventa p on c.pve_id = p.pve_id
+                                                    join ctipocom t on c.cti_id = t.cti_id
+                                        where c.cmo_id = " . $data['cmo_id'])[0];
+        }
 
         foreach ($data['detalle'] as $p) {
             $producto = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p where p.pro_id = " . $p['pro_id'])[0];
@@ -98,6 +106,7 @@ class PreIngresoController extends Controller
                 $fecha = $request->input('fecha');
                 $estado = $request->input('estado');
                 $bod_id = $request->input('bod_id');
+                $cmo_id = null;
                 $guia_remision = $request->input('guia_remision');
                 $cli_id = $request->input('cli_id');
     
@@ -113,6 +122,7 @@ class PreIngresoController extends Controller
                     'bod_id' => $bod_id,
                     'guia_remision' => $guia_remision,
                     'cli_id' => $cli_id,
+                    'cmo_id' => $cmo_id,
                     'usuario_crea' => $usuario_crea,
                     'fecha_crea' => $fecha_crea,
                     'usuario_modifica' => $usuario_modifica,
@@ -182,6 +192,7 @@ class PreIngresoController extends Controller
                     [
                     'numero' => $numero,
                     'estado' => $estado,
+                    'cmo_id' => null,
                     'usuario_crea' => $usuario_crea,
                     'fecha_crea' => $fecha_crea,
                     'usuario_modifica' => $usuario_modifica,
@@ -209,7 +220,7 @@ class PreIngresoController extends Controller
                 }
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Configuración eliminada con exito', []));
+            return response()->json(RespuestaApi::returnResultado('success', 'Preingreso eliminado con exito', []));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
