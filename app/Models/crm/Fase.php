@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\crm\RespuestasCaso;
 use App\Models\crm\Tablero;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -50,5 +51,10 @@ class Fase extends Model
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
+    }
+
+    public function respuestas()
+    {
+        return $this->hasMany(RespuestasCaso::class, "fase_id", "id");
     }
 }
