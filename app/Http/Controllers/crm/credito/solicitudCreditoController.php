@@ -128,4 +128,26 @@ class solicitudCreditoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function solicitudByIdentificacion2($entIdentificacion, $userId)
+    {
+        try {
+            $user = DB::selectOne('SELECT u.name, alm.alm_nombre  from public.users u
+        inner join public.puntoventa pve on pve.pve_id = u.pve_id
+        inner join public.almacen alm on alm.alm_id = pve.alm_id
+        where u.id = ?', [$userId]);
+
+            $solicitudCredito = AvSolicitudCredito::with('referencias')->where('ent_identificacion', $entIdentificacion)->first();
+
+            $data = (object) [
+                "solictudCredito" => $solicitudCredito,
+                "almNombre" => $user->alm_nombre,
+                "userName" => $user->name
+            ];
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }
