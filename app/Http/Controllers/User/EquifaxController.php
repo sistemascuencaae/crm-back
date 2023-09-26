@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\JWTController;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
@@ -70,14 +71,17 @@ class EquifaxController extends Controller
     public function getDocuments(Request $request)
     {
 
-        echo ('$request->all(): '.json_encode($request->all()));
+        //echo ('variables: '.json_encode($request->all()));
+
         try {
             // Validar el token de autorización OAuth
-            $token = $request->header('Authorization');
+            // $token = $request->header('Authorization');
 
             // Realizar validación de OAuth según tus necesidades
 
             // Obtener y validar el JSON de la solicitud
+
+            DB::insert('INSERT INTO crm.tabla_pruebas (nombre) values (?)', ['prueba equifax']);
             $jsonTransaction = $request->json();
 
             // Verificar si se proporcionó un JSON válido
