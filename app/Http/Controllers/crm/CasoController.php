@@ -11,6 +11,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\ChatGroups;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
+use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\DTipoTarea;
 use App\Models\crm\Estados;
 use App\Models\crm\EstadosFormulas;
@@ -688,7 +689,30 @@ class CasoController extends Controller
 
                 $reqCaso->valor_multiple = json_encode($nuevoArray);
             }
+            $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
             $reqCaso->save();
         }
+    }
+    public function validarEnrolamiento($casoId, $tipoCampo)
+    {
+
+        $clienteCaso = Caso::find($casoId);
+        if ($tipoCampo !== 'equifax') {
+            return false;
+        }
+        if ($clienteCaso == null) {
+            return false;
+        }
+        $cedula = $clienteCaso['entidad']->ent_identificacion;
+        if ($cedula == '1234567991') {
+            return false;
+        }
+        //--El cliente ya esta enrolado?
+        $clienteEnrolamiento = ClienteEnrolamiento::where('IdNumber', $cedula)->first();
+        if ($clienteEnrolamiento) {
+            return true;
+        }
+
+        return false;
     }
 }
