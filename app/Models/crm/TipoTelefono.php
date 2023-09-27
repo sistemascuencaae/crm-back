@@ -6,16 +6,14 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class TelefonosReferencias extends Model
+class TipoTelefono extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.telefonos_referencias';
+    protected $table = 'crm.tipo_telefono';
 
     protected $fillable = [
-        "ref_id",
-        "numero_telefono",
-        "tipo_telefono",
+        "nombre",
     ];
 
     public function setCreatedAtAttribute($value)

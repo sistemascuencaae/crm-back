@@ -109,10 +109,10 @@ class ReferenciasClienteController extends Controller
                 if (isset($telefonoData['id'])) {
                     // Actualiza los teléfonos existentes
                     $telefono = TelefonosReferencias::findOrFail($telefonoData['id']);
-                    $telefono->update(['numero_telefono' => $telefonoData['numero_telefono']]);
+                    $telefono->update(['numero_telefono' => $telefonoData['numero_telefono'], 'tipo_telefono' => $telefonoData['tipo_telefono']]);
                 } else {
                     // Agrega nuevos teléfonos
-                    $ref->telefonos()->create(['numero_telefono' => $telefonoData['numero_telefono']]);
+                    $ref->telefonos()->create(['numero_telefono' => $telefonoData['numero_telefono'], 'tipo_telefono' => $telefonoData['tipo_telefono']]);
                 }
             }
 
