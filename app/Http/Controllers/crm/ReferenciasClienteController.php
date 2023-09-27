@@ -63,43 +63,29 @@ class ReferenciasClienteController extends Controller
     public function addReferenciasCliente(Request $request)
     {
         try {
-            $data = $request->input('data'); // Asume que los datos están en una clave 'data' en la solicitud
+            DB::beginTransaction();
 
-            $respuesta = DB::transaction(function () use ($data) {
+            // Crea una nueva referencia
+            $ref = new ReferenciasCliente($request->except('telefonos'));
+            $ref->save();
 
-                foreach ($data as $item) {
-                    // Buscar el cli_id en otra_tabla basado en el ent_id
-                    $cliId = ClienteCrm::where('ent_id', $item['ent_id'])->value('id');
+            // Itera sobre los teléfonos y crea cada uno asociado a la nueva referencia
+            foreach ($request->telefonos as $telefonoData) {
+                $telefono = new TelefonosReferencias($telefonoData);
+                $ref->telefonos()->save($telefono);
+            }
 
-                    // Crear una nueva instancia de ReferenciaCliente
-                    $referenciaCliente = new ReferenciasCliente();
-                    $referenciaCliente->ent_id = $item['ent_id'];
-                    $referenciaCliente->cli_id = $cliId; // Asignar el cli_id encontrado
-                    $referenciaCliente->nombre_comercial = $item['nombre_comercial'];
-                    $referenciaCliente->parentesco = $item['parentesco'];
-                    $referenciaCliente->email = $item['email'];
-                    $referenciaCliente->direccion = $item['direccion'];
-                    $referenciaCliente->save();
+            DB::commit();
 
-                    // Iterar sobre los teléfonos y crear instancias de TelefonoReferencia asociadas
-                    foreach ($item['telefonos'] as $telefonoData) {
+            $respuesta = ReferenciasCliente::where('id', $ref->id)->with('telefonos')->first();
 
-                        // Verificar si numero_telefono no es null
-                        if ($telefonoData['numero_telefono'] !== null) {
-                            $telefonoReferencia = new TelefonosReferencias();
-                            $telefonoReferencia->ref_id = $referenciaCliente->id; // Asociar el teléfono con la referencia
-                            $telefonoReferencia->numero_telefono = $telefonoData['numero_telefono'];
-                            $telefonoReferencia->save();
-                        }
-                    }
-                }
-            });
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $respuesta));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se agregó con éxito', $respuesta));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
+            DB::rollback();
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
 
     public function editReferenciasCliente(Request $request, $id)
     {
@@ -176,14 +162,24 @@ class ReferenciasClienteController extends Controller
     public function deleteReferenciasCliente(Request $request, $id)
     {
         try {
+            DB::beginTransaction();
+
             $respuesta = ReferenciasCliente::findOrFail($id);
 
+            // Elimina los teléfonos asociados a la referencia antes de eliminar la referencia
+            $respuesta->telefonos()->delete();
+
+            // Elimina la referencia
             $respuesta->delete();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $respuesta));
+            DB::commit();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $respuesta));
         } catch (Exception $e) {
+            DB::rollback();
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
 
 }
