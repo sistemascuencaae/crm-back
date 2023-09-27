@@ -33,7 +33,7 @@ class TableroController extends Controller
     public function listByTablerosIdWithFases($tab_id)
     {
         try {
-            $tablero = Tablero::where('id', $tab_id)->where('estado', true)->with('fase')->first();
+            $tablero = Tablero::where('id', $tab_id)->where('estado', true)->with('fase.respuestas')->first();
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tablero));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));

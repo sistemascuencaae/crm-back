@@ -18,7 +18,7 @@ class EstadosFormulasController extends Controller
     public function listEstadosFormulasByTablero($id)
     {
         try {
-            $respuestas = EstadosFormulas::where('tab_id', $id)->with('estado_actual', 'respuesta_caso', 'estado_proximo', 'tablero', 'fase')->get();
+            $respuestas = EstadosFormulas::where('tab_id', $id)->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuestas));
         } catch (Exception $e) {
@@ -32,7 +32,7 @@ class EstadosFormulasController extends Controller
             // Validar si ya existe un registro con el mismo est_id_actual y resp_id
             $existingRecord = EstadosFormulas::where('est_id_actual', $request->est_id_actual)
                 ->where('resp_id', $request->resp_id)
-                ->with('estado_actual', 'respuesta_caso', 'estado_proximo', 'tablero', 'fase')
+                ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
                 ->first();
 
             if ($existingRecord) {
@@ -45,7 +45,7 @@ class EstadosFormulasController extends Controller
                 $respuestas = EstadosFormulas::create($request->all());
 
                 $resultado = EstadosFormulas::where('tab_id', $respuestas->tab_id)
-                    ->with('estado_actual', 'respuesta_caso', 'estado_proximo', 'tablero', 'fase')
+                    ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
                     ->orderBy('id', 'DESC')
                     ->get();
 
@@ -77,7 +77,7 @@ class EstadosFormulasController extends Controller
                 $respuestas->update($request->all());
 
                 $resultado = EstadosFormulas::where('id', $respuestas->id)
-                    ->with('estado_actual', 'respuesta_caso', 'estado_proximo', 'tablero', 'fase')
+                    ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
                     ->first();
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $resultado));
@@ -87,7 +87,6 @@ class EstadosFormulasController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 
     public function deleteEstadosFormulas(Request $request, $id)
     {
