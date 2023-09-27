@@ -8,6 +8,7 @@ use App\Http\Controllers\crm\CActividadClienteController;
 use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Controllers\crm\CFormularioController;
+use App\Http\Controllers\crm\ClienteCrmController;
 use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
 use App\Http\Controllers\crm\CondicionesController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\ClienteEnrolamientoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
+use App\Http\Controllers\crm\credito\ParentescoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
@@ -31,6 +33,7 @@ use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\NotificacionesController;
 use App\Http\Controllers\crm\PerfilAnalistasController;
+use App\Http\Controllers\crm\ReferenciasClienteController;
 use App\Http\Controllers\crm\ReqCasoController;
 use App\Http\Controllers\crm\RequerimientoController;
 use App\Http\Controllers\crm\RespuestasCasoController;
@@ -131,7 +134,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']); //
-    Route::get('/testControl/{casoId}/{faseId}/{userCreadorId}', [CasoController::class, 'testControl']);//
+    Route::get('/testControl/{casoId}/{faseId}/{userCreadorId}', [CasoController::class, 'testControl']); //
     /************************  FORMULARIOS   *********************** */
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
     Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
@@ -395,14 +398,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
     Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
 
-    // EQUIFAX / CLIENTE ENROLAMIENTO
-
-    Route::post('/addClienteEnrolamiento', [ClienteEnrolamientoController::class, 'addClienteEnrolamiento']); // Guardar la imagen de equifax
-
-    // SOLICITUD CREDITO
-
-    // Route::get('/solicitudByIdentificacion/{cedula}/{id_user_creador}', [solicitudCreditoController::class, 'solicitudByIdentificacion']); // Listar por cedula
-
 });
 
 Route::group([], function ($router) {
@@ -420,9 +415,27 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::get('/listSolicitudCreditoByRucCedula/{cedula}', [solicitudCreditoController::class, 'listSolicitudCreditoByRucCedula']); // Listar por cedula
     Route::get('/solicitudByIdentificacion/{cedula}/{id_user_creador}', [solicitudCreditoController::class, 'solicitudByIdentificacion']); // Listar por cedula
     Route::get('/solicitudByIdentificacion2/{cedula}/{id_user_creador}', [solicitudCreditoController::class, 'solicitudByIdentificacion2']); // Listar por cedula
-    // Route::get('/listSolicitudCreditoById/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoById']); // Listar solicitudes por ID
-    // Route::post('/updateSolicitudCredito/{id}', [solicitudCreditoController::class, 'updateSolicitudCredito']); // Editar
-    // Route::delete('/deleteSolicitudCredito/{id}', [solicitudCreditoController::class, 'deleteSolicitudCredito']); // Elimina
+
+    // EQUIFAX / CLIENTE ENROLAMIENTO
+
+    Route::post('/addClienteEnrolamiento', [ClienteEnrolamientoController::class, 'addClienteEnrolamiento']); // Guardar la imagen de equifax
+
+    // CLIENTE CRM
+
+    Route::get('/listClienteCrmByEntId/{ent_id}', [ClienteCrmController::class, 'listClienteCrmByEntId']); // Guardar
+    Route::post('/addClienteCrm', [ClienteCrmController::class, 'addClienteCrm']); // Guardar
+    Route::post('/editClienteCrm/{ent_id}', [ClienteCrmController::class, 'editClienteCrm']); // Editar
+
+    // Referencias CRM
+
+    Route::post('/addReferenciasCliente', [ReferenciasClienteController::class, 'addReferenciasCliente']); // Guardar
+    Route::post('/editReferenciasCliente/{id}', [ReferenciasClienteController::class, 'editReferenciasCliente']); // Editar
+
+    // parentesco CRM
+
+    Route::get('/listParentesco', [ParentescoController::class, 'listParentesco']); // listar
+
+
 });
 
 
