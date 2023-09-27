@@ -122,7 +122,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/listFase', [FaseController::class, 'list']);
     Route::post('/addFase', [FaseController::class, 'add']);
     Route::put('/editFase', [FaseController::class, 'edit']);
-    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']); //
+    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']); //actualizarOrdenFases
+    Route::post('/actualizarOrdenFases', [FaseController::class, 'actualizarOrdenFases']); //
     // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
     // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
 
