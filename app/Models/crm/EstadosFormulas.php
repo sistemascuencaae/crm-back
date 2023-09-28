@@ -16,7 +16,7 @@ class EstadosFormulas extends Model
 
     protected $table = 'crm.estados_formulas';
 
-    protected $fillable = ["est_id_actual", "resp_id", "est_id_proximo", "tablero_id", "fase_id", 'tab_id'];
+    protected $fillable = ["est_id_actual", "fase_id_actual", "resp_id", "est_id_proximo", "tablero_id", "fase_id", 'tab_id'];
 
     public function setCreatedAtAttribute($value)
     {
@@ -40,6 +40,11 @@ class EstadosFormulas extends Model
         return $this->belongsTo(Estados::class, "est_id_actual");
     }
 
+    public function fase_actual()
+    {
+        return $this->belongsTo(Fase::class, "fase_id_actual");
+    }
+
     public function respuesta_caso()
     {
         return $this->belongsTo(RespuestasCaso::class, "resp_id");
@@ -50,12 +55,12 @@ class EstadosFormulas extends Model
         return $this->belongsTo(Estados::class, "est_id_proximo");
     }
 
-    public function tablero()
+    public function tablero_proximo()
     {
         return $this->belongsTo(Tablero::class, "tablero_id");
     }
 
-    public function fase()
+    public function fase_proxima()
     {
         return $this->belongsTo(Fase::class, "fase_id");
     }
