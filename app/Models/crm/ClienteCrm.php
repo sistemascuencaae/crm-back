@@ -3,6 +3,7 @@
 namespace App\Models\crm;
 
 use App\Models\crm\ReferenciasCliente;
+use App\Models\crm\TelefonosCliente;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,22 +27,30 @@ class ClienteCrm extends Model
         "cactividad_economica",
         "numero_dependientes",
         "nombre_empresa",
-        "telefono_domicilio",
-        "celulares",
         "tipo_empresa",
-        "telefono_trabajo",
         "direccion",
         "numero_casa",
         "calle_secundaria",
         "referencias_direccion",
-        "telefono_lugar_trabajo1",
-        "telefono_lugar_trabajo2",
         "trabajo_direccion",
         "fecha_ingreso",
         "ingresos_totales",
         "gastos_totales",
         "activos_totales",
         "pasivos_totales",
+
+        "cedula_conyuge",
+        "nombres_conyuge",
+        "apellidos_conyuge",
+        "direccion_conyuge",
+        "email_conyuge",
+        "sexo_conyuge",
+        "fecha_nacimiento_conyuge",
+
+        "telefono_conyuge_1",
+        "telefono_conyuge_2",
+        "telefono_conyuge_3",
+        "observacion_conyuge",
     ];
 
     public function setCreatedAtAttribute($value)
@@ -58,6 +67,11 @@ class ClienteCrm extends Model
     public function referencias()
     {
         return $this->hasMany(ReferenciasCliente::class, "cli_id", "id");
+    }
+
+    public function telefonos()
+    {
+        return $this->hasMany(TelefonosCliente::class, "cli_id", "id");
     }
 
 }

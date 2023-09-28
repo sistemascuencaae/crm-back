@@ -20,6 +20,7 @@ use App\Http\Controllers\crm\credito\ParentescoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
+use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
 use App\Http\Controllers\crm\CTipoResultadoCierreController;
@@ -431,10 +432,15 @@ Route::group(["prefix" => "credito"], function ($router) {
 
     Route::post('/addReferenciasCliente', [ReferenciasClienteController::class, 'addReferenciasCliente']); // Guardar
     Route::post('/editReferenciasCliente/{id}', [ReferenciasClienteController::class, 'editReferenciasCliente']); // Editar
+    Route::delete('/deleteReferenciasCliente/{id}', [ReferenciasClienteController::class, 'deleteReferenciasCliente']); // Eliminar
 
     // parentesco CRM
 
     Route::get('/listParentesco', [ParentescoController::class, 'listParentesco']); // listar
+   
+    // Tipo Telefono CRM
+
+    Route::get('/listTipoTelefono', [TipoTelefonoController::class, 'listTipoTelefono']); // listar
 
 
 });

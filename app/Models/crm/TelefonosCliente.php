@@ -6,14 +6,14 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class TelefonosReferencias extends Model
+class TelefonosCliente extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.telefonos_referencias';
+    protected $table = 'crm.telefonos_cliente';
 
     protected $fillable = [
-        "ref_id",
+        "cli_id", // ref_id
         "numero_telefono",
         "tipo_telefono",
     ];
