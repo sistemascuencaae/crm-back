@@ -11,6 +11,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\ChatGroups;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
+use App\Models\crm\ClienteCrm;
 use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\DTipoTarea;
 use App\Models\crm\Estados;
@@ -20,6 +21,7 @@ use App\Models\crm\Notificaciones;
 use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tablero;
 use App\Models\crm\Tareas;
+use App\Models\crm\TelefonosCliente;
 use App\Models\crm\TipoCaso;
 use App\Models\User;
 use Exception;
@@ -716,41 +718,114 @@ class CasoController extends Controller
 
 
 
-    public function validarClienteSolicitudCredito($entId){
-        $cliente = DB::selectOne('SELECT * FROM crm.cliente WHERE ent_id = ?',[$entId]);
-        if($cliente)return $cliente;
+    public function validarClienteSolicitudCredito($entId)
+    {
 
-        $entidad = DB::selectOne('SELECT * FROM public.entidad WHERE ent_id = ?',[$entId]);
+        $data = DB::transaction(function () use ($entId) {
+            $cliente = DB::selectOne('SELECT * FROM crm.cliente WHERE ent_id = ?', [$entId]);
+            if ($cliente) return $cliente;
+            //entidad dinamo
+            $entidadPublic = DB::selectOne('SELECT * FROM public.entidad WHERE ent_id = ?', [$entId]);
+            //telefonos del cliente en el dinamo
+            $telefonosCliDynamo = DB::selectOne("SELECT com.com_telefono1 as tel_1_trabajo_sc, com.com_telefono2 as tel_2,
+	            (SELECT te.tel_numero
+                FROM telefono te
+                WHERE te.tel_id = ent.ent_telefono_principal) AS tel_domicilio_sc,
+                ( SELECT array_to_string(array_agg(tel.tel_numero), ','::text) AS array_to_string
+                FROM telefono_entidad te
+                JOIN telefono tel ON te.tel_id = tel.tel_id
+                WHERE te.ent_id = ent.ent_id) AS telefonos_adicionales
+                FROM entidad ent
+                inner join public.telefono telp on telp.tel_id = ent.ent_telefono_principal
+                LEFT JOIN public.cliente cli ON cli.ent_id = ent.ent_id
+                LEFT JOIN public.cliente_anexo cliane ON cliane.cli_id = cli.cli_id
+                LEFT JOIN public.compania com ON cliane.com_id = com.com_id
+                where ent.ent_identificacion = ?", [$entidadPublic->ent_identificacion]);
+            //vista solicitud de credito datos del cliente
+            $clienteSC = DB::selectOne("SELECT * FROM crm.av_solicitud_credito WHERE ent_id = ?", [$entId]);
+            //cliente conyuge
+            $clienteConyuge = DB::selectOne(" SELECT 'CED'::text AS tipodocumento,
+                    cliane.cliane_identificacion_conyuge AS numerodocumento,
+                    split_part(btrim(cliane.cliane_nombre_conyuge::text), ' '::text, 1) AS apellidopaterno,
+                    split_part(btrim(cliane.cliane_nombre_conyuge::text), ' '::text, 2) AS apellidomaterno,
+                    split_part(btrim(cliane.cliane_nombre_conyuge::text), ' '::text, 3) AS primernombre,
+                    cliane.cliane_fecha_nacimiento_conyuge AS fecha_nacimiento,
+	                    CASE
+                        WHEN cliane.cliane_sexo_conyuge::text = 4::text THEN 'M'::text
+                        WHEN cliane.cliane_sexo_conyuge::text = 5::text THEN 'F'::text
+                        ELSE 'F'::text
+                    END AS sexo
+                    FROM entidad ent
+                    LEFT JOIN cliente cli ON cli.ent_id = ent.ent_id
+                    LEFT JOIN cliente_anexo cliane ON cliane.cli_id = cli.cli_id
+                    where ent.ent_id = ? and cliane.cliane_identificacion_conyuge <> null", [$entId]);
+            //crear nuevo cliente
+            $nuevoCliente = new ClienteCrm();
+            $nuevoCliente->ent_id = $entidadPublic->ent_id;
+            $nuevoCliente->ent_tipo_identificacion = $entidadPublic->ent_tipo_identificacion;
+            $nuevoCliente->ent_identificacion = $entidadPublic->ent_identificacion;
+            $nuevoCliente->ent_nombres = $entidadPublic->ent_nombres;
+            $nuevoCliente->ent_apellidos = $entidadPublic->ent_nombres;
+            $nuevoCliente->ent_fechanacimiento = $entidadPublic->ent_fechanacimiento;
+            $nuevoCliente->ent_email =  $entidadPublic->ent_email;
+            $nuevoCliente->pai_nombre = $clienteSC->pai_nombre;
+            $nuevoCliente->ctn_nombre = $clienteSC->ctn_nombre;
+            $nuevoCliente->prq_nombre = $clienteSC->prq_nombre;
+            $nuevoCliente->prv_nombre = $clienteSC->prv_nombre;
+            $nuevoCliente->nivel_educacion = $clienteSC->nivel_educacion;
+            $nuevoCliente->cactividad_economica = $clienteSC->cactividad_economica;
+            $nuevoCliente->numero_dependientes = $clienteSC->numero_dependientes;
+            $nuevoCliente->nombre_empresa = $clienteSC->nombre_empresa;
+            $nuevoCliente->tipo_empresa = $clienteSC->tipo_empresa;
+            $nuevoCliente->direccion = $clienteSC->direccion;
+            $nuevoCliente->numero_casa = $clienteSC->numero_casa;
+            $nuevoCliente->calle_secundaria = $clienteSC->calle_secundaria;
+            $nuevoCliente->referencias_direccion = $clienteSC->referencias_direccion;
+            $nuevoCliente->trabajo_direccion = $clienteSC->trabajo_direccion;
+            $nuevoCliente->fecha_ingreso = $clienteSC->fecha_ingreso;
+            $nuevoCliente->ingresos_totales = $clienteSC->ingresos_totales;
+            $nuevoCliente->gastos_totales = $clienteSC->gastos_totales;
+            $nuevoCliente->activos_totales = $clienteSC->activos_totales;
+            $nuevoCliente->pasivos_totales = $clienteSC->pasivos_totales;
+            if ($clienteConyuge) {
+                $nuevoCliente->cedula_conyuge = $clienteConyuge->numerodocumento;
+                $nuevoCliente->nombres_conyuge = $clienteConyuge->primernombre;
+                $nuevoCliente->apellidos_conyuge = $clienteConyuge->apellidopaterno . ' ' . $clienteConyuge->apellidomaterno;
+                $nuevoCliente->sexo_conyuge = $clienteConyuge->sexo;
+                $nuevoCliente->fecha_nacimiento_conyuge = $clienteConyuge->fecha_nacimiento;
+            }
+            $nuevoCliente->save();
+            $telefonoCliente = new TelefonosCliente();
+            $telefonoCliente->cli_id = $nuevoCliente->id;
+            $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_1_trabajo_sc;
+            $telefonoCliente->tipo_telefono = "No definido";
+            $telefonoCliente->save();
+            $telefonoCliente = new TelefonosCliente();
+            $telefonoCliente->cli_id = $nuevoCliente->id;
+            $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_2;
+            $telefonoCliente->tipo_telefono = "No definido";
+            $telefonoCliente->save();
+            $telefonoCliente = new TelefonosCliente();
+            $telefonoCliente->cli_id = $nuevoCliente->id;
+            $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_domicilio_sc;
+            $telefonoCliente->tipo_telefono = "No definido";
+            $telefonoCliente->save();
+            $telefonosAdicionales = $telefonosCliDynamo->telefonos_adicionales;
+            $telefonosAdicionalesArray = explode(',', $telefonosAdicionales);;
+            foreach ($telefonosAdicionalesArray as $telefono) {
+                $telefonoCliente = new TelefonosCliente();
+                $telefonoCliente->cli_id = $nuevoCliente->id;
+                $telefonoCliente->numero_telefono = $telefono;
+                $telefonoCliente->tipo_telefono = "No definido";
+                $telefonoCliente->save();
+            }
+
+            $resul = ClienteCrm::find($nuevoCliente->id);
+            return $resul;
+        });
 
 
-
-        //telefonos del cliente en el dinamo
-        $telefonos = DB::selectOne("SELECT
-        com.com_telefono1 as tel_1_trabajo_sc,
-        com.com_telefono2 as tel_2,
-	    (SELECT te.tel_numero
-        FROM telefono te
-        WHERE te.tel_id = ent.ent_telefono_principal) AS tel_domicilio_sc,
-        ( SELECT array_to_string(array_agg(tel.tel_numero), ','::text) AS array_to_string
-        FROM telefono_entidad te
-        JOIN telefono tel ON te.tel_id = tel.tel_id
-        WHERE te.ent_id = ent.ent_id) AS telefonos_adicionales
-        FROM entidad ent
-        inner join public.telefono telp on telp.tel_id = ent.ent_telefono_principal
-        LEFT JOIN public.cliente cli ON cli.ent_id = ent.ent_id
-        LEFT JOIN public.cliente_anexo cliane ON cliane.cli_id = cli.cli_id
-        LEFT JOIN public.compania com ON cliane.com_id = com.com_id
-        where ent.ent_identificacion = ?",[$entidad->ent_identificacion]);
-
-
-        return $telefonos;
-
+        return $data;
 
     }
-
-
-
-
-
-
 }
