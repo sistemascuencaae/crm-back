@@ -15,10 +15,10 @@ class ClienteCrm extends Model
     protected $table = 'crm.cliente';
 
     protected $fillable = [
-        "ent_id",
-        "ent_identificacion",
-        "ent_nombres",
-        "ent_apellidos",
+        "id",
+        "identificacion",
+        "nombres",
+        "apellidos",
         "pai_nombre",
         "ctn_nombre",
         "prq_nombre",
@@ -51,6 +51,10 @@ class ClienteCrm extends Model
         "telefono_conyuge_2",
         "telefono_conyuge_3",
         "observacion_conyuge",
+        "fechanacimiento",
+        "tipo_identificacion",
+        "email"
+
     ];
 
     public function setCreatedAtAttribute($value)

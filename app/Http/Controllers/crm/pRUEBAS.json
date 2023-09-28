@@ -1,0 +1,48 @@
+{
+    " select\r\n\t\tsplit_part(btrim(refane.refane_nombre::text), ' '::text, 2) AS refane2_apellpa,\r\n\t\t\tCASE\r\n\t\t\t\tWHEN length(split_part(btrim(refane.refane_nombre::text), ' '::text, 3)) > 0 THEN split_part(btrim(refane.refane_nombre::text), ' '::text, 3)\r\n\t\t\t\tELSE 'SN'::text\r\n\t\t\tEND AS refane2_apellma,\r\n\t\tsplit_part(btrim(refane.refane_nombre::text), ' '::text, 1) AS refane2_nombre,\r\n\t\t refane.refane_nombre,\r\n ( SELECT fa_datos_cliente('accion'::character varying, refane.refane_descripcion) AS fa_datos_cliente) AS refane_parentesco,\r\n refane.refane_direccion,\r\n refane.refane_numero_telefono,\r\n refane.refane_numero_telefono2,\r\n refane.refane_numero_telefono3\r\nfrom public.entidad ent\r\ninner join public.referencias_anexo refane on refane.ent_id = ent.ent_id\r\nwhere ent.ent_id = 1103962 ": [
+        {
+            "refane2_apellpa": "FALQUEZ",
+            "refane2_apellma": "OYAGUE",
+            "refane2_nombre": "JORGE",
+            "refane_nombre": "JORGE FALQUEZ OYAGUE",
+            "refane_parentesco": "PARENTSPRIM",
+            "refane_direccion": "SUR ",
+            "refane_numero_telefono": "0978616597",
+            "refane_numero_telefono2": "1111111222",
+            "refane_numero_telefono3": "1111113333"
+        },
+        {
+            "refane2_apellpa": "HIDROVO",
+            "refane2_apellma": "SN",
+            "refane2_nombre": "JUAN",
+            "refane_nombre": "JUAN HIDROVO",
+            "refane_parentesco": "PARENTNODEF",
+            "refane_direccion": "VIVE CON CLIENTE ",
+            "refane_numero_telefono": "2267032",
+            "refane_numero_telefono2": "2222211111",
+            "refane_numero_telefono3": "2222222333"
+        },
+        {
+            "refane2_apellpa": "JOSE",
+            "refane2_apellma": "FLORES",
+            "refane2_nombre": "JUAN",
+            "refane_nombre": "JUAN JOSE FLORES ",
+            "refane_parentesco": "PARENTNODEF",
+            "refane_direccion": "VIVE CON CLIENTE ",
+            "refane_numero_telefono": "0967223585",
+            "refane_numero_telefono2": "3333222222",
+            "refane_numero_telefono3": "3333111111"
+        },
+        {
+            "refane2_apellpa": "ZAMBRANO",
+            "refane2_apellma": "SN",
+            "refane2_nombre": "LEONARDO",
+            "refane_nombre": "LEONARDO ZAMBRANO ",
+            "refane_parentesco": "PARENTSAMIG",
+            "refane_direccion": "SUR ",
+            "refane_numero_telefono": "0959757774",
+            "refane_numero_telefono2": "4444411111",
+            "refane_numero_telefono3": "4444422222"
+        }
+    ]
+}
