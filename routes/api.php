@@ -135,8 +135,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
-    Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']); //
-    Route::get('/testControl/{casoId}/{faseId}/{userCreadorId}', [CasoController::class, 'testControl']); //
+    Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
+    //---------------------------------------------------------------->PRUEBAS
+    Route::get('/validarClienteSolicitudCredito/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']);//
     /************************  FORMULARIOS   *********************** */
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
     Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //

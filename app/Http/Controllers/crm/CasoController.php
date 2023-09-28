@@ -11,6 +11,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\ChatGroups;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
+use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\DTipoTarea;
 use App\Models\crm\Estados;
 use App\Models\crm\EstadosFormulas;
@@ -107,8 +108,6 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $th->getMessage()));
         }
     }
-
-
     public function list()
     {
         $data = Caso::with('caso.user', 'caso.entidad')->get();
@@ -688,7 +687,70 @@ class CasoController extends Controller
 
                 $reqCaso->valor_multiple = json_encode($nuevoArray);
             }
+            $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
             $reqCaso->save();
         }
     }
+    public function validarEnrolamiento($casoId, $tipoCampo)
+    {
+
+        $clienteCaso = Caso::find($casoId);
+        if ($tipoCampo !== 'equifax') {
+            return false;
+        }
+        if ($clienteCaso == null) {
+            return false;
+        }
+        $cedula = $clienteCaso['entidad']->ent_identificacion;
+        if ($cedula == '1234567991') {
+            return false;
+        }
+        //--El cliente ya esta enrolado?
+        $clienteEnrolamiento = ClienteEnrolamiento::where('IdNumber', $cedula)->first();
+        if ($clienteEnrolamiento) {
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+    public function validarClienteSolicitudCredito($entId){
+        $cliente = DB::selectOne('SELECT * FROM crm.cliente WHERE ent_id = ?',[$entId]);
+        if($cliente)return $cliente;
+
+        $entidad = DB::selectOne('SELECT * FROM public.entidad WHERE ent_id = ?',[$entId]);
+
+
+
+        //telefonos del cliente en el dinamo
+        $telefonos = DB::selectOne("SELECT
+        com.com_telefono1 as tel_1_trabajo_sc,
+        com.com_telefono2 as tel_2,
+	    (SELECT te.tel_numero
+        FROM telefono te
+        WHERE te.tel_id = ent.ent_telefono_principal) AS tel_domicilio_sc,
+        ( SELECT array_to_string(array_agg(tel.tel_numero), ','::text) AS array_to_string
+        FROM telefono_entidad te
+        JOIN telefono tel ON te.tel_id = tel.tel_id
+        WHERE te.ent_id = ent.ent_id) AS telefonos_adicionales
+        FROM entidad ent
+        inner join public.telefono telp on telp.tel_id = ent.ent_telefono_principal
+        LEFT JOIN public.cliente cli ON cli.ent_id = ent.ent_id
+        LEFT JOIN public.cliente_anexo cliane ON cliane.cli_id = cli.cli_id
+        LEFT JOIN public.compania com ON cliane.com_id = com.com_id
+        where ent.ent_identificacion = ?",[$entidad->ent_identificacion]);
+
+
+        return $telefonos;
+
+
+    }
+
+
+
+
+
+
 }
