@@ -20,7 +20,7 @@ class FlujoController extends Controller
 
     public function list()
     {
-        $data = Flujo::with('tarea','tarea.User','tarea.Entidad')->get();
+        $data = Flujo::with('tarea','tarea.User', 'tarea.clienteCrm')->get();
         return response()->json(RespuestaApi::returnResultado('success', 'El listado de flujos se consigiocon exito', $data));
     }
     public function create(Request $request)
