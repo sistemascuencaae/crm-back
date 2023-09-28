@@ -608,7 +608,7 @@ class CasoController extends Controller
     public function testControl($casoId, $faseId, $userCreadorId)
     {
         $reqFase = DB::select(
-            'SELECT rp.* from crm.requerimientos_predefinidos rp
+            'SELECT rp.* from crm.Dequerimientos_predefinidos rp
                 left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
                 WHERE rc.titulo IS null and rp.fase_id = ?',
             [$casoId, $faseId]
@@ -766,12 +766,12 @@ class CasoController extends Controller
                 //crear nuevo cliente
                 $nuevoCliente = new ClienteCrm();
                 $nuevoCliente->ent_id = $entidadPublic->ent_id;
-                $nuevoCliente->ent_tipo_identificacion = $entidadPublic->ent_tipo_identificacion;
-                $nuevoCliente->ent_identificacion = $entidadPublic->ent_identificacion;
-                $nuevoCliente->ent_nombres = $entidadPublic->ent_nombres;
-                $nuevoCliente->ent_apellidos = $entidadPublic->ent_nombres;
-                $nuevoCliente->ent_fechanacimiento = $entidadPublic->ent_fechanacimiento;
-                $nuevoCliente->ent_email =  $entidadPublic->ent_email;
+                $nuevoCliente->tipo_identificacion = $entidadPublic->ent_tipo_identificacion;
+                $nuevoCliente->identificacion = $entidadPublic->ent_identificacion;
+                $nuevoCliente->nombres = $entidadPublic->ent_nombres;
+                $nuevoCliente->apellidos = $entidadPublic->ent_nombres;
+                $nuevoCliente->fechanacimiento = $entidadPublic->ent_fechanacimiento;
+                $nuevoCliente->email =  $entidadPublic->ent_email;
                 if ($clienteSC) {
                     $nuevoCliente->pai_nombre = $clienteSC->pai_nombre;
                     $nuevoCliente->ctn_nombre = $clienteSC->ctn_nombre;
@@ -804,21 +804,20 @@ class CasoController extends Controller
 
 
                 if($telefonosCliDynamo != null){
-                    echo ('$nuevoCliente: ' . json_encode($telefonosCliDynamo));
                     $telefonoCliente = new TelefonosCliente();
                     $telefonoCliente->cli_id = $nuevoCliente->id;
                     $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_1_trabajo_sc;
-                    $telefonoCliente->tipo_telefono = "No definido";
+                    $telefonoCliente->tipo_telefono = "No Definido";
                     $telefonoCliente->save();
                     $telefonoCliente = new TelefonosCliente();
                     $telefonoCliente->cli_id = $nuevoCliente->id;
                     $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_2;
-                    $telefonoCliente->tipo_telefono = "No definido";
+                    $telefonoCliente->tipo_telefono = "No Definido";
                     $telefonoCliente->save();
                     $telefonoCliente = new TelefonosCliente();
                     $telefonoCliente->cli_id = $nuevoCliente->id;
                     $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_domicilio_sc;
-                    $telefonoCliente->tipo_telefono = "No definido";
+                    $telefonoCliente->tipo_telefono = "No Definido";
                     $telefonoCliente->save();
                     $telefonosAdicionales = $telefonosCliDynamo->telefonos_adicionales;
                     $telefonosAdicionalesArray = explode(',', $telefonosAdicionales);
@@ -826,7 +825,7 @@ class CasoController extends Controller
                         $telefonoCliente = new TelefonosCliente();
                         $telefonoCliente->cli_id = $nuevoCliente->id;
                         $telefonoCliente->numero_telefono = $telefono;
-                        $telefonoCliente->tipo_telefono = "No definido";
+                        $telefonoCliente->tipo_telefono = "No Definido";
                         $telefonoCliente->save();
                     }
                 }
@@ -868,7 +867,7 @@ class CasoController extends Controller
                             $telefonoRef = new TelefonosReferencias();
                             $telefonoRef->ref_id = $nuevaRef->id;
                             $telefonoRef->numero_telefono = $ref->refane_numero_telefono;
-                            $telefonoRef->tipo_telefono = "No definido";
+                            $telefonoRef->tipo_telefono = "No Definido";
                             $telefonoRef->save();
                         }
                         //telefono 2
@@ -876,7 +875,7 @@ class CasoController extends Controller
                             $telefonoRef = new TelefonosReferencias();
                             $telefonoRef->ref_id = $nuevaRef->id;
                             $telefonoRef->numero_telefono = $ref->refane_numero_telefono2;
-                            $telefonoRef->tipo_telefono = "No definido";
+                            $telefonoRef->tipo_telefono = "No Definido";
                             $telefonoRef->save();
                         }
                         //telefono 3
@@ -884,7 +883,7 @@ class CasoController extends Controller
                             $telefonoRef = new TelefonosReferencias();
                             $telefonoRef->ref_id = $nuevaRef->id;
                             $telefonoRef->numero_telefono = $ref->refane_numero_telefono3;
-                            $telefonoRef->tipo_telefono = "No definido";
+                            $telefonoRef->tipo_telefono = "No Definido";
                             $telefonoCliente->save();
                         }
                     }
