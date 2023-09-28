@@ -27,7 +27,7 @@ class CrmController extends Controller
             'fase.caso',
             'fase.caso.user',
             'fase.caso.tipocaso',
-            'fase.caso.entidad',
+            'fase.caso.clienteCrm',
             'fase.caso.resumen',
             'fase.caso.tareas',
             'fase.caso.miembros.usuario',

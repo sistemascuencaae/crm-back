@@ -27,7 +27,7 @@ class FaseController extends Controller
             // $data = Fase::with([
             //     'caso.user',
             //     'caso.userCreador',
-            //     'caso.entidad',
+            //     'caso.clienteCrm',
             //     'caso.resumen',
             //     'caso.tareas' => function ($query) use ($tabId) {
             //         $query->where('tab_id', $tabId);
@@ -76,7 +76,7 @@ class FaseController extends Controller
 
     public function edit(Request $request)
     {
-        //$data = Fase::with('caso.user','caso.entidad', 'caso.resumen', 'caso.tareas','caso.actividad')->where('tab_id',$tableroId)->get();
+        //$data = Fase::with('caso.user','caso.clienteCrm', 'caso.resumen', 'caso.tareas','caso.actividad')->where('tab_id',$tableroId)->get();
         try {
 
             $data = DB::transaction(function () use ($request) {
@@ -157,7 +157,7 @@ class FaseController extends Controller
     {
         try {
             $listaFases = $request->all();
-            
+
             $id = DB::transaction(function () use ($listaFases) {
                 $tabId = 0;
                 foreach ($listaFases as $item) {
@@ -183,7 +183,7 @@ class FaseController extends Controller
         $data = Fase::with([
             'caso.user',
             'caso.userCreador',
-            'caso.entidad',
+            'caso.clienteCrm',
             'caso.resumen',
             'caso.tareas' => function ($query) use ($tabId) {
                 $query->where('tab_id', $tabId);

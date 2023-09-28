@@ -63,9 +63,13 @@ class Caso extends Model
     {
         return $this->belongsTo(TipoCaso::class, "user_id", "id");
     }
-    public function entidad()
+    // public function entidad()
+    // {
+    //     return $this->belongsTo(Entidad::class, "ent_id");
+    // }
+    public function clienteCrm()
     {
-        return $this->belongsTo(Entidad::class, "ent_id");
+        return $this->belongsTo(ClienteCrm::class, "cliente_id");
     }
     public function resumen()
     {

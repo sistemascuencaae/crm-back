@@ -203,7 +203,7 @@ class TableroController extends Controller
             // inner join public.users u2 on u2.id = cs.user_id
             // inner join crm.fase f on f.id = cs.fas_id
             // inner join crm.tablero tab on tab.id = f.tab_id
-            // inner join public.entidad ent on ent.ent_id = cs.ent_id
+            // inner join public.clienteCrm ent on ent.ent_id = cs.ent_id
             // inner join crm.chat_groups cg on cg.id = m.chat_group_id
             // where u.id = " . $user_id . "
             // order By caso_id DESC");
