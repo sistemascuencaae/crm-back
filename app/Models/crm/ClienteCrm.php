@@ -51,6 +51,10 @@ class ClienteCrm extends Model
         "telefono_conyuge_2",
         "telefono_conyuge_3",
         "observacion_conyuge",
+        "ent_fechanacimiento",
+        "ent_tipo_identificacion",
+        "ent_email"
+
     ];
 
     public function setCreatedAtAttribute($value)
