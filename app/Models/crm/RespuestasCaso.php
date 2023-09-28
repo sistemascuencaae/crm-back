@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\crm\Fase;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,4 +31,11 @@ class RespuestasCaso extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["deleted_at"] = Carbon::now();
     }
+
+    public function fase()
+    {
+        return $this->belongsTo(Fase::class, "fase_id");
+    }
+
+    
 }
