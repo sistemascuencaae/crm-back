@@ -17,11 +17,8 @@ class EntidadController extends Controller
     {
         try{
         $data = Entidad::with('cliente', 'direccion', 'clientefae', 'referenanexo')->where('ent_id', $id)->first();
-        //$clifae = DB::select("select * from public.av_clientes_reiterativos c where c.cedula = '0100091560';");
-
-        // return response()->json(["message" => 200, "data" => $data]);
         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
-        } catch (Exception $e) {    
+        } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -106,4 +103,4 @@ class EntidadController extends Controller
 //     } catch (Exception $e) {
 //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
 //     }
-// } 
+// }

@@ -114,7 +114,7 @@ class CasoController extends Controller
     }
     public function list()
     {
-        $data = Caso::with('caso.user', 'caso.entidad')->get();
+        $data = Caso::with('caso.user', 'caso.clienteCrm')->get();
         return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigio con exito', $data));
     }
     public function casoById($id)
@@ -132,7 +132,7 @@ class CasoController extends Controller
             $casoAudit = Caso::with(
                 'user',
                 'userCreador',
-                'entidad',
+                'clienteCrm',
                 'fase.tablero',
             )->find($casoId); // Solo para el audits NADA MAS
 
@@ -173,7 +173,7 @@ class CasoController extends Controller
 
     public function listCasoById($id)
     {
-        // $data = Caso::with('user', 'entidad', 'cTipoTarea.dTipoTarea')->where('id', $id)->get();
+        // $data = Caso::with('user', 'clienteCrm', 'cTipoTarea.dTipoTarea')->where('id', $id)->get();
         // return response()->json(RespuestaApi::returnResultado('success', 'El caso se listo con éxito', $data));
         try {
 
@@ -543,13 +543,10 @@ class CasoController extends Controller
             inner join crm.fase fa on fa.id = co.fas_id
             inner join crm.tablero t on t.id = fa.tab_id
         where co.id = ' . $casoId)[0];
-
-
-
         return Caso::with([
             'user',
             'userCreador',
-            'entidad',
+            'clienteCrm',
             'resumen',
             'tareas' => function ($query) use ($tabId) {
                 $query->where('tab_id', $tabId->id);
@@ -589,7 +586,7 @@ class CasoController extends Controller
                 "tab_id" => sizeof($tabDepa) > 0 ? $tabDepa[0]->tab_id : null,
             ]);
 
-            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.entidad', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
                 ->where('id', $noti->id)
                 ->orderBy('id', 'DESC')->first();
 
@@ -640,12 +637,6 @@ class CasoController extends Controller
 
                 $reqCaso->valor_multiple = $nuevoArray;
             }
-
-
-
-
-
-
             array_push($arrayTest, $reqCaso);
             //echo ('$reqCaso: '.json_encode($reqCaso));
             //$reqCaso->save();
@@ -705,7 +696,7 @@ class CasoController extends Controller
         if ($clienteCaso == null) {
             return false;
         }
-        $cedula = $clienteCaso['entidad']->ent_identificacion;
+        $cedula = $clienteCaso['clienteCrm']->ent_identificacion;
         if ($cedula == '1234567991') {
             return false;
         }
