@@ -772,25 +772,27 @@ class CasoController extends Controller
                 $nuevoCliente->ent_apellidos = $entidadPublic->ent_nombres;
                 $nuevoCliente->ent_fechanacimiento = $entidadPublic->ent_fechanacimiento;
                 $nuevoCliente->ent_email =  $entidadPublic->ent_email;
-                $nuevoCliente->pai_nombre = $clienteSC->pai_nombre;
-                $nuevoCliente->ctn_nombre = $clienteSC->ctn_nombre;
-                $nuevoCliente->prq_nombre = $clienteSC->prq_nombre;
-                $nuevoCliente->prv_nombre = $clienteSC->prv_nombre;
-                $nuevoCliente->nivel_educacion = $clienteSC->nivel_educacion;
-                $nuevoCliente->cactividad_economica = $clienteSC->cactividad_economica;
-                $nuevoCliente->numero_dependientes = $clienteSC->numero_dependientes;
-                $nuevoCliente->nombre_empresa = $clienteSC->nombre_empresa;
-                $nuevoCliente->tipo_empresa = $clienteSC->tipo_empresa;
-                $nuevoCliente->direccion = $clienteSC->direccion;
-                $nuevoCliente->numero_casa = $clienteSC->numero_casa;
-                $nuevoCliente->calle_secundaria = $clienteSC->calle_secundaria;
-                $nuevoCliente->referencias_direccion = $clienteSC->referencias_direccion;
-                $nuevoCliente->trabajo_direccion = $clienteSC->trabajo_direccion;
-                $nuevoCliente->fecha_ingreso = $clienteSC->fecha_ingreso;
-                $nuevoCliente->ingresos_totales = $clienteSC->ingresos_totales;
-                $nuevoCliente->gastos_totales = $clienteSC->gastos_totales;
-                $nuevoCliente->activos_totales = $clienteSC->activos_totales;
-                $nuevoCliente->pasivos_totales = $clienteSC->pasivos_totales;
+                if ($clienteSC) {
+                    $nuevoCliente->pai_nombre = $clienteSC->pai_nombre;
+                    $nuevoCliente->ctn_nombre = $clienteSC->ctn_nombre;
+                    $nuevoCliente->prq_nombre = $clienteSC->prq_nombre;
+                    $nuevoCliente->prv_nombre = $clienteSC->prv_nombre;
+                    $nuevoCliente->nivel_educacion = $clienteSC->nivel_educacion;
+                    $nuevoCliente->cactividad_economica = $clienteSC->cactividad_economica;
+                    $nuevoCliente->numero_dependientes = $clienteSC->numero_dependientes;
+                    $nuevoCliente->nombre_empresa = $clienteSC->nombre_empresa;
+                    $nuevoCliente->tipo_empresa = $clienteSC->tipo_empresa;
+                    $nuevoCliente->direccion = $clienteSC->direccion;
+                    $nuevoCliente->numero_casa = $clienteSC->numero_casa;
+                    $nuevoCliente->calle_secundaria = $clienteSC->calle_secundaria;
+                    $nuevoCliente->referencias_direccion = $clienteSC->referencias_direccion;
+                    $nuevoCliente->trabajo_direccion = $clienteSC->trabajo_direccion;
+                    $nuevoCliente->fecha_ingreso = $clienteSC->fecha_ingreso;
+                    $nuevoCliente->ingresos_totales = $clienteSC->ingresos_totales;
+                    $nuevoCliente->gastos_totales = $clienteSC->gastos_totales;
+                    $nuevoCliente->activos_totales = $clienteSC->activos_totales;
+                    $nuevoCliente->pasivos_totales = $clienteSC->pasivos_totales;
+                }
                 if ($clienteConyuge) {
                     $nuevoCliente->cedula_conyuge = $clienteConyuge->numerodocumento;
                     $nuevoCliente->nombres_conyuge = $clienteConyuge->primernombre;
@@ -799,30 +801,37 @@ class CasoController extends Controller
                     $nuevoCliente->fecha_nacimiento_conyuge = $clienteConyuge->fecha_nacimiento;
                 }
                 $nuevoCliente->save();
-                $telefonoCliente = new TelefonosCliente();
-                $telefonoCliente->cli_id = $nuevoCliente->id;
-                $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_1_trabajo_sc;
-                $telefonoCliente->tipo_telefono = "No definido";
-                $telefonoCliente->save();
-                $telefonoCliente = new TelefonosCliente();
-                $telefonoCliente->cli_id = $nuevoCliente->id;
-                $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_2;
-                $telefonoCliente->tipo_telefono = "No definido";
-                $telefonoCliente->save();
-                $telefonoCliente = new TelefonosCliente();
-                $telefonoCliente->cli_id = $nuevoCliente->id;
-                $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_domicilio_sc;
-                $telefonoCliente->tipo_telefono = "No definido";
-                $telefonoCliente->save();
-                $telefonosAdicionales = $telefonosCliDynamo->telefonos_adicionales;
-                $telefonosAdicionalesArray = explode(',', $telefonosAdicionales);;
-                foreach ($telefonosAdicionalesArray as $telefono) {
+
+
+                if($telefonosCliDynamo != null){
+                    echo ('$nuevoCliente: ' . json_encode($telefonosCliDynamo));
                     $telefonoCliente = new TelefonosCliente();
                     $telefonoCliente->cli_id = $nuevoCliente->id;
-                    $telefonoCliente->numero_telefono = $telefono;
+                    $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_1_trabajo_sc;
                     $telefonoCliente->tipo_telefono = "No definido";
                     $telefonoCliente->save();
+                    $telefonoCliente = new TelefonosCliente();
+                    $telefonoCliente->cli_id = $nuevoCliente->id;
+                    $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_2;
+                    $telefonoCliente->tipo_telefono = "No definido";
+                    $telefonoCliente->save();
+                    $telefonoCliente = new TelefonosCliente();
+                    $telefonoCliente->cli_id = $nuevoCliente->id;
+                    $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_domicilio_sc;
+                    $telefonoCliente->tipo_telefono = "No definido";
+                    $telefonoCliente->save();
+                    $telefonosAdicionales = $telefonosCliDynamo->telefonos_adicionales;
+                    $telefonosAdicionalesArray = explode(',', $telefonosAdicionales);
+                    foreach ($telefonosAdicionalesArray as $telefono) {
+                        $telefonoCliente = new TelefonosCliente();
+                        $telefonoCliente->cli_id = $nuevoCliente->id;
+                        $telefonoCliente->numero_telefono = $telefono;
+                        $telefonoCliente->tipo_telefono = "No definido";
+                        $telefonoCliente->save();
+                    }
                 }
+
+
 
 
                 $clienteReferencias = DB::select("SELECT
@@ -841,56 +850,53 @@ class CasoController extends Controller
             from public.entidad ent
             inner join public.referencias_anexo refane on refane.ent_id = ent.ent_id
             where ent.ent_id = ? ", [$entId]);
-
-                foreach ($clienteReferencias as $ref) {
-                    $nuevaRef = new ReferenciasCliente();
-                    $nuevaRef->cli_id = $nuevoCliente->id;
-                    $nuevaRef->ent_id = $nuevoCliente->ent_id;
-                    $nuevaRef->nombre1 = $ref->refane2_nombre;
-                    $nuevaRef->apellido1 = $ref->refane2_apellpa;
-                    $nuevaRef->apellido2 = $ref->refane2_apellma;
-                    $nuevaRef->nombre_comercial = $ref->refane_nombre;
-                    $nuevaRef->parentesco = $ref->refane_parentesco;
-                    $nuevaRef->direccion = $ref->refane_direccion;
-                    $nuevaRef->estado = true;
-                    $nuevaRef->save();
-                    //telefono 1
-                    if ($ref->refane_numero_telefono) {
-                        $telefonoRef = new TelefonosReferencias();
-                        $telefonoRef->ref_id = $nuevaRef->id;
-                        $telefonoRef->numero_telefono = $ref->refane_numero_telefono;
-                        $telefonoRef->tipo_telefono = "No definido";
-                        $telefonoRef->save();
-                    }
-                    //telefono 2
-                    if ($ref->refane_numero_telefono2) {
-                        $telefonoRef = new TelefonosReferencias();
-                        $telefonoRef->ref_id = $nuevaRef->id;
-                        $telefonoRef->numero_telefono = $ref->refane_numero_telefono2;
-                        $telefonoRef->tipo_telefono = "No definido";
-                        $telefonoRef->save();
-                    }
-                    //telefono 3
-                    if ($ref->refane_numero_telefono3) {
-                        $telefonoRef = new TelefonosReferencias();
-                        $telefonoRef->ref_id = $nuevaRef->id;
-                        $telefonoRef->numero_telefono = $ref->refane_numero_telefono3;
-                        $telefonoRef->tipo_telefono = "No definido";
-                        $telefonoCliente->save();
+                if($clienteReferencias){
+                    foreach ($clienteReferencias as $ref) {
+                        $nuevaRef = new ReferenciasCliente();
+                        $nuevaRef->cli_id = $nuevoCliente->id;
+                        $nuevaRef->ent_id = $nuevoCliente->ent_id;
+                        $nuevaRef->nombre1 = $ref->refane2_nombre;
+                        $nuevaRef->apellido1 = $ref->refane2_apellpa;
+                        $nuevaRef->apellido2 = $ref->refane2_apellma;
+                        $nuevaRef->nombre_comercial = $ref->refane_nombre;
+                        $nuevaRef->parentesco = $ref->refane_parentesco;
+                        $nuevaRef->direccion = $ref->refane_direccion;
+                        $nuevaRef->estado = true;
+                        $nuevaRef->save();
+                        //telefono 1
+                        if ($ref->refane_numero_telefono) {
+                            $telefonoRef = new TelefonosReferencias();
+                            $telefonoRef->ref_id = $nuevaRef->id;
+                            $telefonoRef->numero_telefono = $ref->refane_numero_telefono;
+                            $telefonoRef->tipo_telefono = "No definido";
+                            $telefonoRef->save();
+                        }
+                        //telefono 2
+                        if ($ref->refane_numero_telefono2) {
+                            $telefonoRef = new TelefonosReferencias();
+                            $telefonoRef->ref_id = $nuevaRef->id;
+                            $telefonoRef->numero_telefono = $ref->refane_numero_telefono2;
+                            $telefonoRef->tipo_telefono = "No definido";
+                            $telefonoRef->save();
+                        }
+                        //telefono 3
+                        if ($ref->refane_numero_telefono3) {
+                            $telefonoRef = new TelefonosReferencias();
+                            $telefonoRef->ref_id = $nuevaRef->id;
+                            $telefonoRef->numero_telefono = $ref->refane_numero_telefono3;
+                            $telefonoRef->tipo_telefono = "No definido";
+                            $telefonoCliente->save();
+                        }
                     }
                 }
+
                 $resul = ClienteCrm::with('telefonos', 'referencias.telefonos')->find($nuevoCliente->id);
                 return $resul;
             });
 
             return $data;
-
         } catch (\Throwable $th) {
             return $th;
         }
-
-
-
-
     }
 }
