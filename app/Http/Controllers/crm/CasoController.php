@@ -18,10 +18,12 @@ use App\Models\crm\Estados;
 use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Miembros;
 use App\Models\crm\Notificaciones;
+use App\Models\crm\ReferenciasCliente;
 use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tablero;
 use App\Models\crm\Tareas;
 use App\Models\crm\TelefonosCliente;
+use App\Models\crm\TelefonosReferencias;
 use App\Models\crm\TipoCaso;
 use App\Models\User;
 use Exception;
@@ -722,6 +724,7 @@ class CasoController extends Controller
     {
 
         $data = DB::transaction(function () use ($entId) {
+
             $cliente = DB::selectOne('SELECT * FROM crm.cliente WHERE ent_id = ?', [$entId]);
             if ($cliente) return $cliente;
             //entidad dinamo
@@ -820,7 +823,64 @@ class CasoController extends Controller
                 $telefonoCliente->save();
             }
 
-            $resul = ClienteCrm::find($nuevoCliente->id);
+
+            $clienteReferencias = DB::select("SELECT
+		    split_part(btrim(refane.refane_nombre::text), ' '::text, 2) AS refane2_apellpa,
+			CASE
+				WHEN length(split_part(btrim(refane.refane_nombre::text), ' '::text, 3)) > 0 THEN split_part(btrim(refane.refane_nombre::text), ' '::text, 3)
+				ELSE 'SN'::text
+			END AS refane2_apellma,
+		    split_part(btrim(refane.refane_nombre::text), ' '::text, 1) AS refane2_nombre,
+		    refane.refane_nombre,
+            ( SELECT fa_datos_cliente('accion'::character varying, refane.refane_descripcion) AS fa_datos_cliente) AS refane_parentesco,
+            refane.refane_direccion,
+            refane.refane_numero_telefono,
+            refane.refane_numero_telefono2,
+            refane.refane_numero_telefono3
+            from public.entidad ent
+            inner join public.referencias_anexo refane on refane.ent_id = ent.ent_id
+            where ent.ent_id = ? ",[$entId]);
+
+            foreach($clienteReferencias as $ref){
+                $nuevaRef = new ReferenciasCliente();
+                $nuevaRef->cli_id = $nuevoCliente->id;
+                $nuevaRef->ent_id = $nuevoCliente->ent_id;
+                $nuevaRef->nombre1 = $ref->refane2_nombre;
+                $nuevaRef->apellido1 = $ref->refane2_apellpa;
+                $nuevaRef->apellido2 = $ref->refane2_apellma;
+                $nuevaRef->nombre_comercial = $ref->refane_nombre;
+                $nuevaRef->parentesco = $ref->refane_parentesco;
+                $nuevaRef->direccion = $ref->refane_direccion;
+                $nuevaRef->estado = true;
+                $nuevaRef->save();
+                //telefono 1
+                if($ref->refane_numero_telefono){
+                    $telefonoRef = new TelefonosReferencias();
+                    $telefonoRef->ref_id = $nuevaRef->id;
+                    $telefonoRef->numero_telefono = $ref->refane_numero_telefono;
+                    $telefonoRef->tipo_telefono = "No definido";
+                    $telefonoRef->save();
+                }
+                //telefono 2
+                if($ref->refane_numero_telefono2){
+                    $telefonoRef = new TelefonosReferencias();
+                    $telefonoRef->ref_id = $nuevaRef->id;
+                    $telefonoRef->numero_telefono = $ref->refane_numero_telefono2;
+                    $telefonoRef->tipo_telefono = "No definido";
+                    $telefonoRef->save();
+                }
+                //telefono 3
+               if($ref->refane_numero_telefono3){
+                    $telefonoRef = new TelefonosReferencias();
+                    $telefonoRef->ref_id = $nuevaRef->id;
+                    $telefonoRef->numero_telefono = $ref->refane_numero_telefono3;
+                    $telefonoRef->tipo_telefono = "No definido";
+                    $telefonoCliente->save();
+               }
+            }
+
+            echo ('variables: '.json_encode('test final 1'));
+            $resul = ClienteCrm::with('telefonos','referencias.telefonos')->find($nuevoCliente->id);
             return $resul;
         });
 
