@@ -73,7 +73,7 @@ class CasoController extends Controller
                 $caso->estado_2 = $estadoInicial->id;
                 $caso->nombre = 'CASO # ' . $caso->id;
                 $caso->user_creador_id = $userLoginId;
-
+                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
                 $caso->save();
                 for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
@@ -722,15 +722,16 @@ class CasoController extends Controller
 
     public function validarClienteSolicitudCredito($entId)
     {
+        try {
+            $data = DB::transaction(function () use ($entId) {
 
-        $data = DB::transaction(function () use ($entId) {
-
-            $cliente = DB::selectOne('SELECT * FROM crm.cliente WHERE ent_id = ?', [$entId]);
-            if ($cliente) return $cliente;
-            //entidad dinamo
-            $entidadPublic = DB::selectOne('SELECT * FROM public.entidad WHERE ent_id = ?', [$entId]);
-            //telefonos del cliente en el dinamo
-            $telefonosCliDynamo = DB::selectOne("SELECT com.com_telefono1 as tel_1_trabajo_sc, com.com_telefono2 as tel_2,
+                //$cliente = DB::selectOne('SELECT * FROM crm.cliente WHERE ent_id = ?', [$entId]);
+                $cliente = ClienteCrm::where('ent_id', $entId)->first();
+                if ($cliente) return $cliente;
+                //entidad dinamo
+                $entidadPublic = DB::selectOne('SELECT * FROM public.entidad WHERE ent_id = ?', [$entId]);
+                //telefonos del cliente en el dinamo
+                $telefonosCliDynamo = DB::selectOne("SELECT com.com_telefono1 as tel_1_trabajo_sc, com.com_telefono2 as tel_2,
 	            (SELECT te.tel_numero
                 FROM telefono te
                 WHERE te.tel_id = ent.ent_telefono_principal) AS tel_domicilio_sc,
@@ -744,10 +745,10 @@ class CasoController extends Controller
                 LEFT JOIN public.cliente_anexo cliane ON cliane.cli_id = cli.cli_id
                 LEFT JOIN public.compania com ON cliane.com_id = com.com_id
                 where ent.ent_identificacion = ?", [$entidadPublic->ent_identificacion]);
-            //vista solicitud de credito datos del cliente
-            $clienteSC = DB::selectOne("SELECT * FROM crm.av_solicitud_credito WHERE ent_id = ?", [$entId]);
-            //cliente conyuge
-            $clienteConyuge = DB::selectOne(" SELECT 'CED'::text AS tipodocumento,
+                //vista solicitud de credito datos del cliente
+                $clienteSC = DB::selectOne("SELECT * FROM crm.av_solicitud_credito WHERE ent_id = ?", [$entId]);
+                //cliente conyuge
+                $clienteConyuge = DB::selectOne(" SELECT 'CED'::text AS tipodocumento,
                     cliane.cliane_identificacion_conyuge AS numerodocumento,
                     split_part(btrim(cliane.cliane_nombre_conyuge::text), ' '::text, 1) AS apellidopaterno,
                     split_part(btrim(cliane.cliane_nombre_conyuge::text), ' '::text, 2) AS apellidomaterno,
@@ -762,69 +763,69 @@ class CasoController extends Controller
                     LEFT JOIN cliente cli ON cli.ent_id = ent.ent_id
                     LEFT JOIN cliente_anexo cliane ON cliane.cli_id = cli.cli_id
                     where ent.ent_id = ? and cliane.cliane_identificacion_conyuge <> null", [$entId]);
-            //crear nuevo cliente
-            $nuevoCliente = new ClienteCrm();
-            $nuevoCliente->ent_id = $entidadPublic->ent_id;
-            $nuevoCliente->ent_tipo_identificacion = $entidadPublic->ent_tipo_identificacion;
-            $nuevoCliente->ent_identificacion = $entidadPublic->ent_identificacion;
-            $nuevoCliente->ent_nombres = $entidadPublic->ent_nombres;
-            $nuevoCliente->ent_apellidos = $entidadPublic->ent_nombres;
-            $nuevoCliente->ent_fechanacimiento = $entidadPublic->ent_fechanacimiento;
-            $nuevoCliente->ent_email =  $entidadPublic->ent_email;
-            $nuevoCliente->pai_nombre = $clienteSC->pai_nombre;
-            $nuevoCliente->ctn_nombre = $clienteSC->ctn_nombre;
-            $nuevoCliente->prq_nombre = $clienteSC->prq_nombre;
-            $nuevoCliente->prv_nombre = $clienteSC->prv_nombre;
-            $nuevoCliente->nivel_educacion = $clienteSC->nivel_educacion;
-            $nuevoCliente->cactividad_economica = $clienteSC->cactividad_economica;
-            $nuevoCliente->numero_dependientes = $clienteSC->numero_dependientes;
-            $nuevoCliente->nombre_empresa = $clienteSC->nombre_empresa;
-            $nuevoCliente->tipo_empresa = $clienteSC->tipo_empresa;
-            $nuevoCliente->direccion = $clienteSC->direccion;
-            $nuevoCliente->numero_casa = $clienteSC->numero_casa;
-            $nuevoCliente->calle_secundaria = $clienteSC->calle_secundaria;
-            $nuevoCliente->referencias_direccion = $clienteSC->referencias_direccion;
-            $nuevoCliente->trabajo_direccion = $clienteSC->trabajo_direccion;
-            $nuevoCliente->fecha_ingreso = $clienteSC->fecha_ingreso;
-            $nuevoCliente->ingresos_totales = $clienteSC->ingresos_totales;
-            $nuevoCliente->gastos_totales = $clienteSC->gastos_totales;
-            $nuevoCliente->activos_totales = $clienteSC->activos_totales;
-            $nuevoCliente->pasivos_totales = $clienteSC->pasivos_totales;
-            if ($clienteConyuge) {
-                $nuevoCliente->cedula_conyuge = $clienteConyuge->numerodocumento;
-                $nuevoCliente->nombres_conyuge = $clienteConyuge->primernombre;
-                $nuevoCliente->apellidos_conyuge = $clienteConyuge->apellidopaterno . ' ' . $clienteConyuge->apellidomaterno;
-                $nuevoCliente->sexo_conyuge = $clienteConyuge->sexo;
-                $nuevoCliente->fecha_nacimiento_conyuge = $clienteConyuge->fecha_nacimiento;
-            }
-            $nuevoCliente->save();
-            $telefonoCliente = new TelefonosCliente();
-            $telefonoCliente->cli_id = $nuevoCliente->id;
-            $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_1_trabajo_sc;
-            $telefonoCliente->tipo_telefono = "No definido";
-            $telefonoCliente->save();
-            $telefonoCliente = new TelefonosCliente();
-            $telefonoCliente->cli_id = $nuevoCliente->id;
-            $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_2;
-            $telefonoCliente->tipo_telefono = "No definido";
-            $telefonoCliente->save();
-            $telefonoCliente = new TelefonosCliente();
-            $telefonoCliente->cli_id = $nuevoCliente->id;
-            $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_domicilio_sc;
-            $telefonoCliente->tipo_telefono = "No definido";
-            $telefonoCliente->save();
-            $telefonosAdicionales = $telefonosCliDynamo->telefonos_adicionales;
-            $telefonosAdicionalesArray = explode(',', $telefonosAdicionales);;
-            foreach ($telefonosAdicionalesArray as $telefono) {
+                //crear nuevo cliente
+                $nuevoCliente = new ClienteCrm();
+                $nuevoCliente->ent_id = $entidadPublic->ent_id;
+                $nuevoCliente->ent_tipo_identificacion = $entidadPublic->ent_tipo_identificacion;
+                $nuevoCliente->ent_identificacion = $entidadPublic->ent_identificacion;
+                $nuevoCliente->ent_nombres = $entidadPublic->ent_nombres;
+                $nuevoCliente->ent_apellidos = $entidadPublic->ent_nombres;
+                $nuevoCliente->ent_fechanacimiento = $entidadPublic->ent_fechanacimiento;
+                $nuevoCliente->ent_email =  $entidadPublic->ent_email;
+                $nuevoCliente->pai_nombre = $clienteSC->pai_nombre;
+                $nuevoCliente->ctn_nombre = $clienteSC->ctn_nombre;
+                $nuevoCliente->prq_nombre = $clienteSC->prq_nombre;
+                $nuevoCliente->prv_nombre = $clienteSC->prv_nombre;
+                $nuevoCliente->nivel_educacion = $clienteSC->nivel_educacion;
+                $nuevoCliente->cactividad_economica = $clienteSC->cactividad_economica;
+                $nuevoCliente->numero_dependientes = $clienteSC->numero_dependientes;
+                $nuevoCliente->nombre_empresa = $clienteSC->nombre_empresa;
+                $nuevoCliente->tipo_empresa = $clienteSC->tipo_empresa;
+                $nuevoCliente->direccion = $clienteSC->direccion;
+                $nuevoCliente->numero_casa = $clienteSC->numero_casa;
+                $nuevoCliente->calle_secundaria = $clienteSC->calle_secundaria;
+                $nuevoCliente->referencias_direccion = $clienteSC->referencias_direccion;
+                $nuevoCliente->trabajo_direccion = $clienteSC->trabajo_direccion;
+                $nuevoCliente->fecha_ingreso = $clienteSC->fecha_ingreso;
+                $nuevoCliente->ingresos_totales = $clienteSC->ingresos_totales;
+                $nuevoCliente->gastos_totales = $clienteSC->gastos_totales;
+                $nuevoCliente->activos_totales = $clienteSC->activos_totales;
+                $nuevoCliente->pasivos_totales = $clienteSC->pasivos_totales;
+                if ($clienteConyuge) {
+                    $nuevoCliente->cedula_conyuge = $clienteConyuge->numerodocumento;
+                    $nuevoCliente->nombres_conyuge = $clienteConyuge->primernombre;
+                    $nuevoCliente->apellidos_conyuge = $clienteConyuge->apellidopaterno . ' ' . $clienteConyuge->apellidomaterno;
+                    $nuevoCliente->sexo_conyuge = $clienteConyuge->sexo;
+                    $nuevoCliente->fecha_nacimiento_conyuge = $clienteConyuge->fecha_nacimiento;
+                }
+                $nuevoCliente->save();
                 $telefonoCliente = new TelefonosCliente();
                 $telefonoCliente->cli_id = $nuevoCliente->id;
-                $telefonoCliente->numero_telefono = $telefono;
+                $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_1_trabajo_sc;
                 $telefonoCliente->tipo_telefono = "No definido";
                 $telefonoCliente->save();
-            }
+                $telefonoCliente = new TelefonosCliente();
+                $telefonoCliente->cli_id = $nuevoCliente->id;
+                $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_2;
+                $telefonoCliente->tipo_telefono = "No definido";
+                $telefonoCliente->save();
+                $telefonoCliente = new TelefonosCliente();
+                $telefonoCliente->cli_id = $nuevoCliente->id;
+                $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_domicilio_sc;
+                $telefonoCliente->tipo_telefono = "No definido";
+                $telefonoCliente->save();
+                $telefonosAdicionales = $telefonosCliDynamo->telefonos_adicionales;
+                $telefonosAdicionalesArray = explode(',', $telefonosAdicionales);;
+                foreach ($telefonosAdicionalesArray as $telefono) {
+                    $telefonoCliente = new TelefonosCliente();
+                    $telefonoCliente->cli_id = $nuevoCliente->id;
+                    $telefonoCliente->numero_telefono = $telefono;
+                    $telefonoCliente->tipo_telefono = "No definido";
+                    $telefonoCliente->save();
+                }
 
 
-            $clienteReferencias = DB::select("SELECT
+                $clienteReferencias = DB::select("SELECT
 		    split_part(btrim(refane.refane_nombre::text), ' '::text, 2) AS refane2_apellpa,
 			CASE
 				WHEN length(split_part(btrim(refane.refane_nombre::text), ' '::text, 3)) > 0 THEN split_part(btrim(refane.refane_nombre::text), ' '::text, 3)
@@ -839,53 +840,57 @@ class CasoController extends Controller
             refane.refane_numero_telefono3
             from public.entidad ent
             inner join public.referencias_anexo refane on refane.ent_id = ent.ent_id
-            where ent.ent_id = ? ",[$entId]);
+            where ent.ent_id = ? ", [$entId]);
 
-            foreach($clienteReferencias as $ref){
-                $nuevaRef = new ReferenciasCliente();
-                $nuevaRef->cli_id = $nuevoCliente->id;
-                $nuevaRef->ent_id = $nuevoCliente->ent_id;
-                $nuevaRef->nombre1 = $ref->refane2_nombre;
-                $nuevaRef->apellido1 = $ref->refane2_apellpa;
-                $nuevaRef->apellido2 = $ref->refane2_apellma;
-                $nuevaRef->nombre_comercial = $ref->refane_nombre;
-                $nuevaRef->parentesco = $ref->refane_parentesco;
-                $nuevaRef->direccion = $ref->refane_direccion;
-                $nuevaRef->estado = true;
-                $nuevaRef->save();
-                //telefono 1
-                if($ref->refane_numero_telefono){
-                    $telefonoRef = new TelefonosReferencias();
-                    $telefonoRef->ref_id = $nuevaRef->id;
-                    $telefonoRef->numero_telefono = $ref->refane_numero_telefono;
-                    $telefonoRef->tipo_telefono = "No definido";
-                    $telefonoRef->save();
+                foreach ($clienteReferencias as $ref) {
+                    $nuevaRef = new ReferenciasCliente();
+                    $nuevaRef->cli_id = $nuevoCliente->id;
+                    $nuevaRef->ent_id = $nuevoCliente->ent_id;
+                    $nuevaRef->nombre1 = $ref->refane2_nombre;
+                    $nuevaRef->apellido1 = $ref->refane2_apellpa;
+                    $nuevaRef->apellido2 = $ref->refane2_apellma;
+                    $nuevaRef->nombre_comercial = $ref->refane_nombre;
+                    $nuevaRef->parentesco = $ref->refane_parentesco;
+                    $nuevaRef->direccion = $ref->refane_direccion;
+                    $nuevaRef->estado = true;
+                    $nuevaRef->save();
+                    //telefono 1
+                    if ($ref->refane_numero_telefono) {
+                        $telefonoRef = new TelefonosReferencias();
+                        $telefonoRef->ref_id = $nuevaRef->id;
+                        $telefonoRef->numero_telefono = $ref->refane_numero_telefono;
+                        $telefonoRef->tipo_telefono = "No definido";
+                        $telefonoRef->save();
+                    }
+                    //telefono 2
+                    if ($ref->refane_numero_telefono2) {
+                        $telefonoRef = new TelefonosReferencias();
+                        $telefonoRef->ref_id = $nuevaRef->id;
+                        $telefonoRef->numero_telefono = $ref->refane_numero_telefono2;
+                        $telefonoRef->tipo_telefono = "No definido";
+                        $telefonoRef->save();
+                    }
+                    //telefono 3
+                    if ($ref->refane_numero_telefono3) {
+                        $telefonoRef = new TelefonosReferencias();
+                        $telefonoRef->ref_id = $nuevaRef->id;
+                        $telefonoRef->numero_telefono = $ref->refane_numero_telefono3;
+                        $telefonoRef->tipo_telefono = "No definido";
+                        $telefonoCliente->save();
+                    }
                 }
-                //telefono 2
-                if($ref->refane_numero_telefono2){
-                    $telefonoRef = new TelefonosReferencias();
-                    $telefonoRef->ref_id = $nuevaRef->id;
-                    $telefonoRef->numero_telefono = $ref->refane_numero_telefono2;
-                    $telefonoRef->tipo_telefono = "No definido";
-                    $telefonoRef->save();
-                }
-                //telefono 3
-               if($ref->refane_numero_telefono3){
-                    $telefonoRef = new TelefonosReferencias();
-                    $telefonoRef->ref_id = $nuevaRef->id;
-                    $telefonoRef->numero_telefono = $ref->refane_numero_telefono3;
-                    $telefonoRef->tipo_telefono = "No definido";
-                    $telefonoCliente->save();
-               }
-            }
+                $resul = ClienteCrm::with('telefonos', 'referencias.telefonos')->find($nuevoCliente->id);
+                return $resul;
+            });
 
-            echo ('variables: '.json_encode('test final 1'));
-            $resul = ClienteCrm::with('telefonos','referencias.telefonos')->find($nuevoCliente->id);
-            return $resul;
-        });
+            return $data;
+
+        } catch (\Throwable $th) {
+            return $th;
+        }
 
 
-        return $data;
+
 
     }
 }
