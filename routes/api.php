@@ -425,7 +425,7 @@ Route::group(["prefix" => "credito"], function ($router) {
 
     // CLIENTE CRM
 
-    Route::get('/listClienteCrmByEntId/{ent_id}', [ClienteCrmController::class, 'listClienteCrmByEntId']); // Guardar
+    Route::get('/listClienteCrmByEntId/{ent_id}', [ClienteCrmController::class, 'listClienteCrmByEntId']); // lista
     Route::post('/addClienteCrm', [ClienteCrmController::class, 'addClienteCrm']); // Guardar
     Route::post('/editClienteCrm/{ent_id}', [ClienteCrmController::class, 'editClienteCrm']); // Editar
 
@@ -434,11 +434,12 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::post('/addReferenciasCliente', [ReferenciasClienteController::class, 'addReferenciasCliente']); // Guardar
     Route::post('/editReferenciasCliente/{id}', [ReferenciasClienteController::class, 'editReferenciasCliente']); // Editar
     Route::delete('/deleteReferenciasCliente/{id}', [ReferenciasClienteController::class, 'deleteReferenciasCliente']); // Eliminar
+    Route::get('/listReferenciasByClienteId/{cli_id}', [ReferenciasClienteController::class, 'listReferenciasByClienteId']); // lista
 
     // parentesco CRM
 
     Route::get('/listParentesco', [ParentescoController::class, 'listParentesco']); // listar
-   
+
     // Tipo Telefono CRM
 
     Route::get('/listTipoTelefono', [TipoTelefonoController::class, 'listTipoTelefono']); // listar
