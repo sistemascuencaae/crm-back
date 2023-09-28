@@ -85,7 +85,16 @@ class DActividadController extends Controller
                         ->orWhere('acc_publico', true);
                 })
                 ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
-                ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+                // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+
+                ->selectRaw("*, 
+                CASE 
+                    WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                    ELSE descripcion 
+                END AS descripcion_pos_descripcion")
+
+
+
                 ->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
@@ -136,7 +145,14 @@ class DActividadController extends Controller
                 })
                     ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
                     ->where('caso_id', $dta->caso_id)
-                    ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+                    // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+
+                    ->selectRaw("*, 
+                    CASE 
+                        WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                        ELSE descripcion 
+                    END AS descripcion_pos_descripcion")
+
                     ->orderBy('id', 'DESC')
                     ->get();
 
@@ -187,7 +203,15 @@ class DActividadController extends Controller
                 $audit->url = $request->fullUrl();
 
                 $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
-                    ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")->first();
+                    // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+
+                    ->selectRaw("*, 
+                CASE 
+                    WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                    ELSE descripcion 
+                END AS descripcion_pos_descripcion")
+
+                    ->first();
 
                 // Establecer old_values y new_values
                 $audit->new_values = json_encode($data);
@@ -371,17 +395,7 @@ class DActividadController extends Controller
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
+    // Editar el acceso publico o privado de una actividad
     public function editAccesoActividad(Request $request, $actividad_id)
     {
         try {
@@ -396,7 +410,15 @@ class DActividadController extends Controller
                 ]);
 
                 return DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
-                    ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")->first();
+                    // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+
+                    ->selectRaw("*, 
+                CASE 
+                    WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                    ELSE descripcion 
+                END AS descripcion_pos_descripcion")
+
+                    ->first();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));

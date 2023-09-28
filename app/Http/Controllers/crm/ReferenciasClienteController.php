@@ -181,5 +181,16 @@ class ReferenciasClienteController extends Controller
         }
     }
 
+    // LIST PARA LAS ACTIVIDADES
+    public function listReferenciasByClienteId($cli_id)
+    {
+        try {
+            $respuesta = ReferenciasCliente::where('cli_id', $cli_id)->orderBy('id', 'ASC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 
 }
