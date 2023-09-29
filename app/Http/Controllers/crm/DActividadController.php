@@ -404,13 +404,21 @@ class DActividadController extends Controller
     public function listActividadesIniciadasByUserId($user_id)
     {
         try {
-            $actividades = DTipoActividad::where('user_id', $user_id)->where('ctr_id', 1)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('user_id', $user_id)
+                ->whereHas('estado_actividad', function ($query) {
+                    $query->where('nombre', 'Iniciado');
+                })
+                ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')
+                ->orderBy('id', 'DESC')
+                ->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+
 
     // Editar el acceso publico o privado de una actividad
     public function editAccesoActividad(Request $request, $actividad_id)
