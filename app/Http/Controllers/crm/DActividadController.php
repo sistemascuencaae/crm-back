@@ -245,7 +245,13 @@ class DActividadController extends Controller
     public function listActividadesByUserId($user_id)
     {
         try {
-            $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id') // Aquí especificamos que solo queremos el campo 'cliente_id' de la tabla 'caso')
+                ->selectRaw("*, 
+                CASE 
+                    WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                    ELSE descripcion 
+                END AS descripcion_pos_descripcion")
+                ->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
@@ -309,7 +315,13 @@ class DActividadController extends Controller
                 // END Auditoria
 
                 $data = DTipoActividad::where('user_id', $user_id)
-                    ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+                    ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')
+                    ->selectRaw("*, 
+                CASE 
+                    WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                    ELSE descripcion 
+                END AS descripcion_pos_descripcion")
+                    ->orderBy('id', 'DESC')->get();
                 // ->where('caso_id', $dta->caso_id)
 
                 $miembro = new Miembros();
@@ -355,7 +367,13 @@ class DActividadController extends Controller
                 $audit->url = $request->fullUrl();
 
                 $data = DTipoActividad::where('user_id', $user_id)
-                    ->where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->first();
+                    ->where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')
+                    ->selectRaw("*, 
+                CASE 
+                    WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                    ELSE descripcion 
+                END AS descripcion_pos_descripcion")
+                    ->first();
 
                 // Establecer old_values y new_values
                 $audit->new_values = json_encode($data);
@@ -386,14 +404,13 @@ class DActividadController extends Controller
     public function listActividadesIniciadasByUserId($user_id)
     {
         try {
-            $actividades = DTipoActividad::where('user_id', $user_id)->where('ctr_id', 1)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')->orderBy('id', 'DESC')->get();
+            $actividades = DTipoActividad::where('user_id', $user_id)->where('ctr_id', 1)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 
     // Editar el acceso publico o privado de una actividad
     public function editAccesoActividad(Request $request, $actividad_id)
@@ -409,7 +426,7 @@ class DActividadController extends Controller
                     "acc_publico" => $request->acc_publico,
                 ]);
 
-                return DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                return DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')
                     // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
 
                     ->selectRaw("*, 
@@ -426,14 +443,5 @@ class DActividadController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
-
-
-
-
-
-
-
-
 
 }
