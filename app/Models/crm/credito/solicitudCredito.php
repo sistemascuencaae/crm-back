@@ -2,6 +2,7 @@
 
 namespace App\Models\crm\credito;
 
+use App\Models\crm\ClienteCrm;
 use App\Models\crm\Entidad;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class solicitudCredito extends Model
+class SolicitudCredito extends Model
 {
     use HasFactory;
 
@@ -18,6 +19,7 @@ class solicitudCredito extends Model
 
     protected $table = 'crm.solicitud_credito';
     protected $fillable = [
+        "cliente_id",
         "fecha_actual",
         "vendedor",
         "agencia",
@@ -68,6 +70,11 @@ class solicitudCredito extends Model
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["deleted_at"] = Carbon::now();
+    }
+
+    public function cliente()
+    {
+        return $this->belongsTo(ClienteCrm::class, "cliente_id","id");
     }
 
     public function Entidad()
