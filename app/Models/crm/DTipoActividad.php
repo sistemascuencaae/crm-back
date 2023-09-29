@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\crm\Caso;
 use App\Models\crm\CTipoActividad;
 use App\Models\crm\CTipoResultadoCierre;
 use App\Models\User;
@@ -21,7 +22,7 @@ class DTipoActividad extends Model
 
     protected $table = 'crm.dtipo_actividad';
 
-    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "ctrc_id", "pos_descripcion", "cta_id", "ctr_id", "caso_id", "id_padre", "user_id", "acc_publico"];
+    protected $fillable = ["descripcion", "fecha_inicio", "fecha_fin", "fecha_conclusion", "estado", "ctrc_id", "pos_descripcion", "cta_id", "ctr_id", "caso_id", "id_padre", "user_id", "acc_publico", "nombre_referencia"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -60,4 +61,10 @@ class DTipoActividad extends Model
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
+
+    public function caso()
+    {
+        return $this->belongsTo(Caso::class, 'caso_id', 'id');
+    }
+
 }
