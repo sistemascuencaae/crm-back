@@ -16,7 +16,7 @@ class EquifaxController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth:api');
+        $this->middleware('auth:api', ['except' => ['loginEquifax']]);
     }
 
     public function loginEquifax(Request $request)
@@ -70,39 +70,29 @@ class EquifaxController extends Controller
 
     public function getDocuments(Request $request)
     {
-
-        //echo ('variables: '.json_encode($request->all()));
-
         try {
             // Validar el token de autorización OAuth
             // $token = $request->header('Authorization');
-
             // Realizar validación de OAuth según tus necesidades
-
             // Obtener y validar el JSON de la solicitud
-
+            echo ('Test 1: Data ingresada: '.json_encode($request->input('Uid')));
             DB::insert('INSERT INTO crm.tabla_pruebas (nombre) values (?)', ['prueba equifax']);
             $jsonTransaction = $request->json();
-
             // Verificar si se proporcionó un JSON válido
             if (empty($jsonTransaction)) {
                 return response()->json(['message' => 'Parámetros mal formateados'], 400);
             }
-
             // Ruta de la carpeta donde se encuentran los archivos PDF
             $folderPath = storage_path('app/public/equifax/');
-
             // Verificar si la carpeta existe
             if (!File::isDirectory($folderPath)) {
                 return response()->json(['message' => 'La carpeta no existe'], 404);
             }
-
             // Obtener la lista de archivos PDF en la carpeta
             $pdfFiles = File::files($folderPath);
-
             // Inicializar un array para almacenar los documentos en base64
             $documents = [];
-
+            echo ('Test 2: Validaciones');
             // Recorrer los archivos PDF y convertirlos en base64
             foreach ($pdfFiles as $pdfFile) {
                 if (pathinfo($pdfFile, PATHINFO_EXTENSION) === 'pdf') {
@@ -114,7 +104,7 @@ class EquifaxController extends Controller
                     $documents[] = $base64Data;
                 }
             }
-
+            echo ('Test 3: Validaciones');
             // Verificar si hay documentos disponibles
             if (count($documents) > 0) {
                 return response()->json($documents, 200);

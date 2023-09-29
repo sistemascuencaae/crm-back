@@ -30,6 +30,7 @@ class ClienteCrm extends Model
         "tipo_empresa",
         "direccion",
         "numero_casa",
+        "calle_pricipal",
         "calle_secundaria",
         "referencias_direccion",
         "trabajo_direccion",
