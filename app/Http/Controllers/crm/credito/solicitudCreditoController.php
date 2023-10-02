@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 
 class solicitudCreditoController extends Controller
 {
+
     public function listSolicitudCreditoByClienteId($cliente_id)
     {
         try {
@@ -182,7 +183,8 @@ class solicitudCreditoController extends Controller
                 $solicitudCredito->total_ingresos = $cliente->ingresos_totales;
                 $solicitudCredito->total_egresos = $cliente->gastos_totales;
                 $solicitudCredito->total_ingresos_egresos = ($cliente->ingresos_totales - $cliente->gastos_totales);
-                //$solicitudCredito->referencias = json_encode($cliente->referencias);
+                $solicitudCredito->referencias = json_encode($cliente->referencias);
+                $solicitudCredito->telefonos = json_encode($cliente->telefonos);
                 $solicitudCredito->caso_id = $casoId;
                 $solicitudCredito->save();
                 if (!$solicitudCredito) {

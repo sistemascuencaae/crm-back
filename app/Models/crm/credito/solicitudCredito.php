@@ -50,9 +50,8 @@ class SolicitudCredito extends Model
         "total_ingresos",
         "total_egresos",
         "total_ingresos_egresos",
-        //Referencias
         "referencias",
-
+        "telefonos",
         "caso_id"
     ];
 
