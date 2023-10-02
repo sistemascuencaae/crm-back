@@ -418,6 +418,7 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::get('/listSolicitudCreditoByEntidadId/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoByEntidadId']); // Listar por entidad ID
     Route::get('/listSolicitudCreditoByRucCedula/{cedula}', [solicitudCreditoController::class, 'listSolicitudCreditoByRucCedula']); // Listar por cedula
     Route::get('/solicitudByIdentificacion/{cedula}/{id_user_creador}', [solicitudCreditoController::class, 'solicitudByIdentificacion2']); // Listar por cedula
+    Route::get('/listSolicitudCreditoByClienteId/{cliente_id}', [solicitudCreditoController::class, 'listSolicitudCreditoByClienteId']); // Listar por cedula
 
     // EQUIFAX / CLIENTE ENROLAMIENTO
 
