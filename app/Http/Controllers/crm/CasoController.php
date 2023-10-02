@@ -824,7 +824,7 @@ class CasoController extends Controller
 
 
 
-                $clienteReferencias = DB::select("SELECT
+            $clienteReferencias = DB::select("SELECT
 		    split_part(btrim(refane.refane_nombre::text), ' '::text, 2) AS refane2_apellpa,
 			CASE
 				WHEN length(split_part(btrim(refane.refane_nombre::text), ' '::text, 3)) > 0 THEN split_part(btrim(refane.refane_nombre::text), ' '::text, 3)
