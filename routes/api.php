@@ -137,7 +137,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     //---------------------------------------------------------------->PRUEBAS
-    Route::get('/validarClienteSolicitudCredito/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']);//
+    Route::get('/validarClienteSolicitudCredito/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
     /************************  FORMULARIOS   *********************** */
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
     Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
@@ -286,10 +286,12 @@ Route::group(["prefix" => "crm"], function ($router) {
     // DACTIVIDAD
 
     Route::post('/addDTipoActividad', [DActividadController::class, 'addDTipoActividad']); // guardar
-    Route::get('listActividadesByIdCasoId/{caso_id}/{user_id}', [DActividadController::class, 'listActividadesByIdCasoId']); // listar
+    // Route::get('listActividadesByIdCasoId/{caso_id}/{user_id}', [DActividadController::class, 'listActividadesByIdCasoId']); // listar activiades por user_id
+    Route::get('listActividadesByDepIdCasoId/{caso_id}/{dep_id}', [DActividadController::class, 'listActividadesByDepIdCasoId']); // listar actividades por departamento USUARIO COMUN
+    Route::get('listAllActividadesByCasoId/{caso_id}', [DActividadController::class, 'listAllActividadesByCasoId']); // listar ALL actividades SUPER USUARIO 
     Route::post('/updateDActividad/{id}', [DActividadController::class, 'updateDActividad']); // Edita la actividad
     Route::post('/editAccesoActividad/{id}', [DActividadController::class, 'editAccesoActividad']); // Edita el acceso publico de la actividad
-    Route::get('listActividadesByUserId/{user_id}', [DActividadController::class, 'listActividadesByUserId']); // listar
+    Route::get('listActividadesByUserId/{user_id}', [DActividadController::class, 'listActividadesByUserId']); // listar TABLA DE MIS ACTIVIDADES
     // Route::delete('/deleteCTipoActividad/{id}', [DActividadController::class, 'deleteCTipoActividad']); // Eliminar
     Route::post('/addDTipoActividadTabla/{user_id}', [DActividadController::class, 'addDTipoActividadTabla']); // guardar
     Route::post('/updateDActividadTabla/{id}/{user_id}', [DActividadController::class, 'updateDActividadTabla']); // Edita la actividad

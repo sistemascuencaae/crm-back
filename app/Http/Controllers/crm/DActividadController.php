@@ -76,25 +76,72 @@ class DActividadController extends Controller
     //     }
     // }
 
-    public function listActividadesByIdCasoId($caso_id, $user_id)
+
+    // trae por las activiades por user_id y las activiades publicas de otro usuario
+    // public function listActividadesByIdCasoId($caso_id, $user_id)
+    // {
+    //     try {
+    //         $actividades = DTipoActividad::where('caso_id', $caso_id)
+    //             ->where(function ($query) use ($user_id) {
+    //                 $query->where('user_id', $user_id)
+    //                     ->orWhere('acc_publico', true);
+    //             })
+    //             ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+    //             // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+
+    //             ->selectRaw("*, 
+    //             CASE 
+    //                 WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+    //                 ELSE descripcion 
+    //             END AS descripcion_pos_descripcion")
+
+
+
+    //             ->orderBy('id', 'DESC')->get();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
+
+    // LISTA PARA USUARIO COMUN
+    public function listActividadesByDepIdCasoId($caso_id, $dep_id)
     {
         try {
             $actividades = DTipoActividad::where('caso_id', $caso_id)
-                ->where(function ($query) use ($user_id) {
-                    $query->where('user_id', $user_id)
+                ->where(function ($query) use ($dep_id) {
+                    $query->whereHas('usuario', function ($subquery) use ($dep_id) {
+                        $subquery->where('dep_id', $dep_id);
+                    })
                         ->orWhere('acc_publico', true);
                 })
                 ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
-                // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
-
                 ->selectRaw("*, 
-                CASE 
-                    WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
-                    ELSE descripcion 
-                END AS descripcion_pos_descripcion")
+            CASE 
+                WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                ELSE descripcion 
+            END AS descripcion_pos_descripcion")
+                ->orderBy('id', 'DESC')->get();
 
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 
-
+    // LISTA PARA SUPER USUARIO
+    public function listAllActividadesByCasoId($caso_id)
+    {
+        try {
+            $actividades = DTipoActividad::where('caso_id', $caso_id)
+                ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                ->selectRaw("*, 
+            CASE 
+                WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                ELSE descripcion 
+            END AS descripcion_pos_descripcion")
                 ->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));

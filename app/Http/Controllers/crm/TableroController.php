@@ -4,7 +4,9 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\ActividadesFormulas;
 use App\Models\crm\CondicionesFaseMover;
+use App\Models\crm\CTipoResultadoCierre;
 use App\Models\crm\Estados;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
@@ -105,7 +107,6 @@ class TableroController extends Controller
                     DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
                 }
 
-
                 $condicion = CondicionesFaseMover::create([
                     "parametro" => '[]',
                 ]);
@@ -128,6 +129,73 @@ class TableroController extends Controller
                 VALUES('USUARIO GENERAL {$tablero->nombre} {$tablero->id}', true, 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}', 'USUARIOGENERAL{$tablero->id}', 'usuariogeneral{$tablero->id}@gmail.com',
                 '123456', '{$tablero->created_at}', '{$tablero->updated_at}', '9999999999', '{$tablero->created_at}',
                 'USUARIO GENERAL', NULL, $tablero->dep_id, 1, $tablero->id,true);");
+
+                // Insert de resultados de la Actividad cuando se crea el tablero Iniciado , Cerrado , Cerrado y Reagendado
+
+                // DB::insert("INSERT INTO crm.ctipo_resultado_cierre
+                // (estado, nombre, created_at, updated_at, tab_id)
+                // VALUES(true, 'Iniciado', ?, ?, ?);", [$tablero->created_at, $tablero->updated_at, $tablero->id]);
+
+                // DB::insert("INSERT INTO crm.ctipo_resultado_cierre
+                // (estado, nombre, created_at, updated_at, tab_id)
+                // VALUES(true, 'Cerrado', ?, ?, ?);", [$tablero->created_at, $tablero->updated_at, $tablero->id]);
+
+                // DB::insert("INSERT INTO crm.ctipo_resultado_cierre
+                // (estado, nombre, created_at, updated_at, tab_id)
+                // VALUES(true, 'Cerrado y Reagendado', ?, ?, ?);", [$tablero->created_at, $tablero->updated_at, $tablero->id]);
+
+                CTipoResultadoCierre::create([
+                    "estado" => true,
+                    "nombre" => 'Iniciado',
+                    "tab_id" => $tablero->id
+                ]);
+
+                CTipoResultadoCierre::create([
+                    "estado" => true,
+                    "nombre" => 'Cerrado',
+                    "tab_id" => $tablero->id
+                ]);
+
+                CTipoResultadoCierre::create([
+                    "estado" => true,
+                    "nombre" => 'Cerrado y Reagendado',
+                    "tab_id" => $tablero->id
+                ]);
+
+                // CONSULTAS actividades
+                $resultadoIniciado = CTipoResultadoCierre::where('tab_id', $tablero->id)->where('nombre', 'Iniciado')->first();
+                $resultadoCerrado = CTipoResultadoCierre::where('tab_id', $tablero->id)->where('nombre', 'Cerrado')->first();
+                $resultadoCerradoReagendado = CTipoResultadoCierre::where('tab_id', $tablero->id)->where('nombre', 'Cerrado y Reagendado')->first();
+
+                // Insert de actividades_Formulas cuando se crea el tablero 
+
+                // // Iniciado , Cerrado , Cerrado
+                // DB::insert("INSERT INTO crm.actividades_formulas
+                // (tab_id, result_id_actual, result_id, result_id_proximo, created_at, updated_at)
+                // VALUES(?, ?, ?, ?, ?, ?);",
+                //     [$tablero->id, $resultadoIniciado->id, $resultadoCerrado->id, $resultadoCerrado->id, $tablero->created_at, $tablero->updated_at]
+                // );
+
+                // // Iniciado , Cerrado y Reagendado, Cerrado y Reagendado
+                // DB::insert("INSERT INTO crm.actividades_formulas
+                // (tab_id, result_id_actual, result_id, result_id_proximo, created_at, updated_at)
+                // VALUES(?, ?, ?, ?, ?, ?);",
+                //     [$tablero->id, $resultadoIniciado->id, $resultadoCerradoReagendado->id, $resultadoCerradoReagendado->id, $tablero->created_at, $tablero->updated_at]
+                // );
+
+                ActividadesFormulas::create([
+                    "tab_id" => $tablero->id,
+                    "result_id_actual" => $resultadoIniciado->id,
+                    "result_id" => $resultadoCerrado->id,
+                    "result_id_proximo" => $resultadoCerrado->id,
+                ]);
+
+                ActividadesFormulas::create([
+                    "tab_id" => $tablero->id,
+                    "result_id_actual" => $resultadoIniciado->id,
+                    "result_id" => $resultadoCerradoReagendado->id,
+                    "result_id_proximo" => $resultadoCerradoReagendado->id,
+                ]);
 
                 $usuGeneral = DB::select("SELECT * FROM public.users WHERE name = 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}'");
 
