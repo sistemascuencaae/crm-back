@@ -164,61 +164,60 @@ class solicitudCreditoController extends Controller
         }
     }
 
-    public function obtenerSolicitudCreditoActualizada($casoId){
+    public function obtenerSolicitudCreditoActualizada($casoId)
+    {
         try {
-            $solicitudCredito = SolicitudCredito::with('cliente.telefonos', 'cliente.referencias.telefonos')->where('caso_id',$casoId)->first();
-
-            if($solicitudCredito){
-                return $solicitudCredito;
-            }
-
-
+            $solicitudCredito = SolicitudCredito::with('cliente.telefonos', 'cliente.referencias.telefonos')->where('caso_id', $casoId)->first();
+            // if($solicitudCredito){
+            //     return $solicitudCredito;
+            // }
             $caso = Caso::with('userCreador')->find($casoId);
             $almacen = DB::selectOne('SELECT alm.* FROM public.users usu
             inner join public.puntoventa pve on pve.pve_id = usu.pve_id
-            inner join public.almacen alm on alm.alm_id = pve.alm_id where usu.id = ? limit 1',[$caso->user_id]);
-            if($caso){
+            inner join public.almacen alm on alm.alm_id = pve.alm_id where usu.id = ? limit 1', [$caso->user_id]);
+            if ($caso) {
                 $cliente = ClienteCrm::with('referencias.telefonos')->find($caso->cliente_id);
-                $nuevaSC = new SolicitudCredito();
-                $nuevaSC->cliente_id = $cliente->id;
-                $nuevaSC->fecha_actual = Carbon::now()->format('Y-m-d H:i:s');
-                $nuevaSC->vendedor = $caso->userCreador->usu_alias;
-                $nuevaSC->agencia = $almacen->alm_nombre;
-                $nuevaSC->codigo_cliente = $cliente->identificacion;
-                $nuevaSC->nacionalidad = $cliente->nacionalidad;
-                $nuevaSC->ruc_cedula = $cliente->identificacion;
-                $nuevaSC->nombre_razon_social = $cliente->nombres.' '.$cliente->apellidos;
-                $nuevaSC->nivel_educacion = $cliente->nivel_educacion;
-                $nuevaSC->cargas_familiares = $cliente->numero_dependientes;
-                //$nuevaSC->telefono_domicilio = "";
-                //$nuevaSC->numero_celular = "";
-                $nuevaSC->calle_principal = $cliente->calle_principal;
-                $nuevaSC->calle_secundaria = $cliente->calle_secundaria;
-                $nuevaSC->referencia_direccion = $cliente->referencias_direccion;
-                $nuevaSC->provincia = $cliente->prv_nombre;
-                $nuevaSC->canton = $cliente->ctn_nombre;
-                $nuevaSC->parroquia = $cliente->prq_nombre;
-                //$nuevaSC->actividad_economica = "";
-                $nuevaSC->nombre_empresa = $cliente->nombre_empresa;
-                $nuevaSC->tipo_empresa = $cliente->tipo_empresa;
-                $nuevaSC->direccion = $cliente->direccion;
-                //$nuevaSC->telefono_trabajo1 = "";
-                //$nuevaSC->telefono_trabajo2 = "";
-                $nuevaSC->fecha_ingreso = $cliente->fecha_ingreso;
-                $nuevaSC->total_ingresos = $cliente->ingresos_totales;
-                $nuevaSC->total_egresos = $cliente->gastos_totales;
-                $nuevaSC->total_ingresos_egresos = ($cliente->ingresos_totales - $cliente->gastos_totales);
-                $nuevaSC->referencias = json_encode($cliente->referencias);
-                $nuevaSC->caso_id = $casoId;
-                $nuevaSC->save();
-                $solicitudCredito = SolicitudCredito::with('cliente.telefonos', 'cliente.referencias.telefonos')->find($nuevaSC->id);
+                if (!$solicitudCredito) {
+                    $solicitudCredito = new SolicitudCredito();
+                    $solicitudCredito->fecha_actual = Carbon::now()->format('Y-m-d H:i:s');
+                }
+                $solicitudCredito->cliente_id = $cliente->id;
+                $solicitudCredito->vendedor = $caso->userCreador->usu_alias;
+                $solicitudCredito->agencia = $almacen->alm_nombre;
+                $solicitudCredito->codigo_cliente = $cliente->identificacion;
+                $solicitudCredito->nacionalidad = $cliente->nacionalidad;
+                $solicitudCredito->ruc_cedula = $cliente->identificacion;
+                $solicitudCredito->nombre_razon_social = $cliente->nombres . ' ' . $cliente->apellidos;
+                $solicitudCredito->nivel_educacion = $cliente->nivel_educacion;
+                $solicitudCredito->cargas_familiares = $cliente->numero_dependientes;
+                //$solicitudCredito->telefono_domicilio = "";
+                //$solicitudCredito->numero_celular = "";
+                $solicitudCredito->calle_principal = $cliente->calle_principal;
+                $solicitudCredito->calle_secundaria = $cliente->calle_secundaria;
+                $solicitudCredito->referencia_direccion = $cliente->referencias_direccion;
+                $solicitudCredito->provincia = $cliente->prv_nombre;
+                $solicitudCredito->canton = $cliente->ctn_nombre;
+                $solicitudCredito->parroquia = $cliente->prq_nombre;
+                //$solicitudCredito->actividad_economica = "";
+                $solicitudCredito->nombre_empresa = $cliente->nombre_empresa;
+                $solicitudCredito->tipo_empresa = $cliente->tipo_empresa;
+                $solicitudCredito->direccion = $cliente->direccion;
+                //$solicitudCredito->telefono_trabajo1 = "";
+                //$solicitudCredito->telefono_trabajo2 = "";
+                $solicitudCredito->fecha_ingreso = $cliente->fecha_ingreso;
+                $solicitudCredito->total_ingresos = $cliente->ingresos_totales;
+                $solicitudCredito->total_egresos = $cliente->gastos_totales;
+                $solicitudCredito->total_ingresos_egresos = ($cliente->ingresos_totales - $cliente->gastos_totales);
+                //$solicitudCredito->referencias = json_encode($cliente->referencias);
+                $solicitudCredito->caso_id = $casoId;
+                $solicitudCredito->save();
+                if (!$solicitudCredito) {
+                    $solicitudCredito = SolicitudCredito::with('cliente.telefonos', 'cliente.referencias.telefonos')->find($solicitudCredito->id);
+                }
                 return $solicitudCredito;
-
             }
         } catch (\Throwable $th) {
             throw $th;
         }
     }
-
 }
-
