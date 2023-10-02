@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\Audits;
@@ -251,6 +252,56 @@ class ReqCasoController extends Controller
         }
 
         return response()->json(['message' => 'No file uploaded'], 400);
+    }
+
+    public function addSolicitudCreditoReqCaso(Request $request)
+    {
+        try {
+
+            $casoId = $request->input('caso_id');
+
+
+            $solicitudCreditoController = new solicitudCreditoController();
+
+            $solicitudCredito = $solicitudCreditoController->obtenerSolicitudCreditoActualizada($casoId);
+
+            $reqCaso = RequerimientoCaso::find($request->input('id'));
+            $reqCaso->marcado = true;
+            $reqCaso->valor_int = $solicitudCredito->id;
+            $reqCaso->valor = $solicitudCredito->id;
+            $reqCaso->save();
+
+            $data = (object)[
+                "reqCaso" => $reqCaso,
+                "solicitudCredito" => $solicitudCredito
+            ];
+
+
+
+
+
+
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit = new Audits();
+            $audit->user_id = Auth::id();
+            $audit->event = 'created';
+            $audit->auditable_type = solicitudCredito::class;
+            $audit->auditable_id = $solicitudCredito->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->old_values = json_encode($solicitudCredito);
+            $audit->new_values = json_encode([]);
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->accion = 'addSolicitudCreditoReqCaso';
+            $audit->save();
+            //END Auditoria
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     public function listaReqCasoId($casoId){
