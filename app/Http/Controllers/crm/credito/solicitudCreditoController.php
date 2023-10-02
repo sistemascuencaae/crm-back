@@ -10,6 +10,7 @@ use App\Models\crm\ClienteCrm;
 use App\Models\crm\credito\AvSolicitudCredito;
 use App\Models\crm\credito\ReferenciasAnexoOpenceo;
 use App\Models\crm\credito\SolicitudCredito;
+use App\Models\crm\RequerimientoCaso;
 use App\Models\User;
 use Carbon\Carbon;
 use Exception;
@@ -19,43 +20,7 @@ use Illuminate\Support\Facades\DB;
 
 class solicitudCreditoController extends Controller
 {
-    public function addSolicitudCredito(Request $request)
-    {
-        try {
-
-            $casoId = $request->input('caso_id');
-            $solicitudCredito = $this->obtenerSolicitudCreditoActualizada($casoId);
-
-
-
-
-
-
-
-
-
-            // // START Bloque de código que genera un registro de auditoría manualmente
-            // $audit = new Audits();
-            // $audit->user_id = Auth::id();
-            // $audit->event = 'created';
-            // $audit->auditable_type = solicitudCredito::class;
-            // $audit->auditable_id = $solicitudCredito->id;
-            // $audit->user_type = User::class;
-            // $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            // $audit->url = $request->fullUrl();
-            // // Establecer old_values y new_values
-            // $audit->old_values = json_encode($solicitudCredito);
-            // $audit->new_values = json_encode([]);
-            // $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            // $audit->accion = 'addSolicitudCredito';
-            // $audit->save();
-            // END Auditoria
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $solicitudCredito));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
-    }
+    
 
     public function editSolicitudCredito(Request $request, $id)
     {
