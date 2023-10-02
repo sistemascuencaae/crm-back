@@ -17,10 +17,10 @@ class ClienteCrmController extends Controller
         $this->middleware('auth:api');
     }
 
-    public function listClienteCrmByEntId(Request $request, $ent_id)
+    public function listClienteCrmById(Request $request, $id)
     {
         try {
-            $respuesta = ClienteCrm::where('ent_id', $ent_id)->with('telefonos', 'referencias.telefonos')->first();
+            $respuesta = ClienteCrm::where('id', $id)->with('telefonos', 'referencias.telefonos')->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $respuesta));
         } catch (Exception $e) {

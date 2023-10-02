@@ -426,7 +426,7 @@ Route::group(["prefix" => "credito"], function ($router) {
 
     // CLIENTE CRM
 
-    Route::get('/listClienteCrmByEntId/{ent_id}', [ClienteCrmController::class, 'listClienteCrmByEntId']); // lista
+    Route::get('/listClienteCrmById/{id}', [ClienteCrmController::class, 'listClienteCrmById']); // lista
     Route::post('/addClienteCrm', [ClienteCrmController::class, 'addClienteCrm']); // Guardar
     Route::post('/editClienteCrm/{ent_id}', [ClienteCrmController::class, 'editClienteCrm']); // Editar
 
