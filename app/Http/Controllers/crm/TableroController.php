@@ -129,6 +129,20 @@ class TableroController extends Controller
                 '123456', '{$tablero->created_at}', '{$tablero->updated_at}', '9999999999', '{$tablero->created_at}',
                 'USUARIO GENERAL', NULL, $tablero->dep_id, 1, $tablero->id,true);");
 
+
+                // Insert de resultados de la Actividad cuando se crea el tablero Iniciado , Cerrado , Cerrado y Reagendado
+                DB::insert("INSERT INTO crm.ctipo_resultado_cierre
+                (estado, nombre, created_at, updated_at, tab_id)
+                VALUES(true, 'Iniciado', ?, ?, ?);", [$tablero->created_at, $tablero->updated_at, $tablero->id]);
+
+                DB::insert("INSERT INTO crm.ctipo_resultado_cierre
+                (estado, nombre, created_at, updated_at, tab_id)
+                VALUES(true, 'Cerrado', ?, ?, ?);", [$tablero->created_at, $tablero->updated_at, $tablero->id]);
+
+                DB::insert("INSERT INTO crm.ctipo_resultado_cierre
+                (estado, nombre, created_at, updated_at, tab_id)
+                VALUES(true, 'Cerrado y Reagendado', ?, ?, ?);", [$tablero->created_at, $tablero->updated_at, $tablero->id]);
+
                 $usuGeneral = DB::select("SELECT * FROM public.users WHERE name = 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}'");
 
                 DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$usuGeneral[0]->id, $tablero->id]);
