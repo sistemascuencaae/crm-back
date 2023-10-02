@@ -294,7 +294,8 @@ class ReqCasoController extends Controller
             $audit->old_values = json_encode($solicitudCredito);
             $audit->new_values = json_encode([]);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->accion = 'addSolicitudCreditoReqCaso';
+            // $audit->accion = 'addSolicitudCreditoReqCaso';
+            $audit->accion = 'addSolicitudCredito';
             $audit->save();
             //END Auditoria
 

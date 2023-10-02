@@ -20,7 +20,16 @@ use Illuminate\Support\Facades\DB;
 
 class solicitudCreditoController extends Controller
 {
-    
+    public function listSolicitudCreditoByClienteId($cliente_id)
+    {
+        try {
+            $respuesta = SolicitudCredito::where('cliente_id', $cliente_id)->orderBy("id", "asc")->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 
     public function editSolicitudCredito(Request $request, $id)
     {
