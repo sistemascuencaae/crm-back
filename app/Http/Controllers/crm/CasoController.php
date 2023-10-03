@@ -50,8 +50,11 @@ class CasoController extends Controller
                 $caso->save();
 
                 //buscar las tareas predefinidas
-                $arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
-
+                //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
+                $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
+                inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
+                inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
+                where tc.id = ?', [$caso->tc_id]);
                 //insertar en la tabla tareas
                 foreach ($arrayDtipoTareas as $dtt) {
                     $tarea = new Tareas();
