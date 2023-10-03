@@ -51,7 +51,7 @@ class ReqCasoController extends Controller
 
                     $galeria->update([
                         "titulo" => $requerimiento->titulo,
-                        "descripcion" => $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id ,
+                        "descripcion" => $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         "imagen" => $path,
                         "caso_id" => $inputReq->caso_id,
                         "tipo_gal_id" => 1,
@@ -75,7 +75,7 @@ class ReqCasoController extends Controller
                 } else {
                     $newGaleria = new Galeria();
                     $newGaleria->titulo = $requerimiento->titulo;
-                    $newGaleria->descripcion = $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id ;
+                    $newGaleria->descripcion = $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
                     $newGaleria->imagen = $path;
                     $newGaleria->caso_id = $inputReq->caso_id;
                     $newGaleria->tipo_gal_id = 1;
@@ -165,15 +165,25 @@ class ReqCasoController extends Controller
                     $audit->save();
                     // END Auditoria
                 }
-
             }
+            if ($inputReq->valor_int) {
+                $requerimiento->valor_int = $inputReq->valor_int;
+            }
+            //print ($reqCaso['valor_int']);
             $requerimiento->valor_varchar = $path;
             $requerimiento->valor = $requerimiento->titulo;
             $requerimiento->marcado = true;
             $requerimiento->save();
+
+            // $requerimientosCaso = RequerimientoCaso::where('caso_id', $inputReq->caso_id)
+            //     ->orderBy('id', 'asc')
+            //     ->orderBy('id', 'asc')
+            //     ->get();
+
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $requerimiento));
         } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), ''));
+            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
         }
     }
 
@@ -209,9 +219,9 @@ class ReqCasoController extends Controller
                 // END Auditoria
 
                 $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))
-                ->orderBy('id', 'asc')
-                ->orderBy('id', 'asc')
-                ->get();
+                    ->orderBy('id', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->get();
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $reqCaso));
             } else {
@@ -259,6 +269,7 @@ class ReqCasoController extends Controller
         try {
 
             $casoId = $request->input('caso_id');
+            $archivo = $request->input('valor_varchar');
 
 
             $solicitudCreditoController = new solicitudCreditoController();
@@ -268,11 +279,17 @@ class ReqCasoController extends Controller
             $reqCaso = RequerimientoCaso::find($request->input('id'));
             $reqCaso->marcado = true;
             $reqCaso->valor_int = $solicitudCredito->id;
-            $reqCaso->valor = $solicitudCredito->id;
+            $reqCaso->valor = $archivo;
+            $reqCaso->valor_varchar = $archivo;
             $reqCaso->save();
 
+            $requerimientosCaso = RequerimientoCaso::where('caso_id', $casoId)
+                ->orderBy('id', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+
             $data = (object)[
-                "reqCaso" => $reqCaso,
+                "reqCaso" => $requerimientosCaso,
                 "solicitudCredito" => $solicitudCredito
             ];
 
@@ -304,12 +321,13 @@ class ReqCasoController extends Controller
         }
     }
 
-    public function listaReqCasoId($casoId){
+    public function listaReqCasoId($casoId)
+    {
         try {
             $reqs = RequerimientoCaso::where('caso_id', $casoId)
-            ->orderBy('id', 'asc')
-            ->orderBy('orden', 'asc')
-            ->get();
+                ->orderBy('id', 'asc')
+                ->orderBy('orden', 'asc')
+                ->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Datos obtenidos con exito', $reqs));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), ''));
