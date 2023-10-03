@@ -75,7 +75,7 @@ class EquifaxController extends Controller
             // $token = $request->header('Authorization');
             // Realizar validación de OAuth según tus necesidades
             // Obtener y validar el JSON de la solicitud
-            echo ('Test 1: Data ingresada: '.json_encode($request->input('Uid')));
+            //echo ('Test 1: Data ingresada: '.json_encode($request->input('Uid')));
             DB::insert('INSERT INTO crm.tabla_pruebas (nombre) values (?)', ['prueba equifax']);
             $jsonTransaction = $request->json();
             // Verificar si se proporcionó un JSON válido
@@ -92,7 +92,7 @@ class EquifaxController extends Controller
             $pdfFiles = File::files($folderPath);
             // Inicializar un array para almacenar los documentos en base64
             $documents = [];
-            echo ('Test 2: Validaciones');
+            //echo ('Test 2: Validaciones');
             // Recorrer los archivos PDF y convertirlos en base64
             foreach ($pdfFiles as $pdfFile) {
                 if (pathinfo($pdfFile, PATHINFO_EXTENSION) === 'pdf') {
@@ -104,7 +104,7 @@ class EquifaxController extends Controller
                     $documents[] = $base64Data;
                 }
             }
-            echo ('Test 3: Validaciones');
+            //echo ('Test 3: Validaciones');
             // Verificar si hay documentos disponibles
             if (count($documents) > 0) {
                 return response()->json($documents, 200);
