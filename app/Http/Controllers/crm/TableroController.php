@@ -170,7 +170,7 @@ class TableroController extends Controller
                 $resultadoCerrado = CTipoResultadoCierre::where('tab_id', $tablero->id)->where('nombre', 'Cerrado')->first();
                 $resultadoCerradoReagendado = CTipoResultadoCierre::where('tab_id', $tablero->id)->where('nombre', 'Cerrado y Reagendado')->first();
 
-                // Insert de actividades_Formulas cuando se crea el tablero 
+                // Insert de actividades_Formulas cuando se crea el tablero
 
                 // // Iniciado , Cerrado , Cerrado
                 // DB::insert("INSERT INTO crm.actividades_formulas
