@@ -8,10 +8,12 @@ use App\Http\Controllers\crm\CasoController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Caso;
+use App\Models\crm\ControlTiemposCaso;
 use App\Models\crm\EstadosFormulas;
 use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tablero;
 use App\Models\User;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -71,9 +73,16 @@ class RobotCasoController extends Controller
         $casoEnProceso->estado_2 = $formula->est_id_proximo;
         $casoEnProceso->bloqueado = false;
         $casoEnProceso->bloqueado_user = '';
+
+        // start diferencia de tiempos en horas minutos y segundos
+        $CasoController = new CasoController();
+        $CasoController->calcularTiemposCaso($casoEnProceso->id, $casoEnProceso->estado_2);
+        // end diferencia de tiempos en horas minutos y segundos
+
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
         $casoController = new CasoController();
-        $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);;
+        $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
+        ;
         //------------------------------------------------------------
         //-------------------OPCION 1---------------------------------
         //------------------------------------------------------------
@@ -177,5 +186,3 @@ class RobotCasoController extends Controller
 
     }
 }
-
-

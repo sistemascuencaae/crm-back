@@ -12,6 +12,7 @@ use App\Models\ChatGroups;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\ClienteCrm;
+use App\Models\crm\ControlTiemposCaso;
 use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\DTipoTarea;
 use App\Models\crm\Estados;
@@ -26,6 +27,7 @@ use App\Models\crm\TelefonosCliente;
 use App\Models\crm\TelefonosReferencias;
 use App\Models\crm\TipoCaso;
 use App\Models\User;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -416,8 +418,6 @@ class CasoController extends Controller
                 $new_dep_id = $request->input('new_dep_id');
                 $new_tablero_id = $request->input('new_tablero_id');
 
-
-
                 //try {
                 $casoEnProceso = Caso::find($caso_id);
                 $casoEnProceso->fas_id = $new_fase_id;
@@ -429,6 +429,9 @@ class CasoController extends Controller
                 $casoEnProceso->fase_anterior_id = $fase_anterior_id;
                 $casoEnProceso->user_anterior_id = $user_anterior_id;
                 $casoEnProceso->save();
+
+                $this->calcularTiemposCaso($casoEnProceso->id, $casoEnProceso->estado_2);
+
                 $miemExist = DB::select('SELECT * FROM crm.miembros where user_id = ? and caso_id = ?', [$new_user_id, $caso_id]);
                 if (sizeof($miemExist) == 0) {
                     $miembro = new Miembros();
@@ -449,18 +452,19 @@ class CasoController extends Controller
                 return $noti;
             });
 
-
             $data = $this->getCaso($caso_id);
             if ($notificacion) {
                 broadcast(new NotificacionesCrmEvent($notificacion));
             }
 
             broadcast(new ReasignarCasoEvent($data));
-            return response()->json(RespuestaApi::returnResultado(
-                'success',
-                'Se actualizo con éxito',
-                $data
-            ));
+            return response()->json(
+                RespuestaApi::returnResultado(
+                    'success',
+                    'Se actualizo con éxito',
+                    $data
+                )
+            );
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
@@ -721,7 +725,8 @@ class CasoController extends Controller
 
                 //$cliente = DB::selectOne('SELECT * FROM crm.cliente WHERE ent_id = ?', [$entId]);
                 $cliente = ClienteCrm::where('ent_id', $entId)->first();
-                if ($cliente) return $cliente;
+                if ($cliente)
+                    return $cliente;
                 //entidad dinamo
                 $entidadPublic = DB::selectOne('SELECT * FROM public.entidad WHERE ent_id = ?', [$entId]);
                 //telefonos del cliente en el dinamo
@@ -765,7 +770,7 @@ class CasoController extends Controller
                 $nuevoCliente->nombres = $entidadPublic->ent_nombres;
                 $nuevoCliente->apellidos = $entidadPublic->ent_nombres;
                 $nuevoCliente->fechanacimiento = $entidadPublic->ent_fechanacimiento;
-                $nuevoCliente->email =  $entidadPublic->ent_email;
+                $nuevoCliente->email = $entidadPublic->ent_email;
                 if ($clienteSC) {
                     $nuevoCliente->pai_nombre = $clienteSC->pai_nombre;
                     $nuevoCliente->ctn_nombre = $clienteSC->ctn_nombre;
@@ -797,7 +802,7 @@ class CasoController extends Controller
                 $nuevoCliente->save();
 
 
-                if($telefonosCliDynamo != null){
+                if ($telefonosCliDynamo != null) {
                     $telefonoCliente = new TelefonosCliente();
                     $telefonoCliente->cli_id = $nuevoCliente->id;
                     $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_1_trabajo_sc;
@@ -827,7 +832,7 @@ class CasoController extends Controller
 
 
 
-            $clienteReferencias = DB::select("SELECT
+                $clienteReferencias = DB::select("SELECT
 		    split_part(btrim(refane.refane_nombre::text), ' '::text, 2) AS refane2_apellpa,
 			CASE
 				WHEN length(split_part(btrim(refane.refane_nombre::text), ' '::text, 3)) > 0 THEN split_part(btrim(refane.refane_nombre::text), ' '::text, 3)
@@ -843,7 +848,7 @@ class CasoController extends Controller
             from public.entidad ent
             inner join public.referencias_anexo refane on refane.ent_id = ent.ent_id
             where ent.ent_id = ? ", [$entId]);
-                if($clienteReferencias){
+                if ($clienteReferencias) {
                     foreach ($clienteReferencias as $ref) {
                         $nuevaRef = new ReferenciasCliente();
                         $nuevaRef->cli_id = $nuevoCliente->id;
@@ -892,4 +897,89 @@ class CasoController extends Controller
             return $th;
         }
     }
+
+    public function calcularTiemposCaso($caso_id, $estado_2)
+    {
+        // Crear un nuevo registro en ControlTiemposCaso
+        $nuevoRegistro = ControlTiemposCaso::create([
+            "caso_id" => $caso_id,
+            "est_caso_id" => $estado_2,
+        ]);
+
+        // Consulta si ya existe un registro anterior con el mismo caso_id
+        $registroAnterior = ControlTiemposCaso::where('caso_id', $caso_id)
+            ->where('id', '<', $nuevoRegistro->id)
+            ->latest()
+            ->first();
+
+        if ($registroAnterior) {
+            // Convierte las fechas a objetos Carbon para manejar la zona horaria
+            $created_at_actual = Carbon::parse($nuevoRegistro->created_at);
+            $created_at_anterior = Carbon::parse($registroAnterior->created_at);
+
+            // Calcula la diferencia de tiempo en segundos
+            $diferenciaSegundos = $created_at_actual->diffInSeconds($created_at_anterior);
+
+            // Calcula las horas, minutos y segundos
+            $horas = floor($diferenciaSegundos / 3600);
+            $diferenciaSegundos %= 3600;
+            $minutos = floor($diferenciaSegundos / 60);
+            $segundos = $diferenciaSegundos % 60;
+
+            // Formatea la diferencia de tiempo en formato TIME (HH:MM:SS)
+            $tiempoCambio = sprintf("%02d:%02d:%02d", $horas, $minutos, $segundos);
+
+            // Actualiza el nuevo registro con el tiempo_cambio calculado
+            $nuevoRegistro->update([
+                "tiempo_cambio" => $tiempoCambio,
+            ]);
+        } else {
+            // Si no hay registro anterior, el tiempo_cambio se establece como null
+            $nuevoRegistro->update([
+                "tiempo_cambio" => null,
+            ]);
+        }
+    }
+
 }
+
+// codigo que hace lo mismo que la funcion calcularTiemposCaso, solo est ebloque de codigo hiria directamente y no como funcion
+
+// // start diferencia de tiempos en horas minutos y segundos
+// // Crear un nuevo registro en ControlTiemposCaso
+// $nuevoRegistro = ControlTiemposCaso::create([
+//     "caso_id" => $casoEnProceso->id,
+//     "est_caso_id" => $casoEnProceso->estado_2,
+// ]);
+
+// // Consulta si ya existe un registro anterior con el mismo caso_id
+// $registroAnterior = ControlTiemposCaso::where('caso_id', $casoEnProceso->id)->where('id', '<', $nuevoRegistro->id)->latest()->first();
+
+// if ($registroAnterior) {
+//     // Convierte las fechas a objetos Carbon para manejar la zona horaria
+//     $created_at_actual = Carbon::parse($nuevoRegistro->created_at);
+//     $created_at_anterior = Carbon::parse($registroAnterior->created_at);
+
+//     // Calcula la diferencia de tiempo en segundos
+//     $diferenciaSegundos = $created_at_actual->diffInSeconds($created_at_anterior);
+
+//     // Calcula las horas, minutos y segundos
+//     $horas = floor($diferenciaSegundos / 3600);
+//     $diferenciaSegundos %= 3600;
+//     $minutos = floor($diferenciaSegundos / 60);
+//     $segundos = $diferenciaSegundos % 60;
+
+//     // Formatea la diferencia de tiempo en formato TIME (HH:MM:SS)
+//     $tiempoCambio = sprintf("%02d:%02d:%02d", $horas, $minutos, $segundos);
+
+//     // Actualiza el nuevo registro con el tiempo_cambio calculado
+//     $nuevoRegistro->update([
+//         "tiempo_cambio" => $tiempoCambio,
+//     ]);
+// } else {
+//     // Si no hay registro anterior, el tiempo_cambio se establece como null
+//     $nuevoRegistro->update([
+//         "tiempo_cambio" => null,
+//     ]);
+// }
+// // end diferencia de tiempos en horas minutos y segundos
