@@ -24,6 +24,11 @@ class ClienteEnrolamientoController extends Controller
             $datosEnrolamientoJson = $request->input('datosEnrolamiento');
             $datosEnrolamiento = json_decode($datosEnrolamientoJson, true); // Decodificar en un array asociativo
 
+            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $datosEnrolamiento['caso_id'])->first();
+            if ($clienteEnrolado) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolado));
+            }
+
             // Verificar si el objeto contiene el campo "Images"
             if (!isset($datosEnrolamiento['Images']) || empty($datosEnrolamiento['Images'])) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El objeto datosEnrolamiento no contiene imágenes', ''));
@@ -66,7 +71,6 @@ class ClienteEnrolamientoController extends Controller
                     'tipo_gal_id' => 1,
                     'equifax' => true,
                 ]);
-
             }
 
             // Eliminar el array Images del objeto datosEnrolamiento
@@ -81,6 +85,21 @@ class ClienteEnrolamientoController extends Controller
             $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolamiento));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function clienteEnroladoCasoId($casoId)
+    {
+
+        try {
+            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $casoId)->first();
+            if ($clienteEnrolado) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolado));
+            }else{
+                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no enrrolado', $casoId));
+            }
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
