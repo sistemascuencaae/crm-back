@@ -423,6 +423,7 @@ Route::group(["prefix" => "credito"], function ($router) {
     // EQUIFAX / CLIENTE ENROLAMIENTO
 
     Route::post('/addClienteEnrolamiento', [ClienteEnrolamientoController::class, 'addClienteEnrolamiento']); // Guardar la imagen de equifax
+    Route::get('/clienteEnroladoCasoId/{casoId}', [ClienteEnrolamientoController::class, 'clienteEnroladoCasoId']); //
 
     // CLIENTE CRM
 
