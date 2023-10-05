@@ -924,84 +924,100 @@ class CasoController extends Controller
         // 2 automatica por formulas
         // 3 cambio de fase           
 
-        // Consulta si ya existe un registro con el mismo caso_id
-        $registroAnterior = ControlTiemposCaso::where('caso_id', $caso_id)->latest()->first();
+        try {
+            DB::transaction(function () use ($caso, $caso_id, $estado_2, $fase_id, $tipo, $user_id) {
 
-        if ($registroAnterior) {
+                // Consulta si ya existe un registro con el mismo caso_id
+                $registroAnterior = ControlTiemposCaso::where('caso_id', $caso_id)->latest()->first();
 
-            // Crear un nuevo registro en ControlTiemposCaso
-            $nuevoRegistro = ControlTiemposCaso::create([
-                "caso_id" => $caso_id,
-                "est_caso_id" => $estado_2,
-                "tiempo_cambio" => null,
-                "fase_id" => $fase_id,
-                "tipo" => $tipo,
-                "user_id" => $user_id,
-            ]);
+                if ($registroAnterior) {
 
-            // Consulta si ya existe un registro anterior con el mismo caso_id
-            $registroAnterior = ControlTiemposCaso::where('caso_id', $caso_id)
-                ->where('id', '<', $nuevoRegistro->id)
-                ->latest()
-                ->first();
+                    // Crear un nuevo registro en ControlTiemposCaso
+                    $nuevoRegistro = ControlTiemposCaso::create([
+                        "caso_id" => $caso_id,
+                        "est_caso_id" => $estado_2,
+                        "tiempo_cambio" => null,
+                        "fase_id" => $fase_id,
+                        "tipo" => $tipo,
+                        "user_id" => $user_id,
+                    ]);
 
-            if ($registroAnterior) {
-                // Convierte las fechas a objetos Carbon para manejar la zona horaria
-                $created_at_actual = Carbon::parse($nuevoRegistro->created_at);
-                $created_at_anterior = Carbon::parse($registroAnterior->created_at);
+                    // Consulta si ya existe un registro anterior con el mismo caso_id
+                    $registroAnterior = ControlTiemposCaso::where('caso_id', $caso_id)
+                        ->where('id', '<', $nuevoRegistro->id)
+                        ->latest()
+                        ->first();
 
-                // Calcula la diferencia de tiempo en segundos
-                $diferenciaSegundos = $created_at_actual->diffInSeconds($created_at_anterior);
+                    if ($registroAnterior) {
+                        // Convierte las fechas a objetos Carbon para manejar la zona horaria
+                        $created_at_actual = Carbon::parse($nuevoRegistro->created_at);
+                        $created_at_anterior = Carbon::parse($registroAnterior->created_at);
 
-                // Calcula las horas, minutos y segundos
-                $horas = floor($diferenciaSegundos / 3600);
-                $diferenciaSegundos %= 3600;
-                $minutos = floor($diferenciaSegundos / 60);
-                $segundos = $diferenciaSegundos % 60;
+                        // Calcula la diferencia de tiempo en segundos
+                        $diferenciaSegundos = $created_at_actual->diffInSeconds($created_at_anterior);
 
-                // Formatea la diferencia de tiempo en formato TIME (HH:MM:SS)
-                $tiempoCambio = sprintf("%02d:%02d:%02d", $horas, $minutos, $segundos);
+                        // Calcula las horas, minutos y segundos
+                        $horas = floor($diferenciaSegundos / 3600);
+                        $diferenciaSegundos %= 3600;
+                        $minutos = floor($diferenciaSegundos / 60);
+                        $segundos = $diferenciaSegundos % 60;
 
-                // Actualiza el nuevo registro con el tiempo_cambio calculado
-                $nuevoRegistro->update([
-                    "tiempo_cambio" => $tiempoCambio,
-                ]);
-            } else {
-                // Si no hay registro anterior, el tiempo_cambio se establece como null
-                $nuevoRegistro->update([
-                    "tiempo_cambio" => null,
-                ]);
-            }
+                        // Formatea la diferencia de tiempo en formato TIME (HH:MM:SS)
+                        $tiempoCambio = sprintf("%02d:%02d:%02d", $horas, $minutos, $segundos);
 
-        } else {
+                        // Actualiza el nuevo registro con el tiempo_cambio calculado
+                        $nuevoRegistro->update([
+                            "tiempo_cambio" => $tiempoCambio,
+                        ]);
+                    } else {
+                        // Si no hay registro anterior, el tiempo_cambio se establece como null
+                        $nuevoRegistro->update([
+                            "tiempo_cambio" => null,
+                        ]);
+                    }
 
-            // Crea el nuevo registro con tiempo_cambio como null
-            $primerRegistro = ControlTiemposCaso::create([
-                "caso_id" => $caso->id,
-                "est_caso_id" => $caso->estado_2,
-                "tiempo_cambio" => null,
-                "fase_id" => $caso->fas_id,
-                "tipo" => $tipo,
-                "user_id" => $caso->user_id,
-            ]);
+                } else {
 
-            // Convierte las fechas a objetos Carbon para manejar la zona horaria
-            $created_at_actual = Carbon::parse($primerRegistro->created_at);
-            $created_at_anterior = Carbon::parse($caso->created_at);
+                    // Crea el nuevo registro con tiempo_cambio como null
+                    $primerRegistro = ControlTiemposCaso::create([
+                        "caso_id" => $caso->id,
+                        "est_caso_id" => $caso->estado_2,
+                        "tiempo_cambio" => null,
+                        "fase_id" => $caso->fas_id,
+                        "tipo" => $tipo,
+                        "user_id" => $caso->user_id,
+                    ]);
 
-            // Calcula la diferencia de tiempo en horas, minutos y segundos
-            $diferenciaHoras = $created_at_actual->diff($created_at_anterior)->format('%H:%I:%S');
+                    $created_at_actual = Carbon::parse($primerRegistro->created_at);
+                    $created_at_anterior = Carbon::parse($caso->created_at);
 
-            // Crea el nuevo registro con el tiempo_cambio calculado
-            ControlTiemposCaso::create([
-                "caso_id" => $caso->id,
-                "est_caso_id" => $caso->estado_2,
-                "tiempo_cambio" => $diferenciaHoras,
-                "fase_id" => $caso->fas_id,
-                "tipo" => $tipo,
-                "user_id" => $caso->user_id,
-            ]);
+                    // Calcula la diferencia de tiempo en segundos
+                    $diferenciaSegundos = $created_at_actual->diffInSeconds($created_at_anterior);
 
+                    // Calcula las horas, minutos y segundos
+                    $horas = floor($diferenciaSegundos / 3600);
+                    $diferenciaSegundos %= 3600;
+                    $minutos = floor($diferenciaSegundos / 60);
+                    $segundos = $diferenciaSegundos % 60;
+
+                    // Formatea la diferencia de tiempo en formato TIME (HH:MM:SS)
+                    $tiempoCambio = sprintf("%02d:%02d:%02d", $horas, $minutos, $segundos);
+
+                    // Crea el nuevo registro con el tiempo_cambio calculado
+                    ControlTiemposCaso::create([
+                        "caso_id" => $caso->id,
+                        "est_caso_id" => $caso->estado_2,
+                        "tiempo_cambio" => $tiempoCambio,
+                        "fase_id" => $caso->fas_id,
+                        "tipo" => $tipo,
+                        "user_id" => $caso->user_id,
+                    ]);
+
+                }
+
+            });
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
