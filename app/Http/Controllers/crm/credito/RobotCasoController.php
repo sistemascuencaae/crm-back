@@ -76,7 +76,15 @@ class RobotCasoController extends Controller
 
         // start diferencia de tiempos en horas minutos y segundos
         $CasoController = new CasoController();
-        $CasoController->calcularTiemposCaso($casoEnProceso->id, $casoEnProceso->estado_2);
+        $tipo = 2;
+        $CasoController->calcularTiemposCaso(
+            $casoEnProceso,
+            $casoEnProceso->id,
+            $casoEnProceso->estado_2,
+            $casoEnProceso->fas_id,
+            $tipo,
+            $casoEnProceso->user_id
+        );
         // end diferencia de tiempos en horas minutos y segundos
 
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
