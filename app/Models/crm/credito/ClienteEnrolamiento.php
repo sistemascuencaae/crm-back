@@ -2,6 +2,7 @@
 
 namespace App\Models\crm\credito;
 
+use App\Models\crm\Galeria;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -94,8 +95,8 @@ class ClienteEnrolamiento extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    // public function Entidad()
-    // {
-    //     return $this->belongsTo(Entidad::class, "ent_id");
-    // }
+    public function imagenes()
+    {
+        return $this->hasMany(Galeria::class, "caso_id" , "caso_id");
+    }
 }

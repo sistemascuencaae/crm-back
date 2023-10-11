@@ -195,9 +195,9 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // GALERIA
 
-    Route::post('/addGaleria', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
+    Route::post('/addGaleria/{caso_id}', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
     Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
-    Route::post('/updateGaleria/{id}', [GaleriaController::class, 'updateGaleria']); // Edita la imagen
+    Route::post('/editGaleria/{id}', [GaleriaController::class, 'editGaleria']); // Edita la imagen
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
     Route::get('/listGaleriaBySolicitudCreditoId/{id}', [GaleriaController::class, 'listGaleriaBySolicitudCreditoId']); // Listar las imagenes
 
@@ -205,9 +205,9 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // ARCHIVO
 
-    Route::post('/addArchivo', [ArchivoController::class, 'addArchivo']); // Guardar
+    Route::post('/addArchivo/{caso_id}', [ArchivoController::class, 'addArchivo']); // Guardar
     Route::get('/listArchivoByCasoId/{id}', [ArchivoController::class, 'listArchivoByCasoId']); // Listar
-    Route::post('/updateArchivo/{id}', [ArchivoController::class, 'updateArchivo']); // Editar
+    Route::post('/editArchivo/{id}', [ArchivoController::class, 'editArchivo']); // Editar
     Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'deleteArchivo']); // Eliminar
 
     // Etiqueta

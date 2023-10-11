@@ -9,6 +9,7 @@ use App\Models\crm\Galeria;
 use App\Models\crm\RequerimientoCaso;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ClienteEnrolamientoController extends Controller
 {
@@ -62,7 +63,8 @@ class ClienteEnrolamientoController extends Controller
                     $videoBase64 = $imagen['Image'];
                     $videoData = base64_decode($videoBase64);
                     $nombreVideo = uniqid() . '.mp4';
-                    $ruta = storage_path('app/public/galerias/' . $nombreVideo);
+                    // $ruta = storage_path('app/public/galerias/' . $nombreVideo);
+                    $ruta = Storage::disk('nas')->putFile($caso_id . "/galerias", $nombreVideo);
                     file_put_contents($ruta, $videoData);
                 } else {
                     // Si no es un video de Liveness, asumimos que es una imagen
@@ -70,7 +72,8 @@ class ClienteEnrolamientoController extends Controller
                     $imagenBase64 = $imagen['Image'];
                     $imagenData = base64_decode($imagenBase64);
                     $nombreImagen = uniqid() . '.png'; // Puedes utilizar otro formato si es necesario
-                    $ruta = storage_path('app/public/galerias/' . $nombreImagen);
+                    // $ruta = storage_path('app/public/galerias/' . $nombreImagen);
+                    $ruta = Storage::disk('nas')->putFile($caso_id . "/galerias", $nombreImagen);
                     file_put_contents($ruta, $imagenData);
                 }
 
@@ -108,10 +111,10 @@ class ClienteEnrolamientoController extends Controller
     {
 
         try {
-            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $casoId)->first();
+            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $casoId)->with('imagenes')->first();
             if ($clienteEnrolado) {
-                return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolado));
-            }else{
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $clienteEnrolado));
+            } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no enrrolado', $casoId));
             }
         } catch (Exception $e) {
