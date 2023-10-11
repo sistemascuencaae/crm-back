@@ -24,6 +24,7 @@ class RubrosReservas extends Model implements Auditable
         "rr_id".
         "descripcion",
         "porc_calculo",
+        "capital_sn",
         "estado",
         "usuario_crea",
         "fecha_crea",

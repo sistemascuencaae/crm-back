@@ -16,6 +16,7 @@ use App\Http\Controllers\crm\garantias\ConfigItemsController;
 use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
 use App\Http\Controllers\crm\garantias\ExepcionGexController;
 use App\Http\Controllers\crm\garantias\RubrosReservaController;
+use App\Http\Controllers\crm\garantias\GEXController;
 use App\Http\Controllers\crm\series\PreIngresoController;
 use Illuminate\Support\Facades\Route;
 
@@ -192,5 +193,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byPreIngreso/{numero}', [PreIngresoController::class, 'byPreIngreso']);
     Route::get('/anulaPreIngreso/{numero}', [PreIngresoController::class, 'anulaPreIngreso']);
     Route::get('/eliminaPreIngreso/{numero}', [PreIngresoController::class, 'eliminaPreIngreso']);
+    Route::get('/cargaIngresos', [PreIngresoController::class, 'cargaIngresos']);
+    Route::get('/cargaPreingresos', [PreIngresoController::class, 'cargaPreingresos']);
+    Route::get('/cargaRelaciones', [PreIngresoController::class, 'cargaRelaciones']);
+    Route::post('/relacionaPreIngreso', [PreIngresoController::class, 'relacionaPreIngreso']);
+    Route::get('/quitaRelacionPI/{numero}/{usuario}', [PreIngresoController::class, 'quitaRelacionPI']);
+
+    //API GEX
+    Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
+    Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------

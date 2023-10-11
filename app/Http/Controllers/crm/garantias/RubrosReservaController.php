@@ -18,7 +18,7 @@ class RubrosReservaController extends Controller
     
     public function listado()
     {
-        $data = DB::select("select rr.rr_id, rr.descripcion, rr.porc_calculo as porcentaje, case when rr.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end as estado
+        $data = DB::select("select rr.rr_id, rr.descripcion, rr.porc_calculo as porcentaje, case when rr.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end as estado, rr.capital_sn as capital
                             from gex.rubro_reserva rr");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -56,6 +56,7 @@ class RubrosReservaController extends Controller
 
                 $descripcion = $request->input('descripcion');
                 $porc_calculo = $request->input('porc_calculo');
+                $capital_sn = $request->input('capital_sn');
                 $estado = $request->input('estado');
                 $usuario_crea = $request->input('usuario_crea');
                 $usuario_modifica = $request->input('usuario_modifica');
@@ -66,6 +67,7 @@ class RubrosReservaController extends Controller
                     'rr_id' => $rr_id,
                     'descripcion' => $descripcion,
                     'porc_calculo' => $porc_calculo,
+                    'capital_sn' => $capital_sn,
                     'estado' => $estado,
                     'usuario_crea' => $usuario_crea,
                     'fecha_crea' => $fecha_crea,
