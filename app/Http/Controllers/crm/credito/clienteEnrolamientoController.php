@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\Galeria;
+use App\Models\crm\RequerimientoCaso;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,7 +16,22 @@ class ClienteEnrolamientoController extends Controller
 
     public function addClienteEnrolamiento(Request $request)
     {
+        //echo ('$request: '.json_encode($request->input('statusEnrol')));
         try {
+
+            if (!$request->has('casoId')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
+            }
+
+
+            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $request->input('casoId'))->first();
+            if ($clienteEnrolado) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Cliente enrolado.', $clienteEnrolado));
+            }
+            //echo 'estamos qui';
+            $estatusEnrolamiento = $request->input('statusEnrol');
+            //echo ('$request: '.json_encode());
+
             // Verificar si el objeto datosEnrolamiento se ha proporcionado
             if (!$request->has('datosEnrolamiento')) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
@@ -25,10 +41,6 @@ class ClienteEnrolamientoController extends Controller
             $datosEnrolamientoJson = $request->input('datosEnrolamiento');
             $datosEnrolamiento = json_decode($datosEnrolamientoJson, true); // Decodificar en un array asociativo
 
-            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $datosEnrolamiento['caso_id'])->first();
-            if ($clienteEnrolado) {
-                return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolado));
-            }
 
             // Verificar si el objeto contiene el campo "Images"
             if (!isset($datosEnrolamiento['Images']) || empty($datosEnrolamiento['Images'])) {
@@ -87,6 +99,8 @@ class ClienteEnrolamientoController extends Controller
             // Crear ClienteEnrolamiento
             $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
 
+
+            $this->actualizarReqCaso($request->input('reqCasoId'), $request->input('casoId'), $estatusEnrolamiento);
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolamiento));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -108,6 +122,28 @@ class ClienteEnrolamientoController extends Controller
         }
     }
 
+
+    public function actualizarReqCaso($reqCasoId,$casoId, $statusEnrol){
+        //try {
+            $reqCaso = RequerimientoCaso::find($reqCasoId);
+            if($reqCaso){
+                if($statusEnrol == 'Proceso satisfactorio'){
+                    $reqCaso->valor_boolean = true;
+                }else{
+                    $reqCaso->valor_boolean = false;
+                }
+                $reqCaso->save();
+            }
+        //     //[{"Id":2,"UserName":null,"StateName":"Proceso satisfactorio","CausalRejectionName":null,"StartingDate":"0001-01-01T00:00:00","Observation":null}]
+        //     print('*************--' . json_encode($reqCaso) . '*************');
+        //     print('*************--' . json_encode($reqCasoId) . '*************');
+        //     print('*************--' . json_encode($casoId) . '*************');
+        //     print ('*************--'.json_encode($statusEnrol). '*************');
+        // } catch (\Throwable $th) {
+        //     //throw $th;
+        //     return $th;
+        // }
+    }
 
 
     // SI VALEN ESTOS METODOS, SOLO QUE YA SE UNIFICO EN UN SOLO METODO (addClienteEnrolamiento) , NO BORRAR

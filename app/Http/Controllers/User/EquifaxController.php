@@ -24,7 +24,7 @@ class EquifaxController extends Controller
         $credentials = $request->only('username', 'password', 'grant_type');
 
         // Valida que el grant_type sea 'authorization_code'
-        if ($credentials['grant_type'] !== 'authorization_code') {
+        if ($credentials['grant_type'] !== 'password') {
             return response()->json(['error' => 'Invalid grant_type'], 400);
         }
 
