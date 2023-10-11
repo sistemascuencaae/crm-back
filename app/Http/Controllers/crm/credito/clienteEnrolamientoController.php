@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\Galeria;
+use App\Models\crm\RequerimientoCaso;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,7 +16,22 @@ class ClienteEnrolamientoController extends Controller
 
     public function addClienteEnrolamiento(Request $request)
     {
-        try {
+        //echo ('$request: '.json_encode($request->input('statusEnrol')));
+        //try {
+
+            if (!$request->has('casoId')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
+            }
+
+
+            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $request->input('casoId'))->first();
+            if ($clienteEnrolado) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Cliente enrolado.', $clienteEnrolado));
+            }
+            //echo 'estamos qui';
+            $estatusEnrolamiento = $request->input('statusEnrol');
+            //echo ('$request: '.json_encode());
+
             // Verificar si el objeto datosEnrolamiento se ha proporcionado
             if (!$request->has('datosEnrolamiento')) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
@@ -25,10 +41,6 @@ class ClienteEnrolamientoController extends Controller
             $datosEnrolamientoJson = $request->input('datosEnrolamiento');
             $datosEnrolamiento = json_decode($datosEnrolamientoJson, true); // Decodificar en un array asociativo
 
-            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $datosEnrolamiento['caso_id'])->first();
-            if ($clienteEnrolado) {
-                return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolado));
-            }
 
             // Verificar si el objeto contiene el campo "Images"
             if (!isset($datosEnrolamiento['Images']) || empty($datosEnrolamiento['Images'])) {
@@ -37,6 +49,8 @@ class ClienteEnrolamientoController extends Controller
 
             // Obtener el valor de datosEnrolamiento
             $caso_id = $datosEnrolamiento['caso_id'];
+
+
 
             // Iterar a través de las imágenes y procesarlas
             foreach ($datosEnrolamiento['Images'] as $imagen) {
@@ -51,8 +65,7 @@ class ClienteEnrolamientoController extends Controller
                     $videoBase64 = $imagen['Image'];
                     $videoData = base64_decode($videoBase64);
                     $nombreVideo = uniqid() . '.mp4';
-                    // $ruta = storage_path('app/public/galerias/' . $nombreVideo);
-                    $ruta = Storage::disk('nas')->putFile($caso_id . "/galerias", $nombreVideo);
+                    $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombreVideo,$videoData);
                     file_put_contents($ruta, $videoData);
                 } else {
                     // Si no es un video de Liveness, asumimos que es una imagen
@@ -60,8 +73,7 @@ class ClienteEnrolamientoController extends Controller
                     $imagenBase64 = $imagen['Image'];
                     $imagenData = base64_decode($imagenBase64);
                     $nombreImagen = uniqid() . '.png'; // Puedes utilizar otro formato si es necesario
-                    // $ruta = storage_path('app/public/galerias/' . $nombreImagen);
-                    $ruta = Storage::disk('nas')->putFile($caso_id . "/galerias", $nombreImagen);
+                $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombreImagen,$imagenData);
                     file_put_contents($ruta, $imagenData);
                 }
 
@@ -87,10 +99,12 @@ class ClienteEnrolamientoController extends Controller
             // Crear ClienteEnrolamiento
             $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
 
+
+            $this->actualizarReqCaso($request->input('reqCasoId'), $request->input('casoId'), $estatusEnrolamiento, $clienteEnrolamiento);
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolamiento));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
+        // } catch (Exception $e) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        // }
     }
 
     public function clienteEnroladoCasoId($casoId)
@@ -108,6 +122,22 @@ class ClienteEnrolamientoController extends Controller
         }
     }
 
+
+    public function actualizarReqCaso($reqCasoId, $casoId, $statusEnrol, $clienteEnrolamiento)
+    {
+        //try {
+        $reqCaso = RequerimientoCaso::find($reqCasoId);
+        if ($reqCaso) {
+            if ($statusEnrol == 'Proceso satisfactorio') {
+                $reqCaso->valor_boolean = true;
+            } else {
+                $reqCaso->valor_boolean = false;
+            }
+            //$reqCaso->marcado = $casoId;
+            $reqCaso->valor_int = $clienteEnrolamiento->id;
+            $reqCaso->save();
+        }
+    }
 
 
     // SI VALEN ESTOS METODOS, SOLO QUE YA SE UNIFICO EN UN SOLO METODO (addClienteEnrolamiento) , NO BORRAR
