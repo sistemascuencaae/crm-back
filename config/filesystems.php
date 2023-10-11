@@ -35,7 +35,7 @@ return [
         //     'root' => 'Z:/dist2',
         // ],
 
-        'servidor' => [
+        'nas' => [
             'driver' => 'ftp',
             'host' => '192.168.1.248', // La dirección IP o nombre de dominio de tu servidor FTP
             'username' => 'jsimbana', // Tu nombre de usuario FTP

@@ -21,56 +21,16 @@ class GaleriaController extends Controller
         $this->middleware('auth:api');
     }
 
-    // public function getGaleriaImage($imagenNombre)
-    // {
-    //     try {
-    //         // Especifica la ruta de la imagen en el disco FTP
-    //         $imagenRuta = $imagenNombre;
-            
-    //         // Utiliza el disco FTP para obtener la imagen
-    //         $imagenContenido = Storage::disk('servidor')->get($imagenRuta);
-            
-    //         // Devuelve la imagen al cliente con el encabezado adecuado
-    //         return response($imagenContenido)->header('Content-Type', 'image/jpeg'); // Cambia el tipo MIME según el formato de la imagen
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
-    
-    // public function addGaleria(Request $request)
-    // {
-    //     try {
-    //         DB::beginTransaction();
-    //         if ($request->hasFile("imagen_file")) {
-    //             $path = Storage::disk('servidor')->putFile("galerias", $request->file("imagen_file"));
-    //             $request->request->add(["imagen" => $path]);
-    //         }
-            
-    //         $galeria = Galeria::create($request->all());
-            
-    //         // Resto del código de auditoría y otros procesamientos...
-            
-    //         // En lugar de devolver un objeto JSON, redirige a la URL de la imagen.
-    //         DB::commit();
-    //         // return redirect($this->getGaleriaImage($galeria->imagen));
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
-    
-
-
     public function addGaleria(Request $request, $caso_id)
     {
         try {
             if ($request->hasFile("imagen_file")) {
-                // $path = Storage::putFile("galerias", $request->file("imagen_file")); //se va a guardar dentro de la CARPETA CATEGORIAS
-                $path = Storage::disk('servidor')->putFile($caso_id . "/galerias", $request->file("imagen_file"));
+                // $path = Storage::putFile("galerias", $request->file("imagen_file")); //se va a guardar dentro de la CARPETA Galerias del Storage de mi backEnd
+                $path = Storage::disk('nas')->putFile($caso_id . "/galerias", $request->file("imagen_file"));
 
                 $request->request->add(["imagen" => $path]); //Aqui obtenemos la ruta de la imagen en la que se encuentra
             }
-            
+
             $galeria = Galeria::create($request->all());
 
             // START Bloque de código que genera un registro de auditoría manualmente
@@ -155,7 +115,7 @@ class GaleriaController extends Controller
         }
     }
 
-    public function updateGaleria(Request $request, $id)
+    public function editGaleria(Request $request, $id)
     {
         try {
             $galeria = Galeria::findOrFail($id);
@@ -167,9 +127,11 @@ class GaleriaController extends Controller
 
             if ($request->hasFile("imagen_file")) {
                 if ($galeria->imagen) { //Aqui eliminamos la imagen anterior
-                    Storage::delete($galeria->imagen); //Aqui pasa la rta de la imagen para eliminarlo
+                    // Storage::delete($galeria->imagen); //Aqui pasa la ruta de la imagen para eliminarlo del Storage de mi backEnd
+                    Storage::disk('nas')->delete($galeria->imagen); //Aqui pasa la ruta de la imagen para eliminarlo del NAS
                 }
-                $path = Storage::putFile("galerias", $request->file("imagen_file")); //se va a guardar dentro de la CARPETA CATEGORIAS
+                // $path = Storage::putFile("galerias", $request->file("imagen_file")); //se va a guardar dentro de la CARPETA Galerias del Storage de mi backEnd
+                $path = Storage::disk('nas')->putFile($galeria->caso_id . "/galerias", $request->file("imagen_file"));
                 $request->request->add(["imagen" => $path]); //Aqui obtenemos la nueva ruta de la imagen al request
             }
 
@@ -203,8 +165,10 @@ class GaleriaController extends Controller
             // Obtener el old_values (valor antiguo)
             $valorAntiguo = $galeria;
 
-            $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
-            Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
+            // $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
+            // Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
+
+            Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
 
             $galeria->delete();
 
@@ -236,13 +200,7 @@ class GaleriaController extends Controller
         try {
             $ultimaFoto = Galeria::where('sc_id', $sc_id)->latest('id')->first();
 
-            return response()->json(
-                RespuestaApi::returnResultado(
-                    'success',
-                    'Se listo con éxito',
-                    $ultimaFoto
-                )
-            );
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $ultimaFoto));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
