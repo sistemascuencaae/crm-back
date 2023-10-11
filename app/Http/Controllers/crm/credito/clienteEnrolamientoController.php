@@ -17,7 +17,7 @@ class ClienteEnrolamientoController extends Controller
     public function addClienteEnrolamiento(Request $request)
     {
         //echo ('$request: '.json_encode($request->input('statusEnrol')));
-        try {
+        //try {
 
             if (!$request->has('casoId')) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
@@ -50,6 +50,8 @@ class ClienteEnrolamientoController extends Controller
             // Obtener el valor de datosEnrolamiento
             $caso_id = $datosEnrolamiento['caso_id'];
 
+
+
             // Iterar a través de las imágenes y procesarlas
             foreach ($datosEnrolamiento['Images'] as $imagen) {
 
@@ -63,8 +65,7 @@ class ClienteEnrolamientoController extends Controller
                     $videoBase64 = $imagen['Image'];
                     $videoData = base64_decode($videoBase64);
                     $nombreVideo = uniqid() . '.mp4';
-                    // $ruta = storage_path('app/public/galerias/' . $nombreVideo);
-                    $ruta = Storage::disk('nas')->putFile($caso_id . "/galerias", $nombreVideo);
+                    $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombreVideo,$videoData);
                     file_put_contents($ruta, $videoData);
                 } else {
                     // Si no es un video de Liveness, asumimos que es una imagen
@@ -72,8 +73,7 @@ class ClienteEnrolamientoController extends Controller
                     $imagenBase64 = $imagen['Image'];
                     $imagenData = base64_decode($imagenBase64);
                     $nombreImagen = uniqid() . '.png'; // Puedes utilizar otro formato si es necesario
-                    // $ruta = storage_path('app/public/galerias/' . $nombreImagen);
-                    $ruta = Storage::disk('nas')->putFile($caso_id . "/galerias", $nombreImagen);
+                $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombreImagen,$imagenData);
                     file_put_contents($ruta, $imagenData);
                 }
 
@@ -100,11 +100,11 @@ class ClienteEnrolamientoController extends Controller
             $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
 
 
-            $this->actualizarReqCaso($request->input('reqCasoId'), $request->input('casoId'), $estatusEnrolamiento);
+            $this->actualizarReqCaso($request->input('reqCasoId'), $request->input('casoId'), $estatusEnrolamiento, $clienteEnrolamiento);
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolamiento));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
+        // } catch (Exception $e) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        // }
     }
 
     public function clienteEnroladoCasoId($casoId)
@@ -123,26 +123,20 @@ class ClienteEnrolamientoController extends Controller
     }
 
 
-    public function actualizarReqCaso($reqCasoId,$casoId, $statusEnrol){
+    public function actualizarReqCaso($reqCasoId, $casoId, $statusEnrol, $clienteEnrolamiento)
+    {
         //try {
-            $reqCaso = RequerimientoCaso::find($reqCasoId);
-            if($reqCaso){
-                if($statusEnrol == 'Proceso satisfactorio'){
-                    $reqCaso->valor_boolean = true;
-                }else{
-                    $reqCaso->valor_boolean = false;
-                }
-                $reqCaso->save();
+        $reqCaso = RequerimientoCaso::find($reqCasoId);
+        if ($reqCaso) {
+            if ($statusEnrol == 'Proceso satisfactorio') {
+                $reqCaso->valor_boolean = true;
+            } else {
+                $reqCaso->valor_boolean = false;
             }
-        //     //[{"Id":2,"UserName":null,"StateName":"Proceso satisfactorio","CausalRejectionName":null,"StartingDate":"0001-01-01T00:00:00","Observation":null}]
-        //     print('*************--' . json_encode($reqCaso) . '*************');
-        //     print('*************--' . json_encode($reqCasoId) . '*************');
-        //     print('*************--' . json_encode($casoId) . '*************');
-        //     print ('*************--'.json_encode($statusEnrol). '*************');
-        // } catch (\Throwable $th) {
-        //     //throw $th;
-        //     return $th;
-        // }
+            //$reqCaso->marcado = $casoId;
+            $reqCaso->valor_int = $clienteEnrolamiento->id;
+            $reqCaso->save();
+        }
     }
 
 
