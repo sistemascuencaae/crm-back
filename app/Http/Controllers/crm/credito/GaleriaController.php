@@ -5,12 +5,14 @@ namespace App\Http\Controllers\crm\credito;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
+use App\Models\crm\Caso;
 use App\Models\crm\Galeria;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class GaleriaController extends Controller
 {
@@ -19,14 +21,56 @@ class GaleriaController extends Controller
         $this->middleware('auth:api');
     }
 
-    public function addGaleria(Request $request)
+    // public function getGaleriaImage($imagenNombre)
+    // {
+    //     try {
+    //         // Especifica la ruta de la imagen en el disco FTP
+    //         $imagenRuta = $imagenNombre;
+            
+    //         // Utiliza el disco FTP para obtener la imagen
+    //         $imagenContenido = Storage::disk('servidor')->get($imagenRuta);
+            
+    //         // Devuelve la imagen al cliente con el encabezado adecuado
+    //         return response($imagenContenido)->header('Content-Type', 'image/jpeg'); // Cambia el tipo MIME según el formato de la imagen
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+    
+    // public function addGaleria(Request $request)
+    // {
+    //     try {
+    //         DB::beginTransaction();
+    //         if ($request->hasFile("imagen_file")) {
+    //             $path = Storage::disk('servidor')->putFile("galerias", $request->file("imagen_file"));
+    //             $request->request->add(["imagen" => $path]);
+    //         }
+            
+    //         $galeria = Galeria::create($request->all());
+            
+    //         // Resto del código de auditoría y otros procesamientos...
+            
+    //         // En lugar de devolver un objeto JSON, redirige a la URL de la imagen.
+    //         DB::commit();
+    //         // return redirect($this->getGaleriaImage($galeria->imagen));
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+    
+
+
+    public function addGaleria(Request $request, $caso_id)
     {
         try {
             if ($request->hasFile("imagen_file")) {
-                $path = Storage::putFile("galerias", $request->file("imagen_file")); //se va a guardar dentro de la CARPETA CATEGORIAS
+                // $path = Storage::putFile("galerias", $request->file("imagen_file")); //se va a guardar dentro de la CARPETA CATEGORIAS
+                $path = Storage::disk('servidor')->putFile($caso_id . "/galerias", $request->file("imagen_file"));
+
                 $request->request->add(["imagen" => $path]); //Aqui obtenemos la ruta de la imagen en la que se encuentra
             }
-
+            
             $galeria = Galeria::create($request->all());
 
             // START Bloque de código que genera un registro de auditoría manualmente
@@ -52,51 +96,63 @@ class GaleriaController extends Controller
         }
     }
 
+    // public function listGaleriaByCasoId($caso_id)
+    // {
+    //     try {
+    //         $galerias = Galeria::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
+
+    //         // return response()->json([
+    //         //     "imagenes" => $imagenes,]);
+
+    //         // return response()->json([
+    //         //     "imagenes" => $galerias->map(function ($galeria) {
+    //         //         return [
+    //         //             "id" => $galeria->id,
+    //         //             "titulo" => $galeria->titulo,
+    //         //             "descripcion" => $galeria->descripcion,
+    //         //             // "imagen" => env("APP_URL") . "storage/app/public/" . $imagen->imagen,
+    //         //             "imagen" => $galeria->imagen,
+    //         //             "caso_id" => $galeria->caso_id,
+    //         //             "tipo_gal_id" => $galeria->tipo_gal_id
+    //         //         ];
+    //         //     }),
+    //         // ]);
+
+
+    //         return response()->json(
+    //             RespuestaApi::returnResultado(
+    //                 'success',
+    //                 'Se listo con éxito',
+    //                 $galerias
+    //                 // $galerias->map(function ($galeria) {
+    //                 //     return [
+    //                 //         "id" => $galeria->id,
+    //                 //         "titulo" => $galeria->titulo,
+    //                 //         "descripcion" => $galeria->descripcion,
+    //                 //         "imagen" => $galeria->imagen,
+    //                 //         "caso_id" => $galeria->caso_id,
+    //                 //         "tipo_gal_id" => $galeria->tipo_gal_id,
+    //                 //         "sc_id" => $galeria->sc_id,
+    //                 //     ];
+    //                 // })
+    //             )
+    //         );
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+
+    // }
+
     public function listGaleriaByCasoId($caso_id)
     {
         try {
-            $galerias = Galeria::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
+            // Recupera las galerías relacionadas con el caso_id desde la base de datos
+            $galerias = Galeria::where('caso_id', $caso_id)->get();
 
-            // return response()->json([
-            //     "imagenes" => $imagenes,]);
-
-            // return response()->json([
-            //     "imagenes" => $galerias->map(function ($galeria) {
-            //         return [
-            //             "id" => $galeria->id,
-            //             "titulo" => $galeria->titulo,
-            //             "descripcion" => $galeria->descripcion,
-            //             // "imagen" => env("APP_URL") . "storage/app/public/" . $imagen->imagen,
-            //             "imagen" => $galeria->imagen,
-            //             "caso_id" => $galeria->caso_id,
-            //             "tipo_gal_id" => $galeria->tipo_gal_id
-            //         ];
-            //     }),
-            // ]);
-
-
-            return response()->json(
-                RespuestaApi::returnResultado(
-                    'success',
-                    'Se listo con éxito',
-                    $galerias
-                    // $galerias->map(function ($galeria) {
-                    //     return [
-                    //         "id" => $galeria->id,
-                    //         "titulo" => $galeria->titulo,
-                    //         "descripcion" => $galeria->descripcion,
-                    //         "imagen" => $galeria->imagen,
-                    //         "caso_id" => $galeria->caso_id,
-                    //         "tipo_gal_id" => $galeria->tipo_gal_id,
-                    //         "sc_id" => $galeria->sc_id,
-                    //     ];
-                    // })
-                )
-            );
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $galerias));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
-
     }
 
     public function updateGaleria(Request $request, $id)

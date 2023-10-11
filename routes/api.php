@@ -195,7 +195,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // GALERIA
 
-    Route::post('/addGaleria', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
+    Route::post('/addGaleria/{caso_id}', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
     Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
     Route::post('/updateGaleria/{id}', [GaleriaController::class, 'updateGaleria']); // Edita la imagen
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
