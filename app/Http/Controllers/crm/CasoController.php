@@ -651,13 +651,35 @@ class CasoController extends Controller
 
     public function addRequerimientosFase($casoId, $faseId, $userCreadorId)
     {
+
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
-        $reqFase = DB::select(
-            'SELECT rp.* from crm.requerimientos_predefinidos rp
+
+
+        $casorReqEquifa = DB::select("SELECT * from crm.requerimientos_caso rc where rc.caso_id = ? and tipo_campo = ?; ", [$casoId,'equifax']);
+
+        if($casorReqEquifa){
+            //hacer esto si ya existe un requerimiento equifax
+            $reqFase = DB::select(
+                "SELECT rp.* from crm.requerimientos_predefinidos rp
+                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+                WHERE rc.titulo IS null and rp.fase_id = ?  and rp.tipo <> 'equifax' order by rp.orden asc",
+                [$casoId, $faseId]
+            );
+        }else{
+            //hacer esto si todavia no tiene requerimiento equifax
+            $reqFase = DB::select(
+                'SELECT rp.* from crm.requerimientos_predefinidos rp
                 left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
                 WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden asc',
-            [$casoId, $faseId]
-        );
+                [$casoId, $faseId]
+            );
+        }
+
+
+
+
+
+
         for ($i = 0; $i < sizeof($reqFase); $i++) {
             $reqCaso = new RequerimientoCaso();
             $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);

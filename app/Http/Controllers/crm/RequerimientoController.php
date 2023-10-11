@@ -25,6 +25,11 @@ class RequerimientoController extends Controller
     public function addRequerimientos(Request $request)
     {
         try {
+            $existeReqEquifax = Requerimientos::where('fase_id', $request->input('fase_id'))->where('tipo', 'equifax')->first();
+            if($existeReqEquifax){
+                // Si ya existe un requerimiento con tipo "equifax" en esta fase
+                return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE un registro de EQUIFAX: ' . $existeReqEquifax->nombre, ''));
+            }
             // Verifica si ya existe un requerimiento con el tipo "perfil de cliente" en la misma fase
             $existingRequerimiento = Requerimientos::where('fase_id', $request->input('fase_id'))
                 ->where('tipo', 'perfil de cliente')
