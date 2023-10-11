@@ -20,13 +20,15 @@ class ArchivoController extends Controller
         $this->middleware('auth:api');
     }
 
-    public function addArchivo(Request $request)
+    public function addArchivo(Request $request, $caso_id)
     {
         try {
             $file = $request->file("archivo");
             $titulo = $file->getClientOriginalName();
 
-            $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
+            // $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
+            $path = Storage::disk('nas')->putFile($caso_id . "/archivos", $request->file("archivo"));
+
             $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta del archivo en la que se encuentra
 
             $archivo = Archivo::create([
@@ -89,7 +91,7 @@ class ArchivoController extends Controller
         }
     }
 
-    public function updateArchivo(Request $request, $id)
+    public function editArchivo(Request $request, $id)
     {
         try {
             $archivo = Archivo::findOrFail($id);
@@ -143,8 +145,10 @@ class ArchivoController extends Controller
             // Obtener el old_values (valor antiguo)
             $valorAntiguo = $archivo;
 
-            $url = str_replace("storage", "public", $archivo->archivo); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
-            Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
+            // $url = str_replace("storage", "public", $archivo->archivo); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
+            // Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
+
+            Storage::disk('nas')->delete($archivo->archivo); //Mandamos a borrar la foto de nuestra carpeta storage
 
             $archivo->delete();
 
