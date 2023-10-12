@@ -109,11 +109,10 @@ class ClienteEnrolamientoController extends Controller
         // }
     }
 
-    public function clienteEnroladoCasoId($casoId)
+    public function clienteEnroladoById($id)
     {
-
         try {
-            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $casoId)
+            $clienteEnrolado = ClienteEnrolamiento::where('id', $id)
                 ->with([
                     'imagenes' => function ($query) {
                         $query->where('equifax', true);
@@ -123,7 +122,7 @@ class ClienteEnrolamientoController extends Controller
             if ($clienteEnrolado) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $clienteEnrolado));
             } else {
-                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no enrrolado', $casoId));
+                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no enrrolado', $id));
             }
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
