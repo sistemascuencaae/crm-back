@@ -177,7 +177,8 @@ class ClienteEnrolamientoController extends Controller
                     $archivoBase64 = $archivo;
                     $archivoData = base64_decode($archivoBase64);
                     //     $nombreArchivo = uniqid() . '.pdf'; //Genera un nombre ramdon
-                    $nombreArchivo = 'firmado_' . $contador++ . '.pdf';
+                    // $nombreArchivo = 'firmado_' . $contador++ . '_' . $datosEnrolamiento['IdNumber'] . '_' . uniqid() . '.pdf';
+                    $nombreArchivo = 'firmado_' . $contador++ . '_' . $datosEnrolamiento['IdNumber'] . '.pdf';
 
                     $titulo = $nombreArchivo;
                     $observacion = $nombreArchivo;
