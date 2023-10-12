@@ -698,12 +698,7 @@ class CasoController extends Controller
                 [$casoId, $faseId]
             );
         }
-
-
-
-
-
-
+        
         for ($i = 0; $i < sizeof($reqFase); $i++) {
             $reqCaso = new RequerimientoCaso();
             $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
@@ -733,6 +728,8 @@ class CasoController extends Controller
             }
             $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
             $reqCaso->save();
+
+            echo ('$reqCaso: '.json_encode($reqCaso));
         }
     }
 
@@ -944,7 +941,7 @@ class CasoController extends Controller
         // Tipo
         // 1 reasignacion manual
         // 2 automatica por formulas
-        // 3 cambio de fase           
+        // 3 cambio de fase
 
         try {
             DB::transaction(function () use ($caso, $caso_id, $estado_2, $fase_id, $tipo, $user_id) {
