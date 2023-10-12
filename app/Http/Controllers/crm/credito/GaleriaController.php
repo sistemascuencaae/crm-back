@@ -27,9 +27,9 @@ class GaleriaController extends Controller
             if ($request->hasFile("imagen_file")) {
                 $imagen = $request->file("imagen_file");
                 $titulo = $imagen->getClientOriginalName();
-            
-                $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $titulo);
-            
+
+                $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $titulo);
+
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
             }
 
@@ -132,14 +132,14 @@ class GaleriaController extends Controller
                     // Eliminamos la imagen anterior del disco NAS
                     Storage::disk('nas')->delete($galeria->imagen);
                 }
-            
+
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
                 $titulo = $nuevaImagen->getClientOriginalName();
-            
+
                 // Guardar la nueva imagen en el disco NAS con su nombre original
-                $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $titulo);
-            
+                $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+
                 $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
             }
 
