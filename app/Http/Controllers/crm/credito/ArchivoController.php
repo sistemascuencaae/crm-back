@@ -27,7 +27,8 @@ class ArchivoController extends Controller
             $titulo = $file->getClientOriginalName();
 
             // $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
-            $path = Storage::disk('nas')->putFile($caso_id . "/archivos", $request->file("archivo"));
+            $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $file, $titulo); // guarda en el nas con el nombre original del archivo
+
 
             $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta del archivo en la que se encuentra
 
@@ -78,6 +79,7 @@ class ArchivoController extends Controller
                             "id" => $archivo->id,
                             "titulo" => $archivo->titulo,
                             "observacion" => $archivo->observacion,
+                            "tipo" => $archivo->tipo,
                             "archivo" => $archivo->archivo,
                             "caso_id" => $archivo->caso_id,
                             "created_at" => $archivo->created_at,

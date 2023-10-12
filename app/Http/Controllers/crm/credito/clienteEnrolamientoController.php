@@ -4,11 +4,13 @@ namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Archivo;
 use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\Galeria;
 use App\Models\crm\RequerimientoCaso;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ClienteEnrolamientoController extends Controller
@@ -145,6 +147,59 @@ class ClienteEnrolamientoController extends Controller
         }
     }
 
+    public function addArchivosFirmadosEnrolamiento(Request $request)
+    {
+        try {
+            DB::transaction(function () use ($request) {
+
+                // Verificar si el objeto datosEnrolamiento se ha proporcionado
+                if (!$request->has('datosEnrolamiento')) {
+                    return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
+                }
+
+                // Obtener el objeto datosEnrolamiento desde la solicitud
+                $datosEnrolamientoJson = $request->input('datosEnrolamiento');
+                $datosEnrolamiento = json_decode($datosEnrolamientoJson, true); // Decodificar en un array asociativo
+
+
+                // Verificar si el objeto contiene el campo "SignedDocuments"
+                if (!isset($datosEnrolamiento['SignedDocuments']) || empty($datosEnrolamiento['SignedDocuments'])) {
+                    return response()->json(RespuestaApi::returnResultado('error', 'El objeto datosEnrolamiento no contiene archivos firmados', ''));
+                }
+
+                // Obtener el valor de datosEnrolamiento
+                $caso_id = $datosEnrolamiento['caso_id'];
+
+                $contador = 1;
+                foreach ($datosEnrolamiento['SignedDocuments'] as $archivo) {
+
+                    // Decodificar el video base64 y guardarlo en el sistema de archivos
+                    $archivoBase64 = $archivo;
+                    $archivoData = base64_decode($archivoBase64);
+                    //     $nombreArchivo = uniqid() . '.pdf'; //Genera un nombre ramdon
+                    $nombreArchivo = 'firmado_' . $contador++ . '.pdf';
+
+                    $titulo = $nombreArchivo;
+                    $observacion = $nombreArchivo;
+
+                    $ruta = Storage::disk('nas')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
+                    file_put_contents($ruta, $archivoData);
+
+                    Archivo::create([
+                        "titulo" => $titulo,
+                        "observacion" => $observacion,
+                        "archivo" => $caso_id . '/equifax/' . $nombreArchivo,
+                        "caso_id" => $caso_id,
+                        "tipo" => 'equifax',
+                    ]);
+                }
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', ''));
+            });
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 
     // SI VALEN ESTOS METODOS, SOLO QUE YA SE UNIFICO EN UN SOLO METODO (addClienteEnrolamiento) , NO BORRAR
 
