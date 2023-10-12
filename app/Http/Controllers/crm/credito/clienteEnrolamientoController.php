@@ -111,7 +111,13 @@ class ClienteEnrolamientoController extends Controller
     {
 
         try {
-            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $casoId)->with('imagenes')->first();
+            $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $casoId)
+                ->with([
+                    'imagenes' => function ($query) {
+                        $query->where('equifax', true);
+                    }
+                ])->first();
+
             if ($clienteEnrolado) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $clienteEnrolado));
             } else {
