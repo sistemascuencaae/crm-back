@@ -25,10 +25,12 @@ class GaleriaController extends Controller
     {
         try {
             if ($request->hasFile("imagen_file")) {
-                // $path = Storage::putFile("galerias", $request->file("imagen_file")); //se va a guardar dentro de la CARPETA Galerias del Storage de mi backEnd
-                $path = Storage::disk('nas')->putFile($caso_id . "/galerias", $request->file("imagen_file"));
+                $imagen = $request->file("imagen_file");
+                $titulo = $imagen->getClientOriginalName();
 
-                $request->request->add(["imagen" => $path]); //Aqui obtenemos la ruta de la imagen en la que se encuentra
+                $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $titulo);
+
+                $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
             }
 
             $galeria = Galeria::create($request->all());
@@ -126,13 +128,19 @@ class GaleriaController extends Controller
             $audit->old_values = json_encode($valorAntiguo);
 
             if ($request->hasFile("imagen_file")) {
-                if ($galeria->imagen) { //Aqui eliminamos la imagen anterior
-                    // Storage::delete($galeria->imagen); //Aqui pasa la ruta de la imagen para eliminarlo del Storage de mi backEnd
-                    Storage::disk('nas')->delete($galeria->imagen); //Aqui pasa la ruta de la imagen para eliminarlo del NAS
+                if ($galeria->imagen) {
+                    // Eliminamos la imagen anterior del disco NAS
+                    Storage::disk('nas')->delete($galeria->imagen);
                 }
-                // $path = Storage::putFile("galerias", $request->file("imagen_file")); //se va a guardar dentro de la CARPETA Galerias del Storage de mi backEnd
-                $path = Storage::disk('nas')->putFile($galeria->caso_id . "/galerias", $request->file("imagen_file"));
-                $request->request->add(["imagen" => $path]); //Aqui obtenemos la nueva ruta de la imagen al request
+
+                // Obtener el nuevo archivo de imagen y su nombre original
+                $nuevaImagen = $request->file("imagen_file");
+                $titulo = $nuevaImagen->getClientOriginalName();
+
+                // Guardar la nueva imagen en el disco NAS con su nombre original
+                $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+
+                $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
             }
 
             $galeria->update($request->all());
