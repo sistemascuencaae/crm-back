@@ -206,6 +206,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // ARCHIVO
 
     Route::post('/addArchivo/{caso_id}', [ArchivoController::class, 'addArchivo']); // Guardar
+    Route::post('/addArrayArchivos/{caso_id}', [ArchivoController::class, 'addArrayArchivos']); // Guardar
     Route::get('/listArchivoByCasoId/{id}', [ArchivoController::class, 'listArchivoByCasoId']); // Listar
     Route::post('/editArchivo/{id}', [ArchivoController::class, 'editArchivo']); // Editar
     Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'deleteArchivo']); // Eliminar
