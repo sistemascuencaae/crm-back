@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Exception;
+use Log;
 
 class ArchivoController extends Controller
 {
@@ -20,6 +21,36 @@ class ArchivoController extends Controller
         $this->middleware('auth:api');
     }
 
+    public function addArrayArchivos(Request $request, $caso_id)
+    {
+        try {
+            $archivos = $request->file("archivos"); // Acceder a los archivos utilizando la clave "archivos"
+            $archivosGuardados = [];
+            
+            foreach ($archivos as $archivoData) {
+                $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName(); // Obtener el nombre único del archivo
+    
+                $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
+    
+                $nuevoArchivo = Archivo::create([
+                    "titulo" => $nombreUnico,
+                    "observacion" => $request->input("observaciones")[0], // Acceder a la observación de cada archivo
+                    "archivo" => $path,
+                    "caso_id" => $caso_id
+                ]);
+            
+                $archivosGuardados[] = $nuevoArchivo;
+            }
+            
+            $archivos = Archivo::where('caso_id', $request->caso_id)->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron con éxito', $archivos));
+            
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e), 500); // Devolver una respuesta de error 500 en caso de excepción
+        }
+    }
+    
     public function addArchivo(Request $request, $caso_id)
     {
         try {

@@ -136,7 +136,7 @@ class ClienteEnrolamientoController extends Controller
             $clienteEnrolado = ClienteEnrolamiento::where('id', $id)
                 ->with([
                     'imagenes' => function ($query) {
-                        $query->where('equifax', true);
+                        $query->where('equifax', true)->where('deleted_at', null);
                     }
                 ])->first();
 
