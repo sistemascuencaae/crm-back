@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ReqCasoController extends Controller
 {
-    // tipo archivo
+    // tipo archivo test
     public function editReqTipoFile(Request $request)
     {
         $reqCaso = $request->input('reqCaso');
@@ -33,7 +33,13 @@ class ReqCasoController extends Controller
 
             if ($tipoArchivo == 'imagen_file') {
                 if ($request->hasFile("imagen_file")) {
-                    $path = Storage::putFile("galerias", $request->file("imagen_file"));
+                    // $path = Storage::putFile("galerias", $request->file("imagen_file"));
+
+                    $imagen = $request->file("imagen_file");
+                    $titulo = $imagen->getClientOriginalName();
+
+                    $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+
                 }
                 $requerimiento->esimagen = true;
             }
@@ -104,7 +110,13 @@ class ReqCasoController extends Controller
 
             if ($tipoArchivo == 'archivo_file') {
                 if ($request->hasFile("archivo_file")) {
-                    $path = Storage::putFile("archivos", $request->file("archivo_file"));
+
+                    $file = $request->file("archivo_file");
+                    $titulo = $file->getClientOriginalName();
+
+                    $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+
+                    // $path = Storage::putFile("archivos", $request->file("archivo_file"));
                 }
                 $requerimiento->esimagen = false;
 
@@ -288,7 +300,7 @@ class ReqCasoController extends Controller
                 ->orderBy('id', 'asc')
                 ->get();
 
-            $data = (object)[
+            $data = (object) [
                 "reqCaso" => $requerimientosCaso,
                 "solicitudCredito" => $solicitudCredito
             ];
