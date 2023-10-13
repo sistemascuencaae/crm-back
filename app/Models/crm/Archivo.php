@@ -13,7 +13,7 @@ class Archivo extends Model
 {
     use HasFactory;
 
-    use SoftDeletes;
+    //use SoftDeletes;
 
     protected $table = 'crm.archivos';
     protected $fillable = ["titulo", "observacion", "archivo", "caso_id","tipo"];

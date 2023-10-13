@@ -19,116 +19,152 @@ class ClienteEnrolamientoController extends Controller
 
     public function addClienteEnrolamiento(Request $request)
     {
-        //echo ('$request: '.json_encode($request->input('statusEnrol')));
-        //try {
-
-        if (!$request->has('casoId')) {
-            return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
-        }
-
-
-        $clieEnrolado = ClienteEnrolamiento::where('caso_id', $request->input('casoId'))->with([
-            'imagenes' => function ($query) {
-                $query->where('equifax', true);
+        try {
+            if (!$request->has('casoId')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
             }
-        ])->first();
-        if ($clieEnrolado) {
-            $casoController = new CasoController();
-            $data = (object) [
-                "caso" => $casoController->getCaso($request->input('casoId')),
-                "clienteEnrolamiento" => $clieEnrolado
-            ];
-            return response()->json(RespuestaApi::returnResultado('success', 'Cliente enrolado.', $data));
-        }
-        //echo 'estamos qui';
-        $estatusEnrolamiento = $request->input('statusEnrol');
-        //echo ('$request: '.json_encode());
-
-        // Verificar si el objeto datosEnrolamiento se ha proporcionado
-        if (!$request->has('datosEnrolamiento')) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
-        }
-
-        // Obtener el objeto datosEnrolamiento desde la solicitud
-        $datosEnrolamientoJson = $request->input('datosEnrolamiento');
-        $datosEnrolamiento = json_decode($datosEnrolamientoJson, true); // Decodificar en un array asociativo
-
-
-        // Verificar si el objeto contiene el campo "Images"
-        if (!isset($datosEnrolamiento['Images']) || empty($datosEnrolamiento['Images'])) {
-            return response()->json(RespuestaApi::returnResultado('error', 'El objeto datosEnrolamiento no contiene imágenes', ''));
-        }
-
-        // Obtener el valor de datosEnrolamiento
-        $caso_id = $datosEnrolamiento['caso_id'];
-
-
-
-        // Iterar a través de las imágenes y procesarlas
-        foreach ($datosEnrolamiento['Images'] as $imagen) {
-
-            $titulo = $imagen['ImageTypeName'];
-            $descripcion = $imagen['ImageTypeName'];
-
-
-            // Verificar si la imagen es un video de Liveness
-            if ($imagen['ImageTypeName'] === 'Video de Liveness') {
-                // Decodificar el video base64 y guardarlo en el sistema de archivos
-                $videoBase64 = $imagen['Image'];
-                $videoData = base64_decode($videoBase64);
-                $nombreVideo = uniqid() . '.mp4';
-                $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombreVideo, $videoData);
-                file_put_contents($ruta, $videoData);
-            } else {
-                // Si no es un video de Liveness, asumimos que es una imagen
-                // Decodificar la imagen base64 y guardarla en el sistema de archivos
-                $imagenBase64 = $imagen['Image'];
-                $imagenData = base64_decode($imagenBase64);
-                $nombreImagen = uniqid() . '.png'; // Puedes utilizar otro formato si es necesario
-                $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombreImagen, $imagenData);
-                file_put_contents($ruta, $imagenData);
+            if (!$request->has('datosEnrolamiento')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
             }
 
-            // Crear la entrada en la base de datos para Galeria y almacenar su ID
-            Galeria::create([
-                'caso_id' => $caso_id,
-                'titulo' => $titulo,
-                'descripcion' => $descripcion,
-                'imagen' => $caso_id . '/galerias/' . ($imagen['ImageTypeName'] === 'Video de Liveness' ? $nombreVideo : $nombreImagen),
-                'tipo_gal_id' => 1,
-                'equifax' => true,
-            ]);
+            $data = DB::transaction(function () use ($request) {
+
+                $estatusEnrolamiento = $request->input('statusEnrol');
+                $datosEnrolamiento = json_decode($request->input('datosEnrolamiento'), true);
+
+                $caso_id = $request->input('casoId');
+                $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $caso_id)->first();
+
+                if ($clienteEnrolado) {
+                    // Cliente ya existe, actualiza los datos
+                    $clienteEnrolado->fill($datosEnrolamiento);
+                    $clienteEnrolado->save();
+
+                    $imagenes = Galeria::where('caso_id', $caso_id)->where('equifax', true)->get();
+                    Galeria::where('caso_id', $caso_id)->where('equifax', true)->delete();
+                    //echo ('$request->input(reqCasoId): '.json_encode($request->input('reqCasoId')));
+                    $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolado);
+                    //echo ('$imagenes: '.json_encode($imagenes));
+                    foreach ($imagenes as $img) {
+
+                        $ruta = $img['imagen'];
+
+                        if (Storage::disk('nas')->exists($ruta)) {
+                            Storage::disk('nas')->delete($ruta);
+                            // El archivo se ha eliminado exitosamente
+                        } else {
+                            // El archivo no existe en el sistema de archivos "nas"
+                        }
+                    }
+
+                    // También puedes actualizar las imágenes si es necesario
+                    if ($request->has('datosEnrolamiento') && isset($datosEnrolamiento['Images']) && !empty($datosEnrolamiento['Images'])) {
+                        foreach ($datosEnrolamiento['Images'] as $imagen) {
+                            $titulo = $imagen['ImageTypeName'];
+                            $descripcion = $imagen['ImageTypeName'];
+
+                            $imagenBase64 = $imagen['Image'];
+                            $imagenData = base64_decode($imagenBase64);
+
+                            if ($imagen['ImageTypeName'] === 'Video de Liveness') {
+                                $nombre = $titulo . '.mp4';
+                            } else {
+                                $nombre = $titulo . '.png';
+                            }
+
+                            $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombre, $imagenData);
+                            file_put_contents($ruta, $imagenData);
+
+                            Galeria::create([
+                                'caso_id' => $caso_id,
+                                'titulo' => $titulo,
+                                'descripcion' => $descripcion,
+                                'imagen' => $caso_id . '/galerias/' . $nombre,
+                                'tipo_gal_id' => 1,
+                                'equifax' => true,
+                            ]);
+                        }
+                    }
+
+
+                    $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolado->id)
+                        ->with([
+                            'imagenes' => function ($query) {
+                                $query->where('equifax', true);
+                            }
+                        ])->first();
+                    $casoController = new CasoController();
+                    $data = (object) [
+                        "caso" => $casoController->getCaso($caso_id),
+                        "clienteEnrolamiento" => $clieEnrolado
+                    ];
+
+
+
+                    //return response()->json(RespuestaApi::returnResultado('success', 'Cliente enrolado actualizado.', $data));
+                    return $data;
+                }
+
+                if (!isset($datosEnrolamiento['Images']) || empty($datosEnrolamiento['Images'])) {
+                    $data = (object) [
+                        "error" => 'El objeto datosEnrolamiento no contiene imágenes'
+                    ];
+                    return $data;//response()->json(RespuestaApi::returnResultado('error', 'El objeto datosEnrolamiento no contiene imágenes', ''));
+                }
+
+                foreach ($datosEnrolamiento['Images'] as $imagen) {
+                    $titulo = $imagen['ImageTypeName'];
+                    $descripcion = $imagen['ImageTypeName'];
+
+                    $imagenBase64 = $imagen['Image'];
+                    $imagenData = base64_decode($imagenBase64);
+
+                    if ($imagen['ImageTypeName'] === 'Video de Liveness') {
+                        $nombre = $titulo . '.mp4';
+                    } else {
+                        $nombre = $titulo . '.png';
+                    }
+
+                    $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombre, $imagenData);
+                    file_put_contents($ruta, $imagenData);
+
+                    Galeria::create([
+                        'caso_id' => $caso_id,
+                        'titulo' => $titulo,
+                        'descripcion' => $descripcion,
+                        'imagen' => $caso_id . '/galerias/' . $nombre,
+                        'tipo_gal_id' => 1,
+                        'equifax' => true,
+                    ]);
+                }
+
+                unset($datosEnrolamiento['Images']);
+
+                $datosEnrolamiento['Extras'] = json_encode($datosEnrolamiento['Extras']);
+                $datosEnrolamiento['SignedDocuments'] = json_encode($datosEnrolamiento['SignedDocuments']);
+                $datosEnrolamiento['Scores'] = json_encode($datosEnrolamiento['Scores']);
+
+                $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
+                $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolamiento->id)
+                    ->with([
+                        'imagenes' => function ($query) {
+                            $query->where('equifax', true);
+                        }
+                    ])->first();
+                $casoController = new CasoController();
+                $data = (object) [
+                    "caso" => $casoController->getCaso($caso_id),
+                    "clienteEnrolamiento" => $clieEnrolado
+                ];
+
+                $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolamiento);
+               return $data;
+            });
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $th));
         }
-
-        // Eliminar el array Images del objeto datosEnrolamiento
-        unset($datosEnrolamiento['Images']);
-
-        // Convertir otros arrays en cadenas JSON
-        $datosEnrolamiento['Extras'] = json_encode($datosEnrolamiento['Extras']);
-        $datosEnrolamiento['SignedDocuments'] = json_encode($datosEnrolamiento['SignedDocuments']);
-        $datosEnrolamiento['Scores'] = json_encode($datosEnrolamiento['Scores']);
-
-        // Crear ClienteEnrolamiento
-        $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
-
-        $this->actualizarReqCaso($request->input('reqCasoId'), $request->input('casoId'), $estatusEnrolamiento, $clienteEnrolamiento);
-        $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolamiento->id)
-        ->with([
-            'imagenes' => function ($query) {
-                $query->where('equifax', true);
-            }
-        ])->first();
-        $casoController = new CasoController();
-        $data = (object) [
-            "caso" => $casoController->getCaso($caso_id),
-            "clienteEnrolamiento" => $clieEnrolado
-        ];
-        return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $data));
-        // } catch (Exception $e) {
-        //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        // }
     }
-
 
     public function clienteEnroladoById($id)
     {
@@ -153,18 +189,22 @@ class ClienteEnrolamientoController extends Controller
 
     public function actualizarReqCaso($reqCasoId, $casoId, $statusEnrol, $clienteEnrolamiento)
     {
-        $reqCaso = RequerimientoCaso::find($reqCasoId);
-        if ($reqCaso) {
-            if ($statusEnrol == 'Proceso satisfactorio') {
-                $reqCaso->valor_boolean = true;
-            } else {
-                $reqCaso->valor_boolean = false;
+        try {
+            $reqCaso = RequerimientoCaso::find($reqCasoId);
+            if ($reqCaso) {
+                if ($statusEnrol == 'Proceso satisfactorio') {
+                    $reqCaso->valor_boolean = true;
+                } else {
+                    $reqCaso->valor_boolean = false;
+                }
+                $reqCaso->marcado = true;
+                $reqCaso->valor_int = $clienteEnrolamiento->id;
+                $reqCaso->save();
             }
-            $reqCaso->marcado = true;
-            $reqCaso->valor_int = $clienteEnrolamiento->id;
-            $reqCaso->save();
+            return $reqCaso;
+        } catch (\Throwable $th) {
+            return $th;
         }
-        return $reqCaso;
     }
 
     public function addArchivosFirmadosEnrolamiento(Request $request)
