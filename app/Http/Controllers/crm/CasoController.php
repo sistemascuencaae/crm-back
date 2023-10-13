@@ -69,10 +69,10 @@ class CasoController extends Controller
                     $caso->tareas()->save($tarea);
                 }
 
-                $newGrupo = new ChatGroups();
-                $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
-                $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
-                $newGrupo->save();
+                // $newGrupo = new ChatGroups();
+                // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
+                // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
+                //$newGrupo->save();
                 $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
                 //--------------------
                 $caso->estado_2 = $estadoInicial->id;
@@ -83,7 +83,7 @@ class CasoController extends Controller
                 for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
                     $miembro->user_id = $miembros[$i];
-                    $miembro->chat_group_id = $newGrupo->id;
+                    //$miembro->chat_group_id = $newGrupo->id;
                     $caso->miembros()->save($miembro);
                 }
 
@@ -698,7 +698,7 @@ class CasoController extends Controller
                 [$casoId, $faseId]
             );
         }
-        
+
         for ($i = 0; $i < sizeof($reqFase); $i++) {
             $reqCaso = new RequerimientoCaso();
             $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
@@ -806,7 +806,7 @@ class CasoController extends Controller
                 $nuevoCliente->tipo_identificacion = $entidadPublic->ent_tipo_identificacion;
                 $nuevoCliente->identificacion = $entidadPublic->ent_identificacion;
                 $nuevoCliente->nombres = $entidadPublic->ent_nombres;
-                $nuevoCliente->apellidos = $entidadPublic->ent_nombres;
+                $nuevoCliente->apellidos = $entidadPublic->ent_apellidos;
                 $nuevoCliente->fechanacimiento = $entidadPublic->ent_fechanacimiento;
                 $nuevoCliente->email = $entidadPublic->ent_email;
                 if ($clienteSC) {
