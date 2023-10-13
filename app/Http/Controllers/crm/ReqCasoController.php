@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ReqCasoController extends Controller
 {
-    // tipo archivo
+    // tipo archivo test
     public function editReqTipoFile(Request $request)
     {
         $reqCaso = $request->input('reqCaso');
