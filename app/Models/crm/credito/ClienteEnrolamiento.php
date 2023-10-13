@@ -80,7 +80,7 @@ class ClienteEnrolamiento extends Model
         "Parameters",
         "StateSignatureDocument",
 
-        "ent_id", // Id del cliente que viene desde el caso
+        "cli_id", // Id del cliente que viene desde el caso
         "caso_id", // Id del caso que viene desde el caso
     ];
 

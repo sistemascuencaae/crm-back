@@ -14,7 +14,7 @@ class Galeria extends Model
 
     use HasFactory;
 
-    use SoftDeletes;
+    //use SoftDeletes;
 
     protected $table = 'crm.galerias';
 
