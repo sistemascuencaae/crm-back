@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\CasoController;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\credito\ClienteEnrolamiento;
@@ -26,9 +27,18 @@ class ClienteEnrolamientoController extends Controller
         }
 
 
-        $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $request->input('casoId'))->first();
-        if ($clienteEnrolado) {
-            return response()->json(RespuestaApi::returnResultado('success', 'Cliente enrolado.', $clienteEnrolado));
+        $clieEnrolado = ClienteEnrolamiento::where('caso_id', $request->input('casoId'))->with([
+            'imagenes' => function ($query) {
+                $query->where('equifax', true);
+            }
+        ])->first();
+        if ($clieEnrolado) {
+            $casoController = new CasoController();
+            $data = (object) [
+                "caso" => $casoController->getCaso($request->input('casoId')),
+                "clienteEnrolamiento" => $clieEnrolado
+            ];
+            return response()->json(RespuestaApi::returnResultado('success', 'Cliente enrolado.', $data));
         }
         //echo 'estamos qui';
         $estatusEnrolamiento = $request->input('statusEnrol');
@@ -101,13 +111,24 @@ class ClienteEnrolamientoController extends Controller
         // Crear ClienteEnrolamiento
         $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
 
-
         $this->actualizarReqCaso($request->input('reqCasoId'), $request->input('casoId'), $estatusEnrolamiento, $clienteEnrolamiento);
-        return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $clienteEnrolamiento));
+        $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolamiento->id)
+        ->with([
+            'imagenes' => function ($query) {
+                $query->where('equifax', true);
+            }
+        ])->first();
+        $casoController = new CasoController();
+        $data = (object) [
+            "caso" => $casoController->getCaso($caso_id),
+            "clienteEnrolamiento" => $clieEnrolado
+        ];
+        return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $data));
         // } catch (Exception $e) {
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         // }
     }
+
 
     public function clienteEnroladoById($id)
     {
@@ -132,7 +153,6 @@ class ClienteEnrolamientoController extends Controller
 
     public function actualizarReqCaso($reqCasoId, $casoId, $statusEnrol, $clienteEnrolamiento)
     {
-        //try {
         $reqCaso = RequerimientoCaso::find($reqCasoId);
         if ($reqCaso) {
             if ($statusEnrol == 'Proceso satisfactorio') {
@@ -140,10 +160,11 @@ class ClienteEnrolamientoController extends Controller
             } else {
                 $reqCaso->valor_boolean = false;
             }
-            //$reqCaso->marcado = $casoId;
+            $reqCaso->marcado = true;
             $reqCaso->valor_int = $clienteEnrolamiento->id;
             $reqCaso->save();
         }
+        return $reqCaso;
     }
 
     public function addArchivosFirmadosEnrolamiento(Request $request)
