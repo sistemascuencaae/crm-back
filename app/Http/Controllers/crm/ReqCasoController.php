@@ -39,7 +39,6 @@ class ReqCasoController extends Controller
                     $titulo = $imagen->getClientOriginalName();
 
                     $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
-
                 }
                 $requerimiento->esimagen = true;
             }
@@ -208,33 +207,58 @@ class ReqCasoController extends Controller
             $requerimiento = RequerimientoCaso::find($id);
 
             // Obtener el old_values (valor antiguo)
-            $audit = new Audits();
-            $valorAntiguo = $requerimiento;
-            $audit->old_values = json_encode($valorAntiguo);
+
 
             if ($requerimiento) {
-                $requerimiento->update($request->all());
+                DB::transaction(function () use ($requerimiento, $request) {
 
-                // START Bloque de código que genera un registro de auditoría manualmente
-                $audit->user_id = Auth::id();
-                $audit->event = 'updated';
-                $audit->auditable_type = RequerimientoCaso::class;
-                $audit->auditable_id = $requerimiento->id;
-                $audit->user_type = User::class;
-                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-                $audit->url = $request->fullUrl();
-                // Establecer old_values y new_values
-                $audit->new_values = json_encode($requerimiento);
-                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-                $audit->accion = 'editRequerimiento';
-                $audit->save();
-                // END Auditoria
+                    //echo ('$requerimiento->descripcion: '.json_encode($requerimiento->descripcion));
+
+                    if ($requerimiento->tipo_campo == 'archivo' && $requerimiento->galerias_id != null) {
+
+                        //echo ('$requerimiento: '.json_encode($requerimiento));
+                        $galeria = Galeria::find($requerimiento->galerias_id);
+                        $galeria->update([
+                            "descripcion" => $requerimiento->descripcion, // : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        ]);
+                        echo ('$galeria->descripcion: '.json_encode($galeria->descripcion));
+                    }
+                    if ($requerimiento->tipo_campo == 'archivo' && $requerimiento->archivos_id != null) {
+                        $archivo = Archivo::find($requerimiento->archivos_id);
+                        $archivo->update([
+                            "observacion" => $requerimiento->descripcion, // : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        ]);
+                    }
+                    $audit = new Audits();
+                    $valorAntiguo = $requerimiento;
+                    $audit->old_values = json_encode($valorAntiguo);
+                    $requerimiento->update($request->all());
+                    // START Bloque de código que genera un registro de auditoría manualmente
+                    $audit->user_id = Auth::id();
+                    $audit->event = 'updated';
+                    $audit->auditable_type = RequerimientoCaso::class;
+                    $audit->auditable_id = $requerimiento->id;
+                    $audit->user_type = User::class;
+                    $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                    $audit->url = $request->fullUrl();
+                    // Establecer old_values y new_values
+                    $audit->new_values = json_encode($requerimiento);
+                    $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                    $audit->accion = 'editRequerimiento';
+                    $audit->save();
+                    // END Auditoria
+
+
+                    //echo ('$requerimiento: '.json_encode($requerimiento));
+                });
+
+
+
 
                 $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))
                     ->orderBy('id', 'asc')
                     ->orderBy('id', 'asc')
                     ->get();
-
                 return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $reqCaso));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento no existe.', $requerimiento));
