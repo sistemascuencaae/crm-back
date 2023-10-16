@@ -216,54 +216,60 @@ class ArchivoController extends Controller
     public function listArchivosSinFirmaEquifaxByCasoId($caso_id)
     {
         try {
-            $folderPath = $caso_id . "/archivos_sin_firma"; // Ruta de la carpeta en tu NAS
+            $data = DB::transaction(function () use ($caso_id) {
+                $folderPath = $caso_id . "/archivos_sin_firma"; // Ruta de la carpeta en tu NAS
 
-            // Obtén los nombres de archivos del sistema de archivos (NAS)
-            $archivosNAS = Storage::disk('nas')->files($folderPath);
+                // Obtén los nombres de archivos del sistema de archivos (NAS)
+                $archivosNAS = Storage::disk('nas')->files($folderPath);
 
-            // Busca archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
-            $archivosBD = Archivo::whereIn('archivo', $archivosNAS)->orderBy('archivo', 'ASC')->get();
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $archivosBD));
+                // Busca archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
+                return Archivo::whereIn('archivo', $archivosNAS)->orderBy('archivo', 'ASC')->get();
+            });
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
+    // Agrega archivos para mandar a firmar en la carpeta archivos_sin_firmar
     public function addArchivosEquifax(Request $request, $caso_id)
     {
         try {
-            $archivos = $request->file("archivos"); // Acceder a los archivos utilizando la clave "archivos"
-            $archivosGuardados = [];
+            $data = DB::transaction(function () use ($request, $caso_id) {
+                $archivos = $request->file("archivos"); // Acceder a los archivos utilizando la clave "archivos"
+                $archivosGuardados = [];
 
-            foreach ($archivos as $archivoData) {
-                $nombreBase = $caso_id . '-' . $archivoData->getClientOriginalName(); // Nombre base del archivo
+                foreach ($archivos as $archivoData) {
+                    $nombreBase = $caso_id . '-' . $archivoData->getClientOriginalName(); // Nombre base del archivo
 
-                $path = $caso_id . "/archivos_sin_firma";
+                    $path = $caso_id . "/archivos_sin_firma";
 
-                $titulo = $nombreBase;
+                    $titulo = $nombreBase;
 
-                $i = 1;
-                while (Storage::disk('nas')->exists("$path/$titulo")) {
-                    // Si el archivo con el mismo nombre ya existe, ajusta el nombre
-                    $info = pathinfo($nombreBase);
-                    $titulo = $info['filename'] . " ($i)." . $info['extension'];
-                    $i++;
+                    $i = 1;
+                    while (Storage::disk('nas')->exists("$path/$titulo")) {
+                        // Si el archivo con el mismo nombre ya existe, ajusta el nombre
+                        $info = pathinfo($nombreBase);
+                        $titulo = $info['filename'] . " ($i)." . $info['extension'];
+                        $i++;
+                    }
+
+                    $path = Storage::disk('nas')->putFileAs($path, $archivoData, $titulo); // Guardar el archivo
+
+                    $nuevoArchivo = Archivo::create([
+                        "titulo" => $titulo,
+                        "observacion" => $request->input("observaciones")[0],
+                        "archivo" => $path,
+                        "caso_id" => $caso_id
+                    ]);
+
+                    $archivosGuardados[] = $nuevoArchivo;
                 }
 
-                $path = Storage::disk('nas')->putFileAs($path, $archivoData, $titulo); // Guardar el archivo
+                return $archivosGuardados;
+            });
 
-                $nuevoArchivo = Archivo::create([
-                    "titulo" => $titulo,
-                    "observacion" => $request->input("observaciones")[0],
-                    "archivo" => $path,
-                    "caso_id" => $caso_id
-                ]);
-
-                $archivosGuardados[] = $nuevoArchivo;
-            }
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivosGuardados));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
 
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -273,44 +279,46 @@ class ArchivoController extends Controller
     public function editArchivosEquifax(Request $request, $id)
     {
         try {
-            $archivo = Archivo::findOrFail($id);
+            $data = DB::transaction(function () use ($request, $id) {
+                $archivo = Archivo::findOrFail($id);
 
-            if ($request->hasFile("archivo")) {
-                $file = $request->file("archivo");
-                $originalTitulo = $file->getClientOriginalName();
-                $nombreBase = $archivo->caso_id . '-' . $originalTitulo;
+                if ($request->hasFile("archivo")) {
+                    $file = $request->file("archivo");
+                    $originalTitulo = $file->getClientOriginalName();
+                    $nombreBase = $archivo->caso_id . '-' . $originalTitulo;
 
-                $path = $archivo->caso_id . "/archivos_sin_firma";
+                    $path = $archivo->caso_id . "/archivos_sin_firma";
 
-                $titulo = $nombreBase;
+                    $titulo = $nombreBase;
 
-                $i = 1;
-                while (Storage::disk('nas')->exists("$path/$titulo")) {
-                    // Si el archivo con el mismo nombre ya existe, ajusta el nombre
-                    $info = pathinfo($nombreBase);
-                    $titulo = $info['filename'] . " ($i)." . $info['extension'];
-                    $i++;
+                    $i = 1;
+                    while (Storage::disk('nas')->exists("$path/$titulo")) {
+                        // Si el archivo con el mismo nombre ya existe, ajusta el nombre
+                        $info = pathinfo($nombreBase);
+                        $titulo = $info['filename'] . " ($i)." . $info['extension'];
+                        $i++;
+                    }
+
+                    $path = Storage::disk('nas')->putFileAs($path, $file, $titulo);
+
+                    // Puedes eliminar el archivo anterior si es necesario
+                    if ($archivo->archivo) {
+                        Storage::disk('nas')->delete($archivo->archivo);
+                    }
+
+                    $archivo->update([
+                        "titulo" => $titulo,
+                        "observacion" => $request->input("observacion"),
+                        "archivo" => $path,
+                    ]);
+
+                    return $archivo;
+                } else {
+                    return response()->json(RespuestaApi::returnResultado('error', 'Error', 'No se ha cargado un archivo.'));
                 }
+            });
 
-                $path = Storage::disk('nas')->putFileAs($path, $file, $titulo);
-
-                // Puedes eliminar el archivo anterior si es necesario
-                if ($archivo->archivo) {
-                    Storage::disk('nas')->delete($archivo->archivo);
-                }
-
-                $archivo->update([
-                    "titulo" => $titulo,
-                    "observacion" => $request->input("observacion"),
-                    "archivo" => $path,
-                ]);
-            } else {
-                $archivo->update([
-                    "observacion" => $request->input("observacion"),
-                ]);
-            }
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $archivo));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -321,9 +329,10 @@ class ArchivoController extends Controller
     public function listArchivosEquifaxFirmadosByCasoId($caso_id)
     {
         try {
-            $archivos = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->where('tipo', 'equifax')->get();
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $archivos));
+            $data = DB::transaction(function () use ($caso_id) {
+                return Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->where('tipo', 'equifax')->get();
+            });
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
