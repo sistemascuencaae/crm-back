@@ -210,6 +210,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listArchivoByCasoId/{id}', [ArchivoController::class, 'listArchivoByCasoId']); // Listar
     Route::post('/editArchivo/{id}', [ArchivoController::class, 'editArchivo']); // Editar
     Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'deleteArchivo']); // Eliminar
+    //Para documentos de equifax
+    Route::post('/addArchivosEquifax/{caso_id}', [ArchivoController::class, 'addArchivosEquifax']); // Guardar
+    Route::get('/listArchivosSinFirmaEquifaxByCasoId/{caso_id}', [ArchivoController::class, 'listArchivosSinFirmaEquifaxByCasoId']); // Listar sin firmas
+    Route::post('/editArchivosEquifax/{id}', [ArchivoController::class, 'editArchivosEquifax']); // Editar
+    Route::get('/listArchivosEquifaxFirmadosByCasoId/{caso_id}', [ArchivoController::class, 'listArchivosEquifaxFirmadosByCasoId']); // Listar de firmados
 
     // Etiqueta
 
@@ -408,7 +413,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 });
 
 Route::group([], function ($router) {
-    Route::post('/getDocuments', [EquifaxController::class, 'getDocuments']);
+    Route::post('/getDocuments/{caso_id}', [EquifaxController::class, 'getDocuments']);
 });
 
 

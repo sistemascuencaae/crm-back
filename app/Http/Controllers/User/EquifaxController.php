@@ -68,7 +68,7 @@ class EquifaxController extends Controller
 
 
 
-    public function getDocuments(Request $request)
+    public function getDocuments(Request $request, $caso_id) // falta vaciar los archivos de esta carpeta cuando no de error
     {
         try {
             // Validar el token de autorización OAuth
@@ -83,7 +83,9 @@ class EquifaxController extends Controller
                 return response()->json(['message' => 'Parámetros mal formateados'], 400);
             }
             // Ruta de la carpeta donde se encuentran los archivos PDF
-            $folderPath = storage_path('app/public/equifax/');
+            // $folderPath = storage_path('app/public/equifax/');
+            $folderPath = Storage::disk('nas')->files($caso_id . "/archivos_sin_firma");
+
             // Verificar si la carpeta existe
             if (!File::isDirectory($folderPath)) {
                 return response()->json(['message' => 'La carpeta no existe'], 404);
