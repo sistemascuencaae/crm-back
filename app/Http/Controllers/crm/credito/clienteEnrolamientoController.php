@@ -109,7 +109,7 @@ class ClienteEnrolamientoController extends Controller
                     $data = (object) [
                         "error" => 'El objeto datosEnrolamiento no contiene imágenes'
                     ];
-                    return $data;//response()->json(RespuestaApi::returnResultado('error', 'El objeto datosEnrolamiento no contiene imágenes', ''));
+                    return $data; //response()->json(RespuestaApi::returnResultado('error', 'El objeto datosEnrolamiento no contiene imágenes', ''));
                 }
 
                 foreach ($datosEnrolamiento['Images'] as $imagen) {
@@ -158,7 +158,7 @@ class ClienteEnrolamientoController extends Controller
                 ];
 
                 $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolamiento);
-               return $data;
+                return $data;
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $data));
         } catch (\Throwable $th) {
@@ -210,11 +210,15 @@ class ClienteEnrolamientoController extends Controller
     public function addArchivosFirmadosEnrolamiento(Request $request)
     {
         try {
-            DB::transaction(function () use ($request) {
+            $error = null;
+            $exitoso = null;
+            DB::transaction(function () use ($request, &$error, &$exitoso) {
 
                 // Verificar si el objeto datosEnrolamiento se ha proporcionado
                 if (!$request->has('datosEnrolamiento')) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
+                    // return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
+                    $error = 'No se proporcionó el objeto datosEnrolamiento';
+                    return null; // No se realiza la transacción
                 }
 
                 // Obtener el objeto datosEnrolamiento desde la solicitud
@@ -224,39 +228,87 @@ class ClienteEnrolamientoController extends Controller
 
                 // Verificar si el objeto contiene el campo "SignedDocuments"
                 if (!isset($datosEnrolamiento['SignedDocuments']) || empty($datosEnrolamiento['SignedDocuments'])) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'El objeto datosEnrolamiento no contiene archivos firmados', ''));
+                    // return response()->json(RespuestaApi::returnResultado('error', 'No hay archivos para firmar', ''));
+                    $error = 'No hay archivos para firmar';
+                    return null; // No se realiza la transacción
+                } else {
+
+                    // Aqui borrar los archivos de la carpeta equifax y tambien de la BD
+                    // Paso 1: Obtener los nombres de archivos en la carpeta NAS
+                    $folderPath = $datosEnrolamiento['caso_id'] . "/equifax";
+                    $archivosNAS = Storage::disk('nas')->files($folderPath);
+
+                    // Paso 2: Buscar registros de archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
+                    $archivosEnBD = Archivo::whereIn('archivo', $archivosNAS)->get();
+
+                    // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
+                    foreach ($archivosEnBD as $archivo) {
+                        // Eliminar archivos de la carpeta NAS
+                        Storage::disk('nas')->delete($archivo->archivo);
+
+                        // Eliminar el registro de la base de datos
+                        $archivo->delete();
+                    }
+                    // Aqui borrar los archivos de la carpeta equifax y tambien de la BD
+
+                    // Obtener el valor de datosEnrolamiento
+                    $caso_id = $datosEnrolamiento['caso_id'];
+
+                    $contador = 1;
+                    foreach ($datosEnrolamiento['SignedDocuments'] as $archivo) {
+
+                        // Decodificar el video base64 y guardarlo en el sistema de archivos
+                        $archivoBase64 = $archivo;
+                        $archivoData = base64_decode($archivoBase64);
+                        //     $nombreArchivo = uniqid() . '.pdf'; //Genera un nombre ramdon
+                        // $nombreArchivo = 'firmado_' . $contador++ . '_' . $datosEnrolamiento['IdNumber'] . '_' . uniqid() . '.pdf';
+                        $nombreArchivo = 'firmado_' . $contador++ . '_' . $datosEnrolamiento['IdNumber'] . '.pdf';
+
+                        $titulo = $nombreArchivo;
+                        $observacion = $nombreArchivo;
+
+                        $ruta = Storage::disk('nas')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
+                        file_put_contents($ruta, $archivoData);
+
+                        Archivo::create([
+                            "titulo" => $titulo,
+                            "observacion" => $observacion,
+                            "archivo" => $caso_id . '/equifax/' . $nombreArchivo,
+                            "caso_id" => $caso_id,
+                            "tipo" => 'equifax',
+                        ]);
+                    }
+
+                    // Aqui borrar los archivos de la carpeta archivos_sin_firma y tambien de la BD
+                    // Paso 1: Obtener los nombres de archivos en la carpeta NAS
+                    $folderPath = $caso_id . "/archivos_sin_firma";
+                    $archivosNAS = Storage::disk('nas')->files($folderPath);
+
+                    // Paso 2: Buscar registros de archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
+                    $archivosEnBD = Archivo::whereIn('archivo', $archivosNAS)->get();
+
+                    // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
+                    foreach ($archivosEnBD as $archivo) {
+                        // Eliminar archivos de la carpeta NAS
+                        Storage::disk('nas')->delete($archivo->archivo);
+
+                        // Eliminar el registro de la base de datos
+                        $archivo->delete();
+                    }
+                    // Aqui borrar los archivos de la carpeta archivos_sin_firma y tambien de la BD
+
+                    // return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', ''));
+                    $exitoso = 'Se guardo con éxito';
+                    return null; // Se realiza la transacción
                 }
-
-                // Obtener el valor de datosEnrolamiento
-                $caso_id = $datosEnrolamiento['caso_id'];
-
-                $contador = 1;
-                foreach ($datosEnrolamiento['SignedDocuments'] as $archivo) {
-
-                    // Decodificar el video base64 y guardarlo en el sistema de archivos
-                    $archivoBase64 = $archivo;
-                    $archivoData = base64_decode($archivoBase64);
-                    //     $nombreArchivo = uniqid() . '.pdf'; //Genera un nombre ramdon
-                    // $nombreArchivo = 'firmado_' . $contador++ . '_' . $datosEnrolamiento['IdNumber'] . '_' . uniqid() . '.pdf';
-                    $nombreArchivo = 'firmado_' . $contador++ . '_' . $datosEnrolamiento['IdNumber'] . '.pdf';
-
-                    $titulo = $nombreArchivo;
-                    $observacion = $nombreArchivo;
-
-                    $ruta = Storage::disk('nas')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
-                    file_put_contents($ruta, $archivoData);
-
-                    Archivo::create([
-                        "titulo" => $titulo,
-                        "observacion" => $observacion,
-                        "archivo" => $caso_id . '/equifax/' . $nombreArchivo,
-                        "caso_id" => $caso_id,
-                        "tipo" => 'equifax',
-                    ]);
-                }
-
-                return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', ''));
             });
+
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', $exitoso, ''));
+            }
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
