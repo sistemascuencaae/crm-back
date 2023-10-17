@@ -54,7 +54,8 @@ class ClienteCrm extends Model
         "observacion_conyuge",
         "fechanacimiento",
         "tipo_identificacion",
-        "email"
+        "email",
+        "nombre_comercial"
 
     ];
 
