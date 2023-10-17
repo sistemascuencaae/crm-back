@@ -37,7 +37,8 @@ return [
 
         'nas' => [
             'driver' => 'ftp',
-            'host' => '192.168.1.248', // La dirección IP o nombre de dominio de tu servidor FTP
+            // 'host' => '192.168.1.248', // La dirección IP o nombre de dominio de tu servidor FTP
+            'host' => '191.100.27.176', // La dirección IP o nombre de dominio de tu servidor FTP
             'username' => 'jsimbana', // Tu nombre de usuario FTP
             'password' => '5k5KqtDC', // Tu contraseña FTP
             'root' => '/crm', // Ruta raíz en el servidor FTP

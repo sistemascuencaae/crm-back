@@ -65,48 +65,36 @@ class EquifaxController extends Controller
         ]);
     }
 
-
-
-
-    public function getDocuments(Request $request, $caso_id) // falta vaciar los archivos de esta carpeta cuando no de error
+    public function getDocuments(Request $request, $caso_id)
     {
         try {
-            // Validar el token de autorización OAuth
-            // $token = $request->header('Authorization');
-            // Realizar validación de OAuth según tus necesidades
-            // Obtener y validar el JSON de la solicitud
-            //echo ('Test 1: Data ingresada: '.json_encode($request->input('Uid')));
-            DB::insert('INSERT INTO crm.tabla_pruebas (nombre) values (?)', ['prueba equifax']);
-            $jsonTransaction = $request->json();
-            // Verificar si se proporcionó un JSON válido
-            if (empty($jsonTransaction)) {
-                return response()->json(['message' => 'Parámetros mal formateados'], 400);
-            }
-            // Ruta de la carpeta donde se encuentran los archivos PDF
-            // $folderPath = storage_path('app/public/equifax/');
-            $folderPath = Storage::disk('nas')->files($caso_id . "/archivos_sin_firma");
-
-            // Verificar si la carpeta existe
-            if (!File::isDirectory($folderPath)) {
+            // Verificar si la carpeta en NAS existe
+            $folderPath = "$caso_id/archivos_sin_firma";
+            if (!Storage::disk('nas')->exists($folderPath)) {
                 return response()->json(['message' => 'La carpeta no existe'], 404);
             }
+
             // Obtener la lista de archivos PDF en la carpeta
-            $pdfFiles = File::files($folderPath);
-            // Inicializar un array para almacenar los documentos en base64
+            $archivosNAS = Storage::disk('nas')->files($folderPath);
             $documents = [];
-            //echo ('Test 2: Validaciones');
+
             // Recorrer los archivos PDF y convertirlos en base64
-            foreach ($pdfFiles as $pdfFile) {
-                if (pathinfo($pdfFile, PATHINFO_EXTENSION) === 'pdf') {
-                    // Leer el archivo PDF y convertirlo en base64
-                    $pdfData = file_get_contents($pdfFile);
+            foreach ($archivosNAS as $archivo) {
+                $extension = pathinfo($archivo, PATHINFO_EXTENSION);
+                if ($extension === 'pdf') {
+                    $pdfData = Storage::disk('nas')->get($archivo);
                     $base64Data = base64_encode($pdfData);
 
-                    // Agregar el documento base64 al array
+                    // este bloque comentado devuelve los archivos con sus nombres y su base64
+                    // $documents[] = [
+                    //     'nombre' => pathinfo($archivo, PATHINFO_BASENAME),
+                    //     'data' => $base64Data,
+                    // ];
+
                     $documents[] = $base64Data;
                 }
             }
-            //echo ('Test 3: Validaciones');
+
             // Verificar si hay documentos disponibles
             if (count($documents) > 0) {
                 return response()->json($documents, 200);
@@ -118,6 +106,59 @@ class EquifaxController extends Controller
             return response()->json(['message' => 'Ha ocurrido un error en el servidor'], 500);
         }
     }
+
+
+
+    // public function getDocuments(Request $request, $caso_id) // falta vaciar los archivos de esta carpeta cuando no de error
+    // {
+    //     try {
+    //         // Validar el token de autorización OAuth
+    //         // $token = $request->header('Authorization');
+    //         // Realizar validación de OAuth según tus necesidades
+    //         // Obtener y validar el JSON de la solicitud
+    //         //echo ('Test 1: Data ingresada: '.json_encode($request->input('Uid')));
+    //         DB::insert('INSERT INTO crm.tabla_pruebas (nombre) values (?)', ['prueba equifax']);
+    //         $jsonTransaction = $request->json();
+    //         // Verificar si se proporcionó un JSON válido
+    //         if (empty($jsonTransaction)) {
+    //             return response()->json(['message' => 'Parámetros mal formateados'], 400);
+    //         }
+    //         // Ruta de la carpeta donde se encuentran los archivos PDF
+    //         // $folderPath = storage_path('app/public/equifax/');
+    //         $folderPath = Storage::disk('nas')->files($caso_id . "/archivos_sin_firma");
+
+    //         // Verificar si la carpeta existe
+    //         if (!File::isDirectory($folderPath)) {
+    //             return response()->json(['message' => 'La carpeta no existe'], 404);
+    //         }
+    //         // Obtener la lista de archivos PDF en la carpeta
+    //         $pdfFiles = File::files($folderPath);
+    //         // Inicializar un array para almacenar los documentos en base64
+    //         $documents = [];
+    //         //echo ('Test 2: Validaciones');
+    //         // Recorrer los archivos PDF y convertirlos en base64
+    //         foreach ($pdfFiles as $pdfFile) {
+    //             if (pathinfo($pdfFile, PATHINFO_EXTENSION) === 'pdf') {
+    //                 // Leer el archivo PDF y convertirlo en base64
+    //                 $pdfData = file_get_contents($pdfFile);
+    //                 $base64Data = base64_encode($pdfData);
+
+    //                 // Agregar el documento base64 al array
+    //                 $documents[] = $base64Data;
+    //             }
+    //         }
+    //         //echo ('Test 3: Validaciones');
+    //         // Verificar si hay documentos disponibles
+    //         if (count($documents) > 0) {
+    //             return response()->json($documents, 200);
+    //         } else {
+    //             return response()->json(['message' => 'No hay archivos PDF disponibles para retornar'], 404);
+    //         }
+    //     } catch (\Exception $e) {
+    //         // En caso de excepción, retorna un error interno del servidor
+    //         return response()->json(['message' => 'Ha ocurrido un error en el servidor'], 500);
+    //     }
+    // }
 
 
 
