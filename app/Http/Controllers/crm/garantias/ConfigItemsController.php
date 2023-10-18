@@ -45,9 +45,7 @@ class ConfigItemsController extends Controller
 
         foreach ($data['partes'] as $p) {
             $parte = DB::select("select p.descripcion from gex.partes p where p.parte_id = " . $p['parte_id'])[0];
-            foreach ($parte as $valor) {
-                $p['parte'] = $valor;
-            }
+            $p['parte'] = $parte->descripcion;
         }
 
         if($data){

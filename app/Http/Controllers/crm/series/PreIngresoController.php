@@ -227,6 +227,10 @@ class PreIngresoController extends Controller
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
                     ]);
+
+                foreach ($data['detalle'] as $d) {
+                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                }
             });
             
             return response()->json(RespuestaApi::returnResultado('success', 'Preingreso anulado con exito', []));
@@ -269,6 +273,12 @@ class PreIngresoController extends Controller
                                                                                                                 from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
                                                                                                                 where c2.cmo_id = c.cmo_id)");
 
+        foreach ($data as $d) {
+            $d->detalle = DB::select("select pro_id, dmo_cantidad - (select count(*) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
+                                                                     where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo
+                                      from dmovinv d where cmo_id = " . $d->cmo_id);
+        }
+
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
 
@@ -282,6 +292,11 @@ class PreIngresoController extends Controller
                                         from cliente c join entidad e on c.ent_id = e.ent_id
                                         where c.cli_tipocli = 2 and c.cli_id = " . $d['cli_id'])[0];
             $d['fechaPresenta'] = date_format(date_create($d['fecha']),'d/m/Y');
+
+            foreach ($d['detalle'] as $p) {
+                $producto = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p where p.pro_id = " . $p['pro_id'])[0];
+                $p['producto'] = $producto->presenta;
+            }
         }
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -291,7 +306,9 @@ class PreIngresoController extends Controller
         $data = DB::select("select c.numero, concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  ci.cmo_numero) as relacionado,
                                     TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
                                     c.guia_remision, b.bod_nombre,
-                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor
+                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
+                                    (select count(*) from gex.dpreingreso d where d.numero = c.numero) as mov,
+                                    (select count(*) from gex.dpreingreso d join gex.stock_serie ss on d.pro_id = ss.pro_id and d.serie = ss.serie where d.numero = c.numero and ss.bod_id = c.bod_id) as stock
                             from gex.cpreingreso c join bodega b on c.bod_id = b.bod_id
                                                 join cliente l on c.cli_id = l.cli_id
                                                 join entidad e on l.ent_id = e.ent_id
@@ -330,6 +347,19 @@ class PreIngresoController extends Controller
                         'usuario_modifica' => $usuario_modifica,
                         'fecha_modifica' => $fecha_modifica,
                         ]);
+
+                    foreach ($p['detalle'] as $d) {
+                        $pro_id = $d['pro_id'];
+                        $serie = $d['serie'];
+                        $bod_id = $p['bod_id'];
+
+                        DB::table('gex.stock_serie')->insert(
+                            [
+                                'pro_id' => $pro_id,
+                                'serie' => $serie,
+                                'bod_id' => $bod_id,
+                            ]);
+                    }
                 }
             });
             
@@ -346,7 +376,7 @@ class PreIngresoController extends Controller
             DB::transaction(function() use ($numero, $usuario){
                 date_default_timezone_set("America/Guayaquil");
 
-                $data = PreIngreso::get()->where('numero', $numero)->first();
+                $data = PreIngreso::with('detalle')->get()->where('numero', $numero)->first();
 
                 $numero = $data['numero'];
                 $fecha_crea = $data['fecha_crea'];
@@ -366,6 +396,10 @@ class PreIngresoController extends Controller
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
                     ]);
+
+                foreach ($data['detalle'] as $d) {
+                    DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                }
             });
             
             return response()->json(RespuestaApi::returnResultado('success', 'Se quitó la relacion del preingreso con exito', []));
