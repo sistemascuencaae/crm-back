@@ -41,6 +41,22 @@ class ArchivoController extends Controller
                 ]);
 
                 $archivosGuardados[] = $nuevoArchivo;
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                $audit->user_id = Auth::id();
+                $audit->event = 'created';
+                $audit->auditable_type = Archivo::class;
+                $audit->auditable_id = $nuevoArchivo->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->old_values = json_encode($nuevoArchivo);
+                $audit->new_values = json_encode([]);
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'addArchivo';
+                $audit->save();
+                // END Auditoria
             }
 
             $archivos = Archivo::where('caso_id', $request->caso_id)->get();
