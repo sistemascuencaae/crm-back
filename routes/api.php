@@ -20,6 +20,14 @@ use App\Http\Controllers\crm\credito\ParentescoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
+use App\Http\Controllers\crm\garantias\ConfigItemsController;
+use App\Http\Controllers\crm\garantias\ExepcionGexController;
+use App\Http\Controllers\crm\garantias\GEXController;
+use App\Http\Controllers\crm\garantias\PartesController;
+use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
+use App\Http\Controllers\crm\garantias\RubrosReservaController;
+use App\Http\Controllers\crm\menu\MenuController;
+use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
@@ -323,9 +331,9 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // CHAT GRUPAL
 
-    Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
-    Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
-    Route::post('/editChatGrupal/{id}', [ChatController::class, 'editChatGrupal']); // Editar
+    // Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
+    // Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
+    // Route::post('/editChatGrupal/{id}', [ChatController::class, 'editChatGrupal']); // Editar
 
     // TIPO CASO
 
@@ -416,6 +424,12 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addPerfilAnalistas', [PerfilAnalistasController::class, 'addPerfilAnalistas']); // guardar
     Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
     Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
+    
+    // Menu
+    
+    Route::get('/listMenu', [MenuController::class, 'listMenu']); // listar todos los menus
+    Route::get('/listMenuUsuario/{user_id}', [MenuController::class, 'listMenuUsuario']); // listar los menus del usuario
+
 
 });
 
@@ -465,6 +479,13 @@ Route::group(["prefix" => "credito"], function ($router) {
 
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
+
+
+
+
+
+
+
 
 //----------------------- START RUTAS JAIRO  ----------------------------------------------
 Route::group(["prefix" => "crm"], function ($router) {
