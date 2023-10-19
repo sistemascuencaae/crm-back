@@ -20,6 +20,7 @@ use App\Http\Controllers\crm\credito\ParentescoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
+use App\Http\Controllers\crm\menu\MenuController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
@@ -409,6 +410,12 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addPerfilAnalistas', [PerfilAnalistasController::class, 'addPerfilAnalistas']); // guardar
     Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
     Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
+    
+    // Menu
+    
+    Route::get('/listMenu', [MenuController::class, 'listMenu']); // listar todos los menus
+    Route::get('/listMenuUsuario/{user_id}', [MenuController::class, 'listMenuUsuario']); // listar los menus del usuario
+
 
 });
 
