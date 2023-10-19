@@ -54,13 +54,6 @@ use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\user\EquifaxController;
 use App\Http\Controllers\User\ProfileUserController;
-use App\Http\Controllers\crm\garantias\PartesController;
-use App\Http\Controllers\crm\garantias\ConfigItemsController;
-use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
-use App\Http\Controllers\crm\garantias\ExepcionGexController;
-use App\Http\Controllers\crm\garantias\RubrosReservaController;
-use App\Http\Controllers\crm\garantias\GEXController;
-use App\Http\Controllers\crm\series\PreIngresoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -120,18 +113,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addNotificacion', [NotificacionesController::class, 'add']);
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
-    Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']);
 
 
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
 
-    Route::get('/listFlujos', [FlujoController::class, 'list']);
-    Route::post('/create-flujo', [FlujoController::class, 'create']);
-    Route::put('/update-flujo', [FlujoController::class, 'update']);
-    Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
-    Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
+
 
 
     //------------------------------------------------------------------>FASE
