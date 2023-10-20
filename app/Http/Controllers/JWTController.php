@@ -138,6 +138,7 @@ class JWTController extends Controller
                 "usu_tipo" => auth('api')->user()->usu_tipo,
                 "usu_alias" => auth('api')->user()->usu_alias,
                 "dep_id" => auth('api')->user()->dep_id,
+                "profile_id" => auth('api')->user()->profile_id,
                 "alm_nombre" => $alm_nombre,
             ]
         ]);

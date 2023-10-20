@@ -46,6 +46,18 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('web')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/web.php'));
+
+            Route::prefix('hcli')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/hclinica.php'));
+
+
+            Route::prefix('openceo')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/openceo.php'));
+
         });
     }
 

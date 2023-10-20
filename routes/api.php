@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
 use App\Http\Controllers\crm\BitacoraController;
@@ -26,7 +27,6 @@ use App\Http\Controllers\crm\garantias\GEXController;
 use App\Http\Controllers\crm\garantias\PartesController;
 use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
 use App\Http\Controllers\crm\garantias\RubrosReservaController;
-use App\Http\Controllers\crm\menu\MenuController;
 use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
@@ -52,11 +52,13 @@ use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
+use App\Http\Controllers\MenuController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\user\EquifaxController;
 use App\Http\Controllers\User\ProfileUserController;
 use Illuminate\Support\Facades\Route;
 
-/*
+/*w
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
@@ -412,12 +414,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addPerfilAnalistas', [PerfilAnalistasController::class, 'addPerfilAnalistas']); // guardar
     Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
     Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
-    
-    // Menu
-    
-    Route::get('/listMenu', [MenuController::class, 'listMenu']); // listar todos los menus
-    Route::get('/listMenuUsuario/{user_id}', [MenuController::class, 'listMenuUsuario']); // listar los menus del usuario
-
 
 });
 
@@ -482,7 +478,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byParte/{parte}', [PartesController::class, 'byParte']);
     Route::post('/grabaParte', [PartesController::class, 'grabaParte']);
     Route::get('/eliminaParte/{parte}', [PartesController::class, 'eliminaParte']);
-    
+
     //Configuracion Items
     Route::get('/listadoConfig', [ConfigItemsController::class, 'listado']);
     Route::get('/listadoProductos', [ConfigItemsController::class, 'productos']);
@@ -490,7 +486,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaConfig', [ConfigItemsController::class, 'grabaConfig']);
     Route::get('/byConfig/{producto}', [ConfigItemsController::class, 'byConfig']);
     Route::get('/eliminaConfig/{producto}', [ConfigItemsController::class, 'eliminaConfig']);
-    
+
     //Relacion Lineas Gex
     Route::get('/listadoRelacion', [RelacionLineasGexController::class, 'listado']);
     Route::get('/listadoProductosGex', [RelacionLineasGexController::class, 'productos']);
@@ -498,14 +494,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaRela', [RelacionLineasGexController::class, 'grabaRela']);
     Route::get('/byRela/{linea}/{producto}', [RelacionLineasGexController::class, 'byRela']);
     Route::get('/eliminaRela/{linea}/{producto}', [RelacionLineasGexController::class, 'eliminaRela']);
-    
+
     //Excepción Gex
     Route::get('/listadoExepcion', [ExepcionGexController::class, 'listado']);
     Route::get('/listadoProductosExcep', [ExepcionGexController::class, 'productos']);
     Route::post('/grabaExep', [ExepcionGexController::class, 'grabaExep']);
     Route::get('/byExcep/{excep}', [ExepcionGexController::class, 'byExcep']);
     Route::get('/eliminaExep/{excep}', [ExepcionGexController::class, 'eliminaExep']);
-    
+
     //Rubro de Reserva
     Route::get('/listadoRubros', [RubrosReservaController::class, 'listado']);
     Route::post('/grabaRubro', [RubrosReservaController::class, 'grabaRubro']);
@@ -532,3 +528,59 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Route::group([
+    'prefix' => 'profile',
+], function () {
+    Route::get('all', [ProfileController::class, 'all']);
+    Route::get('list', [ProfileController::class, 'list']);
+    Route::get('list/{id}', [ProfileController::class, 'findById']);
+    Route::post('create', [ProfileController::class, 'create']);
+    Route::put('edit/{id}', [ProfileController::class, 'edit']);
+});
+
+
+Route::group([
+    'prefix' => 'access',
+], function () {
+    Route::get('program/{profile}/{program}', [ProfileController::class, 'findByProgram']);
+    Route::get('menu/{userid}', [ProfileController::class, 'findByUser']);
+});
+Route::group([
+    'prefix' => 'company',
+], function () {
+    Route::get('lista/{id}', [CompanyController::class, 'findById']);
+    Route::put('editar/{id}', [CompanyController::class, 'edit']);
+});
+
+Route::group([
+    'prefix' => 'menu',
+], function () {
+
+    Route::get('list', [MenuController::class, 'list']);
+    Route::get('list/{id}', [MenuController::class, 'findById']);
+});
+
+
+
+
+
+
+
+
+
+
+
