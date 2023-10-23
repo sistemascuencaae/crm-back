@@ -63,7 +63,16 @@ class PreIngresoController extends Controller
                                         from cliente c join entidad e on c.ent_id = e.ent_id
                                         where c.cli_tipocli = 2 and c.cli_id = " . $data['cli_id'])[0];
         if ($data['cmo_id'] == null) {
-            $data['doc_rela'] = null;    
+            if ($data['cfa_id'] == null) {
+                $data['doc_rela'] = null;
+            } else {
+                $rela = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
+                                        from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                                        join ctipocom t on c.cti_id = t.cti_id
+                                        where c.cmo_id = " . $data['cfa_id'])[0];
+            
+                $data['doc_rela'] = $rela->numero;
+            }
         } else {
             $rela = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
                                         from cmovinv c join puntoventa p on c.pve_id = p.pve_id
@@ -263,20 +272,46 @@ class PreIngresoController extends Controller
         $data = DB::select("select c.cmo_id,
                                     concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
                                     TO_CHAR(c.cmo_fecha::date, 'dd/mm/yyyy') as fecha,
-                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor
+                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
+                                    'INV' as op,
+                                    c.cmo_id as indice
                             from cmovinv c join puntoventa p on c.pve_id = p.pve_id
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join cliente l on c.cli_id = l.cli_id
                                         join entidad e on l.ent_id = e.ent_id
-                            where c.cti_id = 6 and c.cmo_fecha >= '2023-06-01'
+                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cmo_fecha >= '2023-06-01'
                                     and (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id) > (select count(*)
                                                                                                                 from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
-                                                                                                                where c2.cmo_id = c.cmo_id)");
+                                                                                                                where c2.cmo_id = c.cmo_id)
+                            union
+                            select c.cfa_id,
+                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
+                                    TO_CHAR(c.cfa_fecha::date, 'dd/mm/yyyy') as fecha,
+                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
+                                    'VTA' as op,
+                                    c.cfa_id as indice
+                            from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                        join ctipocom t on c.cti_id = t.cti_id
+                                        join cliente l on c.cli_id = l.cli_id
+                                        join entidad e on l.ent_id = e.ent_id
+                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cfa_fecha >= '2023-06-01'
+                                    and (select sum(d.dfac_cantidad) from dfactura d where d.cfa_id = c.cfa_id) > (select count(*)
+                                                                                                                from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
+                                                                                                                where c2.cfa_id = c.cfa_id)
+                            order by fecha, numero");
 
-        foreach ($data as $d) {
-            $d->detalle = DB::select("select pro_id, dmo_cantidad - (select count(*) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
-                                                                     where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo
-                                      from dmovinv d where cmo_id = " . $d->cmo_id);
+        return response()->json(RespuestaApi::returnResultado('success', '200', $data));
+    }
+
+    public function cargaDetalleIngreso($id, $tipo) {
+        if ($tipo = 'INV') {
+            $data = DB::select("select pro_id, dmo_cantidad - (select count(*) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
+                                                                where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo
+                                from dmovinv d where cmo_id = " . $id);
+        } else {
+            $data = DB::select("select pro_id, dfac_cantidad - (select count(*) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
+                                                                where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id) as saldo
+                                from dfactura d where cfa_id = " . $id);
         }
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -286,6 +321,7 @@ class PreIngresoController extends Controller
         $data = PreIngreso::with('detalle')->get()->where('cmo_id', null)->where('estado', 'A');
         
         foreach ($data as $d) {
+            $d['indice'] = $d['numero'];
             $d['bodega'] = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $d['bod_id'])[0];
             $d['cliente'] = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
                                                 (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
