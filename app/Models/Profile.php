@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Access;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -24,10 +25,13 @@ class Profile extends Model
         'id' => 'integer',
     ];
 
+    // public function access()
+    // {
+    //     return $this->hasMany(Access::class);
+    // }
     public function access()
     {
         return $this->hasMany(Access::class);
     }
-
 
 }
