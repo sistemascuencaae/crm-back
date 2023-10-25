@@ -127,11 +127,12 @@ class ProfileController extends Controller
     public function create(Request $request)
     {
         try {
-
+            $error = null;
+            $exitoso = null;
             // Accede al JSON enviado desde el frontend
             $jsonData = $request->json()->all();
 
-            $data = DB::transaction(function () use ($jsonData, $request) {
+            $data = DB::transaction(function () use ($jsonData, $request, &$error, &$exitoso) {
                 // Valida los datos (puedes usar la validación de Laravel, por ejemplo)
                 $validatedData = $this->validate($request, [
                     'name' => 'required|string|max:255',
@@ -141,54 +142,60 @@ class ProfileController extends Controller
                     // Define reglas de validación para los elementos en 'access' según tus necesidades
                 ]);
 
-                // Procesa los datos y crea un nuevo perfil
-                $profile = new Profile();
-                $profile->name = $validatedData['name'];
-                $profile->isactive = $validatedData['isactive'];
-                $profile->save(); // Guarda el perfil y obtén el ID
-                // Asegúrate de guardar estos datos y obtener el ID del perfil
+                // Verifica si ya existe un perfil con el mismo nombre
+                $existingProfile = Profile::where('name', $validatedData['name'])->first();
 
-                // for ($i = 0; $i < sizeof($jsonData['access']); $i++) {
-                //     Access::create([
-                //         "profile_id" => $profile['id'],
-                //         "menu_id" => $jsonData['access'][$i]['menu_id'],
-                //         "view" => $jsonData['access'][$i]['view'],
-                //         "create" => $jsonData['access'][$i]['create'],
-                //         "edit" => $jsonData['access'][$i]['edit'],
-                //         "delete" => $jsonData['access'][$i]['delete'],
-                //         "report" => $jsonData['access'][$i]['report'],
-                //         "other" => $jsonData['access'][$i]['other']
-                //     ]);
-                // }
+                if ($existingProfile) {
+                    $error = 'Ya EXISTE un perfil con el mismo nombre';
+                    return null;
+                    // return response()->json(RespuestaApi::returnResultado('error', 'El perfil ya existe', ''), 409);
+                } else {
 
-                foreach ($validatedData['access'] as $accessData) {
-                    Access::create([
-                        'profile_id' => $profile->id,
-                        'menu_id' => $accessData['menu_id'],
-                        'view' => $accessData['view'],
-                        'create' => $accessData['create'],
-                        'edit' => $accessData['edit'],
-                        'delete' => $accessData['delete'],
-                        'report' => $accessData['report'],
-                        'other' => $accessData['other'],
-                    ]);
-                };
+                    // Procesa los datos y crea un nuevo perfil
+                    $profile = new Profile();
+                    $profile->name = $validatedData['name'];
+                    $profile->isactive = $validatedData['isactive'];
+                    $profile->save(); // Guarda el perfil y obtén el ID
+                    // Asegúrate de guardar estos datos y obtener el ID del perfil
 
-                //     return Profile::get();
+                    // for ($i = 0; $i < sizeof($jsonData['access']); $i++) {
+                    //     Access::create([
+                    //         "profile_id" => $profile['id'],
+                    //         "menu_id" => $jsonData['access'][$i]['menu_id'],
+                    //         "view" => $jsonData['access'][$i]['view'],
+                    //         "create" => $jsonData['access'][$i]['create'],
+                    //         "edit" => $jsonData['access'][$i]['edit'],
+                    //         "delete" => $jsonData['access'][$i]['delete'],
+                    //         "report" => $jsonData['access'][$i]['report'],
+                    //         "other" => $jsonData['access'][$i]['other']
+                    //     ]);
+                    // }
 
-                //     // return array(
-                //     //     'code' => 200,
-                //     //     'status' => 'success',
-                //     //     'message' => 'Profile creada',
-                //     //     'profile' => $profile,
-                //     // );
-                // });
+                    foreach ($validatedData['access'] as $accessData) {
+                        Access::create([
+                            'profile_id' => $profile->id,
+                            'menu_id' => $accessData['menu_id'],
+                            'view' => $accessData['view'],
+                            'create' => $accessData['create'],
+                            'edit' => $accessData['edit'],
+                            'delete' => $accessData['delete'],
+                            'report' => $accessData['report'],
+                            'other' => $accessData['other'],
+                        ]);
+                    };
 
-                // return response()->json($data);
-                return Profile::orderBy('id', 'desc')->get();
+                    $exitoso = Profile::orderBy('id', 'desc')->get();
+                    return null;
+                    // return Profile::orderBy('id', 'desc')->get();
+                }
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
+                // return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+            }
         } catch (Exception $e) {
             // return response()->json($e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -363,18 +370,21 @@ class ProfileController extends Controller
     public function deleteProfile(Request $request, $id)
     {
         try {
-            $profile = Profile::findOrFail($id);
+            $data = DB::transaction(function () use ($request, $id) {
+                $profile = Profile::findOrFail($id);
 
-            // Verificar si existen usuarios relacionados con este perfil
-            if (User::where('profile_id', $profile->id)->exists()) {
-                return response()->json(RespuestaApi::returnResultado('error', 'No se puede eliminar este perfil porque ya esta asignado a un usuario', ''));
-            }
+                // Verificar si existen usuarios relacionados con este perfil
+                if (User::where('profile_id', $profile->id)->exists()) {
+                    return response()->json(RespuestaApi::returnResultado('error', 'No se puede eliminar este perfil porque ya esta asignado a un usuario', ''));
+                }
 
-            // Elimina el perfil y sus registros relacionados
-            $profile->access()->delete();
-            $profile->delete();
+                // Elimina el perfil y sus registros relacionados
+                $profile->access()->delete();
+                $profile->delete();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $profile));
+                return $profile;
+            });
+            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
