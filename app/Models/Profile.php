@@ -25,10 +25,6 @@ class Profile extends Model
         'id' => 'integer',
     ];
 
-    // public function access()
-    // {
-    //     return $this->hasMany(Access::class);
-    // }
     public function access()
     {
         return $this->hasMany(Access::class);

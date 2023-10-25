@@ -201,60 +201,61 @@ class ProfileController extends Controller
     }
 
 
-    public function create111111111111111111111(Request $request)
-    {
-        $date = date('Y-m-d H:i:s');
-        $json = $request->input('json', null);
-        $params_array = json_decode($json, true); //consigo un objeto
+    // // Metodo original de leonardo
+    // public function create(Request $request)
+    // {
+    //     $date = date('Y-m-d H:i:s');
+    //     $json = $request->input('json', null);
+    //     $params_array = json_decode($json, true); //consigo un objeto
 
-        $validation = \Validator::make($params_array, [
-            'name' => 'required',
-        ]);
-
-
-        if (!$validation->fails()) {
-            $input = $request->all();
-            $profile = new Profile($params_array);
-            $profile->save();
-            $lastProfile = Profile::latest('id')->first();
-
-            foreach ($params_array['access'] as $parent_row) {
-                $access = new Access($parent_row);
-                $access->profile_id = $lastProfile->id;
-                $access->save();
-            }
+    //     $validation = \Validator::make($params_array, [
+    //         'name' => 'required',
+    //     ]);
 
 
-            if ($profile) {
-                //Confirma en Mensaje
-                $data = array(
-                    'code' => 200,
-                    'status' => 'success',
-                    'message' => 'Profile creada',
-                    'profile' => $profile,
-                );
-            } else {
-                //LA VALIDACION A FALLADO
-                $data = array(
-                    'code' => 404,
-                    'status' => 'error',
-                    'message' => 'Profile no creado',
-                );
-            }
-        } else {
-            //NO SE ENVIO NADA
-            $data = array(
-                'code' => 404,
-                'status' => 'error',
-                'message' => 'No has enviado ningun profile',
-                'profile' => $json,
-            );
-        }
-        return response()->json($data);
-    }
+    //     if (!$validation->fails()) {
+    //         $input = $request->all();
+    //         $profile = new Profile($params_array);
+    //         $profile->save();
+    //         $lastProfile = Profile::latest('id')->first();
+
+    //         foreach ($params_array['access'] as $parent_row) {
+    //             $access = new Access($parent_row);
+    //             $access->profile_id = $lastProfile->id;
+    //             $access->save();
+    //         }
 
 
-   
+    //         if ($profile) {
+    //             //Confirma en Mensaje
+    //             $data = array(
+    //                 'code' => 200,
+    //                 'status' => 'success',
+    //                 'message' => 'Profile creada',
+    //                 'profile' => $profile,
+    //             );
+    //         } else {
+    //             //LA VALIDACION A FALLADO
+    //             $data = array(
+    //                 'code' => 404,
+    //                 'status' => 'error',
+    //                 'message' => 'Profile no creado',
+    //             );
+    //         }
+    //     } else {
+    //         //NO SE ENVIO NADA
+    //         $data = array(
+    //             'code' => 404,
+    //             'status' => 'error',
+    //             'message' => 'No has enviado ningun profile',
+    //             'profile' => $json,
+    //         );
+    //     }
+    //     return response()->json($data);
+    // }
+
+
+
 
 
     public function edit(Request $request, $id)
@@ -282,7 +283,7 @@ class ProfileController extends Controller
                 try {
                     // actualizo el profile
                     unset($params_array1['access']);
-                    $profile = Profile::where('id', $id)->update($params_array1);
+                    $profileId = Profile::where('id', $id)->update($params_array1);
                     //Quitar campos que no quiero actualizar
                     unset($params_array['id']);
                     unset($params_array['created_at']);
@@ -305,12 +306,24 @@ class ProfileController extends Controller
 
 
                     //devolver el array con el resultado
+                    // $data = array(
+                    //     'code' => 200,
+                    //     'status' => 'success',
+                    //     'message' => 'Se modifico correctamente.',
+                    //     'data' => $id,
+                    // );
+
+                    // Obtener el perfil actualizado
+                    $updatedProfile = Profile::find($id);
+
                     $data = array(
                         'code' => 200,
                         'status' => 'success',
-                        'message' => 'Se modifico correctamente.',
-                        'data' => $id,
+                        'message' => 'Se modificó correctamente.',
+                        'data' => $updatedProfile,
+                        // Devuelve el perfil actualizado
                     );
+
                 } catch (\Exception $e) {
                     //. $e->getMessage()
                     $data = array(
