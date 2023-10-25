@@ -357,73 +357,71 @@ class ProfileController extends Controller
     public function clonProfile(Request $request)
     {
         try {
-            $data = DB::transaction(function () use ($request) {
-                // Recoger datos por post
-                $json = $request->input('json', null);
-                $params_array = json_decode($json, true);
+            $error = null;
+            $exitoso = null;
 
-                // if (!empty($params_array)) {
+            // Recoger datos por post
+            $json = $request->input('json', null);
+            $params_array = json_decode($json, true);
+
+            $data = DB::transaction(function () use ($request, $json, $params_array, &$error, &$exitoso) {
                 // Validar los datos
                 $validate = \Validator::make($params_array, [
                     'name' => 'required|string|max:255',
                 ]);
 
                 if ($validate->fails()) {
-                    // La validación ha fallado
-                    $data = array(
-                        'code' => 404,
-                        'status' => 'error',
-                        'message' => 'Error: La validación ha fallado, revise que los datos requeridos estén completos',
-                        'error' => $validate->errors(),
-                    );
-                } else {
-                    // try {
-                    // Crea un nuevo perfil
-                    $profile = new Profile($params_array);
-                    $profile->save();
 
-                    // Guardar los nuevos access
-                    if (isset($params_array['access']) && is_array($params_array['access'])) {
-                        foreach ($params_array['access'] as $accessData) {
-                            $access = new Access($accessData);
-                            $access->profile_id = $profile->id; // Asigna el ID del nuevo perfil
-                            $access->save();
-                        }
-                    }
-
+                    $error = 'Error: La validación ha fallado, revise que los datos requeridos estén completos';
+                    return null;
+                    // // La validación ha fallado
                     // $data = array(
-                    //     'code' => 200,
-                    //     'status' => 'success',
-                    //     'message' => 'Se creó un nuevo registro correctamente.',
-                    //     'data' => $profile,
-                    //     // Devuelve el perfil recién creado
+                    //     'code' => 404,
+                    //     'status' => 'error',
+                    //     'message' => 'Error: La validación ha fallado, revise que los datos requeridos estén completos',
+                    //     'error' => $validate->errors(),
                     // );
+                } else {
 
-                    return Profile::orderBy('id', 'desc')->get();
+                    // Verificar si ya existe un perfil con el mismo nombre
+                    $existingProfile = Profile::where('name', $params_array['name'])->first();
 
-                    // } catch (\Exception $e) {
-                    //     $data = array(
-                    //         'code' => 400,
-                    //         'status' => 'error',
-                    //         'message' => 'Error: No se pudo crear el registro, existe un conflicto en la base de datos: ' . $e->getMessage(),
-                    //     );
-                    // }
+                    if ($existingProfile) {
+                        $error = 'Ya EXISTE un perfil con el mismo nombre';
+                        return null;
+                        // return response()->json(RespuestaApi::returnResultado('error', 'El Perfil ya existe', ''));
+                    } else {
+
+                        // Crea un nuevo perfil
+                        $profile = new Profile($params_array);
+                        $profile->save();
+
+                        // Guardar los nuevos access
+                        if (isset($params_array['access']) && is_array($params_array['access'])) {
+                            foreach ($params_array['access'] as $accessData) {
+                                $access = new Access($accessData);
+                                $access->profile_id = $profile->id; // Asigna el ID del nuevo perfil
+                                $access->save();
+                            }
+                        }
+
+                        $exitoso = Profile::orderBy('id', 'desc')->get();
+                        return null;
+                    }
                 }
-                // } else {
-                //     $data = array(
-                //         'code' => 400,
-                //         'status' => 'error',
-                //         'message' => 'Error: No se ha enviado ninguna información, o la información está incompleta.',
-                //     );
-                // }
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
+            }
+
         } catch (Exception $e) {
-            // return response()->json($e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
-        // return response()->json($data, $data['code']);
+
     }
 
 
