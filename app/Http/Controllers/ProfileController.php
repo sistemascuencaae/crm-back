@@ -250,88 +250,114 @@ class ProfileController extends Controller
 
     public function edit(Request $request, $id)
     {
-        //recoger datos por post
-        $json = $request->input('json', null);
-        $params_array = json_decode($json, true);
-        $params_array1 = $params_array;
+        try {
+            $error = null;
+            $exitoso = null;
+            //recoger datos por post
+            $json = $request->input('json', null);
+            $params_array = json_decode($json, true);
+            $params_array1 = $params_array;
 
-        if (!empty($params_array)) {
-            //validar los datos
-            $validate = \Validator::make($params_array, [
-                'id' => 'required',
-            ]);
+            $data = DB::transaction(function () use ($request, $json, $id, $params_array1, $params_array, &$error, &$exitoso) {
 
-            if ($validate->fails()) {
-                //LA VALIDACION A FALLADO
-                $data = array(
-                    'code' => 404,
-                    'status' => 'error',
-                    'message' => 'Error: La validacion a fallado, revise que los datos requeridos esten completos',
-                    'error' => $validate->errors(),
-                );
-            } else {
-                try {
-                    // actualizo el profile
-                    unset($params_array1['access']);
-                    $profileId = Profile::where('id', $id)->update($params_array1);
-                    //Quitar campos que no quiero actualizar
-                    unset($params_array['id']);
-                    unset($params_array['created_at']);
-                    unset($params_array['updated_at']);
+                if (!empty($params_array)) {
+                    //validar los datos
+                    $validate = \Validator::make($params_array, [
+                        'id' => 'required',
+                    ]);
 
-                    //eliminos loa access actuales
-                    $res = Access::where('profile_id', $id)->delete();
-                    //guardo los nuevos access
+                    if ($validate->fails()) {
+                        //LA VALIDACION A FALLADO
+                        // $data = array(
+                        //     'code' => 404,
+                        //     'status' => 'error',
+                        //     'message' => 'Error: La validacion a fallado, revise que los datos requeridos esten completos',
+                        //     'error' => $validate->errors(),
+                        // );
 
-                    foreach ($params_array['access'] as $parent_row) {
-                        $access = new Access($parent_row);
-                        $access->profile_id = $id;
-                        $access->save();
+                        $error = 'Error: La validacion a fallado, revise que los datos requeridos esten completos';
+                        return null;
+                    } else {
+                        // try {
+
+                        // Verificar si ya existe un perfil con el mismo nombre
+                        $existingProfile = Profile::where('name', $params_array['name'])
+                            ->where('id', '!=', $id) // Excluye el perfil que estás editando
+                            ->first();
+
+                        if ($existingProfile) {
+                            $error = 'Ya EXISTE un perfil con el mismo nombre';
+                            return null;
+                            // return response()->json(RespuestaApi::returnResultado('error', 'El Perfil ya existe', ''));
+                        } else {
+
+                            // actualizo el profile
+                            unset($params_array1['access']);
+                            $profileId = Profile::where('id', $id)->update($params_array1);
+                            //Quitar campos que no quiero actualizar
+                            unset($params_array['id']);
+                            unset($params_array['created_at']);
+                            unset($params_array['updated_at']);
+
+                            //eliminos loa access actuales
+                            $res = Access::where('profile_id', $id)->delete();
+                            //guardo los nuevos access
+
+                            foreach ($params_array['access'] as $parent_row) {
+                                $access = new Access($parent_row);
+                                $access->profile_id = $id;
+                                $access->save();
+                            }
+
+
+                            unset($params_array['access']);
+
+                            // Obtener el perfil actualizado
+                            $updatedProfile = Profile::find($id);
+
+                            // $data = array(
+                            //     'code' => 200,
+                            //     'status' => 'success',
+                            //     'message' => 'Se modificó correctamente.',
+                            //     'data' => $updatedProfile,
+                            //     // Devuelve el perfil actualizado
+                            // );
+
+                            $exitoso = $updatedProfile;
+                            return null;
+
+                        }
+                        // } catch (\Exception $e) {
+                        //     //. $e->getMessage()
+                        //     $data = array(
+                        //         'code' => 400,
+                        //         'status' => 'error',
+                        //         'message' => 'Error: No se pudo modificar, existe un conflicto en la base de datos: ',
+                        //         'error' => $e,
+                        //     );
+                        // }
                     }
-
-
-                    unset($params_array['access']);
-                    //MODIFICAR REGISTRO de perfil
-                    //$profile = Profile::where('id', $id)->update($params_array);
-
-
-                    //devolver el array con el resultado
+                } else {
                     // $data = array(
-                    //     'code' => 200,
-                    //     'status' => 'success',
-                    //     'message' => 'Se modifico correctamente.',
-                    //     'data' => $id,
+                    //     'code' => 400,
+                    //     'status' => 'error',
+                    //     'message' => 'Error: No se ha enviado ninguna información, o la información esta incompleta.',
                     // );
-
-                    // Obtener el perfil actualizado
-                    $updatedProfile = Profile::find($id);
-
-                    $data = array(
-                        'code' => 200,
-                        'status' => 'success',
-                        'message' => 'Se modificó correctamente.',
-                        'data' => $updatedProfile,
-                        // Devuelve el perfil actualizado
-                    );
-
-                } catch (\Exception $e) {
-                    //. $e->getMessage()
-                    $data = array(
-                        'code' => 400,
-                        'status' => 'error',
-                        'message' => 'Error: No se pudo modificar, existe un conflicto en la base de datos: ',
-                        'error' => $e,
-                    );
+                    $error = 'Error: No se ha enviado ninguna información, o la información esta incompleta.';
+                    return null;
                 }
+                // return response()->json($data, $data['code']);
+            });
+
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
             }
-        } else {
-            $data = array(
-                'code' => 400,
-                'status' => 'error',
-                'message' => 'Error: No se ha enviado ninguna información, o la información esta incompleta.',
-            );
+
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
-        return response()->json($data, $data['code']);
     }
 
     public function deleteProfile(Request $request, $id)
@@ -374,13 +400,7 @@ class ProfileController extends Controller
 
                     $error = 'Error: La validación ha fallado, revise que los datos requeridos estén completos';
                     return null;
-                    // // La validación ha fallado
-                    // $data = array(
-                    //     'code' => 404,
-                    //     'status' => 'error',
-                    //     'message' => 'Error: La validación ha fallado, revise que los datos requeridos estén completos',
-                    //     'error' => $validate->errors(),
-                    // );
+
                 } else {
 
                     // Verificar si ya existe un perfil con el mismo nombre
@@ -418,14 +438,8 @@ class ProfileController extends Controller
             }
 
         } catch (Exception $e) {
-
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
-
     }
-
-
-
-
 
 }
