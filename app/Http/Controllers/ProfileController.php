@@ -55,7 +55,8 @@ class ProfileController extends Controller
             $data = array(
                 'code' => 200,
                 'status' => 'success',
-                'profile' => $profile,
+                // 'profile' => $profile,
+                'data' => $profile,
             );
         } else {
             $data = array(
@@ -126,26 +127,6 @@ class ProfileController extends Controller
         }
         return response()->json($data, $data['code']);
     }
-
-    // // Procesa los datos de 'access' (asumiendo que 'access' es una relación)
-    // foreach ($validatedData['access'] as $accessData) {
-    //     $access = Access::create([
-    //         'profile_id' => $profile->id,
-    //         'menu_id' => $accessData['menu_id'],
-    //         'view' => $accessData['view'],
-    //         'create' => $accessData['create'],
-    //         'edit' => $accessData['edit'],
-    //         'delete' => $accessData['delete'],
-    //         'report' => $accessData['report'],
-    //         'other' => $accessData['other'],
-    //     ]);
-
-    //     echo(json_encode($access));
-
-    //     // $access->save(); // Asocia el acceso al perfil
-    //     // $profile->access()->save($access); // Asocia el acceso al perfil
-    // }
-
 
 
     public function create(Request $request)
@@ -271,6 +252,9 @@ class ProfileController extends Controller
         }
         return response()->json($data);
     }
+
+
+   
 
 
     public function edit(Request $request, $id)
