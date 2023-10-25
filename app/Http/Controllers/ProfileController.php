@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Traits\FormatResponseTrait;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -19,7 +20,6 @@ class ProfileController extends Controller
     //       $this->middleware('auth:api');
     // }
 
-
     public function all()
     {
         try {
@@ -30,8 +30,6 @@ class ProfileController extends Controller
         }
         return response()->json($data);
     }
-
-
 
     public function list()
     {
@@ -46,7 +44,6 @@ class ProfileController extends Controller
         }
     }
 
-
     public function findById($id)
     {
 
@@ -55,7 +52,8 @@ class ProfileController extends Controller
             $data = array(
                 'code' => 200,
                 'status' => 'success',
-                'profile' => $profile,
+                // 'profile' => $profile,
+                'data' => $profile,
             );
         } else {
             $data = array(
@@ -96,7 +94,6 @@ class ProfileController extends Controller
         return response()->json($data, $data['code']);
     }
 
-
     public function findByUser($userid)
     {
         $sql = "SELECT u.id,u.name,u.surname,u.login,u.profile_id,
@@ -126,27 +123,6 @@ class ProfileController extends Controller
         }
         return response()->json($data, $data['code']);
     }
-
-    // // Procesa los datos de 'access' (asumiendo que 'access' es una relación)
-    // foreach ($validatedData['access'] as $accessData) {
-    //     $access = Access::create([
-    //         'profile_id' => $profile->id,
-    //         'menu_id' => $accessData['menu_id'],
-    //         'view' => $accessData['view'],
-    //         'create' => $accessData['create'],
-    //         'edit' => $accessData['edit'],
-    //         'delete' => $accessData['delete'],
-    //         'report' => $accessData['report'],
-    //         'other' => $accessData['other'],
-    //     ]);
-
-    //     echo(json_encode($access));
-
-    //     // $access->save(); // Asocia el acceso al perfil
-    //     // $profile->access()->save($access); // Asocia el acceso al perfil
-    // }
-
-
 
     public function create(Request $request)
     {
@@ -198,75 +174,79 @@ class ProfileController extends Controller
                     ]);
                 };
 
-                return array(
-                    'code' => 200,
-                    'status' => 'success',
-                    'message' => 'Profile creada',
-                    'profile' => $profile,
-                );
+                //     return Profile::get();
+
+                //     // return array(
+                //     //     'code' => 200,
+                //     //     'status' => 'success',
+                //     //     'message' => 'Profile creada',
+                //     //     'profile' => $profile,
+                //     // );
+                // });
+
+                // return response()->json($data);
+                return Profile::orderBy('id', 'desc')->get();
             });
 
-            return response()->json($data);
-            //code...
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
             // return response()->json($e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
+    // // Metodo original de leonardo
+    // public function create(Request $request)
+    // {
+    //     $date = date('Y-m-d H:i:s');
+    //     $json = $request->input('json', null);
+    //     $params_array = json_decode($json, true); //consigo un objeto
 
-    public function create111111111111111111111(Request $request)
-    {
-        $date = date('Y-m-d H:i:s');
-        $json = $request->input('json', null);
-        $params_array = json_decode($json, true); //consigo un objeto
-
-        $validation = \Validator::make($params_array, [
-            'name' => 'required',
-        ]);
-
-
-        if (!$validation->fails()) {
-            $input = $request->all();
-            $profile = new Profile($params_array);
-            $profile->save();
-            $lastProfile = Profile::latest('id')->first();
-
-            foreach ($params_array['access'] as $parent_row) {
-                $access = new Access($parent_row);
-                $access->profile_id = $lastProfile->id;
-                $access->save();
-            }
+    //     $validation = \Validator::make($params_array, [
+    //         'name' => 'required',
+    //     ]);
 
 
-            if ($profile) {
-                //Confirma en Mensaje
-                $data = array(
-                    'code' => 200,
-                    'status' => 'success',
-                    'message' => 'Profile creada',
-                    'profile' => $profile,
-                );
-            } else {
-                //LA VALIDACION A FALLADO
-                $data = array(
-                    'code' => 404,
-                    'status' => 'error',
-                    'message' => 'Profile no creado',
-                );
-            }
-        } else {
-            //NO SE ENVIO NADA
-            $data = array(
-                'code' => 404,
-                'status' => 'error',
-                'message' => 'No has enviado ningun profile',
-                'profile' => $json,
-            );
-        }
-        return response()->json($data);
-    }
+    //     if (!$validation->fails()) {
+    //         $input = $request->all();
+    //         $profile = new Profile($params_array);
+    //         $profile->save();
+    //         $lastProfile = Profile::latest('id')->first();
 
+    //         foreach ($params_array['access'] as $parent_row) {
+    //             $access = new Access($parent_row);
+    //             $access->profile_id = $lastProfile->id;
+    //             $access->save();
+    //         }
+
+
+    //         if ($profile) {
+    //             //Confirma en Mensaje
+    //             $data = array(
+    //                 'code' => 200,
+    //                 'status' => 'success',
+    //                 'message' => 'Profile creada',
+    //                 'profile' => $profile,
+    //             );
+    //         } else {
+    //             //LA VALIDACION A FALLADO
+    //             $data = array(
+    //                 'code' => 404,
+    //                 'status' => 'error',
+    //                 'message' => 'Profile no creado',
+    //             );
+    //         }
+    //     } else {
+    //         //NO SE ENVIO NADA
+    //         $data = array(
+    //             'code' => 404,
+    //             'status' => 'error',
+    //             'message' => 'No has enviado ningun profile',
+    //             'profile' => $json,
+    //         );
+    //     }
+    //     return response()->json($data);
+    // }
 
     public function edit(Request $request, $id)
     {
@@ -293,7 +273,7 @@ class ProfileController extends Controller
                 try {
                     // actualizo el profile
                     unset($params_array1['access']);
-                    $profile = Profile::where('id', $id)->update($params_array1);
+                    $profileId = Profile::where('id', $id)->update($params_array1);
                     //Quitar campos que no quiero actualizar
                     unset($params_array['id']);
                     unset($params_array['created_at']);
@@ -316,12 +296,24 @@ class ProfileController extends Controller
 
 
                     //devolver el array con el resultado
+                    // $data = array(
+                    //     'code' => 200,
+                    //     'status' => 'success',
+                    //     'message' => 'Se modifico correctamente.',
+                    //     'data' => $id,
+                    // );
+
+                    // Obtener el perfil actualizado
+                    $updatedProfile = Profile::find($id);
+
                     $data = array(
                         'code' => 200,
                         'status' => 'success',
-                        'message' => 'Se modifico correctamente.',
-                        'data' => $id,
+                        'message' => 'Se modificó correctamente.',
+                        'data' => $updatedProfile,
+                        // Devuelve el perfil actualizado
                     );
+
                 } catch (\Exception $e) {
                     //. $e->getMessage()
                     $data = array(
@@ -341,6 +333,97 @@ class ProfileController extends Controller
         }
         return response()->json($data, $data['code']);
     }
+
+    public function deleteProfile(Request $request, $id)
+    {
+        try {
+            $profile = Profile::findOrFail($id);
+
+            // Verificar si existen usuarios relacionados con este perfil
+            if (User::where('profile_id', $profile->id)->exists()) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se puede eliminar este perfil porque ya esta asignado a un usuario', ''));
+            }
+
+            // Elimina el perfil y sus registros relacionados
+            $profile->access()->delete();
+            $profile->delete();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $profile));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function clonProfile(Request $request)
+    {
+        try {
+            $error = null;
+            $exitoso = null;
+
+            // Recoger datos por post
+            $json = $request->input('json', null);
+            $params_array = json_decode($json, true);
+
+            $data = DB::transaction(function () use ($request, $json, $params_array, &$error, &$exitoso) {
+                // Validar los datos
+                $validate = \Validator::make($params_array, [
+                    'name' => 'required|string|max:255',
+                ]);
+
+                if ($validate->fails()) {
+
+                    $error = 'Error: La validación ha fallado, revise que los datos requeridos estén completos';
+                    return null;
+                    // // La validación ha fallado
+                    // $data = array(
+                    //     'code' => 404,
+                    //     'status' => 'error',
+                    //     'message' => 'Error: La validación ha fallado, revise que los datos requeridos estén completos',
+                    //     'error' => $validate->errors(),
+                    // );
+                } else {
+
+                    // Verificar si ya existe un perfil con el mismo nombre
+                    $existingProfile = Profile::where('name', $params_array['name'])->first();
+
+                    if ($existingProfile) {
+                        $error = 'Ya EXISTE un perfil con el mismo nombre';
+                        return null;
+                        // return response()->json(RespuestaApi::returnResultado('error', 'El Perfil ya existe', ''));
+                    } else {
+
+                        // Crea un nuevo perfil
+                        $profile = new Profile($params_array);
+                        $profile->save();
+
+                        // Guardar los nuevos access
+                        if (isset($params_array['access']) && is_array($params_array['access'])) {
+                            foreach ($params_array['access'] as $accessData) {
+                                $access = new Access($accessData);
+                                $access->profile_id = $profile->id; // Asigna el ID del nuevo perfil
+                                $access->save();
+                            }
+                        }
+
+                        $exitoso = Profile::orderBy('id', 'desc')->get();
+                        return null;
+                    }
+                }
+            });
+
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
+            }
+
+        } catch (Exception $e) {
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+
+    }
+
 
 
 
