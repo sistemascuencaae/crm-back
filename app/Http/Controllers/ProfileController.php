@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Traits\FormatResponseTrait;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -332,5 +333,26 @@ class ProfileController extends Controller
         }
         return response()->json($data, $data['code']);
     }
+
+    public function deleteProfile(Request $request, $id)
+    {
+        try {
+            $profile = Profile::findOrFail($id);
+
+            // Verificar si existen usuarios relacionados con este perfil
+            if (User::where('profile_id', $profile->id)->exists()) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se puede eliminar este perfil porque ya esta asignado a un usuario', ''));
+            }
+
+            // Elimina el perfil y sus registros relacionados
+            $profile->access()->delete();
+            $profile->delete();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $profile));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 
 }

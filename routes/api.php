@@ -550,6 +550,7 @@ Route::group([
     Route::get('list/{id}', [ProfileController::class, 'findById']);
     Route::post('create', [ProfileController::class, 'create']);
     Route::post('edit/{id}', [ProfileController::class, 'edit']);
+    Route::delete('deleteProfile/{id}', [ProfileController::class, 'deleteProfile']);
 });
 
 
