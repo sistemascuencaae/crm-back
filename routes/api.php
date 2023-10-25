@@ -551,6 +551,7 @@ Route::group([
     Route::post('create', [ProfileController::class, 'create']);
     Route::post('edit/{id}', [ProfileController::class, 'edit']);
     Route::delete('deleteProfile/{id}', [ProfileController::class, 'deleteProfile']);
+    Route::post('clonProfile', [ProfileController::class, 'clonProfile']);
 });
 
 

@@ -354,5 +354,80 @@ class ProfileController extends Controller
         }
     }
 
+    public function clonProfile(Request $request)
+    {
+        try {
+            $data = DB::transaction(function () use ($request) {
+                // Recoger datos por post
+                $json = $request->input('json', null);
+                $params_array = json_decode($json, true);
+
+                // if (!empty($params_array)) {
+                // Validar los datos
+                $validate = \Validator::make($params_array, [
+                    'name' => 'required|string|max:255',
+                ]);
+
+                if ($validate->fails()) {
+                    // La validación ha fallado
+                    $data = array(
+                        'code' => 404,
+                        'status' => 'error',
+                        'message' => 'Error: La validación ha fallado, revise que los datos requeridos estén completos',
+                        'error' => $validate->errors(),
+                    );
+                } else {
+                    // try {
+                    // Crea un nuevo perfil
+                    $profile = new Profile($params_array);
+                    $profile->save();
+
+                    // Guardar los nuevos access
+                    if (isset($params_array['access']) && is_array($params_array['access'])) {
+                        foreach ($params_array['access'] as $accessData) {
+                            $access = new Access($accessData);
+                            $access->profile_id = $profile->id; // Asigna el ID del nuevo perfil
+                            $access->save();
+                        }
+                    }
+
+                    // $data = array(
+                    //     'code' => 200,
+                    //     'status' => 'success',
+                    //     'message' => 'Se creó un nuevo registro correctamente.',
+                    //     'data' => $profile,
+                    //     // Devuelve el perfil recién creado
+                    // );
+
+                    return Profile::orderBy('id', 'desc')->get();
+
+                    // } catch (\Exception $e) {
+                    //     $data = array(
+                    //         'code' => 400,
+                    //         'status' => 'error',
+                    //         'message' => 'Error: No se pudo crear el registro, existe un conflicto en la base de datos: ' . $e->getMessage(),
+                    //     );
+                    // }
+                }
+                // } else {
+                //     $data = array(
+                //         'code' => 400,
+                //         'status' => 'error',
+                //         'message' => 'Error: No se ha enviado ninguna información, o la información está incompleta.',
+                //     );
+                // }
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+        } catch (Exception $e) {
+            // return response()->json($e);
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+        // return response()->json($data, $data['code']);
+    }
+
+
+
+
 
 }
