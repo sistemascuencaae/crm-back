@@ -198,16 +198,21 @@ class ProfileController extends Controller
                     ]);
                 };
 
-                return array(
-                    'code' => 200,
-                    'status' => 'success',
-                    'message' => 'Profile creada',
-                    'profile' => $profile,
-                );
+                //     return Profile::get();
+
+                //     // return array(
+                //     //     'code' => 200,
+                //     //     'status' => 'success',
+                //     //     'message' => 'Profile creada',
+                //     //     'profile' => $profile,
+                //     // );
+                // });
+
+                // return response()->json($data);
+                return Profile::orderBy('id', 'desc')->get();
             });
 
-            return response()->json($data);
-            //code...
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
             // return response()->json($e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
