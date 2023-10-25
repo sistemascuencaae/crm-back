@@ -19,7 +19,6 @@ class ProfileController extends Controller
     //       $this->middleware('auth:api');
     // }
 
-
     public function all()
     {
         try {
@@ -30,8 +29,6 @@ class ProfileController extends Controller
         }
         return response()->json($data);
     }
-
-
 
     public function list()
     {
@@ -45,7 +42,6 @@ class ProfileController extends Controller
             return $this->getErrCustom($e->getMessage(), 'Error: la información no se logro conseguir: ');
         }
     }
-
 
     public function findById($id)
     {
@@ -97,7 +93,6 @@ class ProfileController extends Controller
         return response()->json($data, $data['code']);
     }
 
-
     public function findByUser($userid)
     {
         $sql = "SELECT u.id,u.name,u.surname,u.login,u.profile_id,
@@ -127,7 +122,6 @@ class ProfileController extends Controller
         }
         return response()->json($data, $data['code']);
     }
-
 
     public function create(Request $request)
     {
@@ -200,7 +194,6 @@ class ProfileController extends Controller
         }
     }
 
-
     // // Metodo original de leonardo
     // public function create(Request $request)
     // {
@@ -253,10 +246,6 @@ class ProfileController extends Controller
     //     }
     //     return response()->json($data);
     // }
-
-
-
-
 
     public function edit(Request $request, $id)
     {
@@ -343,8 +332,5 @@ class ProfileController extends Controller
         }
         return response()->json($data, $data['code']);
     }
-
-
-
 
 }
