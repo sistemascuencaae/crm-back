@@ -574,6 +574,8 @@ Route::group([
 
     Route::get('list', [MenuController::class, 'list']);
     Route::get('list/{id}', [MenuController::class, 'findById']);
+
+    Route::post('addMenu', [MenuController::class, 'addMenu']);
 });
 
 
