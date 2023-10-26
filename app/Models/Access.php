@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Access extends Model
 {
-    protected $table = 'hclinico.access';
+    // protected $table = 'hclinico.access';
+    protected $table = 'crm.access';
 
     protected $fillable = [
         'profile_id',
@@ -18,7 +19,8 @@ class Access extends Model
         'edit',
         'delete',
         'report',
-        'other',
+        // 'other',
+        'ejecutar'
     ];
 
     protected $hidden = [

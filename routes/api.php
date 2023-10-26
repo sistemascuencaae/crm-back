@@ -549,7 +549,9 @@ Route::group([
     Route::get('list', [ProfileController::class, 'list']);
     Route::get('list/{id}', [ProfileController::class, 'findById']);
     Route::post('create', [ProfileController::class, 'create']);
-    Route::put('edit/{id}', [ProfileController::class, 'edit']);
+    Route::post('edit/{id}', [ProfileController::class, 'edit']);
+    Route::delete('deleteProfile/{id}', [ProfileController::class, 'deleteProfile']);
+    Route::post('clonProfile', [ProfileController::class, 'clonProfile']);
 });
 
 

@@ -8,6 +8,7 @@ use App\Models\crm\TableroUsuario;
 use App\Models\crm\UsuarioDynamo;
 use App\Models\crm\Departamento;
 use App\Models\openCeo\PuntoVenta;
+use App\Models\Profile;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -122,5 +123,10 @@ class User extends Authenticatable implements JWTSubject
     public function perfil_analista()
     {
         return $this->belongsTo(PerfilAnalistas::class, "usu_tipo_analista");
+    }
+
+    public function perfil()
+    {
+        return $this->belongsTo(Profile::class, "profile_id", "id");
     }
 }

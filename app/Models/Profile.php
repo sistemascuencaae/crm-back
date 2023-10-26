@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Profile extends Model
 {
-    protected $table = 'hclinico.profiles';
+    // protected $table = 'hclinico.profiles';
+    protected $table = 'crm.profiles';
     protected $primaryKey = 'id';
     
     protected $fillable = [
@@ -25,10 +26,6 @@ class Profile extends Model
         'id' => 'integer',
     ];
 
-    // public function access()
-    // {
-    //     return $this->hasMany(Access::class);
-    // }
     public function access()
     {
         return $this->hasMany(Access::class);
