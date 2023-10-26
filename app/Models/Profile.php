@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Profile extends Model
 {
-    protected $table = 'hclinico.profiles';
+    // protected $table = 'hclinico.profiles';
+    protected $table = 'crm.profiles';
     protected $primaryKey = 'id';
     
     protected $fillable = [

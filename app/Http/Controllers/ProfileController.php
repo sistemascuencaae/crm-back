@@ -99,7 +99,7 @@ class ProfileController extends Controller
         $sql = "SELECT u.id,u.name,u.surname,u.login,u.profile_id,
                     a.menu_id,
                     m.code,m.module,m.name,m.url,m.icon,
-                    a.create,a.edit,a.delete,a.report,a.other
+                    a.create,a.edit,a.delete,a.report,a.ejecutar
                 FROM users u
                 INNER JOIN access a on u.profile_id=a.profile_id
                 INNER JOIN menu m on a.menu_id=m.id
@@ -180,7 +180,7 @@ class ProfileController extends Controller
                             'edit' => $accessData['edit'],
                             'delete' => $accessData['delete'],
                             'report' => $accessData['report'],
-                            'other' => $accessData['other'],
+                            'ejecutar' => $accessData['ejecutar'],
                         ]);
                     };
 
