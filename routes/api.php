@@ -577,6 +577,7 @@ Route::group([
 
     Route::post('addMenu', [MenuController::class, 'addMenu']);
     Route::post('editMenu/{id}', [MenuController::class, 'editMenu']);
+    Route::delete('deleteMenu/{id}', [MenuController::class, 'deleteMenu']);
 });
 
 

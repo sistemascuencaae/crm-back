@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Traits\FormatResponseTrait;
+use App\Models\Access;
 use App\Models\Menu;
 use Exception;
 use Illuminate\Http\Request;
@@ -82,6 +83,34 @@ class MenuController extends Controller
         }
     }
 
+    public function deleteMenu(Request $request, $id)
+    {
+        try {
+            $menu = Menu::findOrFail($id);
 
+            // Validar si la actualización resultaría en valores duplicados
+            $existingRecord = Access::where('menu_id', $menu->id)
+                ->where('id', '!=', $id) // Excluir el registro actual de la consulta
+                ->first();
+
+            if ($existingRecord) {
+                // Si la actualización resultaría en valores duplicados, devuelve un error
+                return response()->json(RespuestaApi::returnResultado('error', 'Este menu ya esta asignado a un perfil', ''));
+
+            } else {
+
+                // $respuestas->update($request->all());
+                $menu->delete();
+
+                $resultado = Menu::orderBy('code', 'asc')->get();
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $resultado));
+            }
+
+            // return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $estado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 
 }
