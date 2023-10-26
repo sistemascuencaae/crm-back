@@ -66,7 +66,21 @@ class MenuController extends Controller
         }
     }
 
+    public function editMenu(Request $request, $id)
+    {
+        try {
+            $menu = Menu::findOrFail($id);
 
+            $menu->update($request->all());
+
+            // $resultado = Menu::where('id', $menu->id)->first();
+            $resultado = Menu::orderBy('code', 'asc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $resultado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 
 
 
