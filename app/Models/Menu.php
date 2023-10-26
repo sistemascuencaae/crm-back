@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Menu extends Model
 {
-    protected $table = 'hclinico.menu';
+    // protected $table = 'hclinico.menu';
+    protected $table = 'crm.menu';
 
 }
