@@ -15,7 +15,7 @@ class GaleriaController extends Controller
     use FormatResponseTrait;
     public function __construct()
     {
-        $this->middleware('auth:admin', ['except' =>
+        $this->middleware('auth:api', ['except' =>
         [
             'all',
             'byId',
@@ -125,11 +125,11 @@ class GaleriaController extends Controller
         }
     }
     public function getImage($filename){
-        $isset = \Storage::disk('images')->exists($filename);
+        $isset = \Storage::disk('nas')->exists($filename);
         //echo($filename);
         //echo($isset);
         if ($isset) {
-            $file = \Storage::disk('images')->get($filename);
+            $file = \Storage::disk('nas')->get($filename);
             return Response($file, 200);
         } else {
             $data = array(
@@ -157,7 +157,7 @@ class GaleriaController extends Controller
 
         if($image){
             $image_path=$image->getClientOriginalName();
-           \Storage::disk('images')->put($image_path, \File::get($image));
+           \Storage::disk('nas')->put($image_path, \File::get($image));
         }
         $data=array(
            'image'=>$image,

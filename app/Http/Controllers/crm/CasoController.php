@@ -37,7 +37,12 @@ class CasoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
+        $this->middleware('auth:api', ['except' =>
+        [
+            'add',
+            'addCasoOPMICreativa'
+
+        ]]);
     }
 
     public function add(Request $request)
@@ -46,11 +51,11 @@ class CasoController extends Controller
         $miembros = $request->input('miembros');
         try {
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros) {
-                $userLoginId = auth('api')->user()->id;
+
+                $userLoginId = 1;//auth('api')->user()->id;
                 $caso = new Caso($casoInput);
                 //$caso->estado_2 = 1;
                 $caso->save();
-
                 //buscar las tareas predefinidas
                 //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
                 $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
@@ -68,7 +73,6 @@ class CasoController extends Controller
                     $tarea->marcado = false;
                     $caso->tareas()->save($tarea);
                 }
-
                 // $newGrupo = new ChatGroups();
                 // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
                 // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
@@ -78,7 +82,7 @@ class CasoController extends Controller
                 $caso->estado_2 = $estadoInicial->id;
                 $caso->nombre = 'CASO # ' . $caso->id;
                 $caso->user_creador_id = $userLoginId;
-                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+                $caso->cliente_id = 10;//$this->validarClienteSolicitudCredito($caso->ent_id)->id;
                 $caso->save();
                 for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
@@ -86,11 +90,9 @@ class CasoController extends Controller
                     //$miembro->chat_group_id = $newGrupo->id;
                     $caso->miembros()->save($miembro);
                 }
-
                 $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
                 return $this->getCaso($caso->id);
             });
-
             broadcast(new TableroEvent($casoCreado));
 
 
@@ -1046,6 +1048,82 @@ class CasoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
+    }
+
+    public function addCasoOPMICreativa($cppId){
+
+        // $opm = DB::select("
+        //       select
+        //       cpp.cpp_fecha,
+        //       alm.alm_nombre,
+        //       cpp.cpp_concepto,
+        //       cli.cli_id,
+        //       cli.ent_nombre_comercial,
+        //       (entemp.ent_nombres || ' ' || entemp.ent_apellidos) as empleado,
+        //   cpp.cpp_subtotal as sub_total_compra,
+        //   cpp.cpp_total as total_compra,
+        //       cpp.cpp_estado,
+        //       cpp.cpp_entrada,
+        //       cpp.cpp_entradaadicional,
+        //       cpp.cpp_contraentrega,
+        //       cpp.cpp_cuotas,
+        //       cpp.cpp_cuotas_gratis,
+        //       cpp.cpp_valor_cuota
+        //       from cpedido_proforma cpp join puntoventa pve on pve.pve_id = cpp.pve_id
+        //       join almacen alm on alm.alm_id = pve.alm_id
+        //       join ctipocom cti on cti.cti_id = cpp.cti_id
+        //       join cliente cli on cli.cli_id = cpp.cli_id
+        //       join empleado emp on emp.emp_id = cpp.emp_id
+        //       join entidad entemp on entemp.ent_id = emp.ent_id
+        //       where cpp.cpp_id = ?
+        // ",[$cppId]);
+        $json = '{
+    "id": null,
+    "fas_id": 393,
+    "nombre": "",
+    "descripcion": "resa1121",
+    "estado": true,
+    "orden": 1,
+    "created_at": null,
+    "updated_at": null,
+    "deleted_at": null,
+    "ent_id": 1205066,
+    "user_id": 1,
+    "prioridad": 1,
+    "fecha_vencimiento": "2023-10-26 18:33",
+    "fase_anterior_id": 393,
+    "user": null,
+    "entidad": null,
+    "comentarios": null,
+    "resumen": null,
+    "bloqueado": false,
+    "bloqueado_user": "",
+    "tar_id": null,
+    "ctt_id": null,
+    "miembros": [
+        1,
+        2,
+        5
+    ],
+    "tareas": null,
+    "tc_id": 75,
+    "tableroId": "192",
+    "estado_2": null,
+    "fase_creacion_id": 393,
+    "tablero_creacion_id": "192",
+    "dep_creacion_id": 3,
+    "fase_anterior_id_reasigna": 393,
+    "user_anterior_id": 1
+}';
+
+        $requestData = json_decode($json, true);
+
+        $request = new Request($requestData);
+        //echo ('$request->all(): '.json_encode($request->all()));
+        return $this->add($request);
+
+        //return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $opm));
+
     }
 
 }
