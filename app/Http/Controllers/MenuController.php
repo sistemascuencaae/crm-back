@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\RespuestaApi;
 use App\Http\Traits\FormatResponseTrait;
+use App\Models\Access;
 use App\Models\Menu;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -13,23 +16,25 @@ class MenuController extends Controller
 {
     use FormatResponseTrait;
 
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware('auth:api');
+    // }
 
     public function list()
     {
-        $data = Menu::all();
+        // $data = Menu::all();
+        $data = Menu::orderBy('code', 'asc')->get();
 
-        return response() ->json([
+        return response()->json([
             'code' => 200,
-            'status'=> 'success',
+            'status' => 'success',
             'data' => $data
         ]);
     }
 
-    public function findById($id){
+    public function findById($id)
+    {
         $entity = Menu::find($id);
         if (is_object($entity)) {
             $data = array(
@@ -49,6 +54,63 @@ class MenuController extends Controller
 
 
 
+    public function addMenu(Request $request)
+    {
+        try {
+            Menu::create($request->all());
 
+            $resultado = Menu::orderBy('code', 'asc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function editMenu(Request $request, $id)
+    {
+        try {
+            $menu = Menu::findOrFail($id);
+
+            $menu->update($request->all());
+
+            // $resultado = Menu::where('id', $menu->id)->first();
+            $resultado = Menu::orderBy('code', 'asc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $resultado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function deleteMenu(Request $request, $id)
+    {
+        try {
+            $menu = Menu::findOrFail($id);
+
+            // Validar si la actualización resultaría en valores duplicados
+            $existingRecord = Access::where('menu_id', $menu->id)
+                ->where('id', '!=', $id) // Excluir el registro actual de la consulta
+                ->first();
+
+            if ($existingRecord) {
+                // Si la actualización resultaría en valores duplicados, devuelve un error
+                return response()->json(RespuestaApi::returnResultado('error', 'Este menu ya esta asignado a un perfil', ''));
+
+            } else {
+
+                // $respuestas->update($request->all());
+                $menu->delete();
+
+                $resultado = Menu::orderBy('code', 'asc')->get();
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $resultado));
+            }
+
+            // return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $estado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 
 }
