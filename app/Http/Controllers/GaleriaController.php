@@ -125,11 +125,11 @@ class GaleriaController extends Controller
         }
     }
     public function getImage($filename){
-        $isset = \Storage::disk('nas')->exists($filename);
+        $isset = \Storage::disk('nas')->exists('hclinico/'.$filename);
         //echo($filename);
         //echo($isset);
         if ($isset) {
-            $file = \Storage::disk('nas')->get($filename);
+            $file = \Storage::disk('nas')->get('hclinico/'.$filename);
             return Response($file, 200);
         } else {
             $data = array(
@@ -157,7 +157,7 @@ class GaleriaController extends Controller
 
         if($image){
             $image_path=$image->getClientOriginalName();
-           \Storage::disk('nas')->put($image_path, \File::get($image));
+           \Storage::disk('nas')->put("hclinico/".$image_path, \File::get($image));
         }
         $data=array(
            'image'=>$image,
