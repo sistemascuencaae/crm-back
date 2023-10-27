@@ -82,7 +82,7 @@ class CasoController extends Controller
                 $caso->estado_2 = $estadoInicial->id;
                 $caso->nombre = 'CASO # ' . $caso->id;
                 $caso->user_creador_id = $userLoginId;
-                $caso->cliente_id = 10;//$this->validarClienteSolicitudCredito($caso->ent_id)->id;
+                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
                 $caso->save();
                 for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
