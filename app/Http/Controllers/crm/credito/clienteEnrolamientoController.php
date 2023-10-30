@@ -13,6 +13,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use LDAP\Result;
 
 class ClienteEnrolamientoController extends Controller
 {
@@ -43,7 +44,8 @@ class ClienteEnrolamientoController extends Controller
                     $imagenes = Galeria::where('caso_id', $caso_id)->where('equifax', true)->get();
                     Galeria::where('caso_id', $caso_id)->where('equifax', true)->delete();
                     //echo ('$request->input(reqCasoId): '.json_encode($request->input('reqCasoId')));
-                    $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolado);
+                    $reqCaso = $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolado);
+                    //$reqCaso = RequerimientoCaso::find($request->input('reqCasoId'));
                     //echo ('$imagenes: '.json_encode($imagenes));
                     foreach ($imagenes as $img) {
 
@@ -94,9 +96,11 @@ class ClienteEnrolamientoController extends Controller
                             }
                         ])->first();
                     $casoController = new CasoController();
+
                     $data = (object) [
                         "caso" => $casoController->getCaso($caso_id),
-                        "clienteEnrolamiento" => $clieEnrolado
+                        "clienteEnrolamiento" => $clieEnrolado,
+                        "reqCaso" => $reqCaso
                     ];
 
 
@@ -152,12 +156,14 @@ class ClienteEnrolamientoController extends Controller
                         }
                     ])->first();
                 $casoController = new CasoController();
+                $reqCaso = $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolamiento);
+                //$reqCaso = RequerimientoCaso::find($request->input('reqCasoId'));
                 $data = (object) [
                     "caso" => $casoController->getCaso($caso_id),
-                    "clienteEnrolamiento" => $clieEnrolado
+                    "clienteEnrolamiento" => $clieEnrolado,
+                    "reqCaso" => $reqCaso
                 ];
 
-                $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolamiento);
                 return $data;
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $data));
@@ -308,7 +314,6 @@ class ClienteEnrolamientoController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('success', $exitoso, ''));
             }
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
