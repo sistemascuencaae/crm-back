@@ -72,7 +72,7 @@ class MenuController extends Controller
                     return null;
                 } else {
 
-                    if (Menu::where('module', $dataJSON->module)->first()) {
+                    if (!is_null($dataJSON->module) && Menu::where('module', $dataJSON->module)->first()) {
                         $error = 'Ya EXISTE un menú con el modulo: ' . $dataJSON->module;
                         return null;
                     } else {
