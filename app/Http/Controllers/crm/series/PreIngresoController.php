@@ -22,7 +22,8 @@ class PreIngresoController extends Controller
         $data = DB::select("select c.numero, TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha, guia_remision,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
                                     case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end as estado,
-                                    c.cmo_id
+                                    c.cmo_id,
+                                    c.cfa_id
                             from gex.cpreingreso c join cliente c2 on c.cli_id = c2.cli_id
                                                 join entidad e on c2.ent_id  = e.ent_id
                             order by c.numero");
@@ -48,8 +49,7 @@ class PreIngresoController extends Controller
     {
         $data = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
                                     (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
-                            from cliente c join entidad e on c.ent_id = e.ent_id
-                            where c.cli_tipocli = 2");
+                            from cliente c join entidad e on c.ent_id = e.ent_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
@@ -61,7 +61,7 @@ class PreIngresoController extends Controller
         $data['cliente'] = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
                                                 (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
                                         from cliente c join entidad e on c.ent_id = e.ent_id
-                                        where c.cli_tipocli = 2 and c.cli_id = " . $data['cli_id'])[0];
+                                        where c.cli_id = " . $data['cli_id'])[0];
         if ($data['cmo_id'] == null) {
             if ($data['cfa_id'] == null) {
                 $data['doc_rela'] = null;
@@ -69,7 +69,7 @@ class PreIngresoController extends Controller
                 $rela = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
                                         from cfactura c join puntoventa p on c.pve_id = p.pve_id
                                                         join ctipocom t on c.cti_id = t.cti_id
-                                        where c.cmo_id = " . $data['cfa_id'])[0];
+                                        where c.cfa_id = " . $data['cfa_id'])[0];
             
                 $data['doc_rela'] = $rela->numero;
             }
@@ -146,6 +146,7 @@ class PreIngresoController extends Controller
                 $estado = $request->input('estado');
                 $bod_id = $request->input('bod_id');
                 $cmo_id = null;
+                $cfa_id = null;
                 $guia_remision = $request->input('guia_remision');
                 $cli_id = $request->input('cli_id');
     
@@ -162,6 +163,7 @@ class PreIngresoController extends Controller
                     'guia_remision' => $guia_remision,
                     'cli_id' => $cli_id,
                     'cmo_id' => $cmo_id,
+                    'cfa_id' => $cfa_id,
                     'usuario_crea' => $usuario_crea,
                     'fecha_crea' => $fecha_crea,
                     'usuario_modifica' => $usuario_modifica,
@@ -304,7 +306,7 @@ class PreIngresoController extends Controller
     }
 
     public function cargaDetalleIngreso($id, $tipo) {
-        if ($tipo = 'INV') {
+        if ($tipo == 'INV') {
             $data = DB::select("select pro_id, dmo_cantidad - (select count(*) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
                                                                 where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo
                                 from dmovinv d where cmo_id = " . $id);
@@ -326,7 +328,7 @@ class PreIngresoController extends Controller
             $d['cliente'] = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
                                                 (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
                                         from cliente c join entidad e on c.ent_id = e.ent_id
-                                        where c.cli_tipocli = 2 and c.cli_id = " . $d['cli_id'])[0];
+                                        where c.cli_id = " . $d['cli_id'])[0];
             $d['fechaPresenta'] = date_format(date_create($d['fecha']),'d/m/Y');
 
             foreach ($d['detalle'] as $p) {
@@ -339,7 +341,7 @@ class PreIngresoController extends Controller
     }
 
     public function cargaRelaciones() {
-        $data = DB::select("select c.numero, concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  ci.cmo_numero) as relacionado,
+        $data = DB::select("select c.numero, (case when ci.cmo_numero is null then concat(t1.cti_sigla,' - ', p1.alm_id, ' - ', p1.pve_numero, ' - ',  cf.cfa_numero) else concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  ci.cmo_numero) end) as relacionado,
                                     TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
                                     c.guia_remision, b.bod_nombre,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
@@ -348,10 +350,13 @@ class PreIngresoController extends Controller
                             from gex.cpreingreso c join bodega b on c.bod_id = b.bod_id
                                                 join cliente l on c.cli_id = l.cli_id
                                                 join entidad e on l.ent_id = e.ent_id
-                                                join cmovinv ci on c.cmo_id = ci.cmo_id
-                                                join puntoventa p on ci.pve_id = p.pve_id
-                                                join ctipocom t on ci.cti_id = t.cti_id
-                            where c.cmo_id is not null and c.estado = 'A'");
+                                                left outer join cmovinv ci on c.cmo_id = ci.cmo_id
+                                                left outer join cfactura cf on c.cfa_id = cf.cfa_id
+                                                left outer join puntoventa p on ci.pve_id = p.pve_id
+                                                left outer join puntoventa p1 on cf.pve_id = p1.pve_id
+                                                left outer join ctipocom t on ci.cti_id = t.cti_id
+                                                left outer join ctipocom t1 on cf.cti_id = t1.cti_id
+                            where (c.cmo_id is not null or c.cfa_id is not null) and c.estado = 'A'");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
@@ -369,6 +374,7 @@ class PreIngresoController extends Controller
                     $fecha_crea = $p['fecha_crea'];
                     $fecha_modifica = date("Y-m-d h:i:s");
                     $cmo_id = $p['cmo_id'];
+                    $cfa_id = $p['cfa_id'];
         
                     $usuario_crea = $p['usuario_crea'];
                     $usuario_modifica = $p['usuario_modifica'];
@@ -378,6 +384,7 @@ class PreIngresoController extends Controller
                         [
                         'numero' => $numero,
                         'cmo_id' => $cmo_id,
+                        'cfa_id' => $cfa_id,
                         'usuario_crea' => $usuario_crea,
                         'fecha_crea' => $fecha_crea,
                         'usuario_modifica' => $usuario_modifica,
@@ -418,6 +425,7 @@ class PreIngresoController extends Controller
                 $fecha_crea = $data['fecha_crea'];
                 $fecha_modifica = date("Y-m-d h:i:s");
                 $cmo_id = null;
+                $cfa_id = null;
         
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $usuario;
@@ -427,6 +435,7 @@ class PreIngresoController extends Controller
                     [
                     'numero' => $numero,
                     'cmo_id' => $cmo_id,
+                    'cfa_id' => $cfa_id,
                     'usuario_crea' => $usuario_crea,
                     'fecha_crea' => $fecha_crea,
                     'usuario_modifica' => $usuario_modifica,
