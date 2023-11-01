@@ -205,7 +205,7 @@ class DespachoController extends Controller
                 $fecha = $request->input('fecha');
                 $estado = $request->input('estado');
                 $bod_id = $request->input('bod_id');
-                $bod_id_fin = $request->input('bod_id_fin');
+                $bod_id_fin = $request->input('bod_id_dest');
                 $cmo_id = $request->input('cmo_id');
                 $cfa_id = $request->input('cfa_id');
     
@@ -313,22 +313,23 @@ class DespachoController extends Controller
         return response()->json(RespuestaApi::returnResultado('success', '', $data));
     }
 
-    /*public function anulaPreIngreso($numero)
+    public function anulaDespacho($numero,$bodDest)
     {
         try {
-            DB::transaction(function() use ($numero){
+            DB::transaction(function() use ($numero,$bodDest){
                 date_default_timezone_set("America/Guayaquil");
                 
-                $data = PreIngreso::with('detalle')->get()->where('numero', $numero)->first();
+                $data = Despacho::with('detalle')->get()->where('numero', $numero)->first();
 
                 $fecha_crea = $data['fecha_crea'];
                 $fecha_modifica = date("Y-m-d h:i:s");
                 $estado = 'D';
+                $bod_id = $data['bod_id'];
     
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $data['usuario_modifica'];
     
-                DB::table('gex.cpreingreso')->updateOrInsert(
+                DB::table('gex.cdespacho')->updateOrInsert(
                     ['numero' => $numero],
                     [
                     'numero' => $numero,
@@ -340,35 +341,86 @@ class DespachoController extends Controller
                     ]);
 
                 foreach ($data['detalle'] as $d) {
-                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                    if ($bodDest == null) {
+                        DB::table('gex.stock_serie')->updateOrInsert(
+                            [
+                                'pro_id' => $d['pro_id'],
+                                'serie' => $d['serie'],
+                                'bod_id' => $bod_id,
+                            ],
+                            [
+                                'pro_id' => $d['pro_id'],
+                                'serie' => $d['serie'],
+                                'bod_id' => $bod_id,
+                            ]);
+                    } else {
+                        DB::table('gex.stock_serie')->updateOrInsert(
+                            [
+                                'pro_id' => $d['pro_id'],
+                                'serie' => $d['serie'],
+                                'bod_id' => $bodDest,
+                            ],
+                            [
+                                'pro_id' => $d['pro_id'],
+                                'serie' => $d['serie'],
+                                'bod_id' => $bod_id,
+                            ]);
+                    }
                 }
             });
             
-            return response()->json(RespuestaApi::returnResultado('success', 'Preingreso anulado con exito', []));
+            return response()->json(RespuestaApi::returnResultado('success', 'Despacho anulado con exito', []));
             
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
     }
 
-    public function eliminaPreIngreso($numero) {
+    public function eliminaDespacho($numero,$bodDest) {
         try {
-            DB::transaction(function() use ($numero){
-                $data = (PreIngreso::with('detalle')->get()->where('numero', $numero)->first())['detalle'];
+            DB::transaction(function() use ($numero,$bodDest){
+                $dato = Despacho::with('detalle')->get()->where('numero', $numero)->first();
+                $bod_id = $dato['bod_id'];
+                
+                $data = $dato['detalle'];
 
-                DB::table('gex.dpreingreso')->where('numero',$numero)->delete();
-                DB::table('gex.cpreingreso')->where('numero',$numero)->delete();
+                DB::table('gex.ddespacho')->where('numero',$numero)->delete();
+                DB::table('gex.cdespacho')->where('numero',$numero)->delete();
 
                 foreach ($data as $d) {
-                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                    if ($bodDest == 'null') {
+                        DB::table('gex.stock_serie')->updateOrInsert(
+                            [
+                                'pro_id' => $d['pro_id'],
+                                'serie' => $d['serie'],
+                                'bod_id' => $bod_id,
+                            ],
+                            [
+                                'pro_id' => $d['pro_id'],
+                                'serie' => $d['serie'],
+                                'bod_id' => $bod_id,
+                            ]);
+                    } else {
+                        DB::table('gex.stock_serie')->updateOrInsert(
+                            [
+                                'pro_id' => $d['pro_id'],
+                                'serie' => $d['serie'],
+                                'bod_id' => $bodDest,
+                            ],
+                            [
+                                'pro_id' => $d['pro_id'],
+                                'serie' => $d['serie'],
+                                'bod_id' => $bod_id,
+                            ]);
+                    }
                 }
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Preingreso eliminado con exito', []));
+            return response()->json(RespuestaApi::returnResultado('success', 'Despacho eliminado con exito', []));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
-    }*/
+    }
 
     public function cargaDetalleMovimiento($id, $tipo) {
         if ($tipo == 'INV') {

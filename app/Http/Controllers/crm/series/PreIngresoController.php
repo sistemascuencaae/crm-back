@@ -20,7 +20,7 @@ class PreIngresoController extends Controller
     public function listado()
     {
         $data = DB::select("select c.numero, TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha, guia_remision,
-                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
+                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c2.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end as estado,
                                     c.cmo_id,
                                     c.cfa_id
@@ -48,7 +48,7 @@ class PreIngresoController extends Controller
     public function clientes()
     {
         $data = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
-                                    (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
+                                    (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as presenta
                             from cliente c join entidad e on c.ent_id = e.ent_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -59,7 +59,7 @@ class PreIngresoController extends Controller
         $data = PreIngreso::with('detalle')->get()->where('numero', $numero)->first();
         $data['bodega'] = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $data['bod_id'])[0];
         $data['cliente'] = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
-                                                (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
+                                                (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as presenta
                                         from cliente c join entidad e on c.ent_id = e.ent_id
                                         where c.cli_id = " . $data['cli_id'])[0];
         if ($data['cmo_id'] == null) {
@@ -93,7 +93,7 @@ class PreIngresoController extends Controller
                                         TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
                                         c.guia_remision,
                                         b.bod_nombre,
-                                        concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
+                                        concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                         p.pro_id,
                                         p.pro_codigo,
                                         p.pro_nombre,
@@ -107,7 +107,7 @@ class PreIngresoController extends Controller
                                                     join entidad e on l.ent_id = e.ent_id
                                                     join producto p on d.pro_id = p.pro_id
                                 where c.numero = " . $data['numero'] .
-                               "group by c.fecha_crea, c.numero, c.fecha, c.guia_remision, b.bod_nombre, e.ent_identificacion, e.ent_nombres, e.ent_apellidos, p.pro_id, p.pro_codigo, p.pro_nombre, c.estado
+                               "group by c.fecha_crea, c.numero, c.fecha, c.guia_remision, b.bod_nombre, e.ent_identificacion, e.ent_nombres, e.ent_apellidos, l.cli_tipocli, p.pro_id, p.pro_codigo, p.pro_nombre, c.estado
                                 order by linea");
 
         foreach ($data['impresion'] as $i) {
@@ -274,7 +274,7 @@ class PreIngresoController extends Controller
         $data = DB::select("select c.cmo_id,
                                     concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
                                     TO_CHAR(c.cmo_fecha::date, 'dd/mm/yyyy') as fecha,
-                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
+                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     'INV' as op,
                                     c.cmo_id as indice
                             from cmovinv c join puntoventa p on c.pve_id = p.pve_id
@@ -289,7 +289,7 @@ class PreIngresoController extends Controller
                             select c.cfa_id,
                                     concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
                                     TO_CHAR(c.cfa_fecha::date, 'dd/mm/yyyy') as fecha,
-                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
+                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     'VTA' as op,
                                     c.cfa_id as indice
                             from cfactura c join puntoventa p on c.pve_id = p.pve_id
@@ -320,13 +320,12 @@ class PreIngresoController extends Controller
     }
 
     public function cargaPreingresos() {
-        $data = PreIngreso::with('detalle')->get()->where('cmo_id', null)->where('estado', 'A');
+        $data = PreIngreso::with('detalle')->where('cmo_id', null)->where('estado', 'A')->get();
         
         foreach ($data as $d) {
-            $d['indice'] = $d['numero'];
             $d['bodega'] = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $d['bod_id'])[0];
             $d['cliente'] = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
-                                                (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
+                                                (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as presenta
                                         from cliente c join entidad e on c.ent_id = e.ent_id
                                         where c.cli_id = " . $d['cli_id'])[0];
             $d['fechaPresenta'] = date_format(date_create($d['fecha']),'d/m/Y');
@@ -344,7 +343,7 @@ class PreIngresoController extends Controller
         $data = DB::select("select c.numero, (case when ci.cmo_numero is null then concat(t1.cti_sigla,' - ', p1.alm_id, ' - ', p1.pve_numero, ' - ',  cf.cfa_numero) else concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  ci.cmo_numero) end) as relacionado,
                                     TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
                                     c.guia_remision, b.bod_nombre,
-                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
+                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     (select count(*) from gex.dpreingreso d where d.numero = c.numero) as mov,
                                     (select count(*) from gex.dpreingreso d join gex.stock_serie ss on d.pro_id = ss.pro_id and d.serie = ss.serie where d.numero = c.numero and ss.bod_id = c.bod_id) as stock
                             from gex.cpreingreso c join bodega b on c.bod_id = b.bod_id
