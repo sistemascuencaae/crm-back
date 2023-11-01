@@ -39,8 +39,8 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', ['except' =>
         [
-            'add',
-            'addCasoOPMICreativa'
+            //'add',
+            //'addCasoOPMICreativa'
 
         ]]);
     }
@@ -52,7 +52,7 @@ class CasoController extends Controller
         try {
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros) {
 
-                $userLoginId = 1;//auth('api')->user()->id;
+                $userLoginId = 1; //auth('api')->user()->id;
                 $caso = new Caso($casoInput);
                 //$caso->estado_2 = 1;
                 $caso->save();
@@ -738,7 +738,7 @@ class CasoController extends Controller
             $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
             $reqCaso->save();
 
-            echo ('$reqCaso: '.json_encode($reqCaso));
+            echo ('$reqCaso: ' . json_encode($reqCaso));
         }
     }
 
@@ -816,7 +816,7 @@ class CasoController extends Controller
                 $nuevoCliente->identificacion = $entidadPublic->ent_identificacion;
                 $nuevoCliente->nombres = $entidadPublic->ent_nombres;
                 $nuevoCliente->apellidos = $entidadPublic->ent_apellidos;
-                $nuevoCliente->nombre_comercial = $entidadPublic->ent_apellidos.' '. $entidadPublic->ent_nombres;
+                $nuevoCliente->nombre_comercial = $entidadPublic->ent_apellidos . ' ' . $entidadPublic->ent_nombres;
                 $nuevoCliente->fechanacimiento = $entidadPublic->ent_fechanacimiento;
                 $nuevoCliente->email = $entidadPublic->ent_email;
                 if ($clienteSC) {
@@ -1004,7 +1004,6 @@ class CasoController extends Controller
                             "tiempo_cambio" => null,
                         ]);
                     }
-
                 } else {
 
                     // Crea el nuevo registro con tiempo_cambio como null
@@ -1041,16 +1040,15 @@ class CasoController extends Controller
                         "tipo" => $tipo,
                         "user_id" => $caso->user_id,
                     ]);
-
                 }
-
             });
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
-    public function addCasoOPMICreativa($cppId){
+    public function addCasoOPMICreativa($cppId)
+    {
 
         // $opm = DB::select("
         //       select
@@ -1077,44 +1075,45 @@ class CasoController extends Controller
         //       join entidad entemp on entemp.ent_id = emp.ent_id
         //       where cpp.cpp_id = ?
         // ",[$cppId]);
+        //return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         $json = '{
-    "id": null,
-    "fas_id": 393,
-    "nombre": "",
-    "descripcion": "resa1121",
-    "estado": true,
-    "orden": 1,
-    "created_at": null,
-    "updated_at": null,
-    "deleted_at": null,
-    "ent_id": 1205066,
-    "user_id": 1,
-    "prioridad": 1,
-    "fecha_vencimiento": "2023-10-26 18:33",
-    "fase_anterior_id": 393,
-    "user": null,
-    "entidad": null,
-    "comentarios": null,
-    "resumen": null,
-    "bloqueado": false,
-    "bloqueado_user": "",
-    "tar_id": null,
-    "ctt_id": null,
-    "miembros": [
-        1,
-        2,
-        5
-    ],
-    "tareas": null,
-    "tc_id": 75,
-    "tableroId": "192",
-    "estado_2": null,
-    "fase_creacion_id": 393,
-    "tablero_creacion_id": "192",
-    "dep_creacion_id": 3,
-    "fase_anterior_id_reasigna": 393,
-    "user_anterior_id": 1
-}';
+                    "id": null,
+                    "fas_id": 393,
+                    "nombre": "",
+                    "descripcion": "resa1121",
+                    "estado": true,
+                    "orden": 1,
+                    "created_at": null,
+                    "updated_at": null,
+                    "deleted_at": null,
+                    "ent_id": 1205066,
+                    "user_id": 1,
+                    "prioridad": 1,
+                    "fecha_vencimiento": "2023-10-26 18:33",
+                    "fase_anterior_id": 393,
+                    "user": null,
+                    "entidad": null,
+                    "comentarios": null,
+                    "resumen": null,
+                    "bloqueado": false,
+                    "bloqueado_user": "",
+                    "tar_id": null,
+                    "ctt_id": null,
+                    "miembros": [
+                        1,
+                        2,
+                        5
+                    ],
+                    "tareas": null,
+                    "tc_id": 75,
+                    "tableroId": "192",
+                    "estado_2": null,
+                    "fase_creacion_id": 393,
+                    "tablero_creacion_id": "192",
+                    "dep_creacion_id": 3,
+                    "fase_anterior_id_reasigna": 393,
+                    "user_anterior_id": 1
+                }';
 
         $requestData = json_decode($json, true);
 
@@ -1125,5 +1124,4 @@ class CasoController extends Controller
         //return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $opm));
 
     }
-
 }

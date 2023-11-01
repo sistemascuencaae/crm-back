@@ -69,7 +69,7 @@ class EquifaxController extends Controller
     {
         try {
             // Verificar si la carpeta en NAS existe
-            $folderPath = "$caso_id/archivos_sin_firma";
+            $folderPath = "691/archivos_sin_firma";
             if (!Storage::disk('nas')->exists($folderPath)) {
                 return response()->json(['message' => 'La carpeta no existe'], 404);
             }

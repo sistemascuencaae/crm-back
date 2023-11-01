@@ -53,6 +53,7 @@ use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\openceo\PedidoMovilController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\user\EquifaxController;
 use App\Http\Controllers\User\ProfileUserController;
@@ -141,6 +142,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
+    Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
     //---------------------------------------------------------------->PRUEBAS
     Route::get('/validarClienteSolicitudCredito/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
     /************************  FORMULARIOS   *********************** */
@@ -173,7 +175,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
     Route::get('/listClientes/{parametro}', [ClienteOpenceoController::class, 'list']);
     Route::get('/clienteCasoList/{depId}', [ClienteOpenceoController::class, 'clienteCasoList']);
-    Route::get('/solicitudByEntId/{entIdentificacion}/{userId}', [solicitudCreditoController::class, 'solicitudByEntId']); //solicitudByEntId
+    Route::get('/solicitudByEntId/{entIdentificacion}/{userId}', [solicitudCreditoController::class, 'solicitudByEntId']);
+
+    /************************  PEDIDO MOVIL OPENCEO   *********************** */
+    Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
 
 
 });
