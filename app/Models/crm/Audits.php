@@ -11,7 +11,7 @@ class Audits extends Model
 {
     use HasFactory;
 
-    protected $table = 'public.audits';
+    protected $table = 'crm.audits';
     protected $fillable = ["accion"];
 
     public function user(): BelongsTo
