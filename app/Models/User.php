@@ -18,7 +18,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
-    protected $table = 'public.users';
+    protected $table = 'crm.users';
     use HasFactory, Notifiable;
 
     // protected $fillable = [

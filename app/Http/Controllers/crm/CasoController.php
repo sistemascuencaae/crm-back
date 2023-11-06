@@ -231,7 +231,7 @@ class CasoController extends Controller
 
     private function getCasoJoinTablero($casoId)
     {
-        $data = DB::select('SELECT ca.*, ta.id as tablero_id FROM public.users us
+        $data = DB::select('SELECT ca.*, ta.id as tablero_id FROM crm.users us
         inner join crm.caso ca on ca.user_id = us.id
         INNER JOIN crm.fase fa on fa.id = ca.fas_id
         INNER JOIN crm.tablero ta on ta.id = fa.tab_id
@@ -547,8 +547,8 @@ class CasoController extends Controller
             inner join crm.fase f on f.id = c.fase_anterior_id_reasigna
             inner join crm.tablero t on t.id = f.tab_id
             inner join crm.departamento d on d.id = t.dep_id
-            inner join public.users us on us.id = c.user_creador_id
-            inner join public.users usant on usant.id = c.user_anterior_id
+            inner join crm.users us on us.id = c.user_creador_id
+            inner join crm.users usant on usant.id = c.user_anterior_id
             where c.id = ? limit 1;',
                 [$casoId]
             );
@@ -1076,7 +1076,7 @@ class CasoController extends Controller
         $entId = $opm->ent_id;
         //--- miembros
         $miembrosAdminTablero = DB::select('select u.id from crm.tablero_user tu
-              inner join public.users u on u.id = tu.user_id
+              inner join crm.users u on u.id = tu.user_id
               where tu.tab_id = 193 and u.usu_tipo in (2,3);');
         $miembros = [];
         foreach ($miembrosAdminTablero as $miembro) {
