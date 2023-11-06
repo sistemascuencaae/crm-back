@@ -1049,79 +1049,80 @@ class CasoController extends Controller
 
     public function addCasoOPMICreativa($cppId)
     {
+        //FASEID = 396 TABLEROID = 193 usuario = 7 tipoCaso = 76 departamentoId = 1
+        $opm = DB::selectOne("
+              select
+              cli.cli_id,
+              cli.ent_id
+              from cpedido_proforma cpp
+              join cliente cli on cli.cli_id = cpp.cli_id
+              join empleado emp on emp.emp_id = cpp.emp_id
+              join entidad entemp on entemp.ent_id = emp.ent_id
+              where cpp.cpp_id = ?
+        ", [$cppId]);
+        //--- fase id
+        $faseId = 396;
+        //--- tablero id
+        $tableroId = 193;
+        //--- departamento id del tablero
+        $deparId = 1;
+        //--- usuario general del tablero id
+        $userId = 7;
+        //--- tipo caso generado en el tablero
+        $tipoCasoId = 76;
+        //--- cliente id openceo
+        $clienteId = $opm->cli_id;
+        //--- entidad id openceo
+        $entId = $opm->ent_id;
+        //--- miembros
+        $miembrosAdminTablero = DB::select('select u.id from crm.tablero_user tu
+              inner join public.users u on u.id = tu.user_id
+              where tu.tab_id = 193 and u.usu_tipo in (2,3);');
+        $miembros = [];
+        foreach ($miembrosAdminTablero as $miembro) {
+            array_push($miembros, $miembro->id);
+        }
+        //--- fecha vencimiento
+        $horaActualEcuador = Carbon::now('America/Guayaquil');
+        $nuevaHora = $horaActualEcuador->addHours(2);
+        $fechaVencimiento = $nuevaHora->toDateTimeString();
+        //---
 
-        // $opm = DB::select("
-        //       select
-        //       cpp.cpp_fecha,
-        //       alm.alm_nombre,
-        //       cpp.cpp_concepto,
-        //       cli.cli_id,
-        //       cli.ent_nombre_comercial,
-        //       (entemp.ent_nombres || ' ' || entemp.ent_apellidos) as empleado,
-        //   cpp.cpp_subtotal as sub_total_compra,
-        //   cpp.cpp_total as total_compra,
-        //       cpp.cpp_estado,
-        //       cpp.cpp_entrada,
-        //       cpp.cpp_entradaadicional,
-        //       cpp.cpp_contraentrega,
-        //       cpp.cpp_cuotas,
-        //       cpp.cpp_cuotas_gratis,
-        //       cpp.cpp_valor_cuota
-        //       from cpedido_proforma cpp join puntoventa pve on pve.pve_id = cpp.pve_id
-        //       join almacen alm on alm.alm_id = pve.alm_id
-        //       join ctipocom cti on cti.cti_id = cpp.cti_id
-        //       join cliente cli on cli.cli_id = cpp.cli_id
-        //       join empleado emp on emp.emp_id = cpp.emp_id
-        //       join entidad entemp on entemp.ent_id = emp.ent_id
-        //       where cpp.cpp_id = ?
-        // ",[$cppId]);
-        //return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-        $json = '{
-                    "id": null,
-                    "fas_id": 393,
-                    "nombre": "",
-                    "descripcion": "resa1121",
-                    "estado": true,
-                    "orden": 1,
-                    "created_at": null,
-                    "updated_at": null,
-                    "deleted_at": null,
-                    "ent_id": 1205066,
-                    "user_id": 1,
-                    "prioridad": 1,
-                    "fecha_vencimiento": "2023-10-26 18:33",
-                    "fase_anterior_id": 393,
-                    "user": null,
-                    "entidad": null,
-                    "comentarios": null,
-                    "resumen": null,
-                    "bloqueado": false,
-                    "bloqueado_user": "",
-                    "tar_id": null,
-                    "ctt_id": null,
-                    "miembros": [
-                        1,
-                        2,
-                        5
-                    ],
-                    "tareas": null,
-                    "tc_id": 75,
-                    "tableroId": "192",
-                    "estado_2": null,
-                    "fase_creacion_id": 393,
-                    "tablero_creacion_id": "192",
-                    "dep_creacion_id": 3,
-                    "fase_anterior_id_reasigna": 393,
-                    "user_anterior_id": 1
-                }';
-
-        $requestData = json_decode($json, true);
-
+        $a = '';
+        $objetoJson = (object)[
+            "id" => null,
+            "fas_id" => $faseId,
+            "nombre" => 'Solicitud de credito aplicación movil)',
+            "descripcion" => 'Pedido generado desde la aplicacion',
+            "estado" => true,
+            "orden" => 1,
+            "ent_id" => $entId,
+            "user_id" => $userId,
+            "prioridad" => 1,
+            "fecha_vencimiento" => $fechaVencimiento,
+            "fase_anterior_id" => $faseId,
+            "user" => null,
+            "entidad" => null,
+            "miembros" => $miembros,
+            "comentarios" => null,
+            "resumen" => null,
+            "bloqueado" => false,
+            "bloqueado_user" => "",
+            "tar_id" => null,
+            "ctt_id" => null,
+            "tareas" => null,
+            "tc_id" => $tipoCasoId,
+            "tableroId" => $tableroId,
+            "estado_2" => null,
+            "fase_creacion_id" => $faseId,
+            "tablero_creacion_id" => $tableroId,
+            "dep_creacion_id" => $deparId,
+            "fase_anterior_id_reasigna" => $faseId,
+            "user_anterior_id" => $userId,
+            "cpp_id" => $cppId,
+        ];
+        $requestData = json_decode(json_encode($objetoJson), true);
         $request = new Request($requestData);
-        //echo ('$request->all(): '.json_encode($request->all()));
         return $this->add($request);
-
-        //return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $opm));
-
     }
 }
