@@ -64,7 +64,7 @@ class ProfileUserController extends Controller
 // {
 
 //     //$user = auth('api')->user();
-//     $usuarios = DB::select('select * from public.users');
+//     $usuarios = DB::select('select * from crm.users');
 //     //echo('usuer : '.json_encode($request->all()));
 
 //     for ($i = 0; $i < sizeof($usuarios); $i++) {

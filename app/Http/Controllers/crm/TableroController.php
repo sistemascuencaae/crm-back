@@ -125,7 +125,7 @@ class TableroController extends Controller
                 (tab_id, nombre, descripcion, estado, orden, created_at, updated_at, generar_caso, color_id, fase_tipo, cnd_mover_id)
                 VALUES(?, 'BANDEJA DE ENTRADA', 'SE CARGARAN TODOS LOS CASOS SIN ASIGNAR', true, 1, ?, ?, true, 22, 1, ?);", [$tablero->id, $tablero->created_at, $tablero->updated_at, $condicion->id]);
 
-                DB::insert("INSERT INTO public.users
+                DB::insert("INSERT INTO crm.users
                 (name, estado, surname, usu_alias, email,
                 password, created_at, updated_at, phone, fecha_nacimiento,
                 address, usu_tipo_analista, dep_id, usu_tipo, tab_id, en_linea)
@@ -200,7 +200,7 @@ class TableroController extends Controller
                     "result_id_proximo" => $resultadoCerradoReagendado->id,
                 ]);
 
-                $usuGeneral = DB::select("SELECT * FROM public.users WHERE name = 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}'");
+                $usuGeneral = DB::select("SELECT * FROM crm.users WHERE name = 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}'");
 
                 DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$usuGeneral[0]->id, $tablero->id]);
 
@@ -274,8 +274,8 @@ class TableroController extends Controller
             // cg.uniqd, cg.nombre as nombre_grupo_chat, f.tab_id,tab.nombre, cs.estado_2
             // from crm.miembros m
             // inner join crm.caso cs on cs.id = m.caso_id
-            // inner join public.users u on u.id = m.user_id
-            // inner join public.users u2 on u2.id = cs.user_id
+            // inner join crm.users u on u.id = m.user_id
+            // inner join crm.users u2 on u2.id = cs.user_id
             // inner join crm.fase f on f.id = cs.fas_id
             // inner join crm.tablero tab on tab.id = f.tab_id
             // inner join public.clienteCrm ent on ent.ent_id = cs.ent_id

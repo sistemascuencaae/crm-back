@@ -80,7 +80,7 @@ class ClienteOpenceoController extends Controller
             $listaAvCC = AvCasoCliente::where('tab_id', $tabId)->get();
 
             $dataCharLine = DB::select("SELECT ta.id as tab_id, ta.nombre as tab_nombre, count(*) as num_caso_tablero, us.name as usu_name   from crm.caso cas
-            inner join public.users us on us.id = cas.user_id
+            inner join crm.users us on us.id = cas.user_id
             inner join crm.fase fa on fa.id = cas.fas_id
             inner join crm.tablero ta on ta.id = fa.tab_id where ta.id = {$tabId} group by (ta.id, ta.nombre, us.name);");
 

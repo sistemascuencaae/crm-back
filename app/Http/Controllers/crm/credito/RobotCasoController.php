@@ -102,7 +102,7 @@ class RobotCasoController extends Controller
                 $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
             } else {
                 //--- si es no, asignar al usuario general del tablero de creacion
-                $usuGeneral = DB::selectOne('SELECT * FROM public.users where tab_id = ? and usu_tipo = 1;', [$formula->tablero_id]);
+                $usuGeneral = DB::selectOne('SELECT * FROM crm.users where tab_id = ? and usu_tipo = 1;', [$formula->tablero_id]);
                 $casoEnProceso->user_id = $usuGeneral->id;
             }
             $casoEnProceso->save();
@@ -111,7 +111,7 @@ class RobotCasoController extends Controller
         //---Usuarios en linea del nuevo tablero y sus perfiles
         $usuariosNuevoTablero = DB::select("SELECT usu.id as usu_id,usu.usu_tipo, usu.name, usu.usu_tipo_analista, pa.nombre, pa.monto_inicial, pa.monto_limite from crm.tablero tab
         inner join crm.tablero_user tu on tu.tab_id = tab.id
-        inner join public.users usu on usu.id = tu.user_id
+        inner join crm.users usu on usu.id = tu.user_id
         left join crm.perfil_analistas pa on pa.id = usu.usu_tipo_analista
         where tab.id = ? and usu.estado = true and usu.en_linea = true", [$formula->tablero_id]);
 
