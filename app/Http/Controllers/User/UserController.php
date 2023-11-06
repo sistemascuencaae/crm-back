@@ -16,7 +16,7 @@ class UserController extends Controller
         //$data = User::with('UsuarioDynamo')->where('usu_tipo_analista', 1)->get();
         $data = DB::select("SELECT u.*, (u.name || ' - ' || dep.dep_nombre) as user_dep from crm.tablero ta
         inner join crm.tablero_user tu on tu.tab_id = ta.id
-        inner join public.users u on u.id  = tu.user_id
+        inner join crm.users u on u.id  = tu.user_id
         inner join crm.departamento dep on dep.id = u.dep_id
         where ta.id = " . $tableroId);
         return response()->json(RespuestaApi::returnResultado('success', 'Lista de usuarios analistas', $data));

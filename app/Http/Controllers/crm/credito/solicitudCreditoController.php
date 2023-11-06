@@ -98,7 +98,7 @@ class solicitudCreditoController extends Controller
     // public function solicitudByIdentificacion($entIdentificacion, $userId)
     // {
     //     try {
-    //         $user = DB::selectOne('SELECT u.name, alm.alm_nombre  from public.users u
+    //         $user = DB::selectOne('SELECT u.name, alm.alm_nombre  from crm.users u
     //         inner join public.puntoventa pve on pve.pve_id = u.pve_id
     //         inner join public.almacen alm on alm.alm_id = pve.alm_id
     //         where u.id = ?', [$userId]);
@@ -120,7 +120,7 @@ class solicitudCreditoController extends Controller
     public function solicitudByIdentificacion($entIdentificacion, $userId)
     {
         try {
-            $user = DB::selectOne('SELECT u.name, alm.alm_nombre  from public.users u
+            $user = DB::selectOne('SELECT u.name, alm.alm_nombre  from crm.users u
         inner join public.puntoventa pve on pve.pve_id = u.pve_id
         inner join public.almacen alm on alm.alm_id = pve.alm_id
         where u.id = ?', [$userId]);
@@ -147,7 +147,7 @@ class solicitudCreditoController extends Controller
             //     return $solicitudCredito;
             // }
             $caso = Caso::with('userCreador')->find($casoId);
-            $almacen = DB::selectOne('SELECT alm.* FROM public.users usu
+            $almacen = DB::selectOne('SELECT alm.* FROM crm.users usu
             inner join public.puntoventa pve on pve.pve_id = usu.pve_id
             inner join public.almacen alm on alm.alm_id = pve.alm_id where usu.id = ? limit 1', [$caso->user_id]);
             if ($caso) {
