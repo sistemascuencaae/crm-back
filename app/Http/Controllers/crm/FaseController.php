@@ -24,23 +24,6 @@ class FaseController extends Controller
         try {
 
             $data = $this->listarfases($tabId);
-            // $data = Fase::with([
-            //     'caso.user',
-            //     'caso.userCreador',
-            //     'caso.clienteCrm',
-            //     'caso.resumen',
-            //     'caso.tareas' => function ($query) use ($tabId) {
-            //         $query->where('tab_id', $tabId);
-            //     },
-            //     'caso.actividad',
-            //     'caso.miembros.usuario.departamento',
-            //     'caso.Etiqueta',
-            //     'caso.req_caso' => function ($query) {
-            //         $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-            //     },
-            //     'condicionFaseMover',
-            //     'caso.estadodos'
-            // ])->where('tab_id', $tabId)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Al listar', $th->getMessage()));
