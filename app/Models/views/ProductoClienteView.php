@@ -17,6 +17,8 @@ class ProductoClienteView extends Model
         "cli_id",
         "cfa_fecha",
         "comprobante",
+        "cfa_facproveedor",
+        "devuelto",
         "pro_nombre",
         "tpr_nombre",
         "cla1_nombre",
