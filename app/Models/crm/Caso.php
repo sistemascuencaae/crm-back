@@ -7,6 +7,7 @@ use App\Models\crm\Fase;
 use App\Models\User;
 use App\Models\crm\Entidad;
 use App\Models\crm\AVResumenCaso;
+use App\Models\views\ProductoClienteView;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -153,5 +154,9 @@ class Caso extends Model
     public function estadodos()
     {
         return $this->belongsTo(Estados::class, "estado_2", "id");
+    }
+    public function productos_cliente()
+    {
+        return $this->hasMany(ProductoClienteView::class, "ent_id", "ent_id");
     }
 }

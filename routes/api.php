@@ -33,6 +33,7 @@ use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
 use App\Http\Controllers\crm\CTipoResultadoCierreController;
 use App\Http\Controllers\crm\DActividadController;
+use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\EstadosController;
@@ -180,6 +181,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     /************************  PEDIDO MOVIL OPENCEO   *********************** */
     Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
 
+    Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);//comprasCliente
 
 });
 Route::group(["prefix" => "crm/audi"], function ($router) {
