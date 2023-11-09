@@ -100,7 +100,7 @@ class ProfileController extends Controller
                     a.menu_id,
                     m.code,m.module,m.name,m.url,m.icon,
                     a.create,a.edit,a.delete,a.report,a.ejecutar
-                FROM users u
+                FROM crm.users u
                 INNER JOIN access a on u.profile_id=a.profile_id
                 INNER JOIN menu m on a.menu_id=m.id
                 where  u.id=?

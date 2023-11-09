@@ -21,19 +21,11 @@ use App\Http\Controllers\crm\credito\ParentescoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
-use App\Http\Controllers\crm\garantias\ConfigItemsController;
-use App\Http\Controllers\crm\garantias\ExepcionGexController;
-use App\Http\Controllers\crm\garantias\GEXController;
-use App\Http\Controllers\crm\garantias\PartesController;
-use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
-use App\Http\Controllers\crm\garantias\RubrosReservaController;
-use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
 use App\Http\Controllers\crm\CTipoResultadoCierreController;
 use App\Http\Controllers\crm\DActividadController;
-use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\EstadosController;
@@ -189,7 +181,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     /************************  PEDIDO MOVIL OPENCEO   *********************** */
     Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
 
-    Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);//comprasCliente
 
 });
 Route::group(["prefix" => "crm/audi"], function ($router) {
@@ -493,7 +484,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byParte/{parte}', [PartesController::class, 'byParte']);
     Route::post('/grabaParte', [PartesController::class, 'grabaParte']);
     Route::get('/eliminaParte/{parte}', [PartesController::class, 'eliminaParte']);
-
+    
     //Configuracion Items
     Route::get('/listadoConfig', [ConfigItemsController::class, 'listado']);
     Route::get('/listadoProductos', [ConfigItemsController::class, 'productos']);
@@ -501,7 +492,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaConfig', [ConfigItemsController::class, 'grabaConfig']);
     Route::get('/byConfig/{producto}', [ConfigItemsController::class, 'byConfig']);
     Route::get('/eliminaConfig/{producto}', [ConfigItemsController::class, 'eliminaConfig']);
-
+    
     //Relacion Lineas Gex
     Route::get('/listadoRelacion', [RelacionLineasGexController::class, 'listado']);
     Route::get('/listadoProductosGex', [RelacionLineasGexController::class, 'productos']);
@@ -509,14 +500,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaRela', [RelacionLineasGexController::class, 'grabaRela']);
     Route::get('/byRela/{linea}/{producto}', [RelacionLineasGexController::class, 'byRela']);
     Route::get('/eliminaRela/{linea}/{producto}', [RelacionLineasGexController::class, 'eliminaRela']);
-
+    
     //Excepción Gex
     Route::get('/listadoExepcion', [ExepcionGexController::class, 'listado']);
     Route::get('/listadoProductosExcep', [ExepcionGexController::class, 'productos']);
     Route::post('/grabaExep', [ExepcionGexController::class, 'grabaExep']);
     Route::get('/byExcep/{excep}', [ExepcionGexController::class, 'byExcep']);
     Route::get('/eliminaExep/{excep}', [ExepcionGexController::class, 'eliminaExep']);
-
+    
     //Rubro de Reserva
     Route::get('/listadoRubros', [RubrosReservaController::class, 'listado']);
     Route::post('/grabaRubro', [RubrosReservaController::class, 'grabaRubro']);
