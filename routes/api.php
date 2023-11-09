@@ -46,6 +46,7 @@ use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\openceo\ClienteDynamoController;
 use App\Http\Controllers\openceo\PedidoMovilController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\user\EquifaxController;
@@ -178,9 +179,12 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/clienteCasoList/{depId}', [ClienteOpenceoController::class, 'clienteCasoList']);
     Route::get('/solicitudByEntId/{entIdentificacion}/{userId}', [solicitudCreditoController::class, 'solicitudByEntId']);
 
-    /************************  PEDIDO MOVIL OPENCEO   *********************** */
+    /************************  PEDIDO MOVIL OPENCEO   ****************** */
     Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
 
+    Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
+
+    Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
 
 });
 Route::group(["prefix" => "crm/audi"], function ($router) {
