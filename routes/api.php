@@ -179,7 +179,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/clienteCasoList/{depId}', [ClienteOpenceoController::class, 'clienteCasoList']);
     Route::get('/solicitudByEntId/{entIdentificacion}/{userId}', [solicitudCreditoController::class, 'solicitudByEntId']);
 
-    /************************  PEDIDO MOVIL OPENCEO   *********************** */
+    /************************  PEDIDO MOVIL OPENCEO   ****************** */
     Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
 
     Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
