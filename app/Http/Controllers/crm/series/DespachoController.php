@@ -129,7 +129,7 @@ class DespachoController extends Controller
 
     public function bodegaUsuario($usuario) {
         $data = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b join puntoventa p on b.bod_id = p.bod_id
-                            where p.pve_id = (select (case when us.pve_id is null then u.pve_id else us.pve_id end) as ptoVta from users u left outer join usuario us on u.usu_id  = us.usu_id
+                            where p.pve_id = (select (case when us.pve_id is null then u.pve_id else us.pve_id end) as ptoVta from crm.users u left outer join usuario us on u.usu_id  = us.usu_id
                                             where id = " . $usuario . ")")[0];
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
