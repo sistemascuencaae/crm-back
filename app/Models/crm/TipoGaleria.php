@@ -8,9 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class TipoGaleria extends Model implements Auditable
+class TipoGaleria extends Model
 {
-    use AuditableTrait;
 
     use HasFactory;
     protected $table = 'crm.tipo_galeria';

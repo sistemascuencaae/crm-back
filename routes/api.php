@@ -1,15 +1,62 @@
 <?php
 
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\crm\ActividadesFormulasController;
+use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
+use App\Http\Controllers\crm\BitacoraController;
+use App\Http\Controllers\crm\CActividadClienteController;
+use App\Http\Controllers\crm\CActividadController;
+use App\Http\Controllers\crm\CasoController;
+use App\Http\Controllers\crm\CFormularioController;
+use App\Http\Controllers\crm\ClienteCrmController;
+use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
+use App\Http\Controllers\crm\CondicionesController;
 use App\Http\Controllers\crm\credito\ArchivoController;
+use App\Http\Controllers\crm\credito\ClienteEnrolamientoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
 use App\Http\Controllers\crm\credito\GaleriaController;
+use App\Http\Controllers\crm\credito\ParentescoController;
+use App\Http\Controllers\crm\credito\RobotCasoController;
+use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
+use App\Http\Controllers\crm\garantias\ConfigItemsController;
+use App\Http\Controllers\crm\garantias\ExepcionGexController;
+use App\Http\Controllers\crm\garantias\GEXController;
+use App\Http\Controllers\crm\garantias\PartesController;
+use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
+use App\Http\Controllers\crm\garantias\RubrosReservaController;
+use App\Http\Controllers\crm\series\PreIngresoController;
+use App\Http\Controllers\crm\TipoTelefonoController;
+use App\Http\Controllers\crm\CrmController;
+use App\Http\Controllers\crm\CTareaController;
+use App\Http\Controllers\crm\CTipoResultadoCierreController;
+use App\Http\Controllers\crm\DActividadController;
+use App\Http\Controllers\crm\DashboardController;
+use App\Http\Controllers\crm\DepartamentoController;
 use App\Http\Controllers\crm\EntidadController;
+use App\Http\Controllers\crm\EstadosController;
+use App\Http\Controllers\crm\EstadosFormulasController;
+use App\Http\Controllers\crm\FaseController;
 use App\Http\Controllers\crm\FlujoController;
+use App\Http\Controllers\crm\NotaController;
+use App\Http\Controllers\crm\NotificacionesController;
+use App\Http\Controllers\crm\PerfilAnalistasController;
+use App\Http\Controllers\crm\ReferenciasClienteController;
+use App\Http\Controllers\crm\ReqCasoController;
+use App\Http\Controllers\crm\RequerimientoController;
+use App\Http\Controllers\crm\RespuestasCasoController;
+use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
-use App\Http\Controllers\User\UsersController;
+use App\Http\Controllers\crm\TipoCasoController;
+use App\Http\Controllers\crm\TipoTableroController;
+use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
+use App\Http\Controllers\MenuController;
+use App\Http\Controllers\openceo\PedidoMovilController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\user\EquifaxController;
 use App\Http\Controllers\User\ProfileUserController;
 use App\Http\Controllers\crm\garantias\PartesController;
 use App\Http\Controllers\crm\garantias\ConfigItemsController;
@@ -21,7 +68,7 @@ use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\series\DespachoController;
 use Illuminate\Support\Facades\Route;
 
-/*
+/*w
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
@@ -60,6 +107,7 @@ Route::group(['middleware' => 'api'], function ($router) {
 
 Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
     Route::post('/profile-user', [ProfileUserController::class, 'profile_user']);
+    Route::put('/profile', [ProfileUserController::class, 'profile_user']);
 });
 
 
@@ -70,26 +118,53 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 //----------------------- RUTAS FELIPE ----------------------------------------------
 //----------------------- RUTAS FELIPE ----------------------------------------------
 //----------------------- RUTAS FELIPE ----------------------------------------------
-
-
-//cambios felipe sin actualizar
 Route::group(["prefix" => "crm"], function ($router) {
-
+    //CRM CONTROLLER PRINCIPAL
+    Route::get('/crmTablero/{id}', [CrmController::class, 'list']);
+    //notificaciones
+    Route::post('/addNotificacion', [NotificacionesController::class, 'add']);
 
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
-    Route::post('/guardarComentario', [AnalistaController::class, 'guardarComentario']);
 
 
-    Route::get('/listarFlujos', [FlujoController::class, 'listarFlujos']);
     Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
     Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
     Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
 
-    Route::get('/listFlujos', [FlujoController::class, 'list']);
-    Route::post('/create-flujo', [FlujoController::class, 'create']);
-    Route::put('/update-flujo', [FlujoController::class, 'update']);
-    Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
-    Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
+
+
+
+    //------------------------------------------------------------------>FASE
+    Route::post('/listFase', [FaseController::class, 'list']);
+    Route::post('/addFase', [FaseController::class, 'add']);
+    Route::put('/editFase', [FaseController::class, 'edit']);
+    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']); //actualizarOrdenFases
+    Route::post('/actualizarOrdenFases', [FaseController::class, 'actualizarOrdenFases']); //
+    // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
+    // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
+
+    //------------------------------------------------------------------>CASO
+    Route::put('/editCasoFase', [CasoController::class, 'editFase']);
+    Route::post('/addCaso', [CasoController::class, 'add']);
+    Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
+    Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
+    Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
+    Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
+    Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
+    Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
+    //---------------------------------------------------------------->PRUEBAS
+    Route::get('/validarClienteSolicitudCredito/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
+    /************************  FORMULARIOS   *********************** */
+    Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
+    Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
+    /************************  REQUERIMIENTOS CASO   *********************** */
+    Route::post('/addSolicitudCreditoReqCaso', [ReqCasoController::class, 'addSolicitudCreditoReqCaso']); // Guardar
+    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll']);
+    Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']);
+    Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
+    Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']); //
+
+
 
     Route::post('/addTarea', [TareaController::class, 'add']);
     Route::get('/listTareas', [TareaController::class, 'list']);
@@ -101,9 +176,31 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
 
-    Route::get('/listAnalistas', [UsersController::class, 'listAnalistas']);
+    Route::get('/listAnalistas/{tableroId}', [UserController::class, 'listAnalistas']);
+    Route::get('/listUsuariosActivos', [UserController::class, 'listUsuariosActivos']);
 
+    /************************  OPENCEO   *********************** */
 
+    Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
+    Route::get('/listClientes/{parametro}', [ClienteOpenceoController::class, 'list']);
+    Route::get('/clienteCasoList/{depId}', [ClienteOpenceoController::class, 'clienteCasoList']);
+    Route::get('/solicitudByEntId/{entIdentificacion}/{userId}', [solicitudCreditoController::class, 'solicitudByEntId']);
+
+    /************************  PEDIDO MOVIL OPENCEO   *********************** */
+    Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
+
+    Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);//comprasCliente
+
+});
+Route::group(["prefix" => "crm/audi"], function ($router) {
+    Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
+});
+Route::group(["prefix" => "crm/robot"], function ($router) {
+    Route::post('/reasignarCaso', [RobotCasoController::class, 'reasignarCaso']);
+});
+
+Route::group([], function ($router) {
+    Route::post('/token', [EquifaxController::class, 'loginEquifax']);
 });
 
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
@@ -114,39 +211,280 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 //----------------------- START RUTAS JUAN  ----------------------------------------------
 
-//Rutas Juan GALERIA
 Route::group(["prefix" => "crm"], function ($router) {
-    Route::post('/addGaleria', [GaleriaController::class, 'store']); // Guardar la imagen
-    Route::get('/allGaleria/{id}', [GaleriaController::class, 'index']); // Listar las imagenes
-    Route::post('/updateGaleria/{id}', [GaleriaController::class, 'edit']); // Edita la imagen
-    Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'destroy']); // Elimina la imagen
 
-    Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'index']); // Listar los tipos de imagenes
+    // GALERIA
+
+    Route::post('/addGaleria/{caso_id}', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
+    Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
+    Route::post('/editGaleria/{id}', [GaleriaController::class, 'editGaleria']); // Edita la imagen
+    Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
+    Route::get('/listGaleriaBySolicitudCreditoId/{id}', [GaleriaController::class, 'listGaleriaBySolicitudCreditoId']); // Listar las imagenes
+
+    Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'allTipoGaleria']); // Listar los tipos de imagenes
+
+    // ARCHIVO
+
+    Route::post('/addArchivo/{caso_id}', [ArchivoController::class, 'addArchivo']); // Guardar
+    Route::post('/addArrayArchivos/{caso_id}', [ArchivoController::class, 'addArrayArchivos']); // Guardar
+    Route::get('/listArchivoByCasoId/{id}', [ArchivoController::class, 'listArchivoByCasoId']); // Listar
+    Route::post('/editArchivo/{id}', [ArchivoController::class, 'editArchivo']); // Editar
+    Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'deleteArchivo']); // Eliminar
+    //Para documentos de equifax
+    Route::post('/addArchivosEquifax/{caso_id}', [ArchivoController::class, 'addArchivosEquifax']); // Guardar
+    Route::get('/listArchivosSinFirmaEquifaxByCasoId/{caso_id}', [ArchivoController::class, 'listArchivosSinFirmaEquifaxByCasoId']); // Listar sin firmas
+    Route::post('/editArchivosEquifax/{id}', [ArchivoController::class, 'editArchivosEquifax']); // Editar
+    Route::get('/listArchivosEquifaxFirmadosByCasoId/{caso_id}', [ArchivoController::class, 'listArchivosEquifaxFirmadosByCasoId']); // Listar de firmados
+
+    // Etiqueta
+
+    Route::post('/addEtiqueta', [EtiquetaController::class, 'addEtiqueta']); // Guardar
+    Route::get('/listEtiquetaByCasoId/{id}', [EtiquetaController::class, 'listEtiquetaByCasoId']); // Listar
+    // Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'updateEtiqueta']); // Editar
+    Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'deleteEtiqueta']); // Eliminar
+
+    // ENTIDAD
+
+    Route::get('/searchById/{id}', [EntidadController::class, 'searchById']); // Listar
+    Route::get('/searchByCedula/{cedula}', [EntidadController::class, 'searchByCedula']); // Listar
+    Route::post('/updateEntidad', [EntidadController::class, 'updateEntidad']); // Editar
+
+    // BITACORA
+
+    Route::get('/listBitacoraByCasoId/{id}', [BitacoraController::class, 'listBitacoraByCasoId']); // Listar
+
+    // TABLERO
+
+    Route::post('/addTablero', [TableroController::class, 'addTablero']); // guardar
+    Route::get('/listTableroByUser/{user_id}', [TableroController::class, 'listTableroByUser']); // listar
+    Route::get('/listTableroMisCasos/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
+    Route::post('/updateTablero/{id}', [TableroController::class, 'updateTablero']); // Editar
+    Route::get('/listAllTableros', [TableroController::class, 'listAll']); // listar tablero mis casos
+    Route::get('/listAllTablerosActivos', [TableroController::class, 'listAllTablerosActivos']); // listar tableros inactivos
+    Route::get('/listAllTablerosInactivos', [TableroController::class, 'listAllTablerosInactivos']); // listar tableros inactivos
+    Route::get('/listAllTablerosWithFases', [TableroController::class, 'listAllTablerosWithFases']); // listar tableros con sus fases
+    Route::get('/listByTablerosIdWithFases/{tab_id}', [TableroController::class, 'listByTablerosIdWithFases']); // listar tableros con sus fases
+    Route::get('/editMiembrosByTableroId/{id}', [TableroController::class, 'editMiembrosByTableroId']); // Editar los miembros del tablero
+
+    // DEPARTAMENTO
+
+    Route::get('/allDepartamento', [DepartamentoController::class, 'allDepartamento']); // listar
+    Route::get('/listDepAllUser', [DepartamentoController::class, 'listAllUser']); // listar
+    Route::get('/listDepartamento', [DepartamentoController::class, 'listDepartamento']); // listar
+    Route::post('/addDepartamento', [DepartamentoController::class, 'addDepartamento']); // guardar
+    Route::post('/editDepartamento/{id}', [DepartamentoController::class, 'editDepartamento']); // Editar
+    Route::delete('/deleteDepartamento/{id}', [DepartamentoController::class, 'deleteDepartamento']); // Eliminar
+
+    // TIPO_TABLERO
+
+    Route::get('/allTipoTablero', [TipoTableroController::class, 'allTipoTablero']); // listar
+
+    // NOTAS
+
+    Route::post('/addNota', [NotaController::class, 'addNota']); // guardar
+    Route::get('/listNotaByCasoId/{id}', [NotaController::class, 'listNotaByCasoId']); // listar
+    Route::post('/updateNota/{id}', [NotaController::class, 'updateNota']); // Editar
+    Route::delete('/deleteNota/{id}', [NotaController::class, 'deleteNota']); // Eliminar
+
+    // CASO
+
+    Route::get('/listCasoById/{id}', [CasoController::class, 'listCasoById']); // listar
+    Route::post('/editPrioridadCaso/{id}', [CasoController::class, 'editPrioridadCaso']);
+    Route::post('/editarTipoCaso/{id}', [CasoController::class, 'editarTipoCaso']);
+    Route::post('/editObservacion/{id}', [CasoController::class, 'editObservacion']); // Editar la observación del caso
+
+    // CTAREA
+
+    Route::post('/addCTarea', [CTareaController::class, 'addCTarea']); // guardar
+    Route::get('/listTareasByIdTablero/{tab_id}', [CTareaController::class, 'listTareasByIdTablero']); // guardar
+    Route::post('/updateCTarea/{id}', [CTareaController::class, 'updateCTarea']); // Edita la tarea
+
+    // CACTIVIDAD
+
+    // Route::post('/addCActividad', [CActividadController::class, 'addCActividad']); // guardar
+    Route::post('/addCTipoActividad', [CActividadController::class, 'addCTipoActividad']); // guardar
+    Route::get('listCTipoActividadByIdTablero/{tab_id}', [CActividadController::class, 'listCTipoActividadByIdTablero']); // listar
+    Route::get('listCTipoActividadByIdTableroEstadoActivo/{tab_id}', [CActividadController::class, 'listCTipoActividadByIdTableroEstadoActivo']); // listar
+    Route::get('listCTipoActividadByIdCasoId/{caso_id}', [CActividadController::class, 'listCTipoActividadByIdCasoId']); // listar
+    // Route::get('allCTipoActividades', [CActividadController::class, 'allCTipoActividades']); // listar todo
+    Route::post('/editCTipoActividad/{id}', [CActividadController::class, 'editCTipoActividad']); // Edita la actividad
+    Route::delete('/deleteCTipoActividad/{id}', [CActividadController::class, 'deleteCTipoActividad']); // Eliminar
+
+    // DACTIVIDAD
+
+    Route::post('/addDTipoActividad', [DActividadController::class, 'addDTipoActividad']); // guardar
+    // Route::get('listActividadesByIdCasoId/{caso_id}/{user_id}', [DActividadController::class, 'listActividadesByIdCasoId']); // listar activiades por user_id
+    Route::get('listActividadesByDepIdCasoId/{caso_id}/{dep_id}', [DActividadController::class, 'listActividadesByDepIdCasoId']); // listar actividades por departamento USUARIO COMUN
+    Route::get('listAllActividadesByCasoId/{caso_id}', [DActividadController::class, 'listAllActividadesByCasoId']); // listar ALL actividades SUPER USUARIO
+    Route::post('/updateDActividad/{id}', [DActividadController::class, 'updateDActividad']); // Edita la actividad
+    Route::post('/editAccesoActividad/{id}', [DActividadController::class, 'editAccesoActividad']); // Edita el acceso publico de la actividad
+    Route::get('listActividadesByUserId/{user_id}', [DActividadController::class, 'listActividadesByUserId']); // listar TABLA DE MIS ACTIVIDADES
+    // Route::delete('/deleteCTipoActividad/{id}', [DActividadController::class, 'deleteCTipoActividad']); // Eliminar
+    Route::post('/addDTipoActividadTabla/{user_id}', [DActividadController::class, 'addDTipoActividadTabla']); // guardar
+    Route::post('/updateDActividadTabla/{id}/{user_id}', [DActividadController::class, 'updateDActividadTabla']); // Edita la actividad
+    Route::get('listActividadesIniciadasByUserId/{user_id}', [DActividadController::class, 'listActividadesIniciadasByUserId']); // listar para el calendario
+
+    // CTIPORESULTADOCIERRE
+
+    Route::post('/addCTipoResultadoCierre', [CTipoResultadoCierreController::class, 'addCTipoResultadoCierre']); // guardar
+    Route::get('listCTipoResultadoCierreByIdTablero/{tab_id}', [CTipoResultadoCierreController::class, 'listCTipoResultadoCierreByIdTablero']); // listar
+    Route::get('listCTipoResultadoCierreByIdTableroEstadoActivo/{tab_id}', [CTipoResultadoCierreController::class, 'listCTipoResultadoCierreByIdTableroEstadoActivo']); // listar
+    Route::get('listCTipoResultadoCierreByIdCasoId/{caso_id}', [CTipoResultadoCierreController::class, 'listCTipoResultadoCierreByIdCasoId']); // listar
+    Route::post('/editCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'editCTipoResultadoCierre']); // Edita la actividad
+    Route::delete('/deleteCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'deleteCTipoResultadoCierre']); // Eliminar
+    Route::get('listResultadoIniciadoByTableroId/{tab_id}', [CTipoResultadoCierreController::class, 'listResultadoIniciadoByTableroId']); // listar
+
+    // CHAT GRUPAL
+
+    // Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
+    // Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
+    // Route::post('/editChatGrupal/{id}', [ChatController::class, 'editChatGrupal']); // Editar
+
+    // TIPO CASO
+
+    Route::post('/addTipoCaso', [TipoCasoController::class, 'addTipoCaso']); // guardar
+    Route::get('listTipoCasoByIdTablero/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTablero']); // listar
+    Route::get('listTipoCasoByIdTableroEstadoActivo/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTableroEstadoActivo']); // listar
+    Route::get('listTipoCasoByIdCasoId/{caso_id}', [TipoCasoController::class, 'listTipoCasoByIdCasoId']); // listar
+    Route::get('listByIdTipoCasoActivo/{tc_id}', [TipoCasoController::class, 'listByIdTipoCasoActivo']); // listar
+    Route::post('/editTipoCaso/{id}', [TipoCasoController::class, 'editTipoCaso']); // Edita la actividad
+    Route::delete('/deleteTipoCaso/{id}', [TipoCasoController::class, 'deleteTipoCaso']); // Eliminar
+
+    // TAREAS INDIVIDUALES
+
+    Route::get('listTareasCasoById/{caso_id}/{tab_id}', [TareaController::class, 'listTareasCasoById']); // by caso_id
+    Route::post('/addTareas', [TareaController::class, 'addTareas']); // guardar
+    Route::post('/editTareas/{id}', [TareaController::class, 'editTareas']); // Editar
+    Route::delete('/deleteTareas/{id}', [TareaController::class, 'deleteTareas']); // Eliminar
+
+    // MIEMBROS DEL CASO
+
+    Route::get('listMiembrosCasoById/{caso_id}', [CasoController::class, 'listMiembrosCasoById']); // by caso_id
+    Route::post('/editMiembrosCaso/{id}', [CasoController::class, 'editMiembrosCaso']); // Editar
+
+    // USUARIOS
+
+    Route::get('allUsers', [UserController::class, 'allUsers']); // by caso_id
+    Route::post('/addUser', [UserController::class, 'addUser']); // guardar
+    Route::post('/editUser/{id}', [UserController::class, 'editUser']); // Editar
+    Route::delete('/deleteUser/{id}', [UserController::class, 'deleteUser']); // Eliminar
+    Route::get('/listUsuariosByTableroId/{tablero_id}', [UserController::class, 'listUsuariosByTableroId']); // listar usuarios del tablero
+    Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
+
+    // NOTIFICACIONES
+
+    Route::get('/allByDepartamento/{id}', [NotificacionesController::class, 'allByDepartamento']);
+    Route::get('/listByDepartamento/{id}', [NotificacionesController::class, 'listByDepartamento']);
+    Route::post('/editLeidoNotificacion/{id}', [NotificacionesController::class, 'editLeidoNotificacion']);
+    Route::post('/editLeidoAllNotificaciones/{id}', [NotificacionesController::class, 'editLeidoAllNotificaciones']);
+
+    // REQUERIMIENTOS
+
+    Route::get('listRequerimientosByFaseId/{fase_id}', [RequerimientoController::class, 'listRequerimientosByFaseId']); // by caso_id
+    Route::post('/addRequerimientos', [RequerimientoController::class, 'addRequerimientos']); // guardar
+    Route::post('/editRequerimientos/{id}', [RequerimientoController::class, 'editRequerimientos']); // Editar
+    Route::delete('/deleteRequerimientos/{id}', [RequerimientoController::class, 'deleteRequerimientos']); // Eliminar
+
+
+    // CActividadCliente
+
+    Route::post('/addCActividadCliente', [CActividadClienteController::class, 'addCActividadCliente']); // guardar
+    Route::get('/listCActividadClienteByIdTablero/{tab_id}', [CActividadClienteController::class, 'listCActividadClienteByIdTablero']); // listar
+    Route::post('/editCActividadCliente/{id}', [CActividadClienteController::class, 'editCActividadCliente']); // Editar
+    Route::get('/listCACReqCaso', [CActividadClienteController::class, 'listCACReqCaso']); //
+    // Estados
+
+    Route::get('/listEstadosByTablero/{tab_id}', [EstadosController::class, 'listEstadosByTablero']); // listar
+    Route::get('/listEstadosActivoByTablero/{tab_id}', [EstadosController::class, 'listEstadosActivoByTablero']); // listar
+    Route::post('/addEstado', [EstadosController::class, 'addEstado']); // guardar
+    Route::post('/editEstado/{id}', [EstadosController::class, 'editEstado']); // Editar
+    Route::delete('/deleteEstado/{id}', [EstadosController::class, 'deleteEstado']); // Eliminar
+
+    // RespuestasCaso
+
+    Route::get('/listRespuestasCasoByTablero/{tab_id}', [RespuestasCasoController::class, 'listRespuestasCasoByTablero']); // listar
+    Route::get('/listRespuestasCasoActivoByTablero/{tab_id}', [RespuestasCasoController::class, 'listRespuestasCasoActivoByTablero']); // listar
+    Route::post('/addRespuestasCaso', [RespuestasCasoController::class, 'addRespuestasCaso']); // guardar
+    Route::post('/editRespuestasCaso/{id}', [RespuestasCasoController::class, 'editRespuestasCaso']); // Editar
+    Route::delete('/deleteRespuestasCaso/{id}', [RespuestasCasoController::class, 'deleteRespuestasCaso']); // Eliminar
+
+    // EstadosFormulas
+
+    Route::get('/listEstadosFormulasByTablero/{tab_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTablero']); // listar
+    Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
+    Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
+    Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
+
+    // ActividadesFormulas
+
+    Route::get('/listActividadesFormulasByTablero/{tab_id}', [ActividadesFormulasController::class, 'listActividadesFormulasByTablero']); // listar
+    Route::post('/addActividadesFormulas', [ActividadesFormulasController::class, 'addActividadesFormulas']); // guardar
+    Route::post('/editActividadesFormulas/{id}', [ActividadesFormulasController::class, 'editActividadesFormulas']); // Editar
+    Route::delete('/deleteActividadesFormulas/{id}', [ActividadesFormulasController::class, 'deleteActividadesFormulas']); // Eliminar
+    Route::get('/listActividadFormulaById/{result_id_actual}/{result_id}', [ActividadesFormulasController::class, 'listActividadFormulaById']); // listar
+
+    // Perfil Analistas
+
+    Route::get('/listAllPerfilAnalistas', [PerfilAnalistasController::class, 'listAllPerfilAnalistas']); // listar
+    Route::post('/addPerfilAnalistas', [PerfilAnalistasController::class, 'addPerfilAnalistas']); // guardar
+    Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
+    Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
+
 });
 
-//Rutas Juan ARCHIVO
-Route::group(["prefix" => "crm"], function ($router) {
-    Route::post('/addArchivo', [ArchivoController::class, 'store']); // Guardar
-    Route::get('/allArchivo/{id}', [ArchivoController::class, 'index']); // Listar
-    Route::post('/updateArchivo/{id}', [ArchivoController::class, 'edit']); // Editar
-    Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'destroy']); // Eliminar
+Route::group([], function ($router) {
+    Route::post('/getDocuments/{caso_id}', [EquifaxController::class, 'getDocuments']);
 });
 
-//Rutas Juan Etiqueta
-Route::group(["prefix" => "crm"], function ($router) {
-    Route::post('/addEtiqueta', [EtiquetaController::class, 'store']); // Guardar
-    Route::get('/allEtiqueta/{id}', [EtiquetaController::class, 'index']); // Listar
-    Route::put('/updateEtiqueta/{id}', [EtiquetaController::class, 'edit']); // Editar
-    Route::delete('/deleteEtiqueta/{id}', [EtiquetaController::class, 'destroy']); // Eliminar
+
+Route::group(["prefix" => "credito"], function ($router) {
+
+    // SOLICITUD CREDITO
+    Route::post('/editSolicitudCredito/{id}', [solicitudCreditoController::class, 'editSolicitudCredito']); // Editar
+    Route::get('/listSolicitudCreditoByEntidadId/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoByEntidadId']); // Listar por entidad ID
+    Route::get('/listSolicitudCreditoByRucCedula/{cedula}', [solicitudCreditoController::class, 'listSolicitudCreditoByRucCedula']); // Listar por cedula
+    Route::get('/solicitudByIdentificacion/{cedula}/{id_user_creador}', [solicitudCreditoController::class, 'solicitudByIdentificacion2']); // Listar por cedula
+    Route::get('/listSolicitudCreditoByClienteId/{cliente_id}', [solicitudCreditoController::class, 'listSolicitudCreditoByClienteId']); // Listar por cedula
+
+    // EQUIFAX / CLIENTE ENROLAMIENTO
+
+    Route::post('/addClienteEnrolamiento', [ClienteEnrolamientoController::class, 'addClienteEnrolamiento']); // Guardar la imagen de equifax
+    Route::get('/clienteEnroladoById/{id}', [ClienteEnrolamientoController::class, 'clienteEnroladoById']); // listar datos cliente enrolado por caso_id
+    Route::post('/addArchivosFirmadosEnrolamiento', [ClienteEnrolamientoController::class, 'addArchivosFirmadosEnrolamiento']); // guardar los archivos firmados
+
+    // CLIENTE CRM
+
+    Route::get('/listClienteCrmById/{id}', [ClienteCrmController::class, 'listClienteCrmById']); // lista
+    Route::post('/addClienteCrm', [ClienteCrmController::class, 'addClienteCrm']); // Guardar
+    Route::post('/editClienteCrm/{ent_id}', [ClienteCrmController::class, 'editClienteCrm']); // Editar
+
+    // Referencias CRM
+
+    Route::post('/addReferenciasCliente', [ReferenciasClienteController::class, 'addReferenciasCliente']); // Guardar
+    Route::post('/editReferenciasCliente/{id}', [ReferenciasClienteController::class, 'editReferenciasCliente']); // Editar
+    Route::delete('/deleteReferenciasCliente/{id}', [ReferenciasClienteController::class, 'deleteReferenciasCliente']); // Eliminar
+    Route::get('/listReferenciasByClienteId/{cli_id}', [ReferenciasClienteController::class, 'listReferenciasByClienteId']); // lista
+
+    // parentesco CRM
+
+    Route::get('/listParentesco', [ParentescoController::class, 'listParentesco']); // listar
+
+    // Tipo Telefono CRM
+
+    Route::get('/listTipoTelefono', [TipoTelefonoController::class, 'listTipoTelefono']); // listar
+
+
 });
 
-Route::group(["prefix" => "crm"], function ($router) { // Listar
-    Route::get('/byId/{id}', [EntidadController::class, 'byId']); // Listar
-    Route::post('/updateE', [EntidadController::class, 'editEntidad']); // Editar
-    // Route::post('/updateD', [EntidadController::class, 'editDireccion']); // Editar
-});
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
+
+
+
+
+
+
+
 
 //----------------------- START RUTAS JAIRO  ----------------------------------------------
 Route::group(["prefix" => "crm"], function ($router) {
@@ -155,7 +493,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byParte/{parte}', [PartesController::class, 'byParte']);
     Route::post('/grabaParte', [PartesController::class, 'grabaParte']);
     Route::get('/eliminaParte/{parte}', [PartesController::class, 'eliminaParte']);
-    
+
     //Configuracion Items
     Route::get('/listadoConfig', [ConfigItemsController::class, 'listado']);
     Route::get('/listadoProductos', [ConfigItemsController::class, 'productos']);
@@ -163,7 +501,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaConfig', [ConfigItemsController::class, 'grabaConfig']);
     Route::get('/byConfig/{producto}', [ConfigItemsController::class, 'byConfig']);
     Route::get('/eliminaConfig/{producto}', [ConfigItemsController::class, 'eliminaConfig']);
-    
+
     //Relacion Lineas Gex
     Route::get('/listadoRelacion', [RelacionLineasGexController::class, 'listado']);
     Route::get('/listadoProductosGex', [RelacionLineasGexController::class, 'productos']);
@@ -171,14 +509,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaRela', [RelacionLineasGexController::class, 'grabaRela']);
     Route::get('/byRela/{linea}/{producto}', [RelacionLineasGexController::class, 'byRela']);
     Route::get('/eliminaRela/{linea}/{producto}', [RelacionLineasGexController::class, 'eliminaRela']);
-    
+
     //Excepción Gex
     Route::get('/listadoExepcion', [ExepcionGexController::class, 'listado']);
     Route::get('/listadoProductosExcep', [ExepcionGexController::class, 'productos']);
     Route::post('/grabaExep', [ExepcionGexController::class, 'grabaExep']);
     Route::get('/byExcep/{excep}', [ExepcionGexController::class, 'byExcep']);
     Route::get('/eliminaExep/{excep}', [ExepcionGexController::class, 'eliminaExep']);
-    
+
     //Rubro de Reserva
     Route::get('/listadoRubros', [RubrosReservaController::class, 'listado']);
     Route::post('/grabaRubro', [RubrosReservaController::class, 'grabaRubro']);
@@ -220,3 +558,65 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Route::group([
+    'prefix' => 'profile',
+], function () {
+    Route::get('all', [ProfileController::class, 'all']);
+    Route::get('list', [ProfileController::class, 'list']);
+    Route::get('list/{id}', [ProfileController::class, 'findById']);
+    Route::post('create', [ProfileController::class, 'create']);
+    Route::post('edit/{id}', [ProfileController::class, 'edit']);
+    Route::delete('deleteProfile/{id}', [ProfileController::class, 'deleteProfile']);
+    Route::post('clonProfile', [ProfileController::class, 'clonProfile']);
+});
+
+
+Route::group([
+    'prefix' => 'access',
+], function () {
+    Route::get('program/{profile}/{program}', [ProfileController::class, 'findByProgram']);
+    Route::get('menu/{userid}', [ProfileController::class, 'findByUser']);
+});
+Route::group([
+    'prefix' => 'company',
+], function () {
+    Route::get('lista/{id}', [CompanyController::class, 'findById']);
+    Route::put('editar/{id}', [CompanyController::class, 'edit']);
+});
+
+Route::group([
+    'prefix' => 'menu',
+], function () {
+
+    Route::get('list', [MenuController::class, 'list']);
+    Route::get('list/{id}', [MenuController::class, 'findById']);
+
+    Route::post('addMenu', [MenuController::class, 'addMenu']);
+    Route::post('editMenu/{id}', [MenuController::class, 'editMenu']);
+    Route::delete('deleteMenu/{id}', [MenuController::class, 'deleteMenu']);
+});
+
+
+
+
+
+
+
+
+
+
+

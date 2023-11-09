@@ -3,17 +3,20 @@
 namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\RespuestaApi;
 use App\Models\crm\TipoGaleria;
-use Illuminate\Http\Request;
+use Exception;
 
 class TipoGaleriaController extends Controller
 {
-    public function index()
+    public function allTipoGaleria()
     {
-        $tiposGaleria = TipoGaleria::orderBy("id", "asc")->get();
+        try {
+            $tiposGaleria = TipoGaleria::orderBy("id", "asc")->get();
 
-        return response()->json([
-            "tiposGaleria" => $tiposGaleria,
-        ]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tiposGaleria));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 }

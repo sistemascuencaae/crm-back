@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\crm\Caso;
+use App\Models\crm\Fase;
+use App\Models\crm\Tablero;
 use App\Models\crm\Tarea;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
@@ -27,18 +30,38 @@ Broadcast::channel('App.User.{id}', function ($user, $id) {
 
 
 
-Broadcast::channel('tarea.comentarios.{id}', function ($user, $id) {
-    // echo(json_encode($user->id));
-     $usuario = User::where("id", $user->id)->get();
-     $comenTarea = Tarea::where("id", $id)->get();
-     if ($comenTarea[0] && $usuario[0]) {
-         return true;
-     } else {
-         return false;
-     }
- });
+Broadcast::channel('caso.comentarios.{id}', function ($user, $id) {
+
+    $usuario = User::where("id", $user->id)->get();
+    $comenTarea = Caso::where("id", $id)->get();
+
+    if ($comenTarea[0] && $usuario[0]) {
+        return true;
+    } else {
+        return false;
+    }
+});
+
+Broadcast::channel('tablero.{id}', function ($user, $id) {
+
+    $usuario = User::where("id", $user->id)->get();
+    $tablero = Tablero::where("id", $id)->get();
+    // echo('ingresamos al chanel'.json_encode($tablero));
+    if ($tablero[0] && $usuario[0]) {
+        return true;
+    } else {
+        return false;
+    }
 
 
+    // $usuario = User::where("id", $user->id)->first();
+    // $caso = Caso::where("user_id", $user->id)->first();
+    // if ($caso && $usuario) {
+    //     return true;
+    // } else {
+    //     return false;
+    // }
+});
 
 
 
@@ -88,5 +111,3 @@ Broadcast::channel('tarea.comentarios.{id}', function ($user, $id) {
 // Broadcast::channel('crm', function ($user, $id) {
 //     return (int) $user->id === (int) $id;
 // });
-
-

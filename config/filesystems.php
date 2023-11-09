@@ -30,6 +30,24 @@ return [
 
     'disks' => [
 
+        // 'servidor' => [
+        //     'driver' => 'local',
+        //     'root' => 'Z:/dist2',
+        // ],
+
+        'nas' => [
+            'driver' => 'ftp',
+            // 'host' => '192.168.1.248', // La dirección IP o nombre de dominio de tu servidor FTP
+            'host' => '191.100.27.176', // La dirección IP o nombre de dominio de tu servidor FTP
+            'username' => 'jsimbana', // Tu nombre de usuario FTP
+            'password' => '5k5KqtDC', // Tu contraseña FTP
+            'root' => '/crm', // Ruta raíz en el servidor FTP
+            'port' => 2159, // Puerto FTP (normalmente 21)
+            'passive' => true, // Modo pasivo (opcional)
+            'ssl' => false, // Usar SSL (opcional)
+            'timeout' => 30, // Tiempo de espera (opcional)
+        ],
+
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
@@ -38,7 +56,7 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            'url' => env('APP_URL') . '/storage',
             'visibility' => 'public',
         ],
 
