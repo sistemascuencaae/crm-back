@@ -58,6 +58,14 @@ use App\Http\Controllers\openceo\PedidoMovilController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\user\EquifaxController;
 use App\Http\Controllers\User\ProfileUserController;
+use App\Http\Controllers\crm\garantias\PartesController;
+use App\Http\Controllers\crm\garantias\ConfigItemsController;
+use App\Http\Controllers\crm\garantias\RelacionLineasGexController;
+use App\Http\Controllers\crm\garantias\ExepcionGexController;
+use App\Http\Controllers\crm\garantias\RubrosReservaController;
+use App\Http\Controllers\crm\garantias\GEXController;
+use App\Http\Controllers\crm\series\PreIngresoController;
+use App\Http\Controllers\crm\series\DespachoController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -525,10 +533,25 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/anulaPreIngreso/{numero}', [PreIngresoController::class, 'anulaPreIngreso']);
     Route::get('/eliminaPreIngreso/{numero}', [PreIngresoController::class, 'eliminaPreIngreso']);
     Route::get('/cargaIngresos', [PreIngresoController::class, 'cargaIngresos']);
+    Route::get('/cargaDetalleIngreso/{id}/{tipo}', [PreIngresoController::class, 'cargaDetalleIngreso']);
     Route::get('/cargaPreingresos', [PreIngresoController::class, 'cargaPreingresos']);
     Route::get('/cargaRelaciones', [PreIngresoController::class, 'cargaRelaciones']);
     Route::post('/relacionaPreIngreso', [PreIngresoController::class, 'relacionaPreIngreso']);
     Route::get('/quitaRelacionPI/{numero}/{usuario}', [PreIngresoController::class, 'quitaRelacionPI']);
+
+    //Despacho de Series
+    Route::get('/listadoDocumentosDes/{bodega}', [DespachoController::class, 'listado']);
+    Route::get('/bodegaUsuario/{usuario}', [DespachoController::class, 'bodegaUsuario']);
+    Route::get('/listadoProdDes/{id}/{tipo}', [DespachoController::class, 'productos']);
+    Route::get('/listadoBodegasDes', [DespachoController::class, 'bodegas']);
+    Route::get('/listadoClientesDes/{tipo}/{id}', [DespachoController::class, 'clientes']);
+    Route::get('/cargaDetalleMovimiento/{id}/{tipo}', [DespachoController::class, 'cargaDetalleMovimiento']);
+    Route::post('/grabaDespacho', [DespachoController::class, 'grabaDespacho']);
+    Route::get('/imprimeDespacho/{numero}', [DespachoController::class, 'imprimeDespacho']);
+    Route::get('/listadoDespachos', [DespachoController::class, 'listadoDespachos']);
+    Route::get('/byDespacho/{numero}', [DespachoController::class, 'byDespacho']);
+    Route::get('/anulaDespacho/{numero}/{bodDest}', [DespachoController::class, 'anulaDespacho']);
+    Route::get('/eliminaDespacho/{numero}/{bodDest}', [DespachoController::class, 'eliminaDespacho']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
