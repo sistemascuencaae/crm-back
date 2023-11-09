@@ -8,13 +8,13 @@ use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 use Illuminate\Support\Facades\DB;
 
-class PreIngreso extends Model implements Auditable
+class Despacho extends Model implements Auditable
 {
     use AuditableTrait;
 
     use HasFactory;
 
-    protected $table = 'gex.cpreingreso';
+    protected $table = 'gex.cdespacho';
 
     protected $primaryKey = 'numero';
 
@@ -25,8 +25,6 @@ class PreIngreso extends Model implements Auditable
         "fecha",
         "estado",
         "bod_id",
-        "guia_remision",
-        "cli_id",
         "cmo_id",
         "cfa_id",
         "usuario_crea",
@@ -37,17 +35,17 @@ class PreIngreso extends Model implements Auditable
     
     public function detalle()
     {
-        return $this->hasMany(PreIngresoDet::class, "numero");
+        return $this->hasMany(DesepachoDet::class, "numero");
     }
 }
 
-class PreIngresoDet extends Model implements Auditable
+class DesepachoDet extends Model implements Auditable
 {
     use AuditableTrait;
 
     use HasFactory;
 
-    protected $table = 'gex.dpreingreso';
+    protected $table = 'gex.ddespacho';
 
     protected $primaryKey = 'numero, linea';
 
