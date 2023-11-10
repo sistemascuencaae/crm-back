@@ -313,7 +313,7 @@ class DespachoController extends Controller
                                                 left outer join gex.ddespacho d on c.numero = d.numero
                                                 left outer join producto p on d.pro_id = p.pro_id
                             where c.numero = " . $numero . "
-                            group by c.fecha_crea, c.numero, c.fecha, b.bod_nombre, p.pro_id, p.pro_codigo, p.pro_nombre, c.estado
+                            group by c.fecha_crea, c.numero, c.fecha, b.bod_nombre, bo.bod_nombre, p.pro_id, p.pro_codigo, p.pro_nombre, c.estado
                             order by linea");
 
         foreach ($data as $i) {
