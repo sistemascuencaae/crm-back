@@ -7,7 +7,7 @@ use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\crm\UsuarioDynamo;
 use App\Models\crm\Departamento;
-use App\Models\openCeo\PuntoVenta;
+use App\Models\openceo\PuntoVenta;
 use App\Models\Profile;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;

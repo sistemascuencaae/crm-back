@@ -4,7 +4,7 @@ namespace App\Http\Controllers\openceo;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\openCeo\CPedidoProforma;
+use App\Models\openceo\CPedidoProforma;
 use Exception;
 use Illuminate\Http\Request;
 
