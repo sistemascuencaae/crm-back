@@ -16,6 +16,7 @@ class CPedidoProforma extends Model
         "cpp_concepto",
         "cli_id",
         "ent_nombre_comercial",
+        "ent_email",
         "empleado",
         "comprobante",
         "sub_total_compra",
