@@ -536,7 +536,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listadoProdDes/{id}/{tipo}', [DespachoController::class, 'productos']);
     Route::get('/listadoBodegasDes', [DespachoController::class, 'bodegas']);
     Route::get('/listadoClientesDes/{tipo}/{id}', [DespachoController::class, 'clientes']);
-    Route::get('/cargaDetalleMovimiento/{id}/{tipo}', [DespachoController::class, 'cargaDetalleMovimiento']);
     Route::post('/grabaDespacho', [DespachoController::class, 'grabaDespacho']);
     Route::get('/imprimeDespacho/{numero}', [DespachoController::class, 'imprimeDespacho']);
     Route::get('/listadoDespachos', [DespachoController::class, 'listadoDespachos']);

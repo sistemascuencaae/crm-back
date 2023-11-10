@@ -71,6 +71,7 @@ class DespachoController extends Controller
     public function listadoDespachos()
     {
         $data = DB::select("select c.numero, TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
+                                    bo.bod_nombre as bodega_origen,
                                     b.bod_nombre as bodega,
                                     (case when c.cmo_id is null then (select concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end))
                                                                     from cfactura c1 join cliente l on c1.cli_id = l.cli_id
@@ -90,6 +91,7 @@ class DespachoController extends Controller
                                     c.cfa_id,
                                     (select c1.bod_id_fin from cmovinv c1 where c1.cmo_id = c.cmo_id) as bod_id_fin
                             from gex.cdespacho c join bodega b on c.bod_id = b.bod_id
+                                                 join bodega bo on c.bod_id_origen = bo.bod_id
                             order by c.numero");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -98,9 +100,17 @@ class DespachoController extends Controller
     public function productos($id, $tipo)
     {
         if ($tipo == 'INV') {
-            $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p join dmovinv d on p.pro_id = d.pro_id where cmo_id = " . $id);
+            $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta,
+                                        dmo_cantidad - (select count(*) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
+                                                        where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo,
+                                        0 as despachado
+                                from producto p join dmovinv d on p.pro_id = d.pro_id where cmo_id = " . $id);
         } else {
-            $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p join dfactura d on p.pro_id = d.pro_id where cfa_id = " . $id);
+            $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta,
+                                        dfac_cantidad - (select count(*) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
+                                                        where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id) as saldo,
+                                        0 as despachado
+                                from producto p join dfactura d on p.pro_id = d.pro_id where cfa_id = " . $id);
         }
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -116,21 +126,21 @@ class DespachoController extends Controller
     public function clientes($tipo,$id)
     {
         if ($tipo == 'INV') {
-            $data = DB::select("select b.bod_id as cli_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $id)[0];
+            $data = DB::selectOne("select b.bod_id as cli_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $id);
         } else {
-            $data = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
+            $data = DB::selectOne("select c.cli_id, concat(e.ent_identificacion, ' - ',
                                         (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
                                 from cliente c join entidad e on c.ent_id = e.ent_id
-                                where c.cli_id = " . $id)[0];
+                                where c.cli_id = " . $id);
         }
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
 
     public function bodegaUsuario($usuario) {
-        $data = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b join puntoventa p on b.bod_id = p.bod_id
+        $data = DB::selectOne("select b.bod_id, b.bod_nombre as presenta from bodega b join puntoventa p on b.bod_id = p.bod_id
                             where p.pve_id = (select (case when us.pve_id is null then u.pve_id else us.pve_id end) as ptoVta from crm.users u left outer join usuario us on u.usu_id  = us.usu_id
-                                            where id = " . $usuario . ")")[0];
+                                            where id = " . $usuario . ")");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
@@ -138,36 +148,36 @@ class DespachoController extends Controller
     public function byDespacho($numero)
     {
         $data = Despacho::with('detalle')->get()->where('numero', $numero)->first();
-        $data['bodega'] = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $data['bod_id'])[0];
+        $data['bodega'] = DB::selectOne("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $data['bod_id']);
         
         if ($data['cmo_id'] == null) {
-            $rela = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
+            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
                                 from cfactura c join puntoventa p on c.pve_id = p.pve_id
                                                 join ctipocom t on c.cti_id = t.cti_id
-                                where c.cfa_id = " . $data['cfa_id'])[0];
+                                where c.cfa_id = " . $data['cfa_id']);
         
             $data['doc_rela'] = $rela->numero;
 
-            $data['cliente'] = DB::select("select c1.cli_id, concat(e.ent_identificacion, ' - ',
+            $data['cliente'] = DB::selectOne("select c1.cli_id, concat(e.ent_identificacion, ' - ',
                                                             (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as presenta
                                             from cfactura c1 join cliente l on c1.cli_id = l.cli_id
                                                             join entidad e on l.ent_id = e.ent_id
-                                            where c1.cfa_id = " . $data['cfa_id'])[0];
+                                            where c1.cfa_id = " . $data['cfa_id']);
         } else {
-            $rela = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
+            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
                                         from cmovinv c join puntoventa p on c.pve_id = p.pve_id
                                                     join ctipocom t on c.cti_id = t.cti_id
-                                        where c.cmo_id = " . $data['cmo_id'])[0];
+                                        where c.cmo_id = " . $data['cmo_id']);
             
             $data['doc_rela'] = $rela->numero;
 
-            $data['cliente'] = DB::select("select b.bod_id as cli_id, b.bod_nombre as presenta
+            $data['cliente'] = DB::selectOne("select b.bod_id as cli_id, b.bod_nombre as presenta
                                             from cmovinv c join bodega b on c.bod_id_fin = b.bod_id
-                                            where c.cmo_id = " . $data['cmo_id'])[0];
+                                            where c.cmo_id = " . $data['cmo_id']);
         }
 
         foreach ($data['detalle'] as $p) {
-            $producto = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p where p.pro_id = " . $p['pro_id'])[0];
+            $producto = DB::selectOne("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p where p.pro_id = " . $p['pro_id']);
             $p['producto'] = $producto->presenta;
         }
 
@@ -208,6 +218,7 @@ class DespachoController extends Controller
                 $bod_id_fin = $request->input('bod_id_dest');
                 $cmo_id = $request->input('cmo_id');
                 $cfa_id = $request->input('cfa_id');
+                $bod_id_origen = $request->input('bod_id_origen');
     
                 $usuario_crea = $request->input('usuario_crea');
                 $usuario_modifica = $request->input('usuario_modifica');
@@ -225,6 +236,7 @@ class DespachoController extends Controller
                     'fecha_crea' => $fecha_crea,
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
+                    'bod_id_origen' => $bod_id_origen,
                     ]);
             
                 $detalle = $request->input('detalle');
@@ -273,6 +285,7 @@ class DespachoController extends Controller
                                     c.numero,
                                     TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
                                     b.bod_nombre,
+                                    bo.bod_nombre as bod_origen,
                                     (case when c.cmo_id is null then 'Cliente: ' else 'Bodega Destino: ' end) as etiqueta,
                                     (case when c.cmo_id is null then (select concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end))
                                                                     from cfactura c1 join cliente l on c1.cli_id = l.cli_id
@@ -296,6 +309,7 @@ class DespachoController extends Controller
                                     (case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end) as estado,
                                     min(d.linea) as linea
                             from gex.cdespacho c join bodega b on c.bod_id = b.bod_id
+                                                join bodega bo on c.bod_id_origen = bo.bod_id
                                                 left outer join gex.ddespacho d on c.numero = d.numero
                                                 left outer join producto p on d.pro_id = p.pro_id
                             where c.numero = " . $numero . "
@@ -420,19 +434,5 @@ class DespachoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
-    }
-
-    public function cargaDetalleMovimiento($id, $tipo) {
-        if ($tipo == 'INV') {
-            $data = DB::select("select pro_id, dmo_cantidad - (select count(*) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
-                                                                where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo
-                                from dmovinv d where cmo_id = " . $id);
-        } else {
-            $data = DB::select("select pro_id, dfac_cantidad - (select count(*) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
-                                                                where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id) as saldo
-                                from dfactura d where cfa_id = " . $id);
-        }
-
-        return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
 }
