@@ -15,6 +15,7 @@ class CPedidoProforma extends Model
         "alm_nombre",
         "cpp_concepto",
         "cli_id",
+        "cli_codigo",
         "ent_nombre_comercial",
         "ent_email",
         "empleado",
