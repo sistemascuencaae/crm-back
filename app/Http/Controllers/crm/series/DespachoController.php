@@ -188,6 +188,17 @@ class DespachoController extends Controller
         }
     }
 
+    public function validaSerie($producto, $serie, $bodega)
+    {
+        $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.bod_id = " . $bodega);
+        
+        if($data) {
+            return response()->json(RespuestaApi::returnResultado('success', 'Serie encontrada', []));
+        }else{
+            return response()->json(RespuestaApi::returnResultado('error', 'La serie no existe para el producto y la bodega seleccionada', []));
+        }
+    }
+
     public function grabaDespacho(Request $request)
     {
         try {
