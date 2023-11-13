@@ -20,7 +20,7 @@ class ClienteEnrolamientoController extends Controller
     public function listEnrolamientosById($cli_id)
     {
         try {
-            $respuesta = ClienteEnrolamiento::where('cli_id', $cli_id)->get();
+            $respuesta = ClienteEnrolamiento::where('cli_id', $cli_id)->with('caso.estadodos')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {

@@ -2,6 +2,7 @@
 
 namespace App\Models\crm\credito;
 
+use App\Models\crm\Caso;
 use App\Models\crm\ClienteCrm;
 use App\Models\crm\Entidad;
 use Carbon\Carbon;
@@ -80,4 +81,10 @@ class SolicitudCredito extends Model
     {
         return $this->belongsTo(Entidad::class, "ent_id");
     }
+
+    public function caso()
+    {
+        return $this->belongsTo(Caso::class, "caso_id");
+    }
+
 }

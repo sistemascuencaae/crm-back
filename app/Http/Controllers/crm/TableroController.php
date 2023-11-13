@@ -11,12 +11,9 @@ use App\Models\crm\Estados;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\crm\VistaMisCasos;
-use App\Models\mail\SendMail;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class TableroController extends Controller
 {
@@ -44,7 +41,6 @@ class TableroController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 
     //LISTA DE TODOS LOS TABLEROS
     public function listAll()
@@ -246,17 +242,12 @@ class TableroController extends Controller
                     }
                 }
 
-                // llamar a send_email para enviar el correo electrónico / email
-                // $this->send_email($tablero);
-
                 return $tablero;
             });
 
-            // $dataRe = Tablero::with('tableroUsuario.usuario')->where('id', $id)->get();
             $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $tab['id'])->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
-            // return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito' . $this->send_email($dataRe), $dataRe));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
@@ -309,26 +300,5 @@ class TableroController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-    // public function send_email($id)
-    public function send_email($tablero)
-    {
-        try {
-            $correoDestino = "juanjgsj@gmail.com";
-            // $correoDestino = "juan_jgsj@hotmail.com";
-            // $correoDestino = "juan.simbana.est@tecazuay.edu.ec";
-            Mail::to($correoDestino)->send(new SendMail($tablero));
-            return "Correo electrónico enviado correctamente a " . $correoDestino;
-        } catch (Exception $e) {
-            return "Error al enviar el correo: " . $e->getMessage();
-        }
-    }
-
-    // public function send_email($id)
-    // {
-    //     $sale = Sale::findOrFail($id);
-    //     Mail::to("juanjgsj@gmail.com")->send(new SaleMail($sale));
-    //     return "TODO SALIO BIEN...!!!";
-    // }
 
 }
