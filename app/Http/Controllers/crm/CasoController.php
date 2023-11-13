@@ -38,12 +38,14 @@ class CasoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' =>
-        [
-            //'add',
-            //'addCasoOPMICreativa'
+        $this->middleware('auth:api', [
+            'except' =>
+                [
+                    //'add',
+                    //'addCasoOPMICreativa'
 
-        ]]);
+                ]
+        ]);
     }
 
     public function add(Request $request)
@@ -110,6 +112,8 @@ class CasoController extends Controller
             $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
             $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->estado_caso = $casoCreado->estadodos->nombre;
+            $audit->estado_caso_id = $casoCreado->estado_2;
             $audit->accion = 'addCaso';
             $audit->save();
             // END Auditoria
@@ -119,6 +123,20 @@ class CasoController extends Controller
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $th->getMessage()));
         }
+    }
+
+    // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
+    public function listHistoricoEstadoCaso($caso_id)
+    {
+        $data = Audits::where('auditable_id', $caso_id)->orderBy('id', 'ASC')->get();
+
+        // Formatear las fechas
+        $data->transform(function ($item) {
+            $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            return $item;
+        });
+
+        return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
     }
 
     public function list()
@@ -183,8 +201,6 @@ class CasoController extends Controller
             $audit->url = $request->fullUrl();
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'editFase';
-            $audit->estado_caso = $caso->estadodos->nombre;
-            $audit->estado_caso_id = $caso->estado_2;
             // Establecer old_values y new_values
             $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
             $audit->save();
@@ -1090,7 +1106,7 @@ class CasoController extends Controller
         //---
 
         $a = '';
-        $objetoJson = (object)[
+        $objetoJson = (object) [
             "id" => null,
             "fas_id" => $faseId,
             "nombre" => 'Solicitud de credito aplicación movil)',

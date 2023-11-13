@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\ControlTiemposCaso;
 use App\Models\crm\EstadosFormulas;
@@ -19,6 +20,7 @@ use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class RobotCasoController extends Controller
 {
@@ -31,7 +33,7 @@ class RobotCasoController extends Controller
             $casoId = $request->input('casoId');
             $tableroActualId = $request->input('tableroActualId');
             $facturaId = $request->input('facturaId');
-            $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId);
+            $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId, $request);
             $data = $casoController->getCaso($casoModificado->id);
             broadcast(new ReasignarCasoEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
@@ -40,7 +42,7 @@ class RobotCasoController extends Controller
         }
     }
 
-    private function validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId)
+    private function validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId, Request $request)
     {
         $formula = EstadosFormulas::find($estadoFormId);
         //---validacion formual
@@ -61,6 +63,35 @@ class RobotCasoController extends Controller
         $casoEnProceso->estado_2 = $formula->est_id_proximo;
         $casoEnProceso->bloqueado = false;
         $casoEnProceso->bloqueado_user = '';
+
+        $caso = Caso::find($casoId);
+        $casoAudit = Caso::with(
+            'user',
+            'userCreador',
+            'clienteCrm',
+            'fase.tablero',
+        )->find($casoId); // Solo para el audits NADA MAS
+
+        $audit = new Audits();
+        // Obtener el old_values (valor antiguo)
+        $valorAntiguo = $casoAudit;
+        $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
+        // START Bloque de código que genera un registro de auditoría manualmente
+        $audit->user_id = Auth::id();
+        $audit->event = 'updated';
+        $audit->auditable_type = Caso::class;
+        $audit->auditable_id = $caso->id;
+        $audit->user_type = User::class;
+        $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+        $audit->url = $request->fullUrl();
+        $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+        $audit->estado_caso = $casoEnProceso->estadodos->nombre;
+        $audit->estado_caso_id = $casoEnProceso->estado_2;
+        $audit->accion = 'cambioEstado';
+        // Establecer old_values y new_values
+        $audit->new_values = json_encode($casoEnProceso); // json_encode para convertir en string ese array
+        $audit->save();
+        // END Auditoria
 
         // start diferencia de tiempos en horas minutos y segundos
         $CasoController = new CasoController();
@@ -98,7 +129,6 @@ class RobotCasoController extends Controller
         $casoEnProceso->save();
 
         return $casoEnProceso;
-
 
         // //------------------------------------------------------------
         // //-------------------OPCION 1---------------------------------
@@ -203,9 +233,10 @@ class RobotCasoController extends Controller
         return $userMenorNumCasos;
     }
 
-    public function addMiembro($userId, $casoId){
-        $userExiste = DB::selectOne("SELECT * from crm.miembros m where m.user_id = ? and m.caso_id = ?",[$userId, $casoId]);
-        if(!$userExiste){
+    public function addMiembro($userId, $casoId)
+    {
+        $userExiste = DB::selectOne("SELECT * from crm.miembros m where m.user_id = ? and m.caso_id = ?", [$userId, $casoId]);
+        if (!$userExiste) {
             $miembro = new Miembros();
             $miembro->user_id = $userId;
             $miembro->caso_id = $casoId;
