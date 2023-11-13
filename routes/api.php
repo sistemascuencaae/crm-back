@@ -291,6 +291,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editPrioridadCaso/{id}', [CasoController::class, 'editPrioridadCaso']);
     Route::post('/editarTipoCaso/{id}', [CasoController::class, 'editarTipoCaso']);
     Route::post('/editObservacion/{id}', [CasoController::class, 'editObservacion']); // Editar la observación del caso
+    Route::get('/listHistoricoEstadoCaso/{caso_id}', [CasoController::class, 'listHistoricoEstadoCaso']); // listado/ historico de los estados del caso
 
     // CTAREA
 
