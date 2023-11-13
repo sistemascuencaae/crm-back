@@ -1139,11 +1139,11 @@ class CasoController extends Controller
             "cpp_id" => $cppId,
         ];
 
-        // $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
+        $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
 
-        // $email = "juanjgsj@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
-        //     $t = new EmailController();
-        //     $t->send_email($email,$dataEmail);
+            $email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
+                $t = new EmailController();
+                $t->send_email($email,$dataEmail);
 
         $requestData = json_decode(json_encode($objetoJson), true);
         $request = new Request($requestData);
