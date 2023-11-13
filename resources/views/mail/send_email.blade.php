@@ -29,25 +29,25 @@
 <body>
     <table style="width: 100%">
         <tr>
-            <td class="auto-style1">Proforma #{{ $object->cpp_id }} </td>
+            <td class="auto-style1"><b>Proforma #{{ $object->cpp_id }}</b></td>
         </tr>
     </table>
     <table style="width: 100%">
         <tr>
-            <td>Almespana Cia. Ltda.</td>
+            <td><b>Almespana Cia. Ltda.</b></td>
         </tr>
     </table>
     <table style="width: 100%">
         <tr>
-            <td style="width: 134px">Fecha:</td>
+            <td style="width: 134px"><b>Fecha:</b></td>
             <td>{{ $object->cpp_fecha }} </td>
         </tr>
         <tr>
-            <td style="width: 134px">Cédula:</td>
+            <td style="width: 134px"><b>Cédula:</b></td>
             <td>{{ $object->cli_codigo }}</td>
         </tr>
         <tr>
-            <td style="width: 134px">Cliente:</td>
+            <td style="width: 134px"><b>Cliente:</b></td>
             <td>{{ $object->empleado }} </td>
         </tr>
     </table>
@@ -57,8 +57,7 @@
     <table id="tablaProd">
         <thead>
             <tr id="tablaProd">
-                <th id="tablaProd" style="width: 10%;">Código
-                </th>
+                <th id="tablaProd" style="width: 10%;">Código</th>
                 <th id="tablaProd" style="width: 60%">Descripción</th>
                 <th id="tablaProd" style="width: 10%">Cantidad</th>
                 <th id="tablaProd" style="width: 10%">PVP</th>
