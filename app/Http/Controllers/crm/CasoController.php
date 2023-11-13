@@ -183,6 +183,8 @@ class CasoController extends Controller
             $audit->url = $request->fullUrl();
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'editFase';
+            $audit->estado_caso = $caso->estadodos->nombre;
+            $audit->estado_caso_id = $caso->estado_2;
             // Establecer old_values y new_values
             $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
             $audit->save();

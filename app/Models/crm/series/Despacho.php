@@ -31,6 +31,7 @@ class Despacho extends Model implements Auditable
         "fecha_crea",
         "usuario_modifica",
         "fecha_modifica",
+        "bod_id_origen",
     ];
     
     public function detalle()
@@ -56,5 +57,6 @@ class DesepachoDet extends Model implements Auditable
         "linea",
         "pro_id",
         "serie",
+        "tipo",
     ];
 }
