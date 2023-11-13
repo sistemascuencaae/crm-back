@@ -37,12 +37,14 @@ class CasoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' =>
-        [
-            //'add',
-            //'addCasoOPMICreativa'
+        $this->middleware('auth:api', [
+            'except' =>
+                [
+                    //'add',
+                    //'addCasoOPMICreativa'
 
-        ]]);
+                ]
+        ]);
     }
 
     public function add(Request $request)
@@ -120,6 +122,13 @@ class CasoController extends Controller
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $th->getMessage()));
         }
+    }
+
+    // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
+    public function listHistoricoEstadoCaso($caso_id)
+    {
+        $data = Audits::where('auditable_id', $caso_id)->orderBy('id', 'ASC')->get();
+        return response()->json(RespuestaApi::returnResultado('success', 'El listo con exito', $data));
     }
 
     public function list()
@@ -1091,7 +1100,7 @@ class CasoController extends Controller
         //---
 
         $a = '';
-        $objetoJson = (object)[
+        $objetoJson = (object) [
             "id" => null,
             "fas_id" => $faseId,
             "nombre" => 'Solicitud de credito aplicación movil)',
