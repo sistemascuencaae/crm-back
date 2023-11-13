@@ -9,16 +9,19 @@
     <style type="text/css">
         .auto-style1 {
             text-align: center;
+            color: black;
         }
 
         #tablaProd {
             border: 1px solid black;
             border-collapse: collapse;
             width: 100%;
+            color: black;
         }
 
         #tablaProd th {
             background-color: #dddddd;
+            color: black;
         }
     </style>
 </head>
@@ -41,8 +44,7 @@
         </tr>
         <tr>
             <td style="width: 134px">Cédula:</td>
-            <td>{{ $object->cli_id }}</td>
-            <!-- aqui va la cedula -->
+            <td>{{ $object->cli_codigo }}</td>
         </tr>
         <tr>
             <td style="width: 134px">Cliente:</td>
