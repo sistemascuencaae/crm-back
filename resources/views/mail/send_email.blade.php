@@ -48,7 +48,33 @@
         </tr>
         <tr>
             <td style="width: 134px"><b>Cliente:</b></td>
-            <td>{{ $object->empleado }} </td>
+            <td>{{ $object->ent_nombre_comercial }} </td>
+        </tr>
+    </table>
+
+
+    <table style="width: 100%">
+        <tr>
+            <td style="width: 134px"><b>Entrada:</b></td>
+            <td>{{ $object->cpp_entrada }} </td>
+
+            <td style="width: 134px"><b>Entrada adicional:</b></td>
+            <td>{{ $object->cpp_entradaadicional }}</td>
+
+            <td style="width: 134px"><b>Contraentrega:</b></td>
+            <td>{{ $object->cpp_contraentrega }} </td>
+        </tr>
+    </table>
+    <table style="width: 100%">
+        <tr>
+            <td style="width: 134px"><b>Cuotas gratis:</b></td>
+            <td>{{ $object->cpp_cuotas_gratis }} </td>
+
+            <td style="width: 134px"><b># Cuotas:</b></td>
+            <td>{{ $object->cpp_cuotas }} </td>
+
+            <td style="width: 134px"><b>Valor cuota:</b></td>
+            <td>{{ $object->cpp_valor_cuota }} </td>
         </tr>
     </table>
 
@@ -67,17 +93,18 @@
         <tbody>
             @if (!is_null($object->dpedidoProforma))
                 @foreach ($object->dpedidoProforma as $p)
-                    </tr>
-                    <td id="tablaProd" style="width: 10%;">{{ $p->pro_codigo }}</td>
-                    <td id="tablaProd" style="width: 60%;">{{ $p->pro_nombre }}</td>
-                    <td id="tablaProd" style="width: 10%;">{{ $p->dpp_cantidad }}
-                    </td>
-                    <td id="tablaProd" style="width: 10%;">{{ $p->dpp_costoprecio }}</td>
-                    <td id="tablaProd" style="width: 10%;"> {{ $p->dpp_valortotal }}</td>
+                    <tr id="tablaProd">
+                        <td id="tablaProd" style="width: 10%;">{{ $p->pro_codigo }}</td>
+                        <td id="tablaProd" style="width: 60%;">{{ $p->pro_nombre }}</td>
+                        <td id="tablaProd" style="width: 10%;">{{ $p->dpp_cantidad }}</td>
+                        <td id="tablaProd" style="width: 10%;">{{ $p->dpp_costoprecio }}</td>
+                        <td id="tablaProd" style="width: 10%;">{{ $p->dpp_valortotal }}</td>
                     </tr>
                 @endforeach
             @else
-                <td colspan="5">No hay productos.</td>
+                <tr id="tablaProd">
+                    <td colspan="5">No hay productos.</td>
+                </tr>
             @endif
 
             <tr id="tablaProd">
@@ -101,8 +128,10 @@
         </tbody>
     </table>
 
-    <h5>Has recibido este correo electrónico porque has solicitado una cotización en Almespana Cia. Ltda.</h5>
-    <h5>Por favor, no responda a este mensaje.</h5>
+    <h5 class="auto-style1">Atentamente, agente {{ $object->empleado }}</h5>
+    <h5 class="auto-style1">Has recibido este correo electrónico porque has solicitado una cotización en Almespana Cia.
+        Ltda.</h5>
+    <h5 class="auto-style1">Por favor, no responda a este mensaje.</h5>
 
 </body>
 
