@@ -101,6 +101,9 @@
         </tbody>
     </table>
 
+    <h5>Has recibido este correo electrónico porque has solicitado una cotización en Almespana Cia. Ltda.</h5>
+    <h5>Por favor, no responda a este mensaje.</h5>
+
 </body>
 
 </html>

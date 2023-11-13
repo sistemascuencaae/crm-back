@@ -128,7 +128,14 @@ class CasoController extends Controller
     public function listHistoricoEstadoCaso($caso_id)
     {
         $data = Audits::where('auditable_id', $caso_id)->orderBy('id', 'ASC')->get();
-        return response()->json(RespuestaApi::returnResultado('success', 'El listo con exito', $data));
+
+        // Formatear las fechas
+        $data->transform(function ($item) {
+            $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            return $item;
+        });
+
+        return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
     }
 
     public function list()
