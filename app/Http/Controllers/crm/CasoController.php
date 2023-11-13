@@ -26,6 +26,7 @@ use App\Models\crm\Tareas;
 use App\Models\crm\TelefonosCliente;
 use App\Models\crm\TelefonosReferencias;
 use App\Models\crm\TipoCaso;
+use App\Models\openceo\CPedidoProforma;
 use App\Models\User;
 use Carbon\Carbon;
 use Exception;
@@ -737,8 +738,6 @@ class CasoController extends Controller
             }
             $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
             $reqCaso->save();
-
-            echo ('$reqCaso: ' . json_encode($reqCaso));
         }
     }
 
@@ -1121,6 +1120,13 @@ class CasoController extends Controller
             "user_anterior_id" => $userId,
             "cpp_id" => $cppId,
         ];
+
+        // $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
+
+        // $email = "juanjgsj@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
+        //     $t = new EmailController();
+        //     $t->send_email($email,$dataEmail);
+
         $requestData = json_decode(json_encode($objetoJson), true);
         $request = new Request($requestData);
         return $this->add($request);
