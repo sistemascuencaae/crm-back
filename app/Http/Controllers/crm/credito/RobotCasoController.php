@@ -22,29 +22,17 @@ use Illuminate\Support\Facades\DB;
 class RobotCasoController extends Controller
 {
 
-
-
-
     public function reasignarCaso(Request $request)
     {
-
-
         try {
-
             $casoController = new CasoController();
             $estadoFormId = $request->input('estadoFormId');
             $casoId = $request->input('casoId');
             $tableroActualId = $request->input('tableroActualId');
             $facturaId = $request->input('facturaId');
-            $casoEnProceso = Caso::find($casoId);
             $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId);
-            // return response()->json([
-            //     "antes" => $casoEnProceso,
-            //     "despues" => $casoModificado
-            // ]);
-            // return $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId);
-            //----------------------------------------------------------------FALATA EL NUEVO USUARIO ASIGNADO
-            //$casoEnProceso->save();
+
+            return;
             $data = $casoController->getCaso($casoModificado->id);
             broadcast(new ReasignarCasoEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
@@ -90,7 +78,44 @@ class RobotCasoController extends Controller
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
         $casoController = new CasoController();
         $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
-        ;
+        /*---------******** ANALICIS DE USUARIOS ********------------- */
+        $activarRobot = true;
+        if ($activarRobot == true) {
+            //---Si el nuevo tablero es el tablero de creacio reasigna al creador
+            if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
+                //---pregunta si el usuario sigue en el tablero
+                $userTab = $this->getUsuarioTablero($casoEnProceso->user_creador_id, $casoEnProceso->tablero_creacion_id);
+                if ($userTab) {
+                    $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
+                    $casoEnProceso->save();
+                    //return $casoEnProceso;
+                }
+            }
+
+            //--- usuarios en linea del nuevo tablero
+            $usuariosNuevoTablero = DB::select("SELECT * FROM crm.usuarios_casos WHERE tab_id = ?", [$formula->tablero_id]);
+
+            echo ('$usuariosNuevoTablero: '.json_encode($usuariosNuevoTablero));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        }
+
+
+        return;
+
         //------------------------------------------------------------
         //-------------------OPCION 1---------------------------------
         //------------------------------------------------------------
@@ -187,10 +212,12 @@ class RobotCasoController extends Controller
         //2068
         //2067
         //2066
+    }
 
 
-
-
-
+    public function getUsuarioTablero($userCreadorId, $tableroCreacionId)
+    {
+        $userTab = DB::selectOne('SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ?', [$userCreadorId, $tableroCreacionId]);
+        return $userTab;
     }
 }
