@@ -10,16 +10,16 @@ class SendMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $tablero;
+    public $object;
 
-    public function __construct($tablero)
+    public function __construct($object) // Recibe cualquier objeto por ejemplo un Pedido para poder acceder en la vista ($object->campo_que_queremos_mostrar)
     {
-        $this->tablero = $tablero;
+        $this->object = $object;
     }
 
     public function build()
     {
-        return $this->subject("ECOMMERCE DETALLADO DE COMPRA")->view('mail.send_email');
+        return $this->subject("PROFORMA DE COMPRA")->view('mail.send_email');
     }
 
     // public function build()
