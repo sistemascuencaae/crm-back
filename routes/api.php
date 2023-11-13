@@ -542,7 +542,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byDespacho/{numero}', [DespachoController::class, 'byDespacho']);
     Route::get('/anulaDespacho/{numero}/{bodDest}', [DespachoController::class, 'anulaDespacho']);
     Route::get('/eliminaDespacho/{numero}/{bodDest}', [DespachoController::class, 'eliminaDespacho']);
-    Route::get('/validaSerie/{producto}/{serie}/{bodega}', [DespachoController::class, 'validaSerie']);
+    Route::get('/validaSerie/{producto}/{serie}/{bodega}/{tipo}', [DespachoController::class, 'validaSerie']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
