@@ -58,6 +58,5 @@ class PreIngresoDet extends Model implements Auditable
         "linea",
         "pro_id",
         "serie",
-        "tipo",
     ];
 }

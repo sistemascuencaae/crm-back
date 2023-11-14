@@ -57,6 +57,5 @@ class DesepachoDet extends Model implements Auditable
         "linea",
         "pro_id",
         "serie",
-        "tipo",
     ];
 }
