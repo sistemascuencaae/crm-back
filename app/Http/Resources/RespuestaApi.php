@@ -8,47 +8,45 @@ class RespuestaApi
 
     public static function returnResultado($estado, $message, $data)
     {
-        
         switch ($estado) {
             case 'success':
-
-                $result = array(
-                    'code'      => 200,
-                    'status'    => 'success',
-                    'message'   =>  $message,
-                    'data'     =>  $data
+                return array(
+                    'code' =>  200,
+                    'status' =>  'success',
+                    'message' =>  $message,
+                    'data' =>  $data,
+                    'icon' =>  'success',
+                    'color' =>  '#99ff99'
                 );
-                return $result; 
 
             case 'error':
-
-                $result = array(
-                    'code'      => 400,
-                    'status'    => 'error',
-                    'message'   => $message,
-                    'data'     =>  $data
+                return array(
+                    'code' =>   500,
+                    'status' =>  'error',
+                    'message' =>  $message,
+                    'data' =>  $data,
+                    'icon' =>  'error',
+                    'color' =>  '#ff4000'
                 );
-                return $result;
-
 
             case 'exception':
-
-                $result = array(
-                    'code'      => 500,
-                    'status'    => 'exception',
-                    'message'   => $message,
-                    'data'     =>  $data
+                return array(
+                    'code' =>   500,
+                    'status' =>  'error',
+                    'message' =>  'Exception: '.$message,
+                    'data' =>  $data,
+                    'icon' =>  'error',
+                    'color' =>  '#ff4000'
                 );
-return $result;
-
             default:
-            $result = array(
-                'code'      => 500,
-                'status'    => 'sin asignar error',
-                'message'   => $message,
-                'data'     =>  $data
+            return array(
+                'code' =>   404,
+                'status' =>  'error',
+                'message' =>  'Exception: '.$message,
+                'data' =>  $data,
+                'icon' =>  'error',
+                'color' =>  '#ff4000'
             );
-                break;
         }
     }
 }
