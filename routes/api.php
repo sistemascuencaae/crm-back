@@ -58,6 +58,7 @@ use App\Http\Controllers\crm\garantias\RubrosReservaController;
 use App\Http\Controllers\crm\garantias\GEXController;
 use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\series\DespachoController;
+use App\Http\Controllers\crm\series\InventarioController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -543,6 +544,17 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/anulaDespacho/{numero}/{bodDest}', [DespachoController::class, 'anulaDespacho']);
     Route::get('/eliminaDespacho/{numero}/{bodDest}', [DespachoController::class, 'eliminaDespacho']);
     Route::get('/validaSerie/{producto}/{serie}/{bodega}/{tipo}', [DespachoController::class, 'validaSerie']);
+
+    //Inventario de Series
+    Route::get('/listadoProdInv', [InventarioController::class, 'productos']);
+    Route::get('/listadoBodegasInv', [InventarioController::class, 'bodegas']);
+    Route::post('/grabaInventario', [InventarioController::class, 'grabaInventario']);
+    Route::get('/imprimeInventario/{numero}', [InventarioController::class, 'imprimeInventario']);
+    Route::get('/listadoInventarios', [InventarioController::class, 'listado']);
+    Route::get('/byInventario/{numero}', [InventarioController::class, 'byInventario']);
+    Route::get('/byInventarioProc/{numero}', [InventarioController::class, 'byInventarioProc']);
+    Route::get('/anulaInventario/{numero}', [InventarioController::class, 'anulaInventario']);
+    Route::get('/eliminaInventario/{numero}', [InventarioController::class, 'eliminaInventario']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);

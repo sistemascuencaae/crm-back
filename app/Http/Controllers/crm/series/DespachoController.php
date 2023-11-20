@@ -338,9 +338,9 @@ class DespachoController extends Controller
 
         foreach ($data as $i) {
             if ($i->pro_id != null){
-                $i->series = DB::select("select d.serie
-                                    from gex.ddespacho d
-                                    where d.numero = " . $i->numero . " and d.pro_id = " . $i->pro_id);
+                $i->series = DB::select("select d.serie, (case d.tipo when 'C' then 'COMPRESOR' when 'E' then 'EVAPORADOR' end) as tipo
+                                        from gex.ddespacho d
+                                        where d.numero = " . $i->numero . " and d.pro_id = " . $i->pro_id);
             }
         }
 

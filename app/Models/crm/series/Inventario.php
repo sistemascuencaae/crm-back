@@ -56,5 +56,6 @@ class InventarioDet extends Model implements Auditable
         "pro_id",
         "serie",
         "tipo",
+        "procesado",
     ];
 }
