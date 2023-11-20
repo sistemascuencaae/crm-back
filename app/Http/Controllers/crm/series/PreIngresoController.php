@@ -33,7 +33,7 @@ class PreIngresoController extends Controller
     
     public function productos()
     {
-        $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p");
+        $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta, pc.tipo_servicio as tipo from producto p left outer join gex.producto_config pc  on p.pro_id = pc.pro_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
@@ -97,10 +97,18 @@ class PreIngresoController extends Controller
                                         p.pro_id,
                                         p.pro_codigo,
                                         p.pro_nombre,
-                                        count(*) as cantidad,
-                                        (select count(*) from gex.dpreingreso d2 where d2.numero = c.numero) as cantidadTotal,
+                                        cast(sum((case d.tipo when 'N' then 1 else 0.5 end)) as integer) as cantidad,
+                                        (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.dpreingreso d2 where d2.numero = c.numero) as cantidadTotal,
                                         (case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end) as estado,
-                                        min(d.linea) as linea
+                                        min(d.linea) as linea,
+                                        (case when c.cmo_id is null then 'Nota/Crédito: ' else 'Ingreso: ' end) as etiquetaDR,
+                                        (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
+                                                                        from cfactura c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                            join ctipocom t on c1.cti_id = t.cti_id
+                                                                        where c1.cfa_id = c.cfa_id) else (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cmo_numero)
+                                                                                                            from cmovinv c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                                                            join ctipocom t on c1.cti_id = t.cti_id
+                                                                                                            where c1.cmo_id = c.cmo_id) end) as doc_rela
                                 from gex.cpreingreso c join gex.dpreingreso d on c.numero = d.numero
                                                     join bodega b on c.bod_id = b.bod_id
                                                     join cliente l on c.cli_id = l.cli_id
@@ -111,7 +119,7 @@ class PreIngresoController extends Controller
                                 order by linea");
 
         foreach ($data['impresion'] as $i) {
-            $i->series = DB::select("select d.serie
+            $i->series = DB::select("select d.serie, (case d.tipo when 'C' then 'COMPRESOR' when 'E' then 'EVAPORADOR' end) as tipo
                                     from gex.dpreingreso d
                                     where d.numero = " . $i->numero . " and d.pro_id = " . $i->pro_id);
         }
@@ -394,6 +402,9 @@ class PreIngresoController extends Controller
                         $pro_id = $d['pro_id'];
                         $serie = $d['serie'];
                         $bod_id = $p['bod_id'];
+
+                        $tipo = $d['tipo'];
+
 
                         DB::table('gex.stock_serie')->insert(
                             [
