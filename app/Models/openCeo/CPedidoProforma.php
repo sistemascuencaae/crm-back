@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\openCeo;
+namespace App\Models\openceo;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +15,9 @@ class CPedidoProforma extends Model
         "alm_nombre",
         "cpp_concepto",
         "cli_id",
+        "cli_codigo",
         "ent_nombre_comercial",
+        "ent_email",
         "empleado",
         "comprobante",
         "sub_total_compra",

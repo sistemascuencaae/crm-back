@@ -2,6 +2,7 @@
 
 namespace App\Models\crm\credito;
 
+use App\Models\crm\Caso;
 use App\Models\crm\Galeria;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -98,5 +99,10 @@ class ClienteEnrolamiento extends Model
     public function imagenes()
     {
         return $this->hasMany(Galeria::class, "caso_id" , "caso_id");
+    }
+
+    public function caso()
+    {
+        return $this->belongsTo(Caso::class, "caso_id");
     }
 }

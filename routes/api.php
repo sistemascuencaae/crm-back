@@ -21,6 +21,7 @@ use App\Http\Controllers\crm\credito\ParentescoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
+use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
@@ -46,6 +47,7 @@ use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\openceo\ClienteDynamoController;
 use App\Http\Controllers\openceo\PedidoMovilController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\user\EquifaxController;
@@ -58,7 +60,11 @@ use App\Http\Controllers\crm\garantias\RubrosReservaController;
 use App\Http\Controllers\crm\garantias\GEXController;
 use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\series\DespachoController;
+
 use App\Http\Controllers\crm\series\InventarioController;
+
+use App\Http\Controllers\crm\TableroProcesosController;
+
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -172,6 +178,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAnalistas/{tableroId}', [UserController::class, 'listAnalistas']);
     Route::get('/listUsuariosActivos', [UserController::class, 'listUsuariosActivos']);
 
+    Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']);//list
+
     /************************  OPENCEO   *********************** */
 
     Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
@@ -179,9 +187,12 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/clienteCasoList/{depId}', [ClienteOpenceoController::class, 'clienteCasoList']);
     Route::get('/solicitudByEntId/{entIdentificacion}/{userId}', [solicitudCreditoController::class, 'solicitudByEntId']);
 
-    /************************  PEDIDO MOVIL OPENCEO   *********************** */
+    /************************  PEDIDO MOVIL OPENCEO   ****************** */
     Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
 
+    Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
+
+    Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
 
 });
 Route::group(["prefix" => "crm/audi"], function ($router) {
@@ -284,6 +295,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editPrioridadCaso/{id}', [CasoController::class, 'editPrioridadCaso']);
     Route::post('/editarTipoCaso/{id}', [CasoController::class, 'editarTipoCaso']);
     Route::post('/editObservacion/{id}', [CasoController::class, 'editObservacion']); // Editar la observación del caso
+    Route::get('/listHistoricoEstadoCaso/{caso_id}', [CasoController::class, 'listHistoricoEstadoCaso']); // listado/ historico de los estados del caso
 
     // CTAREA
 
@@ -443,6 +455,7 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::post('/addClienteEnrolamiento', [ClienteEnrolamientoController::class, 'addClienteEnrolamiento']); // Guardar la imagen de equifax
     Route::get('/clienteEnroladoById/{id}', [ClienteEnrolamientoController::class, 'clienteEnroladoById']); // listar datos cliente enrolado por caso_id
     Route::post('/addArchivosFirmadosEnrolamiento', [ClienteEnrolamientoController::class, 'addArchivosFirmadosEnrolamiento']); // guardar los archivos firmados
+    Route::get('/listEnrolamientosById/{cli_id}', [ClienteEnrolamientoController::class, 'listEnrolamientosById']); // lista todos los enrolamientos del cliente
 
     // CLIENTE CRM
 
@@ -485,7 +498,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byParte/{parte}', [PartesController::class, 'byParte']);
     Route::post('/grabaParte', [PartesController::class, 'grabaParte']);
     Route::get('/eliminaParte/{parte}', [PartesController::class, 'eliminaParte']);
-    
+
     //Configuracion Items
     Route::get('/listadoConfig', [ConfigItemsController::class, 'listado']);
     Route::get('/listadoProductos', [ConfigItemsController::class, 'productos']);
@@ -493,7 +506,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaConfig', [ConfigItemsController::class, 'grabaConfig']);
     Route::get('/byConfig/{producto}', [ConfigItemsController::class, 'byConfig']);
     Route::get('/eliminaConfig/{producto}', [ConfigItemsController::class, 'eliminaConfig']);
-    
+
     //Relacion Lineas Gex
     Route::get('/listadoRelacion', [RelacionLineasGexController::class, 'listado']);
     Route::get('/listadoProductosGex', [RelacionLineasGexController::class, 'productos']);
@@ -501,14 +514,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaRela', [RelacionLineasGexController::class, 'grabaRela']);
     Route::get('/byRela/{linea}/{producto}', [RelacionLineasGexController::class, 'byRela']);
     Route::get('/eliminaRela/{linea}/{producto}', [RelacionLineasGexController::class, 'eliminaRela']);
-    
+
     //Excepción Gex
     Route::get('/listadoExepcion', [ExepcionGexController::class, 'listado']);
     Route::get('/listadoProductosExcep', [ExepcionGexController::class, 'productos']);
     Route::post('/grabaExep', [ExepcionGexController::class, 'grabaExep']);
     Route::get('/byExcep/{excep}', [ExepcionGexController::class, 'byExcep']);
     Route::get('/eliminaExep/{excep}', [ExepcionGexController::class, 'eliminaExep']);
-    
+
     //Rubro de Reserva
     Route::get('/listadoRubros', [RubrosReservaController::class, 'listado']);
     Route::post('/grabaRubro', [RubrosReservaController::class, 'grabaRubro']);
@@ -543,7 +556,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byDespacho/{numero}', [DespachoController::class, 'byDespacho']);
     Route::get('/anulaDespacho/{numero}/{bodDest}', [DespachoController::class, 'anulaDespacho']);
     Route::get('/eliminaDespacho/{numero}/{bodDest}', [DespachoController::class, 'eliminaDespacho']);
-    Route::get('/validaSerie/{producto}/{serie}/{bodega}/{tipo}', [DespachoController::class, 'validaSerie']);
+    Route::get('/validaSerie/{producto}/{serie}/{bodega}', [DespachoController::class, 'validaSerie']);
 
     //Inventario de Series
     Route::get('/listadoProdInv', [InventarioController::class, 'productos']);

@@ -17,6 +17,16 @@ use LDAP\Result;
 
 class ClienteEnrolamientoController extends Controller
 {
+    public function listEnrolamientosById($cli_id)
+    {
+        try {
+            $respuesta = ClienteEnrolamiento::where('cli_id', $cli_id)->with('caso.estadodos')->orderBy('id', 'ASC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 
     public function addClienteEnrolamiento(Request $request)
     {
@@ -31,6 +41,7 @@ class ClienteEnrolamientoController extends Controller
             $data = DB::transaction(function () use ($request) {
 
                 $estatusEnrolamiento = $request->input('statusEnrol');
+                $cliId = $request->input('cliId');
                 $datosEnrolamiento = json_decode($request->input('datosEnrolamiento'), true);
 
                 $caso_id = $request->input('casoId');
@@ -147,7 +158,7 @@ class ClienteEnrolamientoController extends Controller
                 $datosEnrolamiento['Extras'] = json_encode($datosEnrolamiento['Extras']);
                 $datosEnrolamiento['SignedDocuments'] = json_encode($datosEnrolamiento['SignedDocuments']);
                 $datosEnrolamiento['Scores'] = json_encode($datosEnrolamiento['Scores']);
-
+                $datosEnrolamiento['cli_id'] = $cliId;
                 $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
                 $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolamiento->id)
                     ->with([

@@ -26,6 +26,7 @@ use App\Models\crm\Tareas;
 use App\Models\crm\TelefonosCliente;
 use App\Models\crm\TelefonosReferencias;
 use App\Models\crm\TipoCaso;
+use App\Models\openceo\CPedidoProforma;
 use App\Models\User;
 use Carbon\Carbon;
 use Exception;
@@ -37,12 +38,14 @@ class CasoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' =>
-        [
-            //'add',
-            //'addCasoOPMICreativa'
+        $this->middleware('auth:api', [
+            'except' =>
+                [
+                    //'add',
+                    //'addCasoOPMICreativa'
 
-        ]]);
+                ]
+        ]);
     }
 
     public function add(Request $request)
@@ -109,6 +112,8 @@ class CasoController extends Controller
             $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
             $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->estado_caso = $casoCreado->estadodos->nombre;
+            $audit->estado_caso_id = $casoCreado->estado_2;
             $audit->accion = 'addCaso';
             $audit->save();
             // END Auditoria
@@ -118,6 +123,20 @@ class CasoController extends Controller
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $th->getMessage()));
         }
+    }
+
+    // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
+    public function listHistoricoEstadoCaso($caso_id)
+    {
+        $data = Audits::where('auditable_id', $caso_id)->orderBy('id', 'ASC')->get();
+
+        // Formatear las fechas
+        $data->transform(function ($item) {
+            $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            return $item;
+        });
+
+        return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
     }
 
     public function list()
@@ -737,8 +756,6 @@ class CasoController extends Controller
             }
             $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
             $reqCaso->save();
-
-            echo ('$reqCaso: ' . json_encode($reqCaso));
         }
     }
 
@@ -1089,7 +1106,7 @@ class CasoController extends Controller
         //---
 
         $a = '';
-        $objetoJson = (object)[
+        $objetoJson = (object) [
             "id" => null,
             "fas_id" => $faseId,
             "nombre" => 'Solicitud de credito aplicación movil)',
@@ -1121,6 +1138,13 @@ class CasoController extends Controller
             "user_anterior_id" => $userId,
             "cpp_id" => $cppId,
         ];
+
+        $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
+
+            $email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
+                $t = new EmailController();
+                $t->send_email($email,$dataEmail);
+
         $requestData = json_decode(json_encode($objetoJson), true);
         $request = new Request($requestData);
         return $this->add($request);
