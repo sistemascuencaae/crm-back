@@ -194,9 +194,9 @@ class DespachoController extends Controller
         }
     }
 
-    public function validaSerie($producto, $serie, $bodega)
+    public function validaSerie($producto, $serie, $bodega, $tipo)
     {
-        $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.bod_id = " . $bodega);
+        $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.bod_id = " . $bodega . " and ss.tipo = '" . $tipo . "'");
         
         if($data) {
             return response()->json(RespuestaApi::returnResultado('success', 'Serie encontrada', []));
@@ -269,21 +269,24 @@ class DespachoController extends Controller
                             'linea' => $d['linea'],
                             'pro_id' => $d['pro_id'],
                             'serie' => $d['serie'],
+                            'tipo' => $d['tipo'],
                         ]);
 
                     if ($bod_id_fin == null) {
-                        DB::table('gex.stock_serie')->where('pro_id',$d['pro_id'])->where('serie',$d['serie'])->where('bod_id',$bod_id)->delete();
+                        DB::table('gex.stock_serie')->where('pro_id',$d['pro_id'])->where('serie',$d['serie'])->where('bod_id',$bod_id)->where('tipo',$d['tipo'])->delete();
                     } else {
                         DB::table('gex.stock_serie')->updateOrInsert(
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id_fin,
+                                'tipo' => $d['tipo'],
                             ]);
                     }
                 }
@@ -378,11 +381,13 @@ class DespachoController extends Controller
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ]);
                     } else {
                         DB::table('gex.stock_serie')->updateOrInsert(
@@ -390,11 +395,13 @@ class DespachoController extends Controller
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bodDest,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ]);
                     }
                 }
@@ -425,11 +432,13 @@ class DespachoController extends Controller
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ]);
                     } else {
                         DB::table('gex.stock_serie')->updateOrInsert(
@@ -437,11 +446,13 @@ class DespachoController extends Controller
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bodDest,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ]);
                     }
                 }

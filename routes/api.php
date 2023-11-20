@@ -60,11 +60,8 @@ use App\Http\Controllers\crm\garantias\RubrosReservaController;
 use App\Http\Controllers\crm\garantias\GEXController;
 use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\series\DespachoController;
-
 use App\Http\Controllers\crm\series\InventarioController;
-
 use App\Http\Controllers\crm\TableroProcesosController;
-
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -556,7 +553,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byDespacho/{numero}', [DespachoController::class, 'byDespacho']);
     Route::get('/anulaDespacho/{numero}/{bodDest}', [DespachoController::class, 'anulaDespacho']);
     Route::get('/eliminaDespacho/{numero}/{bodDest}', [DespachoController::class, 'eliminaDespacho']);
-    Route::get('/validaSerie/{producto}/{serie}/{bodega}', [DespachoController::class, 'validaSerie']);
+    Route::get('/validaSerie/{producto}/{serie}/{bodega}/{tipo}', [DespachoController::class, 'validaSerie']);
 
     //Inventario de Series
     Route::get('/listadoProdInv', [InventarioController::class, 'productos']);

@@ -193,10 +193,12 @@ class PreIngresoController extends Controller
                         [
                             'pro_id' => $d['pro_id'],
                             'serie' => $d['serie'],
+                            'tipo' => $d['tipo'],
                         ],
                         [
                             'pro_id' => $d['pro_id'],
                             'serie' => $d['serie'],
+                            'tipo' => $d['tipo'],
                         ]);
 
                     DB::table('gex.dpreingreso')->updateOrInsert(
@@ -209,6 +211,7 @@ class PreIngresoController extends Controller
                             'linea' => $d['linea'],
                             'pro_id' => $d['pro_id'],
                             'serie' => $d['serie'],
+                            'tipo' => $d['tipo'],
                         ]);
 
                 }
@@ -248,7 +251,7 @@ class PreIngresoController extends Controller
                     ]);
 
                 foreach ($data['detalle'] as $d) {
-                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
                 }
             });
             
@@ -268,7 +271,7 @@ class PreIngresoController extends Controller
                 DB::table('gex.cpreingreso')->where('numero',$numero)->delete();
 
                 foreach ($data as $d) {
-                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
                 }
             });
 
@@ -402,7 +405,6 @@ class PreIngresoController extends Controller
                         $pro_id = $d['pro_id'];
                         $serie = $d['serie'];
                         $bod_id = $p['bod_id'];
-
                         $tipo = $d['tipo'];
 
 
@@ -411,6 +413,7 @@ class PreIngresoController extends Controller
                                 'pro_id' => $pro_id,
                                 'serie' => $serie,
                                 'bod_id' => $bod_id,
+                                'tipo' => $tipo,
                             ]);
                     }
                 }
@@ -453,7 +456,7 @@ class PreIngresoController extends Controller
                     ]);
 
                 foreach ($data['detalle'] as $d) {
-                    DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                    DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
                 }
             });
             
