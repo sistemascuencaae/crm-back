@@ -27,8 +27,8 @@ class DespachoController extends Controller
                                     c.cmo_id as indice,
                                     c.bod_id, c.bod_id_fin,
                                     null as cli_id,
-                                    (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id) as cantidad,
-                                    (select count(*) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cmo_id = c.cmo_id) as despachado
+                                    (select cast(sum(d.dmo_cantidad) as integer) from dmovinv d where d.cmo_id = c.cmo_id) as cantidad,
+                                    coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cmo_id = c.cmo_id),0) as despachado
                             from cmovinv c join puntoventa p on c.pve_id = p.pve_id
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join bodega b on c.bod_id = b.bod_id
@@ -51,8 +51,8 @@ class DespachoController extends Controller
                                     c.cfa_id as indice,
                                     p.bod_id, null,
                                     c.cli_id,
-                                    (select sum(d.dfac_cantidad) from dfactura d where d.cfa_id = c.cfa_id) as cantidad,
-                                    (select count(*) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cfa_id = c.cfa_id) as despachado
+                                    (select cast(sum(d.dfac_cantidad) as integer) from dfactura d where d.cfa_id = c.cfa_id) as cantidad,
+                                    coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cfa_id = c.cfa_id),0) as despachado
                             from cfactura c join puntoventa p on c.pve_id = p.pve_id
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join cliente l on c.cli_id = l.cli_id
@@ -101,16 +101,22 @@ class DespachoController extends Controller
     {
         if ($tipo == 'INV') {
             $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta,
-                                        dmo_cantidad - (select count(*) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
-                                                        where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo,
-                                        0 as despachado
-                                from producto p join dmovinv d on p.pro_id = d.pro_id where cmo_id = " . $id);
+                                        cast(dmo_cantidad as integer) - coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
+                                                                                  where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id),0) as saldo,
+                                        0 as despachado,
+                                        pc.tipo_servicio as tipo
+                                from producto p join dmovinv d on p.pro_id = d.pro_id
+                                                left outer join gex.producto_config pc  on p.pro_id = pc.pro_id
+                                where cmo_id = " . $id);
         } else {
             $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta,
-                                        dfac_cantidad - (select count(*) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
-                                                        where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id) as saldo,
-                                        0 as despachado
-                                from producto p join dfactura d on p.pro_id = d.pro_id where cfa_id = " . $id);
+                                        cast(dfac_cantidad as integer) - coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
+                                                                                   where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id),0) as saldo,
+                                        0 as despachado,
+                                        pc.tipo_servicio as tipo
+                                from producto p join dfactura d on p.pro_id = d.pro_id
+                                                left outer join gex.producto_config pc  on p.pro_id = pc.pro_id
+                                where cfa_id = " . $id);
         }
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -188,9 +194,9 @@ class DespachoController extends Controller
         }
     }
 
-    public function validaSerie($producto, $serie, $bodega)
+    public function validaSerie($producto, $serie, $bodega, $tipo)
     {
-        $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.bod_id = " . $bodega);
+        $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.bod_id = " . $bodega . " and ss.tipo = '" . $tipo . "'");
         
         if($data) {
             return response()->json(RespuestaApi::returnResultado('success', 'Serie encontrada', []));
@@ -263,21 +269,24 @@ class DespachoController extends Controller
                             'linea' => $d['linea'],
                             'pro_id' => $d['pro_id'],
                             'serie' => $d['serie'],
+                            'tipo' => $d['tipo'],
                         ]);
 
                     if ($bod_id_fin == null) {
-                        DB::table('gex.stock_serie')->where('pro_id',$d['pro_id'])->where('serie',$d['serie'])->where('bod_id',$bod_id)->delete();
+                        DB::table('gex.stock_serie')->where('pro_id',$d['pro_id'])->where('serie',$d['serie'])->where('bod_id',$bod_id)->where('tipo',$d['tipo'])->delete();
                     } else {
                         DB::table('gex.stock_serie')->updateOrInsert(
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id_fin,
+                                'tipo' => $d['tipo'],
                             ]);
                     }
                 }
@@ -315,8 +324,8 @@ class DespachoController extends Controller
                                     p.pro_id,
                                     p.pro_codigo,
                                     p.pro_nombre,
-                                    count(d.pro_id) as cantidad,
-                                    (select count(*) from gex.ddespacho d2 where d2.numero = c.numero) as cantidadTotal,
+                                    cast(sum((case d.tipo when 'N' then 1 else 0.5 end)) as integer) as cantidad,
+                                    (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 where d2.numero = c.numero) as cantidadTotal,
                                     (case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end) as estado,
                                     min(d.linea) as linea
                             from gex.cdespacho c join bodega b on c.bod_id = b.bod_id
@@ -329,9 +338,9 @@ class DespachoController extends Controller
 
         foreach ($data as $i) {
             if ($i->pro_id != null){
-                $i->series = DB::select("select d.serie
-                                    from gex.ddespacho d
-                                    where d.numero = " . $i->numero . " and d.pro_id = " . $i->pro_id);
+                $i->series = DB::select("select d.serie, (case d.tipo when 'C' then 'COMPRESOR' when 'E' then 'EVAPORADOR' end) as tipo
+                                        from gex.ddespacho d
+                                        where d.numero = " . $i->numero . " and d.pro_id = " . $i->pro_id);
             }
         }
 
@@ -372,11 +381,13 @@ class DespachoController extends Controller
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ]);
                     } else {
                         DB::table('gex.stock_serie')->updateOrInsert(
@@ -384,11 +395,13 @@ class DespachoController extends Controller
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bodDest,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ]);
                     }
                 }
@@ -419,11 +432,13 @@ class DespachoController extends Controller
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ]);
                     } else {
                         DB::table('gex.stock_serie')->updateOrInsert(
@@ -431,11 +446,13 @@ class DespachoController extends Controller
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bodDest,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ]);
                     }
                 }
