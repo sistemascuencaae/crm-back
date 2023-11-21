@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Validator;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +68,13 @@ class JWTController extends Controller
 
         if (!$token = auth()->attempt($validator->validated())) {
             return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Verifica si el usuario está activo
+        $user = Auth::user();
+        if (!$user || !$user->estado) {
+            // El usuario no está activo
+            return response()->json(['error' => 'Usuario NO activo'], 401);
         }
 
         return $this->respondWithToken($token);
