@@ -17,10 +17,17 @@ use LDAP\Result;
 
 class ClienteEnrolamientoController extends Controller
 {
-    public function listEnrolamientosById($cli_id)
+
+    public function listEnrolamientosById($cli_id, $caso_id)
     {
         try {
-            $respuesta = ClienteEnrolamiento::where('cli_id', $cli_id)->with('caso.estadodos')->orderBy('id', 'ASC')->get();
+            $respuesta = ClienteEnrolamiento::where(function ($query) use ($cli_id, $caso_id) {
+                $query->where('cli_id', $cli_id)
+                    ->orWhere('caso_id', $caso_id);
+            })
+                ->with('caso.estadodos')
+                ->orderBy('id', 'ASC')
+                ->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {
