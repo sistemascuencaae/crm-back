@@ -182,11 +182,12 @@ class PacienteController extends Controller
     public function all(){
         try{
             //$sql =  "select pac.*, ciu.ciu_nombre as ciudad_nombre from hclinico.paciente pac, public.ciudad ciu where pac.ciudad_id = ciu.ciu_id order by pac.pac_primer_apellido";
-            $sql = "SELECT pac.*,alm.alm_nombre,ciu.ciu_nombre FROM hclinico.paciente pac
-            left join hclinico.formulario_ocupacional fo on pac.pac_id = fo.pac_id
-            left join public.almacen alm on fo.alm_id = alm.alm_id
-            left join public.ciudad ciu on ciu.ciu_id= pac.ciudad_id
-            ORDER BY pac_id ASC";
+            $sql = "SELECT DISTINCT pac.*, alm.alm_nombre, ciu.ciu_nombre
+            FROM hclinico.paciente pac
+            LEFT JOIN hclinico.formulario_ocupacional fo ON pac.pac_id = fo.pac_id
+            LEFT JOIN public.almacen alm ON fo.alm_id = alm.alm_id
+            LEFT JOIN public.ciudad ciu ON ciu.ciu_id = pac.ciudad_id
+            ORDER BY pac.pac_id ASC;";
 
             $data = DB::select($sql);
 
