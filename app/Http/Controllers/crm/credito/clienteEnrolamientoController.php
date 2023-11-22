@@ -52,80 +52,85 @@ class ClienteEnrolamientoController extends Controller
                 $datosEnrolamiento = json_decode($request->input('datosEnrolamiento'), true);
 
                 $caso_id = $request->input('casoId');
-                $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $caso_id)->first();
 
-                if ($clienteEnrolado) {
-                    // Cliente ya existe, actualiza los datos
-                    $clienteEnrolado->fill($datosEnrolamiento);
-                    $clienteEnrolado->save();
+                //START CODIGO EN CASO DE QUERER ACTUALIZAR UN CLIENTE ENROLAMIENTO
 
-                    $imagenes = Galeria::where('caso_id', $caso_id)->where('equifax', true)->get();
-                    Galeria::where('caso_id', $caso_id)->where('equifax', true)->delete();
-                    //echo ('$request->input(reqCasoId): '.json_encode($request->input('reqCasoId')));
-                    $reqCaso = $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolado);
-                    //$reqCaso = RequerimientoCaso::find($request->input('reqCasoId'));
-                    //echo ('$imagenes: '.json_encode($imagenes));
-                    foreach ($imagenes as $img) {
+                // $clienteEnrolado = ClienteEnrolamiento::where('caso_id', $caso_id)->first();
 
-                        $ruta = $img['imagen'];
+                // if ($clienteEnrolado) {
+                //     // Cliente ya existe, actualiza los datos
+                //     $clienteEnrolado->fill($datosEnrolamiento);
+                //     $clienteEnrolado->save();
 
-                        if (Storage::disk('nas')->exists($ruta)) {
-                            Storage::disk('nas')->delete($ruta);
-                            // El archivo se ha eliminado exitosamente
-                        } else {
-                            // El archivo no existe en el sistema de archivos "nas"
-                        }
-                    }
+                //     $imagenes = Galeria::where('caso_id', $caso_id)->where('equifax', true)->get();
+                //     Galeria::where('caso_id', $caso_id)->where('equifax', true)->delete();
+                //     //echo ('$request->input(reqCasoId): '.json_encode($request->input('reqCasoId')));
+                //     $reqCaso = $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolado);
+                //     //$reqCaso = RequerimientoCaso::find($request->input('reqCasoId'));
+                //     //echo ('$imagenes: '.json_encode($imagenes));
+                //     foreach ($imagenes as $img) {
 
-                    // También puedes actualizar las imágenes si es necesario
-                    if ($request->has('datosEnrolamiento') && isset($datosEnrolamiento['Images']) && !empty($datosEnrolamiento['Images'])) {
-                        foreach ($datosEnrolamiento['Images'] as $imagen) {
-                            $titulo = $imagen['ImageTypeName'];
-                            $descripcion = $imagen['ImageTypeName'];
+                //         $ruta = $img['imagen'];
 
-                            $imagenBase64 = $imagen['Image'];
-                            $imagenData = base64_decode($imagenBase64);
+                //         if (Storage::disk('nas')->exists($ruta)) {
+                //             Storage::disk('nas')->delete($ruta);
+                //             // El archivo se ha eliminado exitosamente
+                //         } else {
+                //             // El archivo no existe en el sistema de archivos "nas"
+                //         }
+                //     }
 
-                            if ($imagen['ImageTypeName'] === 'Video de Liveness') {
-                                $nombre = $titulo . '.mp4';
-                            } else {
-                                $nombre = $titulo . '.png';
-                            }
+                //     // También puedes actualizar las imágenes si es necesario
+                //     if ($request->has('datosEnrolamiento') && isset($datosEnrolamiento['Images']) && !empty($datosEnrolamiento['Images'])) {
+                //         foreach ($datosEnrolamiento['Images'] as $imagen) {
+                //             $titulo = $imagen['ImageTypeName'];
+                //             $descripcion = $imagen['ImageTypeName'];
 
-                            $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombre, $imagenData);
-                            file_put_contents($ruta, $imagenData);
+                //             $imagenBase64 = $imagen['Image'];
+                //             $imagenData = base64_decode($imagenBase64);
 
-                            Galeria::create([
-                                'caso_id' => $caso_id,
-                                'titulo' => $titulo,
-                                'descripcion' => $descripcion,
-                                'imagen' => $caso_id . '/galerias/' . $nombre,
-                                'tipo_gal_id' => 1,
-                                'equifax' => true,
-                            ]);
-                        }
-                    }
+                //             if ($imagen['ImageTypeName'] === 'Video de Liveness') {
+                //                 $nombre = $titulo . '.mp4';
+                //             } else {
+                //                 $nombre = $titulo . '.png';
+                //             }
 
+                //             $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombre, $imagenData);
+                //             file_put_contents($ruta, $imagenData);
 
-                    $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolado->id)
-                        ->with([
-                            'imagenes' => function ($query) {
-                                $query->where('equifax', true);
-                            }
-                        ])->first();
-                    $casoController = new CasoController();
-
-                    $data = (object) [
-                        "caso" => $casoController->getCaso($caso_id),
-                        "clienteEnrolamiento" => $clieEnrolado,
-                        "reqCaso" => $reqCaso
-                    ];
+                //             Galeria::create([
+                //                 'caso_id' => $caso_id,
+                //                 'titulo' => $titulo,
+                //                 'descripcion' => $descripcion,
+                //                 'imagen' => $caso_id . '/galerias/' . $nombre,
+                //                 'tipo_gal_id' => 1,
+                //                 'equifax' => true,
+                //             ]);
+                //         }
+                //     }
 
 
+                //     $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolado->id)
+                //         ->with([
+                //             'imagenes' => function ($query) {
+                //                 $query->where('equifax', true);
+                //             }
+                //         ])->first();
+                //     $casoController = new CasoController();
 
-                    //return response()->json(RespuestaApi::returnResultado('success', 'Cliente enrolado actualizado.', $data));
-                    return $data;
-                }
+                //     $data = (object) [
+                //         "caso" => $casoController->getCaso($caso_id),
+                //         "clienteEnrolamiento" => $clieEnrolado,
+                //         "reqCaso" => $reqCaso
+                //     ];
+
+
+
+                //     //return response()->json(RespuestaApi::returnResultado('success', 'Cliente enrolado actualizado.', $data));
+                //     return $data;
+                // }
+
+                //END CODIGO EN CASO DE QUERER ACTUALIZAR UN CLIENTE ENROLAMIENTO
 
                 if (!isset($datosEnrolamiento['Images']) || empty($datosEnrolamiento['Images'])) {
                     $data = (object) [
