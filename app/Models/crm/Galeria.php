@@ -18,7 +18,7 @@ class Galeria extends Model
 
     protected $table = 'crm.galerias';
 
-    protected $fillable = ["titulo", "descripcion", "imagen", "caso_id", "tipo_gal_id", "sc_id", "equifax"];
+    protected $fillable = ["titulo", "descripcion", "imagen", "caso_id", "tipo_gal_id", "sc_id", "equifax", "enrolamiento_id"];
 
     public function setCreatedAtAttribute($value)
     {
