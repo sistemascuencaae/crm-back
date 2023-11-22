@@ -151,33 +151,38 @@ class ClienteEnrolamientoController extends Controller
                     } else {
                         $nombre = $titulo . '.png';
                     }
-
-                    $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $nombre, $imagenData);
+                    $fechaOriginal = $datosEnrolamiento['CreationDate'];
+                    $fechaFormateada = str_replace([':', ' '], ['_', '_'], $fechaOriginal);
+                    $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' .$fechaFormateada.' - '.$nombre, $imagenData);
                     file_put_contents($ruta, $imagenData);
 
                     Galeria::create([
                         'caso_id' => $caso_id,
                         'titulo' => $titulo,
                         'descripcion' => $descripcion,
-                        'imagen' => $caso_id . '/galerias/' . $nombre,
+                        'imagen' => $caso_id . '/galerias/' .$fechaFormateada.' - '.$nombre,
                         'tipo_gal_id' => 1,
                         'equifax' => true,
+                        'enrolamiento_id' => $datosEnrolamiento['Uid']
                     ]);
                 }
 
+                $enrolamientoId = $datosEnrolamiento['Uid'];
                 unset($datosEnrolamiento['Images']);
-
                 $datosEnrolamiento['Extras'] = json_encode($datosEnrolamiento['Extras']);
                 $datosEnrolamiento['SignedDocuments'] = json_encode($datosEnrolamiento['SignedDocuments']);
                 $datosEnrolamiento['Scores'] = json_encode($datosEnrolamiento['Scores']);
                 $datosEnrolamiento['cli_id'] = $cliId;
                 $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
+
                 $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolamiento->id)
                     ->with([
-                        'imagenes' => function ($query) {
-                            $query->where('equifax', true);
+                        'imagenes' => function ($query) use ($enrolamientoId)  {
+                            $query->where('equifax', true)->where('enrolamiento_id', $enrolamientoId);
                         }
                     ])->first();
+
+
                 $casoController = new CasoController();
                 $reqCaso = $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolamiento);
                 //$reqCaso = RequerimientoCaso::find($request->input('reqCasoId'));
@@ -198,11 +203,13 @@ class ClienteEnrolamientoController extends Controller
     public function clienteEnroladoById($id)
     {
         try {
+            $enrolamiento = ClienteEnrolamiento::find($id);
+            $enrolId = $enrolamiento['Uid'];
             $clienteEnrolado = ClienteEnrolamiento::where('id', $id)
                 ->with([
-                    'imagenes' => function ($query) {
-                        $query->where('equifax', true)->where('deleted_at', null);
-                    }
+                'imagenes' => function ($query) use ($enrolId) {
+                    $query->where('equifax', true)->where('enrolamiento_id', $enrolId);
+                }
                 ])->first();
 
             if ($clienteEnrolado) {
