@@ -18,7 +18,8 @@ class ConfigItemsController extends Controller
     
     public function listado()
     {
-        $data = DB::select("select p.pro_id, p.pro_codigo, p.pro_nombre as descripcion, case pc.tipo_servicio when 'G' then 'GEX' when 'S' then 'SEGURO' when 'P' then 'PRODUCTO' when 'A' then 'PRODUCTO A/C' end as tipo
+        $data = DB::select("select p.pro_id, p.pro_codigo, p.pro_nombre as descripcion, case pc.tipo_servicio when 'G' then 'GEX' when 'S' then 'SEGURO' when 'P' then 'PRODUCTO' when 'A' then 'PRODUCTO A/C' end as tipo,
+                                   pc.porc_gex, pc.meses_garantia
                             from producto p join gex.producto_config pc on p.pro_id = pc.pro_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
