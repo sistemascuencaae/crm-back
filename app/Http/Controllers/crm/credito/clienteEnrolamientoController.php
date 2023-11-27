@@ -153,14 +153,14 @@ class ClienteEnrolamientoController extends Controller
                     }
                     $fechaOriginal = $datosEnrolamiento['CreationDate'];
                     $fechaFormateada = str_replace([':', ' '], ['_', '_'], $fechaOriginal);
-                    $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' .$fechaFormateada.' - '.$nombre, $imagenData);
+                    $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
                     file_put_contents($ruta, $imagenData);
 
                     Galeria::create([
                         'caso_id' => $caso_id,
                         'titulo' => $titulo,
                         'descripcion' => $descripcion,
-                        'imagen' => $caso_id . '/galerias/' .$fechaFormateada.' - '.$nombre,
+                        'imagen' => $caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre,
                         'tipo_gal_id' => 1,
                         'equifax' => true,
                         'enrolamiento_id' => $datosEnrolamiento['Uid']
@@ -177,7 +177,7 @@ class ClienteEnrolamientoController extends Controller
 
                 $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolamiento->id)
                     ->with([
-                        'imagenes' => function ($query) use ($enrolamientoId)  {
+                        'imagenes' => function ($query) use ($enrolamientoId) {
                             $query->where('equifax', true)->where('enrolamiento_id', $enrolamientoId);
                         }
                     ])->first();
@@ -207,9 +207,9 @@ class ClienteEnrolamientoController extends Controller
             $enrolId = $enrolamiento['Uid'];
             $clienteEnrolado = ClienteEnrolamiento::where('id', $id)
                 ->with([
-                'imagenes' => function ($query) use ($enrolId) {
-                    $query->where('equifax', true)->where('enrolamiento_id', $enrolId);
-                }
+                    'imagenes' => function ($query) use ($enrolId) {
+                        $query->where('equifax', true)->where('enrolamiento_id', $enrolId);
+                    }
                 ])->first();
 
             if ($clienteEnrolado) {
@@ -225,10 +225,23 @@ class ClienteEnrolamientoController extends Controller
 
     public function actualizarReqCaso($reqCasoId, $casoId, $statusEnrol, $clienteEnrolamiento)
     {
+
+        $casoCedulaCliente = DB::selectOne("SELECT cli.identificacion  from crm.caso ca
+        inner join crm.cliente cli on cli.id = ca.cliente_id where ca.id = ?", [$casoId]);
+        $enrolamientoCedulaCliente = DB::selectOne(
+            'SELECT ce."IdNumber" from crm.cliente_enrolamiento ce
+        left join crm.cliente cli on cli.id = ce.cli_id where ce.caso_id = ? and ce.id = ?',
+            [$casoId,  $clienteEnrolamiento->id]
+        );
+
+
+        //echo ('enrolamientoCedulaCliente: ' . json_encode($enrolamientoCedulaCliente));
+        //echo ('$casoCedulaCliente: ' . json_encode($casoCedulaCliente));
+
         try {
             $reqCaso = RequerimientoCaso::find($reqCasoId);
             if ($reqCaso) {
-                if ($statusEnrol == 'Proceso satisfactorio') {
+                if ($statusEnrol == 'Proceso satisfactorio' && $casoCedulaCliente->identificacion == $enrolamientoCedulaCliente->IdNumber) {
                     $reqCaso->valor_boolean = true;
                 } else {
                     $reqCaso->valor_boolean = false;
