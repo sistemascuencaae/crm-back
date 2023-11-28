@@ -150,7 +150,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
     //---------------------------------------------------------------->PRUEBAS
-    Route::get('/validarClienteSolicitudCredito/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
+    Route::get('/actualizarReqCaso/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
     /************************  FORMULARIOS   *********************** */
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
     Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
@@ -546,6 +546,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/cargaRelaciones', [PreIngresoController::class, 'cargaRelaciones']);
     Route::post('/relacionaPreIngreso', [PreIngresoController::class, 'relacionaPreIngreso']);
     Route::get('/quitaRelacionPI/{numero}/{usuario}', [PreIngresoController::class, 'quitaRelacionPI']);
+    Route::get('/validaSeriePreIngreso/{producto}/{serie}/{tipo}', [PreIngresoController::class, 'validaSerie']);
 
     //Despacho de Series
     Route::get('/listadoDocumentosDes/{bodega}', [DespachoController::class, 'listado']);
