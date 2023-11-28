@@ -16,9 +16,9 @@ class PedidoMovilController extends Controller
         try {
             $data = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
             // echo json_encode($data);
-            $email = "juanjgsj@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
-            $t = new EmailController();
-            $t->send_email($email, $data);
+            // $email = "juanjgsj@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
+            // $t = new EmailController();
+            // $t->send_email($email, $data);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {

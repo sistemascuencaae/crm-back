@@ -40,11 +40,11 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-                [
-                    //'add',
-                    //'addCasoOPMICreativa'
+            [
+                //'add',
+                //'addCasoOPMICreativa'
 
-                ]
+            ]
         ]);
     }
 
@@ -128,7 +128,10 @@ class CasoController extends Controller
     // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
     public function listHistoricoEstadoCaso($caso_id)
     {
-        $data = Audits::where('auditable_id', $caso_id)->orderBy('id', 'ASC')->get();
+        $data = Audits::where('auditable_id', $caso_id)
+            ->whereIn('accion', ['addCaso', 'cambioEstado'])
+            ->orderBy('id', 'ASC')
+            ->get();
 
         // Formatear las fechas
         $data->transform(function ($item) {
@@ -1105,7 +1108,6 @@ class CasoController extends Controller
         $fechaVencimiento = $nuevaHora->toDateTimeString();
         //---
 
-        $a = '';
         $objetoJson = (object) [
             "id" => null,
             "fas_id" => $faseId,
@@ -1140,10 +1142,15 @@ class CasoController extends Controller
         ];
 
         $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
-
-            $email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
-                $t = new EmailController();
-                $t->send_email($email,$dataEmail);
+        $emailCliente = DB::selectOne('select ent_email from entidad where ent_id = ?', [$opm->ent_id]);
+        //$email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
+        if (!$emailCliente) {
+            $t = new EmailController();
+            $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
+        }else{
+            $t = new EmailController();
+            $t->send_email($emailCliente->ent_email, $dataEmail);
+        }
 
         $requestData = json_decode(json_encode($objetoJson), true);
         $request = new Request($requestData);

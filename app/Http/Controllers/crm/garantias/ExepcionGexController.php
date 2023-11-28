@@ -18,7 +18,7 @@ class ExepcionGexController extends Controller
     
     public function listado()
     {
-        $data = DB::select("select eg.exce_id, p.pro_codigo, p.pro_nombre as descripcion, concat(TO_CHAR(eg.fecha_ini::date, 'dd/mm/yyyy'), ' - ', TO_CHAR(eg.fecha_fin::date, 'dd/mm/yyyy')) as periodo
+        $data = DB::select("select eg.exce_id, p.pro_codigo, p.pro_nombre as descripcion, concat(TO_CHAR(eg.fecha_ini::date, 'dd/mm/yyyy'), ' - ', TO_CHAR(eg.fecha_fin::date, 'dd/mm/yyyy')) as periodo, eg.porc_gex as porcentaje
                             from producto p join gex.excepciones_gex eg on p.pro_id = eg.pro_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
