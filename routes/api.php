@@ -149,7 +149,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
     //---------------------------------------------------------------->PRUEBAS
-    Route::get('/validarClienteSolicitudCredito/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
+    Route::get('/actualizarReqCaso/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
     /************************  FORMULARIOS   *********************** */
     Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
     Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
