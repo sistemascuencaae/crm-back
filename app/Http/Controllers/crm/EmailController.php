@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\RespuestaApi;
 use App\Models\mail\CorreoElectronico;
 use App\Models\mail\SendMail;
+use App\Models\mail\sendMailCambioFase;
 use App\Models\mail\sendMailLinkEnrolamiento;
 use Exception;
 use Illuminate\Support\Facades\Mail;
@@ -46,7 +48,7 @@ class EmailController extends Controller
                 'texto' => $request->input('texto'),
             ];
 
-            Mail::to($email)->send(new sendMailLinkEnrolamiento($object));
+            Mail::to($email)->send(new sendMailCambioFase($object));
             return "Correo electrónico enviado correctamente a " . $email;
         } catch (Exception $e) {
             return "Error al enviar el correo: " . $e->getMessage();
@@ -65,7 +67,7 @@ class EmailController extends Controller
 
             // echo $textoReemplazado;
             $object->texto = $textoReemplazado;
-            Mail::to($email)->send(new sendMailLinkEnrolamiento($object));
+            Mail::to($email)->send(new sendMailCambioFase($object));
 
             return "Correo electrónico enviado correctamente a " . $email;
         } catch (Exception $e) {
@@ -86,9 +88,10 @@ class EmailController extends Controller
             ];
 
             Mail::to($object->email)->send(new sendMailLinkEnrolamiento($object));
-            return "Correo electrónico enviado correctamente a " . $object->email;
+
+            return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $object->email, ''));
         } catch (Exception $e) {
-            return "Error al enviar el correo: " . $e->getMessage();
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
