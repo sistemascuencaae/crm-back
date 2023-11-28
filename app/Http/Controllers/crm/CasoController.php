@@ -128,7 +128,10 @@ class CasoController extends Controller
     // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
     public function listHistoricoEstadoCaso($caso_id)
     {
-        $data = Audits::where('auditable_id', $caso_id)->orderBy('id', 'ASC')->get();
+        $data = Audits::where('auditable_id', $caso_id)
+            ->whereIn('accion', ['addCaso', 'cambioEstado'])
+            ->orderBy('id', 'ASC')
+            ->get();
 
         // Formatear las fechas
         $data->transform(function ($item) {
