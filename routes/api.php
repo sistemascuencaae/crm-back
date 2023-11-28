@@ -540,6 +540,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/cargaRelaciones', [PreIngresoController::class, 'cargaRelaciones']);
     Route::post('/relacionaPreIngreso', [PreIngresoController::class, 'relacionaPreIngreso']);
     Route::get('/quitaRelacionPI/{numero}/{usuario}', [PreIngresoController::class, 'quitaRelacionPI']);
+    Route::get('/validaSeriePreIngreso/{producto}/{serie}/{tipo}', [PreIngresoController::class, 'validaSerie']);
 
     //Despacho de Series
     Route::get('/listadoDocumentosDes/{bodega}', [DespachoController::class, 'listado']);

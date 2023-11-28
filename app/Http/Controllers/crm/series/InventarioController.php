@@ -23,7 +23,8 @@ class InventarioController extends Controller
                                     TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
                                     b.bod_nombre as bodega,
                                     (case c.estado when 'A' then 'PENDIENTE' when 'D' then 'DESACTIVO' when 'P' then 'PROCESADO' end) as estado,
-                                    c.responsable
+                                    c.responsable,
+                                    (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.dinventario d2 where d2.numero = c.numero) as inventariado
                             from gex.cinventario c join bodega b on c.bod_id = b.bod_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
