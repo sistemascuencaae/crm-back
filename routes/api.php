@@ -22,6 +22,7 @@ use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
+use App\Http\Controllers\crm\EmailController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
@@ -175,7 +176,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAnalistas/{tableroId}', [UserController::class, 'listAnalistas']);
     Route::get('/listUsuariosActivos', [UserController::class, 'listUsuariosActivos']);
 
-    Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']);//list
+    Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']); //list
 
     /************************  OPENCEO   *********************** */
 
@@ -475,6 +476,11 @@ Route::group(["prefix" => "credito"], function ($router) {
 
     Route::get('/listTipoTelefono', [TipoTelefonoController::class, 'listTipoTelefono']); // listar
 
+    // Email correo electronico
+
+    Route::post('/send_emailCambioFase', [EmailController::class, 'send_emailCambioFase']); // Envia un correo (link enrolamiento)
+    Route::post('/send_emailCambioFaseAutomatico/{email}/{caso_id}/{nombre_fase}', [EmailController::class, 'send_emailCambioFaseAutomatico']); // Envia un correo automaticamente (link enrolamiento)
+    Route::post('/send_emailLinkEnrolamiento', [EmailController::class, 'send_emailLinkEnrolamiento']); // Envia un correo automaticamente (link enrolamiento)
 
 });
 
