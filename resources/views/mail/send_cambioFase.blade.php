@@ -17,16 +17,17 @@
 <body>
     <table style="width: 100%">
         <tr>
-            <td><b>Almespana Cia. Ltda.</b></td>
+            <td>
+                <h3>Almespana Cia. Ltda.</h3>
+            </td>
         </tr>
     </table>
 
-    <h3>{{ $object->cuerpo ?? '' }}</h3>
+    <p>{{ $object->cuerpo ?? '' }}</p>
 
     <h5 class="auto-style1">Atentamente, Almespana Cia. Ltda.</h5>
     <h5 class="auto-style1">Has recibido este correo electrónico de Almespana Cia. Ltda.</h5>
     <h5 class="auto-style1">Por favor, no responda a este mensaje.</h5>
-
 
 </body>
 
