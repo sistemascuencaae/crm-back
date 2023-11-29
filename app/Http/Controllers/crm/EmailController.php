@@ -87,7 +87,7 @@ class EmailController extends Controller
         }
     }
 
-    public function send_emailCambioFaseAutomatico($email, $caso_id, $nombre_fase, $fase_id)
+    public function send_emailCambioFase($email, $caso_id, $nombre_fase, $fase_id, $nombre_cliente)
     {
         try {
             // $email = "juanjgsj@gmail.com";
@@ -98,11 +98,12 @@ class EmailController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
             } else {
 
-                $textoReemplazado = str_replace('<caso_id>', $caso_id, $object->cuerpo);
+                $textoReemplazado = str_replace('<nombre_cliente>', $nombre_cliente, $object->cuerpo);
+                $textoReemplazado = str_replace('<caso_id>', $caso_id, $textoReemplazado);
                 $textoReemplazado = str_replace('<nombre_fase>', $nombre_fase, $textoReemplazado);
 
                 // echo $textoReemplazado;
-                $object->texto = $textoReemplazado;
+                $object->cuerpo = $textoReemplazado;
                 Mail::to($email)->send(new sendMailCambioFase($object));
 
                 return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $email, $object));
@@ -113,27 +114,24 @@ class EmailController extends Controller
     }
 
 
+    // public function send_emailCambioFase1(Request $request)
+    // {
+    //     try {
+    //         // $email = "juanjgsj@gmail.com";
 
+    //         $email = $request->input('email');
+    //         $object = (object) [
+    //             'asunto' => $request->input('asunto'),
+    //             'cuerpo' => $request->input('cuerpo'),
+    //         ];
 
+    //         Mail::to($email)->send(new sendMailCambioFase($object));
 
-    public function send_emailCambioFase(Request $request)
-    {
-        try {
-            // $email = "juanjgsj@gmail.com";
-
-            $email = $request->input('email');
-            $object = (object) [
-                'asunto' => $request->input('asunto'),
-                'cuerpo' => $request->input('cuerpo'),
-            ];
-
-            Mail::to($email)->send(new sendMailCambioFase($object));
-
-            return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $email, ''));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
-    }
+    //         return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $email, ''));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
 
 
 }

@@ -478,8 +478,8 @@ Route::group(["prefix" => "credito"], function ($router) {
 
     // Email correo electronico
 
-    Route::post('/send_emailCambioFase', [EmailController::class, 'send_emailCambioFase']); // Envia un correo (link enrolamiento)
-    Route::post('/send_emailCambioFaseAutomatico/{email}/{caso_id}/{nombre_fase}/{fase_id}', [EmailController::class, 'send_emailCambioFaseAutomatico']); // Envia un correo automaticamente (link enrolamiento)
+    // Route::post('/send_emailCambioFase1', [EmailController::class, 'send_emailCambioFase']); // Envia un correo (link enrolamiento)
+    Route::post('/send_emailCambioFase/{email}/{caso_id}/{nombre_fase}/{fase_id}/{nombre_cliente}', [EmailController::class, 'send_emailCambioFase']); // Envia un correo automaticamente (link enrolamiento)
     Route::post('/send_emailLinkEnrolamiento', [EmailController::class, 'send_emailLinkEnrolamiento']); // Envia un correo automaticamente (link enrolamiento)
 
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // Envia un correo automaticamente (link enrolamiento)
