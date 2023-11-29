@@ -192,14 +192,135 @@ class ClienteEnrolamientoController extends Controller
                     "reqCaso" => $reqCaso
                 ];
 
+                $validEnrolCli = DB::selectOne('SELECT * from crm.temp_enrolamiento_cliente
+                where cli_id = ? and req_caso_id = ? and  caso_id = ?', [$cliId, $request->input('reqCasoId'), $caso_id]);
+                if ($validEnrolCli) {
+                    DB::delete('DELETE FROM crm.temp_enrolamiento_cliente WHERE id = ?', [$validEnrolCli->id]);
+                }
                 return $data;
             });
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $th));
         }
     }
 
+    // public function addClienteEnrolByCliente(Request $request)
+    // {
+    //     try {
+
+
+
+
+    //         if (!$request->has('casoId')) {
+    //             return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
+    //         }
+    //         if (!$request->has('datosEnrolamiento')) {
+    //             return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
+    //         }
+
+    //         $reqCasoId = $request->input('reqCasoId');
+    //         $casoId = $request->input('casoId');
+    //         $cliId = $request->input('cliId');
+    //         if ($reqCasoId && $casoId && $cliId) {
+    //             $validEnrolCli = DB::selectOne('SELECT * from crm.temp_enrolamiento_cliente
+    //             where cli_id = ? and req_caso_id = ? and  caso_id = ?', [$cliId, $reqCasoId, $casoId]);
+    //             if (!$validEnrolCli) {
+    //                 return response()->json(RespuestaApi::returnResultado('error', 'Error', 'Proceso terminado.'));
+    //             }else{
+    //                 $idProcesoEnrolamie = $validEnrolCli->id;
+    //             }
+    //         }else{
+    //             return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El los datos de enrolamiento no son validos.'));
+    //         }
+
+
+
+
+
+    //         $data = DB::transaction(function () use ($request) {
+
+    //             $estatusEnrolamiento = $request->input('statusEnrol');
+    //             $cliId = $request->input('cliId');
+    //             $datosEnrolamiento = json_decode($request->input('datosEnrolamiento'), true);
+
+    //             $caso_id = $request->input('casoId');
+
+    //             //START CODIGO EN CASO DE QUERER ACTUALIZAR UN CLIENTE ENROLAMIENTO
+    //             //END CODIGO EN CASO DE QUERER ACTUALIZAR UN CLIENTE ENROLAMIENTO
+
+    //             if (!isset($datosEnrolamiento['Images']) || empty($datosEnrolamiento['Images'])) {
+    //                 $data = (object) [
+    //                     "error" => 'El objeto datosEnrolamiento no contiene imágenes'
+    //                 ];
+    //                 return $data; //response()->json(RespuestaApi::returnResultado('error', 'El objeto datosEnrolamiento no contiene imágenes', ''));
+    //             }
+
+    //             foreach ($datosEnrolamiento['Images'] as $imagen) {
+    //                 $titulo = $imagen['ImageTypeName'];
+    //                 $descripcion = $imagen['ImageTypeName'];
+
+    //                 $imagenBase64 = $imagen['Image'];
+    //                 $imagenData = base64_decode($imagenBase64);
+
+    //                 if ($imagen['ImageTypeName'] === 'Video de Liveness') {
+    //                     $nombre = $titulo . '.mp4';
+    //                 } else {
+    //                     $nombre = $titulo . '.png';
+    //                 }
+    //                 $fechaOriginal = $datosEnrolamiento['CreationDate'];
+    //                 $fechaFormateada = str_replace([':', ' '], ['_', '_'], $fechaOriginal);
+    //                 $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
+    //                 file_put_contents($ruta, $imagenData);
+
+    //                 Galeria::create([
+    //                     'caso_id' => $caso_id,
+    //                     'titulo' => $titulo,
+    //                     'descripcion' => $descripcion,
+    //                     'imagen' => $caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre,
+    //                     'tipo_gal_id' => 1,
+    //                     'equifax' => true,
+    //                     'enrolamiento_id' => $datosEnrolamiento['Uid']
+    //                 ]);
+    //             }
+
+    //             $enrolamientoId = $datosEnrolamiento['Uid'];
+    //             unset($datosEnrolamiento['Images']);
+    //             $datosEnrolamiento['Extras'] = json_encode($datosEnrolamiento['Extras']);
+    //             $datosEnrolamiento['SignedDocuments'] = json_encode($datosEnrolamiento['SignedDocuments']);
+    //             $datosEnrolamiento['Scores'] = json_encode($datosEnrolamiento['Scores']);
+    //             $datosEnrolamiento['cli_id'] = $cliId;
+    //             $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
+
+    //             $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolamiento->id)
+    //                 ->with([
+    //                     'imagenes' => function ($query) use ($enrolamientoId) {
+    //                         $query->where('equifax', true)->where('enrolamiento_id', $enrolamientoId);
+    //                     }
+    //                 ])->first();
+
+
+    //             $casoController = new CasoController();
+    //             $reqCaso = $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolamiento);
+    //             //$reqCaso = RequerimientoCaso::find($request->input('reqCasoId'));
+    //             $data = (object) [
+    //                 "caso" => $casoController->getCaso($caso_id),
+    //                 "clienteEnrolamiento" => $clieEnrolado,
+    //                 "reqCaso" => $reqCaso
+    //             ];
+
+    //             return $data;
+    //         });
+
+    //         if($idProcesoEnrolamie){
+    //             DB::delete('DELETE FROM crm.temp_enrolamiento_cliente WHERE id = ?', [$idProcesoEnrolamie]);
+    //         }
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $data));
+    //     } catch (\Throwable $th) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $th));
+    //     }
+    // }
     public function clienteEnroladoById($id)
     {
         try {
@@ -256,11 +377,24 @@ class ClienteEnrolamientoController extends Controller
         }
     }
 
-    public function validarReqCasoCliente($casoId, $cliId, $reqCasoId)
+    public function validarReqCasoCliente(Request $request)
     {
         try {
-            $data = DB::select();
-            return response()->json(RespuestaApi::returnResultado('success', $data, ''));
+
+            $reqCasoId = $request->input('reqCasoId');
+            $casoId = $request->input('casoId');
+            $cliId = $request->input('cliId');
+            if ($reqCasoId && $casoId && $cliId) {
+                $validEnrolCli = DB::selectOne('SELECT * from crm.temp_enrolamiento_cliente
+                where cli_id = ? and req_caso_id = ? and  caso_id = ?', [$cliId, $reqCasoId, $casoId]);
+                if (!$validEnrolCli) {
+                    return response()->json(RespuestaApi::returnResultado('error', 'Error', 'Proceso terminado.'));
+                } else {
+                    return response()->json(RespuestaApi::returnResultado('success', 'Proceso incompleto', 'Proceso incompleto.'));
+                }
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El los datos de enrolamiento no son validos.'));
+            }
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
