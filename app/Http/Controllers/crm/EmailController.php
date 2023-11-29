@@ -4,7 +4,7 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\mail\CorreoElectronico;
+use App\Models\mail\Email;
 use App\Models\mail\SendMail;
 use App\Models\mail\sendMailCambioFase;
 use App\Models\mail\sendMailLinkEnrolamiento;
@@ -20,56 +20,13 @@ class EmailController extends Controller
         $this->middleware('auth:api');
     }
 
+    // proforma
     public function send_email($email, $object)
     {
         try {
             // $email = "juanjgsj@gmail.com";
             Mail::to($email)->send(new SendMail($object));
             // return "Correo electrónico enviado correctamente a " . $email;
-        } catch (Exception $e) {
-            return "Error al enviar el correo: " . $e->getMessage();
-        }
-    }
-
-    public function send_emailCambioFase(Request $request)
-    {
-        try {
-            // $email = "juanjgsj@gmail.com";
-
-            $email = $request->input('email');
-            $object = (object) [
-                'asunto' => $request->input('asunto'),
-                // 'tipo' => $request->input('tipo'),
-                'titulo' => $request->input('titulo'),
-                'empresa' => $request->input('empresa'),
-                'atentamente' => $request->input('atentamente'),
-                'motivo' => $request->input('motivo'),
-                'mensaje_final' => $request->input('mensaje_final'),
-                'texto' => $request->input('texto'),
-            ];
-
-            Mail::to($email)->send(new sendMailCambioFase($object));
-            return "Correo electrónico enviado correctamente a " . $email;
-        } catch (Exception $e) {
-            return "Error al enviar el correo: " . $e->getMessage();
-        }
-    }
-
-    public function send_emailCambioFaseAutomatico($email, $caso_id, $nombre_fase)
-    {
-        try {
-            // $email = "juanjgsj@gmail.com";
-
-            $object = CorreoElectronico::where('tipo', 'Enrolamiento')->first();
-
-            $textoReemplazado = str_replace('<caso_id>', $caso_id, $object->texto);
-            $textoReemplazado = str_replace('<nombre_fase>', $nombre_fase, $textoReemplazado);
-
-            // echo $textoReemplazado;
-            $object->texto = $textoReemplazado;
-            Mail::to($email)->send(new sendMailCambioFase($object));
-
-            return "Correo electrónico enviado correctamente a " . $email;
         } catch (Exception $e) {
             return "Error al enviar el correo: " . $e->getMessage();
         }
@@ -94,5 +51,89 @@ class EmailController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function listEmailByFaseId($fase_id)
+    {
+        try {
+            $data = Email::where('fase_id', $fase_id)->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function addEmail(Request $request)
+    {
+        try {
+            $data = Email::create($request->all());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function editEmail(Request $request, $id)
+    {
+        try {
+            $data = Email::findOrFail($id);
+
+            $data->update($request->all());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function send_emailCambioFaseAutomatico($email, $caso_id, $nombre_fase, $fase_id)
+    {
+        try {
+            // $email = "juanjgsj@gmail.com";
+
+            $object = Email::where('fase_id', $fase_id)->first();
+
+            if (!$object) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
+            } else {
+
+                $textoReemplazado = str_replace('<caso_id>', $caso_id, $object->cuerpo);
+                $textoReemplazado = str_replace('<nombre_fase>', $nombre_fase, $textoReemplazado);
+
+                // echo $textoReemplazado;
+                $object->texto = $textoReemplazado;
+                Mail::to($email)->send(new sendMailCambioFase($object));
+
+                return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $email, $object));
+            }
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
+
+
+
+    public function send_emailCambioFase(Request $request)
+    {
+        try {
+            // $email = "juanjgsj@gmail.com";
+
+            $email = $request->input('email');
+            $object = (object) [
+                'asunto' => $request->input('asunto'),
+                'cuerpo' => $request->input('cuerpo'),
+            ];
+
+            Mail::to($email)->send(new sendMailCambioFase($object));
+
+            return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $email, ''));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 
 }
