@@ -109,6 +109,7 @@ class RobotCasoController extends Controller
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
         $casoController = new CasoController();
         $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
+
         /*---------******** ANALISIS DE USUARIOS ********------------- */
         //---Si el nuevo tablero es el tablero de creacio reasigna al creador
         if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
@@ -117,6 +118,7 @@ class RobotCasoController extends Controller
             if ($userTab) {
                 $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
                 $casoEnProceso->save();
+                $casoController->enviarCorreoCliente($casoEnProceso->id);
                 $this->addMiembro($casoEnProceso->user_id, $casoId);
                 return $casoEnProceso;
             }
@@ -127,7 +129,7 @@ class RobotCasoController extends Controller
         $this->addMiembro($userMenorNumCasos->usu_id, $casoId);
         $casoEnProceso->user_id = $userMenorNumCasos->usu_id;
         $casoEnProceso->save();
-
+        $casoController->enviarCorreoCliente($casoEnProceso->id);
         return $casoEnProceso;
 
         // //------------------------------------------------------------
