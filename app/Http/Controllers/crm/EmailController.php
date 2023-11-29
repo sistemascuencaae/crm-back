@@ -98,12 +98,32 @@ class EmailController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
             } else {
 
-                $textoReemplazado = str_replace('<nombre_cliente>', $nombre_cliente, $object->cuerpo);
-                $textoReemplazado = str_replace('<caso_id>', $caso_id, $textoReemplazado);
-                $textoReemplazado = str_replace('<nombre_fase>', $nombre_fase, $textoReemplazado);
+                // Encontrar todas las palabras entre <>
+                preg_match_all('/<([^>]*)>/', $object->cuerpo, $matches);
 
-                // echo $textoReemplazado;
-                $object->cuerpo = $textoReemplazado;
+                // Obtener todas las coincidencias encontradas
+                $palabrasEntreCorchetes = $matches[1];
+
+                // Lista de palabras clave
+                $palabrasClave = ['nombre_cliente', 'caso_id', 'nombre_fase'];
+
+                // Realiza los reemplazos
+                foreach ($palabrasEntreCorchetes as $palabra) {
+                    // Verificar si la palabra clave está presente en la lista de palabras clave
+                    if (in_array($palabra, $palabrasClave)) {
+                        // Realizar el reemplazo con el valor correspondiente
+                        $textoReemplazado = str_replace('<nombre_cliente>', $nombre_cliente, $object->cuerpo);
+                        $textoReemplazado = str_replace('<caso_id>', $caso_id, $textoReemplazado);
+                        $textoReemplazado = str_replace('<nombre_fase>', $nombre_fase, $textoReemplazado);
+
+                        $object->cuerpo = $textoReemplazado;
+
+                    } else {
+                        // Si la palabra clave no está presente, lo reemplazo con un espacio en blanco
+                        $object->cuerpo = str_replace("<$palabra>", ' ', $object->cuerpo);
+                    }
+                }
+
                 Mail::to($email)->send(new sendMailCambioFase($object));
 
                 return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $email, $object));
@@ -112,26 +132,5 @@ class EmailController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-
-    // public function send_emailCambioFase1(Request $request)
-    // {
-    //     try {
-    //         // $email = "juanjgsj@gmail.com";
-
-    //         $email = $request->input('email');
-    //         $object = (object) [
-    //             'asunto' => $request->input('asunto'),
-    //             'cuerpo' => $request->input('cuerpo'),
-    //         ];
-
-    //         Mail::to($email)->send(new sendMailCambioFase($object));
-
-    //         return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $email, ''));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
-
 
 }
