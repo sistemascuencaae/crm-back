@@ -256,6 +256,16 @@ class ClienteEnrolamientoController extends Controller
         }
     }
 
+    public function validarReqCasoCliente($casoId, $cliId, $reqCasoId)
+    {
+        try {
+            $data = DB::select();
+            return response()->json(RespuestaApi::returnResultado('success', $data, ''));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function addArchivosFirmadosEnrolamiento(Request $request)
     {
         try {
