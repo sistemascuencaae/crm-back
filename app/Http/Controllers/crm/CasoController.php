@@ -208,7 +208,7 @@ class CasoController extends Controller
             $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
             $audit->save();
             // END Auditoria
-
+            $this->enviarCorreoCliente($caso->id);
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e));
@@ -506,6 +506,7 @@ class CasoController extends Controller
             }
 
             broadcast(new ReasignarCasoEvent($data));
+            $this->enviarCorreoCliente($caso_id);
             return response()->json(
                 RespuestaApi::returnResultado(
                     'success',
@@ -1155,5 +1156,27 @@ class CasoController extends Controller
         $requestData = json_decode(json_encode($objetoJson), true);
         $request = new Request($requestData);
         return $this->add($request);
+    }
+    public function enviarCorreoCliente($casoId){
+        $sendEmail = DB::selectOne('SELECT
+	        cli.email,
+	        cli.nombre_comercial as nombre_cliente,
+	        fa.nombre as nombre_fase,
+	        fa.id as fase_id,
+	        ca.id as caso_id,
+	        em.auto
+	        from crm.caso ca
+	        inner join crm.fase fa on fa.id = ca.fas_id
+	        inner join crm.cliente cli on cli.id = ca.cliente_id
+	        inner join crm.email em on em.fase_id = fa.id
+	        where ca.id = ?
+        ', [$casoId]);
+
+        if ($sendEmail) {
+            if ($sendEmail->auto) {
+                $emailController = new EmailController();
+                $emailController->send_emailCambioFase($sendEmail->email, $sendEmail->caso_id, $sendEmail->nombre_fase, $sendEmail->fase_id, $sendEmail->nombre_cliente);
+            }
+        };
     }
 }

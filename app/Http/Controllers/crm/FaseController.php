@@ -24,7 +24,7 @@ class FaseController extends Controller
         try {
 
             $data = $this->listarfases($tabId);
-            return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con existo', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Al listar', $th->getMessage()));
         }
@@ -97,7 +97,7 @@ class FaseController extends Controller
             });
 
 
-            return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigiocon exito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error al actualizar fase.', $th->getMessage()));
         }
