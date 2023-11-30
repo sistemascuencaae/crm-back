@@ -109,12 +109,15 @@ class EmailController extends Controller
             $object = Email::where('fase_id', $fase_id)->first();
 
             $fase = Fase::find($fase_id);
-            $result = DB::selectOne("
-            SELECT cli.email, em.emails, em.email_cliente, cli.nombre_comercial
-            FROM crm.caso ca
-            INNER JOIN crm.cliente cli ON cli.id = ca.cliente_id
-            LEFT JOIN crm.email em ON em.fase_id = ca.fas_id
-            WHERE ca.id = :casoId", ['casoId' => $caso_id]);
+            $result = DB::selectOne("SELECT distinct  cli.email, em.emails, em.email_cliente, cli.nombre_comercial from crm.caso ca
+            inner join crm.cliente cli on cli.id = ca.cliente_id
+            inner join crm.requerimientos_caso rc on rc.caso_id = ca.id
+            inner join crm.fase fa on fa.id = rc.fas_id
+            inner join crm.email em on em.fase_id = fa.id
+            where fa.id = :faseId and ca.id = :casoId", [
+                'casoId' => $caso_id,
+                'faseId' => $fase_id
+            ]);
 
             //echo ('count($result)'.json_encode($object));
             //echo ('count($result) !$object: '.json_encode(count($result)));
