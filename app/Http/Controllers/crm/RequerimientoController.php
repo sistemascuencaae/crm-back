@@ -7,6 +7,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Requerimientos;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class RequerimientoController extends Controller
 {
@@ -24,11 +25,22 @@ class RequerimientoController extends Controller
 
     public function addRequerimientos(Request $request)
     {
-        try {
-            $existeReqEquifax = Requerimientos::where('fase_id', $request->input('fase_id'))->where('tipo', 'equifax')->first();
-            if($existeReqEquifax){
-                // Si ya existe un requerimiento con tipo "equifax" en esta fase
-                return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE un registro de EQUIFAX: ' . $existeReqEquifax->nombre, ''));
+        //try {
+
+            $existeReqEquifax = DB::selectOne("SELECT 'equifax' AS campo_a_exist,
+            EXISTS (SELECT 1 FROM crm.requerimientos_predefinidos WHERE fase_id = " . $request->input('fase_id') . " and tipo = 'equifax') AS existe_a,
+            'equifax enrolamiento cliente' AS campo_b_exist,
+            EXISTS (SELECT 1 FROM crm.requerimientos_predefinidos WHERE fase_id = " . $request->input('fase_id') . " and tipo = 'equifax enrolamiento cliente')
+            AS existe_b;");
+            //echo ('$existeReqEquifax: ' . json_encode($existeReqEquifax));
+            //echo ('$request->all(): '.json_encode($request->all()));
+            if ($existeReqEquifax) {
+                if ($existeReqEquifax->existe_a == true && $request->input('tipo') == 'equifax' ) {
+                    return response()->json(RespuestaApi::returnResultado('error', 'Ya existe el requerimiento tipo: '.$request->input('tipo'), ''));
+                }
+                if ($existeReqEquifax->existe_b == true && $request->input('tipo') == 'equifax enrolamiento cliente') {
+                    return response()->json(RespuestaApi::returnResultado('error', 'Ya existe el requerimiento tipo: '.$request->input('tipo'), ''));
+                }
             }
             // Verifica si ya existe un requerimiento con el tipo "perfil de cliente" en la misma fase
             $existingRequerimiento = Requerimientos::where('fase_id', $request->input('fase_id'))
@@ -46,10 +58,9 @@ class RequerimientoController extends Controller
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $resultado));
             }
-
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
+        // } catch (Exception $e) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        // }
     }
 
     // public function addRequerimientos(Request $request)

@@ -11,7 +11,7 @@ use App\Models\mail\sendMailLinkEnrolamiento;
 use Exception;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\DB;
 
 class EmailController extends Controller
 {
@@ -35,9 +35,24 @@ class EmailController extends Controller
     public function send_emailLinkEnrolamiento(Request $request)
     {
         try {
-            // $email = "juanjgsj@gmail.com";
+            $casoId = $request->input('casoId');
+            $cliId = $request->input('cliId');
+            $reqCasoId = $request->input('reqCasoId');
 
-            // $email = $request->input('email');
+            $validEnrolCli = DB::select('SELECT * from crm.temp_enrolamiento_cliente
+             where cli_id = ? and req_caso_id = ? and  caso_id = ?', [$cliId, $reqCasoId, $casoId]);
+
+            if (!$validEnrolCli) {
+                $dataTempEnro = DB::insert(
+                    'INSERT INTO crm.temp_enrolamiento_cliente
+                (cli_id, req_caso_id, caso_id)
+                VALUES(?, ?, ?);',
+                    [$cliId, $reqCasoId, $casoId]
+                );
+            }
+
+
+
             $object = (object) [
                 'email' => $request->input('email'),
                 'asunto' => $request->input('asunto'),
