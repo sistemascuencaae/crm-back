@@ -102,14 +102,18 @@ class EmailController extends Controller
         }
     }
 
-    public function send_emailCambioFase($email, $caso_id, $nombre_fase, $fase_id, $nombre_cliente)
+    public function send_emailCambioFase($caso_id, $nombre_fase, $fase_id, $nombre_cliente)
     {
         try {
             // $email = "juanjgsj@gmail.com";
-
             $object = Email::where('fase_id', $fase_id)->first();
-
-            if (!$object) {
+            $result = DB::select("
+            SELECT cli.email, em.emails, em.email_cliente
+            FROM crm.caso ca
+            INNER JOIN crm.cliente cli ON cli.id = ca.cliente_id
+            LEFT JOIN crm.email em ON em.fase_id = ca.fas_id
+            WHERE ca.id = :casoId", ['casoId' => $caso_id]);
+            if (count($result) == 0) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
             } else {
 
@@ -132,20 +136,31 @@ class EmailController extends Controller
                         $textoReemplazado = str_replace('<nombre_fase>', $nombre_fase, $textoReemplazado);
 
                         $object->cuerpo = $textoReemplazado;
-
                     } else {
                         // Si la palabra clave no está presente, lo reemplazo con un espacio en blanco
                         $object->cuerpo = str_replace("<$palabra>", ' ', $object->cuerpo);
                     }
                 }
+                $row = $result[0];
+                // Obtener los correos separados por comas
+                $emailsArray = explode(',', $row->emails);
+                // Limpiar espacios en blanco alrededor de los correos
+                $emailsArray = array_map('trim', $emailsArray);
+                // Añadir el correo adicional si el campo es true
+                if ($row->email_cliente === true) {
+                    $emailsArray[] = $row->email;
+                }
+                // Puedes devolver el array de correos aquí o hacer cualquier otra cosa con él
+                if(count($emailsArray) > 0){
+                    Mail::to($emailsArray)->send(new sendMailCambioFase($object));
+                }else{
+                    return response()->json(RespuestaApi::returnResultado('error', 'No existen correos para enviar.', ''));
+                }
 
-                Mail::to($email)->send(new sendMailCambioFase($object));
-
-                return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $email, $object));
+                return response()->json(RespuestaApi::returnResultado('success', "Correos enviados correctamente", $object));
             }
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 }
