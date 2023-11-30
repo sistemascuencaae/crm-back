@@ -4,6 +4,7 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Fase;
 use App\Models\mail\Email;
 use App\Models\mail\SendMail;
 use App\Models\mail\sendMailCambioFase;
@@ -102,18 +103,23 @@ class EmailController extends Controller
         }
     }
 
-    public function send_emailCambioFase($caso_id, $nombre_fase, $fase_id, $nombre_cliente)
+    public function send_emailCambioFase($caso_id, $fase_id)
     {
         try {
-            // $email = "juanjgsj@gmail.com";
             $object = Email::where('fase_id', $fase_id)->first();
-            $result = DB::select("
-            SELECT cli.email, em.emails, em.email_cliente
+
+            $fase = Fase::find($fase_id);
+            $result = DB::selectOne("
+            SELECT cli.email, em.emails, em.email_cliente, cli.nombre_comercial
             FROM crm.caso ca
             INNER JOIN crm.cliente cli ON cli.id = ca.cliente_id
             LEFT JOIN crm.email em ON em.fase_id = ca.fas_id
             WHERE ca.id = :casoId", ['casoId' => $caso_id]);
-            if (count($result) == 0) {
+
+            //echo ('count($result)'.json_encode($object));
+            //echo ('count($result) !$object: '.json_encode(count($result)));
+
+            if (!$result || !$object) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
             } else {
 
@@ -131,9 +137,9 @@ class EmailController extends Controller
                     // Verificar si la palabra clave está presente en la lista de palabras clave
                     if (in_array($palabra, $palabrasClave)) {
                         // Realizar el reemplazo con el valor correspondiente
-                        $textoReemplazado = str_replace('<nombre_cliente>', $nombre_cliente, $object->cuerpo);
+                        $textoReemplazado = str_replace('<nombre_cliente>', $result->nombre_comercial, $object->cuerpo);
                         $textoReemplazado = str_replace('<caso_id>', $caso_id, $textoReemplazado);
-                        $textoReemplazado = str_replace('<nombre_fase>', $nombre_fase, $textoReemplazado);
+                        $textoReemplazado = str_replace('<nombre_fase>', $fase->nombre, $textoReemplazado);
 
                         $object->cuerpo = $textoReemplazado;
                     } else {
@@ -141,7 +147,7 @@ class EmailController extends Controller
                         $object->cuerpo = str_replace("<$palabra>", ' ', $object->cuerpo);
                     }
                 }
-                $row = $result[0];
+                $row = $result;
                 // Obtener los correos separados por comas
                 $emailsArray = explode(',', $row->emails);
                 // Limpiar espacios en blanco alrededor de los correos
