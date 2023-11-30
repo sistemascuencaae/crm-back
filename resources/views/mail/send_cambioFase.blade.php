@@ -25,9 +25,9 @@
 
     <p>{{ $object->cuerpo ?? '' }}</p>
 
-    <h5 class="auto-style1">Atentamente, Almespana Cia. Ltda.</h5>
-    <h5 class="auto-style1">Has recibido este correo electrónico de Almespana Cia. Ltda.</h5>
-    <h5 class="auto-style1">Por favor, no responda a este mensaje.</h5>
+    <h5 class="auto-style1">{{ $object->firma ?? '' }}</h5>
+    <h5 class="auto-style1">{{ $object->cuerpo2 ?? '' }}</h5>
+    <h5 class="auto-style1">{{ $object->cuerpo3 ?? '' }}</h5>
 
 </body>
 
