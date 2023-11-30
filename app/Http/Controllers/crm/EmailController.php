@@ -4,6 +4,7 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Fase;
 use App\Models\mail\Email;
 use App\Models\mail\SendMail;
 use App\Models\mail\sendMailCambioFase;
@@ -102,14 +103,26 @@ class EmailController extends Controller
         }
     }
 
-    public function send_emailCambioFase($email, $caso_id, $nombre_fase, $fase_id, $nombre_cliente)
+    public function send_emailCambioFase($caso_id, $fase_id)
     {
         try {
-            // $email = "juanjgsj@gmail.com";
-
             $object = Email::where('fase_id', $fase_id)->first();
 
-            if (!$object) {
+            $fase = Fase::find($fase_id);
+            $result = DB::selectOne("SELECT distinct  cli.email, em.emails, em.email_cliente, cli.nombre_comercial from crm.caso ca
+            inner join crm.cliente cli on cli.id = ca.cliente_id
+            inner join crm.requerimientos_caso rc on rc.caso_id = ca.id
+            inner join crm.fase fa on fa.id = rc.fas_id
+            inner join crm.email em on em.fase_id = fa.id
+            where fa.id = :faseId and ca.id = :casoId", [
+                'casoId' => $caso_id,
+                'faseId' => $fase_id
+            ]);
+
+            //echo ('count($result)'.json_encode($object));
+            //echo ('count($result) !$object: '.json_encode(count($result)));
+
+            if (!$result || !$object) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
             } else {
 
@@ -127,25 +140,36 @@ class EmailController extends Controller
                     // Verificar si la palabra clave está presente en la lista de palabras clave
                     if (in_array($palabra, $palabrasClave)) {
                         // Realizar el reemplazo con el valor correspondiente
-                        $textoReemplazado = str_replace('<nombre_cliente>', $nombre_cliente, $object->cuerpo);
+                        $textoReemplazado = str_replace('<nombre_cliente>', $result->nombre_comercial, $object->cuerpo);
                         $textoReemplazado = str_replace('<caso_id>', $caso_id, $textoReemplazado);
-                        $textoReemplazado = str_replace('<nombre_fase>', $nombre_fase, $textoReemplazado);
+                        $textoReemplazado = str_replace('<nombre_fase>', $fase->nombre, $textoReemplazado);
 
                         $object->cuerpo = $textoReemplazado;
-
                     } else {
                         // Si la palabra clave no está presente, lo reemplazo con un espacio en blanco
                         $object->cuerpo = str_replace("<$palabra>", ' ', $object->cuerpo);
                     }
                 }
+                $row = $result;
+                // Obtener los correos separados por comas
+                $emailsArray = explode(',', $row->emails);
+                // Limpiar espacios en blanco alrededor de los correos
+                $emailsArray = array_map('trim', $emailsArray);
+                // Añadir el correo adicional si el campo es true
+                if ($row->email_cliente === true) {
+                    $emailsArray[] = $row->email;
+                }
+                // Puedes devolver el array de correos aquí o hacer cualquier otra cosa con él
+                if(count($emailsArray) > 0){
+                    Mail::to($emailsArray)->send(new sendMailCambioFase($object));
+                }else{
+                    return response()->json(RespuestaApi::returnResultado('error', 'No existen correos para enviar.', ''));
+                }
 
-                Mail::to($email)->send(new sendMailCambioFase($object));
-
-                return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $email, $object));
+                return response()->json(RespuestaApi::returnResultado('success', "Correos enviados correctamente", $object));
             }
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 }

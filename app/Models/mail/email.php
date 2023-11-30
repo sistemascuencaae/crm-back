@@ -14,6 +14,8 @@ class Email extends Model
         'cuerpo',
         'fase_id',
         'auto',
+        'email_cliente',
+        'emails',
     ];
 
     public function setCreatedAtAttribute($value)
