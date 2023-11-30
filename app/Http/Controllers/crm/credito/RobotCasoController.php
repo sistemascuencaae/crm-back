@@ -5,6 +5,7 @@ namespace App\Http\Controllers\crm\credito;
 use App\Events\ReasignarCasoEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Controllers\crm\EmailController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
@@ -44,6 +45,7 @@ class RobotCasoController extends Controller
 
     private function validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId, Request $request)
     {
+        $emailController = new EmailController();
         $formula = EstadosFormulas::find($estadoFormId);
         //---validacion formual
         if (!$formula) {
@@ -118,7 +120,9 @@ class RobotCasoController extends Controller
             if ($userTab) {
                 $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
                 $casoEnProceso->save();
-                $casoController->enviarCorreoCliente($casoEnProceso->id);
+
+                $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+                //$casoController->enviarCorreoCliente($casoEnProceso->id);
                 $this->addMiembro($casoEnProceso->user_id, $casoId);
                 return $casoEnProceso;
             }
@@ -129,7 +133,7 @@ class RobotCasoController extends Controller
         $this->addMiembro($userMenorNumCasos->usu_id, $casoId);
         $casoEnProceso->user_id = $userMenorNumCasos->usu_id;
         $casoEnProceso->save();
-        $casoController->enviarCorreoCliente($casoEnProceso->id);
+        $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
         return $casoEnProceso;
 
         // //------------------------------------------------------------
