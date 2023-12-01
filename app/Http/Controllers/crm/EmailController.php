@@ -105,71 +105,90 @@ class EmailController extends Controller
 
     public function send_emailCambioFase($caso_id, $fase_id)
     {
-        try {
-            $object = Email::where('fase_id', $fase_id)->first();
 
-            $fase = Fase::find($fase_id);
-            $result = DB::selectOne("SELECT distinct  cli.email, em.emails, em.email_cliente, cli.nombre_comercial from crm.caso ca
+        //try {
+        $object = Email::where('fase_id', $fase_id)->first();
+
+        $fase = Fase::find($fase_id);
+        $result = DB::selectOne("SELECT distinct  cli.email, em.emails, em.email_cliente, em.auto, cli.nombre_comercial from crm.caso ca
             inner join crm.cliente cli on cli.id = ca.cliente_id
             inner join crm.requerimientos_caso rc on rc.caso_id = ca.id
             inner join crm.fase fa on fa.id = rc.fas_id
             inner join crm.email em on em.fase_id = fa.id
             where fa.id = :faseId and ca.id = :casoId", [
-                'casoId' => $caso_id,
-                'faseId' => $fase_id
-            ]);
+            'casoId' => $caso_id,
+            'faseId' => $fase_id
+        ]);
 
-            //echo ('count($result)'.json_encode($object));
-            //echo ('count($result) !$object: '.json_encode(count($result)));
+        if ($result == null) {
+            $emailsSendCli = DB::selectOne("SELECT  em.emails, em.email_cliente, em.auto from crm.fase fa
+                inner join crm.email em on em.fase_id = fa.id
+                where fa.id = :faseId", ['faseId' => $fase_id]);
+            $datosCliente = DB::selectOne("SELECT cli.email, cli.nombre_comercial from crm.caso ca
+                inner join crm.cliente cli on cli.id = ca.cliente_id
+                where ca.id = :casoId", ['casoId' => $caso_id]);
 
-            if (!$result || !$object) {
-                return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
-            } else {
-
-                // Encontrar todas las palabras entre <>
-                preg_match_all('/<([^>]*)>/', $object->cuerpo, $matches);
-
-                // Obtener todas las coincidencias encontradas
-                $palabrasEntreCorchetes = $matches[1];
-
-                // Lista de palabras clave
-                $palabrasClave = ['nombre_cliente', 'caso_id', 'nombre_fase'];
-
-                // Realiza los reemplazos
-                foreach ($palabrasEntreCorchetes as $palabra) {
-                    // Verificar si la palabra clave está presente en la lista de palabras clave
-                    if (in_array($palabra, $palabrasClave)) {
-                        // Realizar el reemplazo con el valor correspondiente
-                        $textoReemplazado = str_replace('<nombre_cliente>', $result->nombre_comercial, $object->cuerpo);
-                        $textoReemplazado = str_replace('<caso_id>', $caso_id, $textoReemplazado);
-                        $textoReemplazado = str_replace('<nombre_fase>', $fase->nombre, $textoReemplazado);
-
-                        $object->cuerpo = $textoReemplazado;
-                    } else {
-                        // Si la palabra clave no está presente, lo reemplazo con un espacio en blanco
-                        $object->cuerpo = str_replace("<$palabra>", ' ', $object->cuerpo);
-                    }
-                }
-                $row = $result;
-                // Obtener los correos separados por comas
-                $emailsArray = explode(',', $row->emails);
-                // Limpiar espacios en blanco alrededor de los correos
-                $emailsArray = array_map('trim', $emailsArray);
-                // Añadir el correo adicional si el campo es true
-                if ($row->email_cliente === true) {
-                    $emailsArray[] = $row->email;
-                }
-                // Puedes devolver el array de correos aquí o hacer cualquier otra cosa con él
-                if(count($emailsArray) > 0){
-                    Mail::to($emailsArray)->send(new sendMailCambioFase($object));
-                }else{
-                    return response()->json(RespuestaApi::returnResultado('error', 'No existen correos para enviar.', ''));
-                }
-
-                return response()->json(RespuestaApi::returnResultado('success', "Correos enviados correctamente", $object));
-            }
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            $result = (object) [
+                "email" => $datosCliente->email,
+                "emails" => $emailsSendCli->auto == true ? $emailsSendCli->emails : "",
+                "email_cliente" => $emailsSendCli->email_cliente,
+                "nombre_comercial" => $datosCliente->nombre_comercial,
+                "auto" => $emailsSendCli->auto
+            ];
         }
+        if (!$result || !$object) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
+        } else {
+
+            // Encontrar todas las palabras entre <>
+            preg_match_all('/<([^>]*)>/', $object->cuerpo, $matches);
+
+            // Obtener todas las coincidencias encontradas
+            $palabrasEntreCorchetes = $matches[1];
+
+            // Lista de palabras clave
+            $palabrasClave = ['nombre_cliente', 'caso_id', 'nombre_fase'];
+
+            // Realiza los reemplazos
+            foreach ($palabrasEntreCorchetes as $palabra) {
+                // Verificar si la palabra clave está presente en la lista de palabras clave
+                if (in_array($palabra, $palabrasClave)) {
+                    // Realizar el reemplazo con el valor correspondiente
+                    $textoReemplazado = str_replace('<nombre_cliente>', $result->nombre_comercial, $object->cuerpo);
+                    $textoReemplazado = str_replace('<caso_id>', $caso_id, $textoReemplazado);
+                    $textoReemplazado = str_replace('<nombre_fase>', $fase->nombre, $textoReemplazado);
+
+                    $object->cuerpo = $textoReemplazado;
+                } else {
+                    // Si la palabra clave no está presente, lo reemplazo con un espacio en blanco
+                    $object->cuerpo = str_replace("<$palabra>", ' ', $object->cuerpo);
+                }
+            }
+            $row = $result;
+            // Obtener los correos separados por comas
+            if ($row->auto == true) {
+                $emailsArray = explode(',', $row->emails);
+            } else {
+                $emailsArray = [];
+            }
+
+            // Limpiar espacios en blanco alrededor de los correos
+            $emailsArray = array_map('trim', $emailsArray);
+            // Añadir el correo adicional si el campo es true
+            if ($row->email_cliente === true) {
+                $emailsArray[] = $row->email;
+            }
+            // Puedes devolver el array de correos aquí o hacer cualquier otra cosa con él
+            if (count($emailsArray) > 0) {
+                Mail::to($emailsArray)->send(new sendMailCambioFase($object));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'No existen correos para enviar.', ''));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', "Correos enviados correctamente", $object));
+        }
+        // } catch (Exception $e) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        // }
     }
 }
