@@ -139,7 +139,6 @@ class EmailController extends Controller
         if (!$result || !$object) {
             return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
         } else {
-
             // Encontrar todas las palabras entre <>
             preg_match_all('/<([^>]*)>/', $object->cuerpo, $matches);
 
@@ -148,6 +147,9 @@ class EmailController extends Controller
 
             // Lista de palabras clave
             $palabrasClave = ['nombre_cliente', 'caso_id', 'nombre_fase'];
+
+            // Copia la cadena original
+            $textoReemplazado = $object->cuerpo;
 
             // Realiza los reemplazos
             foreach ($palabrasEntreCorchetes as $palabra) {
@@ -158,12 +160,16 @@ class EmailController extends Controller
                     $textoReemplazado = str_replace('<caso_id>', $caso_id, $textoReemplazado);
                     $textoReemplazado = str_replace('<nombre_fase>', $fase->nombre, $textoReemplazado);
 
+                    // $object->cuerpo = $textoReemplazado;
                     $object->cuerpo = $textoReemplazado;
                 } else {
                     // Si la palabra clave no está presente, lo reemplazo con un espacio en blanco
                     $object->cuerpo = str_replace("<$palabra>", ' ', $object->cuerpo);
                 }
             }
+            
+            $object->cuerpo = $textoReemplazado;
+
             $row = $result;
             // Obtener los correos separados por comas
             if ($row->auto == true) {
