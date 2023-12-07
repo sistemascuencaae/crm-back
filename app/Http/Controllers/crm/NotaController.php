@@ -41,7 +41,8 @@ class NotaController extends Controller
             $audit->save();
             // END Auditoria
 
-            $data = DB::select('select * from crm.nota where caso_id =' . $request->caso_id);
+            // $data = DB::select('select * from crm.nota where caso_id =' . $request->caso_id);
+            $data = Nota::where('caso_id', $request->caso_id)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
