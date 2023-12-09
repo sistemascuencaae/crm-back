@@ -15,9 +15,11 @@ class ControlTiemposCaso extends Model
         "caso_id",
         "est_caso_id",
         "tiempo_cambio",
+        "fase",
         "fase_id",
         "tipo",
         "user_id",
+        "usuario",
     ];
 
     public function setCreatedAtAttribute($value)
