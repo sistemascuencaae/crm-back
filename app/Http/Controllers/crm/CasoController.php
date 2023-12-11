@@ -118,6 +118,7 @@ class CasoController extends Controller
             $audit->save();
             // END Auditoria
 
+            // le mando uno porque es la primera vez q se crea el caso
             $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
             $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
 
