@@ -118,20 +118,8 @@ class CasoController extends Controller
             $audit->save();
             // END Auditoria
 
-            // start diferencia de tiempos en horas minutos y segundos
-            $tipo = 1;
-            ControlTiemposCaso::create([
-                "caso_id" => $casoCreado->id,
-                "est_caso_id" => $casoCreado->estado_2,
-                // "tiempo_cambio" => null,
-                "tiempo_cambio" => '00:00:00',
-                "fase" => $casoCreado->fase->nombre,
-                "fase_id" => $casoCreado->fas_id,
-                "tipo" => $tipo,
-                "user_id" => $casoCreado->user_id,
-                "usuario" => $casoCreado->user->name,
-            ]);
-            // end diferencia de tiempos en horas minutos y segundos
+            $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+            $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito.', $casoCreado));
         } catch (\Throwable $th) {
@@ -1015,6 +1003,8 @@ class CasoController extends Controller
                         "usuario" => $userNuevo->name,
                     ]);
 
+                    $this->editCalcularTiemposCaso($nuevoRegistro->caso_id);  // calculamos los tiempos de caso pero como las dos horas del sistema y del nuevo caso son la misma por eso me da 00:00:00
+
                     // Convierte las fechas a objetos Carbon para manejar la zona horaria
                     $created_at_actual = Carbon::parse($nuevoRegistro->created_at);
                     $created_at_anterior = Carbon::parse($registroAnterior->created_at);
@@ -1035,6 +1025,23 @@ class CasoController extends Controller
                     $registroAnterior->update([
                         "tiempo_cambio" => $tiempoCambio,
                     ]);
+
+                } else {
+
+                    // start diferencia de tiempos en horas minutos y segundos
+                    $casoNuevo = ControlTiemposCaso::create([
+                        "caso_id" => $caso->id,
+                        "est_caso_id" => $caso->estado_2,
+                        "tiempo_cambio" => '00:00:00',
+                        "fase" => $caso->fase->nombre,
+                        "fase_id" => $caso->fas_id,
+                        "tipo" => $tipo,
+                        "user_id" => $caso->user_id,
+                        "usuario" => $caso->user->name,
+                    ]);
+                    // end diferencia de tiempos en horas minutos y segundos
+
+                    $this->editCalcularTiemposCaso($casoNuevo->caso_id); // calculamos los tiempos de caso pero como las dos horas del sistema y del nuevo caso son la misma por eso me da 00:00:00
 
                 }
 
