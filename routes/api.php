@@ -433,6 +433,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
     Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
 
+    // CONTROL TIEMPOS CASO
+
+    Route::post('/editCalcularTiemposCaso/{caso_id}', [CasoController::class, 'editCalcularTiemposCaso']); // Editar
+
 });
 
 Route::group([], function ($router) {
