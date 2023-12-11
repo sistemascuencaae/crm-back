@@ -988,20 +988,22 @@ class CasoController extends Controller
 
                 if ($registroAnterior) {
 
-                    $faseNueva = Fase::where('id', $fase_id)->first();
+                    $faseNueva = Fase::where('id', $fase_id)->with('tablero')->first();
                     $userNuevo = User::where('id', $user_id)->first();
 
                     // Crear un nuevo registro en ControlTiemposCaso
                     $nuevoRegistro = ControlTiemposCaso::create([
                         "caso_id" => $caso_id,
                         "est_caso_id" => $estado_2,
-                        // "tiempo_cambio" => null,
+                        "estado_caso" => $caso->estadodos->nombre,
                         "tiempo_cambio" => '00:00:00',
                         "fase" => $faseNueva->nombre,
                         "fase_id" => $fase_id,
                         "tipo" => $tipo,
                         "user_id" => $user_id,
                         "usuario" => $userNuevo->name,
+                        "tab_id" => $faseNueva->tablero->id,
+                        "tablero" => $faseNueva->tablero->nombre,
                     ]);
 
                     $this->editCalcularTiemposCaso($nuevoRegistro->caso_id);  // calculamos los tiempos de caso pero como las dos horas del sistema y del nuevo caso son la misma por eso me da 00:00:00
@@ -1033,12 +1035,15 @@ class CasoController extends Controller
                     $casoNuevo = ControlTiemposCaso::create([
                         "caso_id" => $caso->id,
                         "est_caso_id" => $caso->estado_2,
+                        "estado_caso" => $caso->estadodos->nombre,
                         "tiempo_cambio" => '00:00:00',
                         "fase" => $caso->fase->nombre,
                         "fase_id" => $caso->fas_id,
                         "tipo" => $tipo,
                         "user_id" => $caso->user_id,
                         "usuario" => $caso->user->name,
+                        "tab_id" => $caso->tablero->id,
+                        "tablero" => $caso->tablero->nombre,
                     ]);
                     // end diferencia de tiempos en horas minutos y segundos
 
