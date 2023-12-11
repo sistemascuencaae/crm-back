@@ -63,6 +63,7 @@ use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\series\DespachoController;
 use App\Http\Controllers\crm\series\InventarioController;
 use App\Http\Controllers\crm\TableroProcesosController;
+use App\Http\Controllers\formulario\FormController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -204,6 +205,10 @@ Route::group([], function ($router) {
     Route::post('/token', [EquifaxController::class, 'loginEquifax']);
 });
 
+Route::group(["prefix" => "formulario"], function ($router) {
+    Route::get('/list', [FormController::class, 'list']); //
+    Route::get('/listByDepar/{id}', [FormController::class, 'listByDepar']);//byDepartamento
+});
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
