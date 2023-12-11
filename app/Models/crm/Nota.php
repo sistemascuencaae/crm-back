@@ -14,7 +14,7 @@ class Nota extends Model
 
     use HasFactory;
 
-    use SoftDeletes;
+    // use SoftDeletes;
 
     protected $table = 'crm.nota';
     protected $fillable = ["nombre", "texto", "caso_id"];
@@ -29,9 +29,9 @@ class Nota extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-    public function setDeletedAtAttribute($value)
-    {
-        date_default_timezone_set("America/Guayaquil");
-        $this->attributes["deleted_at"] = Carbon::now();
-    }
+    // public function setDeletedAtAttribute($value)
+    // {
+    //     date_default_timezone_set("America/Guayaquil");
+    //     $this->attributes["deleted_at"] = Carbon::now();
+    // }
 }

@@ -23,7 +23,7 @@
         </tr>
     </table>
 
-    <p>{{ $object->cuerpo ?? '' }}</p>
+    {!! $object->cuerpo ?? '' !!}
 
     <h5 class="auto-style1">{{ $object->firma ?? '' }}</h5>
     <h5 class="auto-style1">{{ $object->cuerpo2 ?? '' }}</h5>
