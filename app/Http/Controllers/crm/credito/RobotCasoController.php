@@ -95,19 +95,6 @@ class RobotCasoController extends Controller
         $audit->save();
         // END Auditoria
 
-        // start diferencia de tiempos en horas minutos y segundos
-        $CasoController = new CasoController();
-        $tipo = 2;
-        $CasoController->calcularTiemposCaso(
-            $casoEnProceso,
-            $casoEnProceso->id,
-            $casoEnProceso->estado_2,
-            $casoEnProceso->fas_id,
-            $tipo,
-            $casoEnProceso->user_id
-        );
-        // end diferencia de tiempos en horas minutos y segundos
-
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
         $casoController = new CasoController();
         $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
@@ -124,6 +111,20 @@ class RobotCasoController extends Controller
                 $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
                 //$casoController->enviarCorreoCliente($casoEnProceso->id);
                 $this->addMiembro($casoEnProceso->user_id, $casoId);
+
+                // start diferencia de tiempos en horas minutos y segundos
+                $CasoController = new CasoController();
+                $tipo = 2;
+                $CasoController->calcularTiemposCaso(
+                    $casoEnProceso,
+                    $casoEnProceso->id,
+                    $casoEnProceso->estado_2,
+                    $casoEnProceso->fas_id,
+                    $tipo,
+                    $casoEnProceso->user_id
+                );
+                // end diferencia de tiempos en horas minutos y segundos
+
                 return $casoEnProceso;
             }
         }
@@ -133,6 +134,20 @@ class RobotCasoController extends Controller
         $this->addMiembro($userMenorNumCasos->usu_id, $casoId);
         $casoEnProceso->user_id = $userMenorNumCasos->usu_id;
         $casoEnProceso->save();
+
+        // start diferencia de tiempos en horas minutos y segundos
+        $CasoController = new CasoController();
+        $tipo = 2;
+        $CasoController->calcularTiemposCaso(
+            $casoEnProceso,
+            $casoEnProceso->id,
+            $casoEnProceso->estado_2,
+            $casoEnProceso->fas_id,
+            $tipo,
+            $casoEnProceso->user_id
+        );
+        // end diferencia de tiempos en horas minutos y segundos
+
         $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
         return $casoEnProceso;
 
