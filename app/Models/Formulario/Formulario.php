@@ -18,7 +18,7 @@ class Formulario extends Model
         'estado',
         'dep_id'
     ];
-    protected $hidden = ['created_at', 'updated_at', 'deleted_at'];
+    protected $hidden = ['created_at', 'deleted_at'];
     public function campo()
     {
         return $this->hasMany(FormCampo::class,"form_id");

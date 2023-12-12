@@ -14,7 +14,6 @@ class FormCampoValor extends Model
     protected $table = 'crm.form_campo_valor';
     protected $dates = ['deleted_at'];
     protected $fillable = [
-        'user_id',
         'campo_id',
         'valor_id',
         'fcl_id',

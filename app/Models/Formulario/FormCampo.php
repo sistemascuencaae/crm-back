@@ -19,7 +19,9 @@ class FormCampo extends Model
         'requerido',
         'marcado',
         'form_id',
-        'tipo_campo_id'
+        'tipo_campo_id',
+        'form_control_name',
+        'fcl_id'
     ];
     protected $hidden = ['created_at', 'updated_at', 'deleted_at'];
     public function valor()
@@ -29,5 +31,13 @@ class FormCampo extends Model
     public function tipo()
     {
         return $this->belongsTo(FormTipoCampo::class,'tipo_campo_id');
+    }
+    public function likert()
+    {
+        return $this->belongsToMany(FormCampoLikert::class, 'crm.campo_likert', 'campo_id', 'fcl_id');
+    }
+    public function campoLikerts()
+    {
+        return $this->hasMany(CampoLikert::class, 'campo_id', 'id');
     }
 }

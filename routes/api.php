@@ -63,6 +63,7 @@ use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\series\DespachoController;
 use App\Http\Controllers\crm\series\InventarioController;
 use App\Http\Controllers\crm\TableroProcesosController;
+use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
 use Illuminate\Support\Facades\Route;
 
@@ -205,9 +206,24 @@ Route::group([], function ($router) {
     Route::post('/token', [EquifaxController::class, 'loginEquifax']);
 });
 
-Route::group(["prefix" => "formulario"], function ($router) {
+Route::group(["prefix" => "form"], function ($router) {
     Route::get('/list', [FormController::class, 'list']); //
-    Route::get('/listByDepar/{id}', [FormController::class, 'listByDepar']);//byDepartamento
+    Route::get('/listByDepar/{depId}/{userId}', [FormController::class, 'listByDepar']); //
+    Route::get('/formUser/{depId}/{userId}', [FormController::class, 'formUser']); //formUser
+    Route::get('/byId/{formId}', [FormController::class, 'byId']); //formUser
+    Route::get('/listAll', [FormController::class, 'listAll']);
+});
+Route::group(['prefix' => 'form/campo'], function ($router) {
+    Route::get('/store', [CampoController::class, 'store']);
+    Route::get('/full/{id}', [CampoController::class, 'full']);
+    Route::get('/list', [CampoController::class, 'list']);
+    Route::get('/listAll', [CampoController::class, 'listAll']);
+    Route::get('/byId/{id}', [CampoController::class, 'byId']);
+    Route::get('/deleted', [CampoController::class, 'deleted']);
+    Route::get('/restoreById/{id}', [CampoController::class, 'restoreById']);
+    Route::put('/edit/{id}', [CampoController::class, 'edit']);
+    Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
+    Route::post('/add', [CampoController::class, 'add']);
 });
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
