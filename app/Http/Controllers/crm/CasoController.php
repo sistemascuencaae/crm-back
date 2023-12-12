@@ -447,8 +447,9 @@ class CasoController extends Controller
     public function reasignarCaso(Request $request)
     {
         $caso_id = $request->input('caso_id');
+        $audit = new Audits();
         try {
-            $notificacion = DB::transaction(function () use ($request) {
+            $notificacion = DB::transaction(function () use ($request, $audit) {
                 $caso_id = $request->input('caso_id');
                 $estado_2 = $request->input('estado_2');
                 $user_anterior_id = $request->input('user_anterior_id');
@@ -462,7 +463,13 @@ class CasoController extends Controller
                 $new_tablero_id = $request->input('new_tablero_id');
 
                 //try {
-                $casoEnProceso = Caso::find($caso_id);
+                $casoEnProceso = Caso::with(
+                    'user',
+                    'userCreador',
+                    'clienteCrm',
+                    'fase.tablero',
+                    'estadodos',
+                )->find($caso_id);
                 $casoEnProceso->fas_id = $new_fase_id;
                 $casoEnProceso->user_id = $new_user_id;
                 $casoEnProceso->estado_2 = $estado_2;
@@ -475,6 +482,11 @@ class CasoController extends Controller
                 $emailController = new EmailController();
                 $emailController->send_emailCambioFase($caso_id, $casoEnProceso->fas_id);
                 //$this->enviarCorreoCliente($caso_id);
+
+                // Obtener el old_values (valor antiguo)
+                $valorAntiguo = $casoEnProceso;
+                $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
+
                 // start diferencia de tiempos en horas minutos y segundos
                 $tipo = 1;
                 $this->calcularTiemposCaso(
@@ -504,6 +516,18 @@ class CasoController extends Controller
                     $casoEnProceso->fas_id,
                     $casoEnProceso->user->name
                 );
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = Caso::class;
+                $audit->auditable_id = $casoEnProceso->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'editFase';
+
                 return $noti;
             });
 
@@ -513,13 +537,13 @@ class CasoController extends Controller
             }
 
             broadcast(new ReasignarCasoEvent($data));
-            return response()->json(
-                RespuestaApi::returnResultado(
-                    'success',
-                    'Se actualizo con éxito',
-                    $data
-                )
-            );
+
+            // Establecer old_values y new_values
+            $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
+            $audit->save();
+            // END Auditoria
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }

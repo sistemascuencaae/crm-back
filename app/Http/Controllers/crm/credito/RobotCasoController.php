@@ -72,6 +72,7 @@ class RobotCasoController extends Controller
             'userCreador',
             'clienteCrm',
             'fase.tablero',
+            'estadodos'
         )->find($casoId); // Solo para el audits NADA MAS
 
         $audit = new Audits();
