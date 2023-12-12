@@ -526,7 +526,7 @@ class CasoController extends Controller
                 $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
                 $audit->url = $request->fullUrl();
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-                $audit->accion = 'editFase';
+                $audit->accion = 'reasignarCaso';
 
                 return $noti;
             });
