@@ -12,7 +12,7 @@ class TipoGaleriaController extends Controller
     public function allTipoGaleria()
     {
         try {
-            $tiposGaleria = TipoGaleria::orderBy("id", "asc")->get();
+            $tiposGaleria = TipoGaleria::where('estado', true)->orderBy("id", "asc")->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tiposGaleria));
         } catch (Exception $e) {
