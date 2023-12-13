@@ -4,9 +4,11 @@ namespace App\Http\Controllers\formulario;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\Formulario\CampoLikert;
 use App\Models\Formulario\FormCampo;
 use App\Models\Formulario\FormCampoLikert;
 use App\Models\Formulario\FormTipoCampo;
+use App\Models\Formulario\Formulario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -29,7 +31,8 @@ class CampoController extends Controller
             'deleteById'
         ]]);
     }
-    public function store(){
+    public function store()
+    {
         try {
             $tipos = FormTipoCampo::all();
             $likertList = FormCampoLikert::all();
@@ -78,7 +81,17 @@ class CampoController extends Controller
             $data = DB::transaction(function () use ($request) {
                 $dataCampo = $request->all();
                 $newCampo = FormCampo::create($dataCampo);
-                return $newCampo;
+                if ($newCampo->tipo_campo_id == 2) {
+                    $camposLikers = FormCampoLikert::all();
+                    foreach ($camposLikers as $camp) {
+                        CampoLikert::create([
+                            "campo_id" => $newCampo->id,
+                            "fcl_id" => $camp->id
+                        ]);
+                    }
+                }
+                return Formulario::with('campo.tipo', 'campo.likert')->find($newCampo->form_id);
+
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
         } catch (\Throwable $th) {
