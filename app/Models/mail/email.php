@@ -1,28 +1,24 @@
 <?php
 
-namespace App\Models\crm;
+namespace App\Models\mail;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ControlTiemposCaso extends Model
+class Email extends Model
 {
-    use HasFactory;
+    protected $table = 'crm.email';
 
-    protected $table = 'crm.control_tiempos_caso';
     protected $fillable = [
-        "caso_id",
-        "est_caso_id",
-        "estado_caso",
-        "tiempo_cambio",
-        "fase",
-        "fase_id",
-        "tipo",
-        "user_id",
-        "usuario",
-        "tab_id",
-        "tablero",
+        'asunto',
+        'cuerpo',
+        'fase_id',
+        'auto',
+        'email_cliente',
+        'emails',
+        'firma',
+        'cuerpo2',
+        'cuerpo3',
     ];
 
     public function setCreatedAtAttribute($value)

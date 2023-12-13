@@ -26,6 +26,7 @@ use App\Models\crm\Tareas;
 use App\Models\crm\TelefonosCliente;
 use App\Models\crm\TelefonosReferencias;
 use App\Models\crm\TipoCaso;
+use App\Models\crm\Fase;
 use App\Models\openceo\CPedidoProforma;
 use App\Models\User;
 use Carbon\Carbon;
@@ -40,11 +41,11 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-            [
-                //'add',
-                //'addCasoOPMICreativa'
+                [
+                    //'add',
+                    //'addCasoOPMICreativa'
 
-            ]
+                ]
         ]);
     }
 
@@ -98,7 +99,6 @@ class CasoController extends Controller
             });
             broadcast(new TableroEvent($casoCreado));
 
-
             // START Bloque de código que genera un registro de auditoría manualmente
             $audit = new Audits();
             $audit->user_id = Auth::id();
@@ -118,6 +118,9 @@ class CasoController extends Controller
             $audit->save();
             // END Auditoria
 
+            // le mando uno porque es la primera vez q se crea el caso
+            $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+            $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito.', $casoCreado));
         } catch (\Throwable $th) {
@@ -208,7 +211,9 @@ class CasoController extends Controller
             $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
             $audit->save();
             // END Auditoria
-
+            $emailController = new EmailController();
+            $emailController->send_emailCambioFase($caso->id, $caso->fas_id);
+            //$this->enviarCorreoCliente($caso->id);
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e));
@@ -442,8 +447,9 @@ class CasoController extends Controller
     public function reasignarCaso(Request $request)
     {
         $caso_id = $request->input('caso_id');
+        $audit = new Audits();
         try {
-            $notificacion = DB::transaction(function () use ($request) {
+            $notificacion = DB::transaction(function () use ($request, $audit) {
                 $caso_id = $request->input('caso_id');
                 $estado_2 = $request->input('estado_2');
                 $user_anterior_id = $request->input('user_anterior_id');
@@ -457,7 +463,13 @@ class CasoController extends Controller
                 $new_tablero_id = $request->input('new_tablero_id');
 
                 //try {
-                $casoEnProceso = Caso::find($caso_id);
+                $casoEnProceso = Caso::with(
+                    'user',
+                    'userCreador',
+                    'clienteCrm',
+                    'fase.tablero',
+                    'estadodos',
+                )->find($caso_id);
                 $casoEnProceso->fas_id = $new_fase_id;
                 $casoEnProceso->user_id = $new_user_id;
                 $casoEnProceso->estado_2 = $estado_2;
@@ -467,6 +479,13 @@ class CasoController extends Controller
                 $casoEnProceso->fase_anterior_id = $fase_anterior_id;
                 $casoEnProceso->user_anterior_id = $user_anterior_id;
                 $casoEnProceso->save();
+                $emailController = new EmailController();
+                $emailController->send_emailCambioFase($caso_id, $casoEnProceso->fas_id);
+                //$this->enviarCorreoCliente($caso_id);
+
+                // Obtener el old_values (valor antiguo)
+                $valorAntiguo = $casoEnProceso;
+                $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
 
                 // start diferencia de tiempos en horas minutos y segundos
                 $tipo = 1;
@@ -497,6 +516,18 @@ class CasoController extends Controller
                     $casoEnProceso->fas_id,
                     $casoEnProceso->user->name
                 );
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = Caso::class;
+                $audit->auditable_id = $casoEnProceso->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'reasignarCaso';
+
                 return $noti;
             });
 
@@ -506,13 +537,13 @@ class CasoController extends Controller
             }
 
             broadcast(new ReasignarCasoEvent($data));
-            return response()->json(
-                RespuestaApi::returnResultado(
-                    'success',
-                    'Se actualizo con éxito',
-                    $data
-                )
-            );
+
+            // Establecer old_values y new_values
+            $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
+            $audit->save();
+            // END Auditoria
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
@@ -981,63 +1012,29 @@ class CasoController extends Controller
 
                 if ($registroAnterior) {
 
+                    $faseNueva = Fase::where('id', $fase_id)->with('tablero')->first();
+                    $userNuevo = User::where('id', $user_id)->first();
+
                     // Crear un nuevo registro en ControlTiemposCaso
                     $nuevoRegistro = ControlTiemposCaso::create([
                         "caso_id" => $caso_id,
                         "est_caso_id" => $estado_2,
-                        "tiempo_cambio" => null,
+                        "estado_caso" => $caso->estadodos->nombre,
+                        "tiempo_cambio" => '00:00:00',
+                        "fase" => $faseNueva->nombre,
                         "fase_id" => $fase_id,
                         "tipo" => $tipo,
                         "user_id" => $user_id,
+                        "usuario" => $userNuevo->name,
+                        "tab_id" => $faseNueva->tablero->id,
+                        "tablero" => $faseNueva->tablero->nombre,
                     ]);
 
-                    // Consulta si ya existe un registro anterior con el mismo caso_id
-                    $registroAnterior = ControlTiemposCaso::where('caso_id', $caso_id)
-                        ->where('id', '<', $nuevoRegistro->id)
-                        ->latest()
-                        ->first();
+                    $this->editCalcularTiemposCaso($nuevoRegistro->caso_id);  // calculamos los tiempos de caso pero como las dos horas del sistema y del nuevo caso son la misma por eso me da 00:00:00
 
-                    if ($registroAnterior) {
-                        // Convierte las fechas a objetos Carbon para manejar la zona horaria
-                        $created_at_actual = Carbon::parse($nuevoRegistro->created_at);
-                        $created_at_anterior = Carbon::parse($registroAnterior->created_at);
-
-                        // Calcula la diferencia de tiempo en segundos
-                        $diferenciaSegundos = $created_at_actual->diffInSeconds($created_at_anterior);
-
-                        // Calcula las horas, minutos y segundos
-                        $horas = floor($diferenciaSegundos / 3600);
-                        $diferenciaSegundos %= 3600;
-                        $minutos = floor($diferenciaSegundos / 60);
-                        $segundos = $diferenciaSegundos % 60;
-
-                        // Formatea la diferencia de tiempo en formato TIME (HH:MM:SS)
-                        $tiempoCambio = sprintf("%02d:%02d:%02d", $horas, $minutos, $segundos);
-
-                        // Actualiza el nuevo registro con el tiempo_cambio calculado
-                        $nuevoRegistro->update([
-                            "tiempo_cambio" => $tiempoCambio,
-                        ]);
-                    } else {
-                        // Si no hay registro anterior, el tiempo_cambio se establece como null
-                        $nuevoRegistro->update([
-                            "tiempo_cambio" => null,
-                        ]);
-                    }
-                } else {
-
-                    // Crea el nuevo registro con tiempo_cambio como null
-                    $primerRegistro = ControlTiemposCaso::create([
-                        "caso_id" => $caso->id,
-                        "est_caso_id" => $caso->estado_2,
-                        "tiempo_cambio" => null,
-                        "fase_id" => $caso->fas_id,
-                        "tipo" => $tipo,
-                        "user_id" => $caso->user_id,
-                    ]);
-
-                    $created_at_actual = Carbon::parse($primerRegistro->created_at);
-                    $created_at_anterior = Carbon::parse($caso->created_at);
+                    // Convierte las fechas a objetos Carbon para manejar la zona horaria
+                    $created_at_actual = Carbon::parse($nuevoRegistro->created_at);
+                    $created_at_anterior = Carbon::parse($registroAnterior->created_at);
 
                     // Calcula la diferencia de tiempo en segundos
                     $diferenciaSegundos = $created_at_actual->diffInSeconds($created_at_anterior);
@@ -1051,17 +1048,72 @@ class CasoController extends Controller
                     // Formatea la diferencia de tiempo en formato TIME (HH:MM:SS)
                     $tiempoCambio = sprintf("%02d:%02d:%02d", $horas, $minutos, $segundos);
 
-                    // Crea el nuevo registro con el tiempo_cambio calculado
-                    ControlTiemposCaso::create([
+                    // Actualiza el nuevo registro con el tiempo_cambio calculado
+                    $registroAnterior->update([
+                        "tiempo_cambio" => $tiempoCambio,
+                    ]);
+
+                } else {
+
+                    // start diferencia de tiempos en horas minutos y segundos
+                    $casoNuevo = ControlTiemposCaso::create([
                         "caso_id" => $caso->id,
                         "est_caso_id" => $caso->estado_2,
-                        "tiempo_cambio" => $tiempoCambio,
+                        "estado_caso" => $caso->estadodos->nombre,
+                        "tiempo_cambio" => '00:00:00',
+                        "fase" => $caso->fase->nombre,
                         "fase_id" => $caso->fas_id,
                         "tipo" => $tipo,
                         "user_id" => $caso->user_id,
+                        "usuario" => $caso->user->name,
+                        "tab_id" => $caso->tablero->id,
+                        "tablero" => $caso->tablero->nombre,
                     ]);
+                    // end diferencia de tiempos en horas minutos y segundos
+
+                    $this->editCalcularTiemposCaso($casoNuevo->caso_id); // calculamos los tiempos de caso pero como las dos horas del sistema y del nuevo caso son la misma por eso me da 00:00:00
+
                 }
+
             });
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function editCalcularTiemposCaso($caso_id)
+    {
+        try {
+            $data = DB::transaction(function () use ($caso_id) {
+
+                $ultimoRegistro = ControlTiemposCaso::where('caso_id', $caso_id)->latest()->first();
+
+                // Convierte las fechas a objetos Carbon para manejar la zona horaria
+                $created_at_actual = Carbon::parse($ultimoRegistro->created_at);
+                $horaSistema = Carbon::parse(date('H:i:s'));
+
+                // Calcula la diferencia de tiempo en segundos
+                $diferenciaSegundos = $created_at_actual->diffInSeconds($horaSistema);
+
+                // Calcula las horas, minutos y segundos
+                $horas = floor($diferenciaSegundos / 3600);
+                $diferenciaSegundos %= 3600;
+                $minutos = floor($diferenciaSegundos / 60);
+                $segundos = $diferenciaSegundos % 60;
+
+                // Formatea la diferencia de tiempo en formato TIME (HH:MM:SS)
+                $tiempoCambio = sprintf("%02d:%02d:%02d", $horas, $minutos, $segundos);
+
+                // Actualiza el nuevo registro con el tiempo_cambio calculado
+                $ultimoRegistro->update([
+                    "tiempo_cambio" => $tiempoCambio,
+                ]);
+
+                return $ultimoRegistro;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
@@ -1147,7 +1199,7 @@ class CasoController extends Controller
         if (!$emailCliente) {
             $t = new EmailController();
             $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
-        }else{
+        } else {
             $t = new EmailController();
             $t->send_email($emailCliente->ent_email, $dataEmail);
         }
@@ -1156,4 +1208,24 @@ class CasoController extends Controller
         $request = new Request($requestData);
         return $this->add($request);
     }
+    // public function enviarCorreoCliente($casoId){
+    //     if ($sendEmail) {
+    //         if ($sendEmail->auto) {
+    //             $emailController = new EmailController();
+    //             $emailController->send_emailCambioFase($sendEmail->caso_id, $sendEmail->fase_id, $sendEmail->nombre_cliente);
+    //         }
+    //     };
+    // }
+
+    public function listHistorialCaso($caso_id)
+    {
+        try {
+            $data = ControlTiemposCaso::where('caso_id', $caso_id)->orderBy('id', 'ASC')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }
