@@ -5,6 +5,8 @@ namespace App\Http\Controllers\formulario;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\Formulario\FormCampo;
+use App\Models\Formulario\FormCampoLikert;
+use App\Models\Formulario\FormTipoCampo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -15,6 +17,7 @@ class CampoController extends Controller
     {
         $this->middleware('auth:api', ['except' => [
             'full',
+            'store',
             'add',
             'byId',
             'list',
@@ -25,6 +28,19 @@ class CampoController extends Controller
             'delete',
             'deleteById'
         ]]);
+    }
+    public function store(){
+        try {
+            $tipos = FormTipoCampo::all();
+            $likertList = FormCampoLikert::all();
+            $data = (object) [
+                "tipos" => $tipos,
+                "likertList" => $likertList
+            ];
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
+        }
     }
     public function list()
     {
