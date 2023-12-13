@@ -39,7 +39,7 @@ class DespachoController extends Controller
                                         (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id) > (case when exists (select 1 from gex.cdespacho c1 where c.cmo_id = c1.cmo_id) and
                                                                                                                             not exists (select 1 from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
                                                                                                                                         where c2.cmo_id = c.cmo_id) then (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id)
-                                                                                                                else (select count(*)
+                                                                                                                else (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
                                                                                                                         from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
                                                                                                                         where c2.cmo_id = c.cmo_id) end))
                             union
@@ -51,7 +51,10 @@ class DespachoController extends Controller
                                     c.cfa_id as indice,
                                     p.bod_id, null,
                                     c.cli_id,
-                                    (select cast(sum(d.dfac_cantidad) as integer) from dfactura d where d.cfa_id = c.cfa_id) as cantidad,
+                                    (select cast(sum(d.dfac_cantidad) as integer)
+                                     from dfactura d
+                                     where d.cfa_id = c.cfa_id
+                                            and not exists (select 1 from gex.producto_config pc where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G')) as cantidad,
                                     coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cfa_id = c.cfa_id),0) as despachado
                             from cfactura c join puntoventa p on c.pve_id = p.pve_id
                                         join ctipocom t on c.cti_id = t.cti_id
@@ -60,7 +63,10 @@ class DespachoController extends Controller
                             where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'DES') and c.cfa_fecha >= '2023-06-01'
                                     and p.bod_id = " . $bodega . "
                                     and (not exists (select 1 from gex.cdespacho c1 where c1.cfa_id = c.cfa_id) or
-                                        (select sum(d.dfac_cantidad) from dfactura d where d.cfa_id = c.cfa_id) > (select count(*)
+                                            (select cast(sum(d.dfac_cantidad) as integer)
+                                            from dfactura d
+                                            where d.cfa_id = c.cfa_id
+                                                    and not exists (select 1 from gex.producto_config pc where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G')) > (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
                                                                                                                 from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
                                                                                                                 where c2.cfa_id = c.cfa_id))
                             order by fecha, numero");
