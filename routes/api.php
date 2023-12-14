@@ -397,6 +397,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::delete('/deleteUser/{id}', [UserController::class, 'deleteUser']); // Eliminar
     Route::get('/listUsuariosByTableroId/{tablero_id}', [UserController::class, 'listUsuariosByTableroId']); // listar usuarios del tablero
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
+    
+    Route::get('/listAlmacenes', [UserController::class, 'listAlmacenes']); // listar almacenes
 
     // NOTIFICACIONES
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\crm\Almacen;
 use App\Models\crm\PerfilAnalistas;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
@@ -55,7 +56,8 @@ class User extends Authenticatable implements JWTSubject
         "pve_id",
         "estado_sesion",
         "en_linea",
-        "profile_id"
+        "profile_id",
+        "alm_id",
     ];
 
     protected $hidden = [
@@ -129,4 +131,10 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->belongsTo(Profile::class, "profile_id", "id");
     }
+
+    public function almacen()
+    {
+        return $this->belongsTo(Almacen::class, "alm_id", "alm_id");
+    }
+
 }
