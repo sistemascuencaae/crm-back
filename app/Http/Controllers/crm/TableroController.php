@@ -301,4 +301,15 @@ class TableroController extends Controller
         }
     }
 
+    public function listTableroByDepId($dep_id)
+    {
+        try {
+            $data = Tablero::where('dep_id', $dep_id)->where('estado', true)->with('fase')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }
