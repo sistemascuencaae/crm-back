@@ -8,6 +8,7 @@ use App\Models\crm\EstadosFormulas;
 use App\Models\crm\TipoCasoFormulas;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TipoCasoFormulasController extends Controller
 {
@@ -41,65 +42,87 @@ class TipoCasoFormulasController extends Controller
     public function addTipoCasoFormulas(Request $request)
     {
         try {
-            // Validar si ya existe un registro con el mismo est_id_actual y resp_id
-            $existingRecord = TipoCasoFormulas::where('tab_id', $request->tab_id)
-                ->where('tc_id', $request->tc_id)
-                ->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")
-                ->first();
 
-            if ($existingRecord) {
-                // Si ya existe un registro con los mismos valores, devuelve un error
-                return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE un registro con los valores tablero: ' . $existingRecord->tablero->nombre . ' y Tipo caso: ' . $existingRecord->tipoCaso->nombre, ''));
+            $error = null;
+            $exitoso = null;
 
+            DB::transaction(function () use ($request, &$error, &$exitoso) {
+
+                // Validar si ya existe un registro con el mismo est_id_actual y resp_id
+                $existingRecord = TipoCasoFormulas::where('tab_id', $request->tab_id)
+                    ->where('tc_id', $request->tc_id)
+                    ->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")
+                    ->first();
+
+                if ($existingRecord) {
+                    // Si ya existe un registro con los mismos valores, devuelve un error
+                    $error = 'Ya EXISTE un registro con los valores tablero: ' . $existingRecord->tablero->nombre . ' y Tipo caso: ' . $existingRecord->tipoCaso->nombre;
+                    return null;
+
+                } else {
+
+                    // Si no existe un registro con los mismos valores, crea el nuevo registro
+                    TipoCasoFormulas::create($request->all());
+
+                    $resultado = TipoCasoFormulas::with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")
+                        ->orderBy('id', 'DESC')
+                        ->get();
+
+                    $exitoso = $resultado;
+                    return null;
+                }
+
+            });
+
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
             } else {
-
-                // Si no existe un registro con los mismos valores, crea el nuevo registro
-                TipoCasoFormulas::create($request->all());
-
-                $resultado = TipoCasoFormulas::with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")
-                    ->orderBy('id', 'DESC')
-                    ->get();
-
-                return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
             }
 
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-
-
-
-
-
-
-    
 
     public function editTipoCasoFormulas(Request $request, $id)
     {
         try {
-            $respuestas = EstadosFormulas::findOrFail($id);
 
-            // Validar si la actualización resultaría en valores duplicados
-            $existingRecord = EstadosFormulas::where('est_id_actual', $request->est_id_actual)
-                ->where('resp_id', $request->resp_id)
-                ->where('id', '!=', $id) // Excluir el registro actual de la consulta
-                ->first();
+            $error = null;
+            $exitoso = null;
 
-            if ($existingRecord) {
-                // Si la actualización resultaría en valores duplicados, devuelve un error
-                return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE un registro con los valores estado actual: ' . $existingRecord->estado_actual->nombre . ' y respuesta: ' . $existingRecord->respuesta_caso->nombre, ''));
+            DB::transaction(function () use ($request, $id, &$error, &$exitoso) {
+                $respuestas = EstadosFormulas::findOrFail($id);
 
-            } else {
-
-                $respuestas->update($request->all());
-
-                $resultado = EstadosFormulas::where('id', $respuestas->id)
-                    ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
+                // Validar si la actualización resultaría en valores duplicados
+                $existingRecord = EstadosFormulas::where('tab_id', $request->tab_id)
+                    ->where('tc_id', $request->tc_id)
+                    ->where('id', '!=', $id) // Excluir el registro actual de la consulta
                     ->first();
 
-                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $resultado));
+                if ($existingRecord) {
+                    // Si la actualización resultaría en valores duplicados, devuelve un error
+                    $error = 'Ya EXISTE un registro con los valores tablero: ' . $existingRecord->tablero->nombre . ' y Tipo caso: ' . $existingRecord->tipoCaso->nombre;
+                    return null;
+
+                } else {
+
+                    $respuestas->update($request->all());
+
+                    $resultado = EstadosFormulas::where('id', $respuestas->id)
+                        ->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")
+                        ->first();
+
+                    $exitoso = $resultado;
+                    return null;
+                }
+            });
+
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
             }
 
         } catch (Exception $e) {
@@ -107,14 +130,16 @@ class TipoCasoFormulasController extends Controller
         }
     }
 
-    public function deleteTipoCasoFormulas(Request $request, $id)
+    public function deleteTipoCasoFormulas($id)
     {
         try {
-            $respuestas = EstadosFormulas::findOrFail($id);
+            DB::transaction(function () use ($id) {
+                $respuestas = EstadosFormulas::findOrFail($id);
 
-            $respuestas->delete();
+                $respuestas->delete();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $respuestas));
+                return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $respuestas));
+            });
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
