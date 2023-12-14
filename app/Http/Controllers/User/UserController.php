@@ -71,11 +71,16 @@ class UserController extends Controller
     public function addUser(Request $request)
     {
         try {
-            // Verificar si ya existe un usuario con el mismo correo electrónico
-            $existingUser = User::where('usu_alias', $request->input('usu_alias'))->first();
+            // Verificar si ya existe un usuario con el mismo usu_alias
+            $existingUsuAlias = User::where('usu_alias', $request->input('usu_alias'))->first();
+            $existingUserCedula = User::where('cedula', $request->input('cedula'))->first();
 
-            if ($existingUser) {
-                return response()->json(RespuestaApi::returnResultado('error', 'El usuario ya existe', ''));
+            if ($existingUsuAlias) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este usu_alias ya existe', ''));
+            }
+
+            if ($existingUserCedula) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Esta cédula ya existe', ''));
             }
 
             // Si no existe, crea el nuevo usuario
@@ -89,34 +94,26 @@ class UserController extends Controller
         }
     }
 
-
-    // public function editUser(Request $request, $user_id)
-    // {
-    //     try {
-    //         $usuario = User::findOrFail($user_id);
-
-    //         $usuario->update($request->all());
-
-    //         $data = User::where('id', $usuario->id)->with('Departamento', 'perfil_analista')->first();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
-
     public function editUser(Request $request, $user_id)
     {
         try {
             $usuario = User::findOrFail($user_id);
 
-            // Verificar si ya existe otro usuario con el mismo correo electrónico
-            $existingUser = User::where('usu_alias', $request->input('usu_alias'))
+            // Verificar si ya existe otro usuario con el mismo usu_alias
+            $existingUsuAlias = User::where('usu_alias', $request->input('usu_alias'))
                 ->where('id', '!=', $usuario->id)
                 ->first();
 
-            if ($existingUser) {
-                return response()->json(RespuestaApi::returnResultado('error', 'El correo electrónico ya está en uso por otro usuario', ''));
+            $existingUserCedula = User::where('cedula', $request->input('cedula'))
+                ->where('id', '!=', $usuario->id)
+                ->first();
+
+            if ($existingUsuAlias) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El usu_alias ya está en uso por otro usuario', ''));
+            }
+
+            if ($existingUserCedula) {
+                return response()->json(RespuestaApi::returnResultado('error', 'La cédula ya está en uso por otro usuario', ''));
             }
 
             $usuario->update($request->all());
