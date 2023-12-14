@@ -468,8 +468,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listTpoCasoFormulas', [TipoCasoFormulasController::class, 'listTpoCasoFormulas']); // listar all
     Route::get('/listTpoCasoFormulasActivos', [TipoCasoFormulasController::class, 'listTpoCasoFormulasActivos']); // listar activos
     Route::post('/addTipoCasoFormulas', [TipoCasoFormulasController::class, 'addTipoCasoFormulas']); // guardar
-    Route::post('/editTipoCasoFormulas', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
-    Route::delete('/deleteTipoCasoFormulas', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
+    Route::post('/editTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
+    Route::delete('/deleteTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
 
 });
 

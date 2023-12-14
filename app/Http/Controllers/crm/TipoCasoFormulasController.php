@@ -4,7 +4,6 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\EstadosFormulas;
 use App\Models\crm\TipoCasoFormulas;
 use Exception;
 use Illuminate\Http\Request;
@@ -93,10 +92,10 @@ class TipoCasoFormulasController extends Controller
             $exitoso = null;
 
             DB::transaction(function () use ($request, $id, &$error, &$exitoso) {
-                $respuestas = EstadosFormulas::findOrFail($id);
+                $respuestas = TipoCasoFormulas::findOrFail($id);
 
                 // Validar si la actualización resultaría en valores duplicados
-                $existingRecord = EstadosFormulas::where('tab_id', $request->tab_id)
+                $existingRecord = TipoCasoFormulas::where('tab_id', $request->tab_id)
                     ->where('tc_id', $request->tc_id)
                     ->where('id', '!=', $id) // Excluir el registro actual de la consulta
                     ->first();
@@ -110,7 +109,7 @@ class TipoCasoFormulasController extends Controller
 
                     $respuestas->update($request->all());
 
-                    $resultado = EstadosFormulas::where('id', $respuestas->id)
+                    $resultado = TipoCasoFormulas::where('id', $respuestas->id)
                         ->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")
                         ->first();
 
@@ -122,7 +121,7 @@ class TipoCasoFormulasController extends Controller
             if ($error) {
                 return response()->json(RespuestaApi::returnResultado('error', $error, ''));
             } else {
-                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
+                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $exitoso));
             }
 
         } catch (Exception $e) {
@@ -133,13 +132,24 @@ class TipoCasoFormulasController extends Controller
     public function deleteTipoCasoFormulas($id)
     {
         try {
-            DB::transaction(function () use ($id) {
-                $respuestas = EstadosFormulas::findOrFail($id);
+            $error = null;
+            $exitoso = null;
+
+            DB::transaction(function () use ($id, &$error, &$exitoso) {
+                $respuestas = TipoCasoFormulas::findOrFail($id);
 
                 $respuestas->delete();
 
-                return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $respuestas));
+                $exitoso = $respuestas;
+                return null;
             });
+
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $exitoso));
+            }
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
