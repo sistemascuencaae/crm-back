@@ -575,17 +575,16 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/kardexSeries/{fecIni}/{fecFin}/{bodega}/{producto}/{tipo}/{serie}', [KardexSeriesController::class, 'kardexSeries']);
 
     //Contratos GEX
-    Route::get('/listadoProdKar', [KardexSeriesController::class, 'productos']);
-    Route::get('/listadoProdKar', [KardexSeriesController::class, 'productos']);
-    Route::get('/listadoProdKar', [KardexSeriesController::class, 'productos']);
-
-    //API GEX
     Route::get('/contratosGex', [ContratosController::class, 'listado']);
     Route::get('/almacenes', [ContratosController::class, 'almacenes']);
     Route::get('/facturas/{almacen}', [ContratosController::class, 'facturas']);
     Route::get('/datosContrato/{factura}', [ContratosController::class, 'datosContrato']);
     Route::post('/grabaContrato', [ContratosController::class, 'grabaContrato']);
     Route::get('/eliminaContrato/{almacen}/{numero}', [ContratosController::class, 'eliminaContrato']);
+
+    //API GEX
+    Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
+    Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
 });
 //----------------------- END RUTAS JAIRO  ----------------------------------------------
 

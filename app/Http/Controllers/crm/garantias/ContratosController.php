@@ -25,7 +25,8 @@ class ContratosController extends Controller
                                     cg.factura_gex,
                                     concat(cg.identificacion, ' - ', cg.nom_cliente) as cliente,
                                     cg.producto,
-                                    TO_CHAR(cg.fecha::date, 'dd/mm/yyyy') as fecha
+                                    TO_CHAR(cg.fecha::date, 'dd/mm/yyyy') as fecha,
+                                    cg.alm_id
                             from gex.contrato_gex cg
                             order by cg.nom_almacen, cg.numero");
 
@@ -123,20 +124,23 @@ class ContratosController extends Controller
     {
         try {
             $numero = 0;
-            $respuesta = [];
+            $almacen = 0;
+            $numeros = [];
             $contratos = $request->all();
 
-            DB::transaction(function() use ($contratos, $numero, $respuesta){
+            DB::transaction(function() use ($contratos, $numero, &$numeros, &$almacen){
                 date_default_timezone_set("America/Guayaquil");
                 
                 foreach ($contratos as $c) {
                     if ($numero == 0) {
-                        $numero = FolioContratos::selectone('select folio from gex.folios_contratos where alm_id = ' . $c['alm_id']) + 1;
+                        $folio = FolioContratos::get()->where('alm_id',$c['alm_id'])->first();
+                        $numero = $folio['folio']  + 1;
                     } else {
                         $numero += 1;
                     }
 
-                    $respuesta.push($numero);
+                    array_push($numeros, $numero);
+                    $almacen = $c['alm_id'];
                     
                     $alm_id = $c['alm_id'];
                     $fecha = date("Y-m-d h:i:s");
@@ -166,6 +170,7 @@ class ContratosController extends Controller
                     $fecha_desde = $c['fecha_desde'];
                     $fecha_hasta = $c['fecha_hasta'];
                     $usuario_crea = $c['usuario_crea'];
+                    $usuario_modifica = $c['usuario_modifica'];
                     $fecha_crea = date("Y-m-d h:i:s");
 
                     DB::table('gex.contrato_gex')->insert(
@@ -199,6 +204,7 @@ class ContratosController extends Controller
                         'fecha_desde' => $fecha_desde,
                         'fecha_hasta' => $fecha_hasta,
                         'usuario_crea' => $usuario_crea,
+                        'usuario_modifica' => $usuario_modifica,
                         'fecha_crea' => $fecha_crea,
                         ]);
 
@@ -206,12 +212,18 @@ class ContratosController extends Controller
                         ['alm_id' => $alm_id],
                         [
                         'alm_id' => $alm_id,
-                        'numero' => $numero,
+                        'folio' => $numero,
                         ]);
                 }
             });
+
+            $data = [];
+
+            foreach ($numeros as $n){
+                array_push($data, ContratoGex::get()->where('alm_id', $almacen)->where('numero', $n)->first());
+            }
             
-            return response()->json(RespuestaApi::returnResultado('success', 'Contratos generados con exito', $respuesta));
+            return response()->json(RespuestaApi::returnResultado('success', 'Contratos generados con exito', $data));
             
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
@@ -220,7 +232,7 @@ class ContratosController extends Controller
 
     public function eliminaContrato($almacen, $numero) {
         try {
-            Partes::where('alm_id',$parte)->where('numero',$numero)->delete();
+            ContratoGex::where('alm_id',$almacen)->where('numero',$numero)->delete();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Contrato eliminado con exito', []));
         } catch (Exception $e) {
