@@ -58,6 +58,7 @@ class User extends Authenticatable implements JWTSubject
         "en_linea",
         "profile_id",
         "alm_id",
+        "cedula",
     ];
 
     protected $hidden = [
