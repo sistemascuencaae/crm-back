@@ -63,6 +63,8 @@ use App\Http\Controllers\crm\garantias\GEXController;
 use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\series\DespachoController;
 use App\Http\Controllers\crm\series\InventarioController;
+use App\Http\Controllers\crm\series\KardexSeriesController;
+use App\Http\Controllers\crm\garantias\ContratosController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
@@ -616,6 +618,19 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byInventarioProc/{numero}', [InventarioController::class, 'byInventarioProc']);
     Route::get('/anulaInventario/{numero}', [InventarioController::class, 'anulaInventario']);
     Route::get('/eliminaInventario/{numero}', [InventarioController::class, 'eliminaInventario']);
+
+    //Kardex de Series
+    Route::get('/listadoProdKar', [KardexSeriesController::class, 'productos']);
+    Route::get('/listadoBodegasKar', [KardexSeriesController::class, 'bodegas']);
+    Route::get('/kardexSeries/{fecIni}/{fecFin}/{bodega}/{producto}/{tipo}/{serie}', [KardexSeriesController::class, 'kardexSeries']);
+
+    //Contratos GEX
+    Route::get('/contratosGex', [ContratosController::class, 'listado']);
+    Route::get('/almacenes', [ContratosController::class, 'almacenes']);
+    Route::get('/facturas/{almacen}', [ContratosController::class, 'facturas']);
+    Route::get('/datosContrato/{factura}', [ContratosController::class, 'datosContrato']);
+    Route::post('/grabaContrato', [ContratosController::class, 'grabaContrato']);
+    Route::get('/eliminaContrato/{almacen}/{numero}', [ContratosController::class, 'eliminaContrato']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
