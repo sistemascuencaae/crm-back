@@ -16,6 +16,25 @@ class TipoCasoFormulasController extends Controller
         $this->middleware('auth:api');
     }
 
+    public function listTpoCasoFormulasById($tab_id, $tc_id)
+    {
+        try {
+            $data = TipoCasoFormulas::where([
+                ['tab_id', $tab_id],
+                ['tc_id', $tc_id]
+            ])->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")->first();
+
+            if ($data) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'No hay ninguna fórmula con este tipo de caso, comuníquese con el administrador, por favor.', ''));
+            }
+
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function listTpoCasoFormulas(Request $request)
     {
         try {
