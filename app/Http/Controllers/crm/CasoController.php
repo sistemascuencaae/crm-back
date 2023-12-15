@@ -122,7 +122,7 @@ class CasoController extends Controller
             $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
             $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito.', $casoCreado));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $th->getMessage()));
         }
