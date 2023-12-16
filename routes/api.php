@@ -212,6 +212,7 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::get('/formUser/{depId}/{userId}', [FormController::class, 'formUser']); //formUser
     Route::get('/byId/{formId}', [FormController::class, 'byId']); //formUser
     Route::get('/listAll', [FormController::class, 'listAll']);
+    Route::put('/edit/{id}', [FormController::class, 'edit']);
 });
 Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::get('/store', [CampoController::class, 'store']);

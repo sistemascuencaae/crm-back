@@ -91,7 +91,6 @@ class CampoController extends Controller
                     }
                 }
                 return Formulario::with('campo.tipo', 'campo.likert')->find($newCampo->form_id);
-
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
         } catch (\Throwable $th) {
@@ -106,6 +105,7 @@ class CampoController extends Controller
                 $campoData = $request->all();
                 $campo = FormCampo::findOrFail($id);
                 $campo->update($campoData);
+                return Formulario::with('campo.tipo', 'campo.likert')->find($campo->form_id);
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
         } catch (\Throwable $th) {
@@ -118,7 +118,14 @@ class CampoController extends Controller
             $data = FormCampo::find($id);
             if ($data) {
                 $data->delete();
-                return response()->json(RespuestaApi::returnResultado('success', 'Eliminado con éxito.', $data));
+                $this->reordenarCamposEliminados($data->form_id, $data);
+                //$result = Formulario::with('campo.tipo', 'campo.likert')->find($data->form_id);
+
+                $formularioController = new FormController();
+
+                $result = $formularioController->obtenerFormularioCompleto($data->form_id);
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Eliminado con éxito.', $result));
             }
             return response()->json(RespuestaApi::returnResultado('error', 'No existe', $id));
         } catch (\Throwable $th) {
@@ -129,7 +136,13 @@ class CampoController extends Controller
     {
         try {
             $data = FormCampo::withTrashed()->find($id);
-            $data->restore();
+            //$data->restore();
+            $this->restaurarCampo($data->form_id, $data);
+            $formularioController = new FormController();
+
+            $result = $formularioController->obtenerFormularioCompleto($data->form_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Restaurado con éxito.', $result));
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
@@ -148,5 +161,79 @@ class CampoController extends Controller
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         }
+    }
+
+    public function reordenarCamposEliminados($formId, $campoEliminado)
+    {
+        // Obtener los campos ordenados por 'orden' de manera ascendente
+        $campos = FormCampo::whereNull('deleted_at')
+            ->where('form_id', $formId)
+            ->orderBy('orden', 'asc')
+            ->get();
+        // Recorrer el array para actualizar el campo 'orden' en la base de datos
+        foreach ($campos as $index => $campo) {
+            // Incrementar el índice ya que 'orden' suele ser 1-indexed
+            $nuevoOrden = $index + 1;
+            // Actualizar el campo 'orden' en la base de datos
+            $campo->update(['orden' => $nuevoOrden]);
+        }
+    }
+
+
+    public function restaurarCampo($formId, $campoEliminado)
+    {
+        $ordenTemporal = $campoEliminado->orden;
+        // Obtener los campos eliminados lógicamente después del campo restaurado
+        $campoEliminado->restore();
+        $camposRestantes = FormCampo::where('form_id', $formId)
+            // ->where('orden', '>=', $campoEliminado->orden)
+            // ->where('id', '>=', $campoEliminado->id)
+            ->orderBy('orden', 'asc')
+            ->get();
+        // Reajustar el orden de los campos restantes
+        // Restaurar el campo eliminado
+        foreach ($camposRestantes as $index => $campo) {
+            $campo->orden = $index + 1;
+            $campo->save();
+        }
+        // $campoEliminado->orden = $ordenTemporal;
+        // $campoEliminado->save();
+    }
+
+
+
+
+
+
+
+
+
+
+
+    public function restaurarCampoManual($formId, $campoEliminado)
+    {
+        echo ('$formId: ' . json_encode($formId));
+        $ordenTemporal = $campoEliminado->orden;
+        // Obtener los campos eliminados lógicamente después del campo restaurado
+        $camposRestantes = FormCampo::withTrashed()
+            ->select('id', 'nombre', 'orden', 'deleted_at')
+            ->where('form_id', $formId)
+            ->where('orden', '>=', $campoEliminado->orden)
+            ->where('id', '>=', $campoEliminado->id)
+            ->orderBy('orden', 'asc')
+            ->get();
+
+        echo ('$camposRestantes: ' . json_encode($camposRestantes));
+
+        return;
+        // Reajustar el orden de los campos restantes
+        // Restaurar el campo eliminado
+        $campoEliminado->restore();
+        foreach ($camposRestantes as $index => $campo) {
+            $campo->orden = $campo->orden + $index;
+            $campo->save();
+        }
+        $campoEliminado->orden = $ordenTemporal;
+        $campoEliminado->save();
     }
 }

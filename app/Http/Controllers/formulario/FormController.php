@@ -7,13 +7,14 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormUserCompletoView;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FormController extends Controller
 {
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => [
-            'list', 'listByDepar', 'formUser', 'byId','listAll'
+            'list', 'listByDepar', 'formUser', 'byId', 'listAll'
         ]]);
     }
 
@@ -44,7 +45,13 @@ class FormController extends Controller
     {
         try {
             //$data = Formulario::with('campo.tipo', 'campo.campoLikerts.formCampoLikert')->get();
-            $data = Formulario::with('campo.tipo', 'campo.likert')->get();
+            // $data = Formulario::with('campo.tipo', 'campo.likert')->withTrashed()->get();
+            $data = Formulario::withTrashed()
+                ->with(['campo' => function ($query) {
+                    $query->withTrashed()->with('tipo', 'likert');
+                }])
+                ->get();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
@@ -63,6 +70,34 @@ class FormController extends Controller
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         }
+    }
+
+    public function edit(Request $request, $id)
+    {
+        try {
+            $data = DB::transaction(function () use ($request, $id) {
+                $formData = $request->all();
+                $form = Formulario::findOrFail($id);
+                $form->update($formData);
+                return Formulario::with('campo.tipo', 'campo.likert')->find($id);
+            });
+            return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
+        }
+    }
+
+    public function obtenerFormularioCompleto($id)
+    {
+        $data = Formulario::withTrashed()
+            ->with(['campo' => function ($query) {
+                $query->withTrashed()->with('tipo', 'likert');
+            }])
+            ->where('id', $id)
+            ->first();
+
+
+        return $data;
     }
 }
 
