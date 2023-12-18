@@ -8,13 +8,14 @@ use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormUserCompletoView;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class FormController extends Controller
 {
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => [
-            'list', 'listByDepar', 'formUser', 'byId', 'listAll'
+            'list', 'listByDepar', 'formUser', 'listAll'
         ]]);
     }
 
@@ -61,7 +62,14 @@ class FormController extends Controller
     public function byId($id)
     {
         try {
-            $data = Formulario::with('campo.tipo')->where('dep_id', $id)->get();
+            $userId = Auth::id();
+            $data = Formulario::with([
+                'campo.tipo',
+                'campo.likert',
+                'campo.valor' => function ($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                },
+            ])->find($id);
             if ($data) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
             } else {

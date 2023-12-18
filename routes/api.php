@@ -224,7 +224,8 @@ Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::get('/restoreById/{id}', [CampoController::class, 'restoreById']);
     Route::put('/edit/{id}', [CampoController::class, 'edit']);
     Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
-    Route::post('/add', [CampoController::class, 'add']);
+    Route::post('/add', [CampoController::class, 'add']); //addCampoValor
+    Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']);//addCampoValor
 });
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------

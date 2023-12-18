@@ -7,11 +7,13 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\Formulario\CampoLikert;
 use App\Models\Formulario\FormCampo;
 use App\Models\Formulario\FormCampoLikert;
+use App\Models\Formulario\FormCampoValor;
 use App\Models\Formulario\FormTipoCampo;
 use App\Models\Formulario\Formulario;
+use App\Models\Formulario\FormValor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class CampoController extends Controller
 {
@@ -90,13 +92,45 @@ class CampoController extends Controller
                         ]);
                     }
                 }
-                return Formulario::with('campo.tipo', 'campo.likert')->find($newCampo->form_id);
+                $this->reordenarCampos($newCampo);
+                $formularioController = new FormController();
+
+                return $formularioController->obtenerFormularioCompleto($newCampo->form_id);
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
         }
     }
+
+    public function addCampoValor(Request $request)
+    {
+        try {
+            $data = DB::transaction(function () use ($request) {
+                $userId = Auth::id();
+                $valor = $request->all();
+                $campoId = $request->input('campoId');
+                $valor['user_id'] = $userId;
+
+                if ($request->input('id')) {
+                    $modificarCampo = FormValor::find($valor['id']);
+                    $modificarCampo->update($valor);
+                    return $campoValor = FormValor::find($valor['id']);
+                } else {
+                    $newValor = FormValor::create($valor);
+                    $newCampoValor = FormCampoValor::create([
+                        "valor_id" => $newValor->id,
+                        "campo_id" => $campoId
+                    ]);
+                    return $campoValor = FormValor::find($newValor->id);
+                }
+            });
+            return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
+        }
+    }
+
     public function edit(Request $request, $id)
     {
 
@@ -105,7 +139,9 @@ class CampoController extends Controller
                 $campoData = $request->all();
                 $campo = FormCampo::findOrFail($id);
                 $campo->update($campoData);
-                return Formulario::with('campo.tipo', 'campo.likert')->find($campo->form_id);
+                $this->reordenarCamposEditados($campo->form_id, $campo);
+                $formularioController = new FormController();
+                return $formularioController->obtenerFormularioCompleto($campo->form_id);
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
         } catch (\Throwable $th) {
@@ -148,7 +184,6 @@ class CampoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         }
     }
-
     public function byId($id)
     {
         try {
@@ -162,6 +197,50 @@ class CampoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         }
     }
+
+
+    public function reordenarCampos($newCampo)
+    {
+        // Obtener los campos ordenados por 'orden' de manera ascendente
+        $campos = FormCampo::whereNull('deleted_at')
+            ->where('form_id', $newCampo->form_id)
+            ->where('id', '<>', $newCampo->id)
+            ->orderBy('orden', 'asc')
+            ->get();
+
+
+        // Verificar si ya existe un campo con el mismo orden
+        $existingCampo = null;
+        foreach ($campos as $campo) {
+            if ($campo->orden == $newCampo->orden) {
+                $existingCampo = $campo;
+                break;
+            }
+        }
+
+        // // Si existe, incrementar el orden de los campos siguientes
+        if ($existingCampo) {
+            foreach ($campos as $index => $campo) {
+                if ($campo->orden >= $newCampo->orden && $campo->id !== $newCampo->id) {
+                    $campo->orden++;
+                    $campo->save();
+                }
+            }
+        }
+        //echo ('$campos: '.json_encode($campos));
+        // Insertar el nuevo campo en la posición correcta
+        // $posicionNuevoCampo = $existingCampo ? $existingCampo->orden - 1 : count($campos);
+        // $campos->splice($posicionNuevoCampo, 0, [$newCampo]);
+
+        // Actualizar los campos en la base de datos con los nuevos órdenes
+        // foreach ($campos as $index => $campo) {
+        //     $campo->orden = $index + 1; // Actualizar el campo 'orden'
+        //     $campo->save();
+        // }
+    }
+
+
+
 
     public function reordenarCamposEliminados($formId, $campoEliminado)
     {
@@ -179,6 +258,24 @@ class CampoController extends Controller
         }
     }
 
+    public function reordenarCamposEditados($formId, $campoEditado)
+    {
+        // Obtener los campos ordenados por 'orden' de manera ascendente
+        $campos = FormCampo::whereNull('deleted_at')
+            ->where('form_id', $formId)
+            ->orderBy('orden', 'asc')
+            ->get();
+        // Recorrer el array para actualizar el campo 'orden' en la base de datos
+        foreach ($campos as $index => $campo) {
+            if ($campo->id == $campoEditado->id) {
+            } else {
+                // Incrementar el índice ya que 'orden' suele ser 1-indexed
+                $nuevoOrden = $index + 1;
+                // Actualizar el campo 'orden' en la base de datos
+                $campo->update(['orden' => $nuevoOrden]);
+            }
+        }
+    }
 
     public function restaurarCampo($formId, $campoEliminado)
     {
