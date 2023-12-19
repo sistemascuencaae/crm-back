@@ -399,7 +399,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::delete('/deleteUser/{id}', [UserController::class, 'deleteUser']); // Eliminar
     Route::get('/listUsuariosByTableroId/{tablero_id}', [UserController::class, 'listUsuariosByTableroId']); // listar usuarios del tablero
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
-    
+
     Route::get('/listAlmacenes', [UserController::class, 'listAlmacenes']); // listar almacenes
 
     // NOTIFICACIONES
@@ -467,11 +467,12 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // TIPO CASO FORMULAS
 
+    Route::get('/listTpoCasoFormulasById/{tab_id}/{tc_id}', [TipoCasoFormulasController::class, 'listTpoCasoFormulasById']); // listar por la llave tab_id y tc_id
     Route::get('/listTpoCasoFormulas', [TipoCasoFormulasController::class, 'listTpoCasoFormulas']); // listar all
     Route::get('/listTpoCasoFormulasActivos', [TipoCasoFormulasController::class, 'listTpoCasoFormulasActivos']); // listar activos
     Route::post('/addTipoCasoFormulas', [TipoCasoFormulasController::class, 'addTipoCasoFormulas']); // guardar
-    Route::post('/editTipoCasoFormulas', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
-    Route::delete('/deleteTipoCasoFormulas', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
+    Route::post('/editTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
+    Route::delete('/deleteTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
 
 });
 
