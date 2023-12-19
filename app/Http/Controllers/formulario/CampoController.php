@@ -83,6 +83,9 @@ class CampoController extends Controller
             $data = DB::transaction(function () use ($request) {
                 $dataCampo = $request->all();
                 $newCampo = FormCampo::create($dataCampo);
+                $newCampo->nombre = 'FORMCAMPO'.$newCampo->id;
+                $newCampo->form_control_name = 'FORMCAMPO' . $newCampo->id;
+                $newCampo->save();
                 if ($newCampo->tipo_campo_id == 2) {
                     $camposLikers = FormCampoLikert::all();
                     foreach ($camposLikers as $camp) {
@@ -94,7 +97,6 @@ class CampoController extends Controller
                 }
                 $this->reordenarCampos($newCampo);
                 $formularioController = new FormController();
-
                 return $formularioController->obtenerFormularioCompleto($newCampo->form_id);
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
@@ -106,8 +108,8 @@ class CampoController extends Controller
     public function addCampoValor(Request $request)
     {
         try {
-            $data = DB::transaction(function () use ($request) {
-                $userId = Auth::id();
+            $userId = Auth::id();
+            DB::transaction(function () use ($request, $userId) {
                 $valor = $request->all();
                 $campoId = $request->input('campoId');
                 $valor['user_id'] = $userId;
@@ -115,16 +117,23 @@ class CampoController extends Controller
                 if ($request->input('id')) {
                     $modificarCampo = FormValor::find($valor['id']);
                     $modificarCampo->update($valor);
-                    return $campoValor = FormValor::find($valor['id']);
+                    return FormValor::find($valor['id']);
                 } else {
                     $newValor = FormValor::create($valor);
                     $newCampoValor = FormCampoValor::create([
                         "valor_id" => $newValor->id,
                         "campo_id" => $campoId
                     ]);
-                    return $campoValor = FormValor::find($newValor->id);
+                    return FormValor::find($newValor->id);
                 }
             });
+            $data = Formulario::with([
+                'campo.tipo',
+                'campo.likert',
+                'campo.valor' => function ($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                },
+            ]);
             return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
@@ -227,16 +236,6 @@ class CampoController extends Controller
                 }
             }
         }
-        //echo ('$campos: '.json_encode($campos));
-        // Insertar el nuevo campo en la posición correcta
-        // $posicionNuevoCampo = $existingCampo ? $existingCampo->orden - 1 : count($campos);
-        // $campos->splice($posicionNuevoCampo, 0, [$newCampo]);
-
-        // Actualizar los campos en la base de datos con los nuevos órdenes
-        // foreach ($campos as $index => $campo) {
-        //     $campo->orden = $index + 1; // Actualizar el campo 'orden'
-        //     $campo->save();
-        // }
     }
 
 

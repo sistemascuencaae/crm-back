@@ -4,11 +4,13 @@ namespace App\Http\Controllers\formulario;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\Formulario\FormSeccion;
 use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormUserCompletoView;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use PhpParser\Node\Stmt\TryCatch;
 
 class FormController extends Controller
 {
@@ -18,6 +20,26 @@ class FormController extends Controller
             'list', 'listByDepar', 'formUser', 'listAll'
         ]]);
     }
+
+
+    public function store($formId)
+    {
+        try {
+            $userId = Auth::id();
+            $secciones = FormSeccion::where('form_id', $formId)
+            ->where('estado', true)
+            ->orderBy('orden', 'asc')
+            ->get();
+            $data = (object) [
+                "secciones" => $secciones
+
+            ];
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+    }
+
 
     public function formUser($formId, $userId)
     {

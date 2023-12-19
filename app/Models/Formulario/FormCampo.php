@@ -22,6 +22,7 @@ class FormCampo extends Model
         'form_control_name',
         'fcl_id',
         'orden',
+        'form_secc_id',
         'deleted_at'
     ];
     protected $hidden = ['created_at', 'updated_at'];
