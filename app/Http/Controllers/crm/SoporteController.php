@@ -37,7 +37,7 @@ class SoporteController extends Controller
                             "descripcion" => 'Imagen Soporte - ' . $caso_id,
                             "imagen" => $path,
                             "caso_id" => $caso_id,
-                            "tipo_gal_id" => 7,
+                            "tipo_gal_id" => 7, // 7 porque es tipo galeria 'Formulario de Soporte'
                             "sc_id" => 0,
                         ]);
 

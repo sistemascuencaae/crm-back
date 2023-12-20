@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Exception;
-use Log;
 
 class ArchivoController extends Controller
 {
@@ -37,7 +36,8 @@ class ArchivoController extends Controller
                     "observacion" => $request->input("observaciones")[0],
                     // Acceder a la observación de cada archivo
                     "archivo" => $path,
-                    "caso_id" => $caso_id
+                    "caso_id" => $caso_id,
+                    "tipo" => 'Caso',
                 ]);
 
                 $archivosGuardados[] = $nuevoArchivo;
@@ -83,7 +83,8 @@ class ArchivoController extends Controller
                 "titulo" => $caso_id . '-' . $titulo,
                 "observacion" => $request->observacion,
                 "archivo" => $path,
-                "caso_id" => $request->caso_id
+                "caso_id" => $request->caso_id,
+                "tipo" => 'Caso',
             ]);
 
             // START Bloque de código que genera un registro de auditoría manualmente
