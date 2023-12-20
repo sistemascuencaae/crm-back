@@ -59,7 +59,8 @@ class ReqCasoController extends Controller
                         "descripcion" => $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         "imagen" => $path,
                         "caso_id" => $inputReq->caso_id,
-                        "tipo_gal_id" => 1,
+                        "tipo_gal_id" => 8, // Tipo Requerimiento es el id 8
+                        "sc_id" => 0,
                     ]);
 
                     // START Bloque de código que genera un registro de auditoría manualmente
@@ -83,7 +84,8 @@ class ReqCasoController extends Controller
                     $newGaleria->descripcion = $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
                     $newGaleria->imagen = $path;
                     $newGaleria->caso_id = $inputReq->caso_id;
-                    $newGaleria->tipo_gal_id = 1;
+                    $newGaleria->tipo_gal_id = 8;
+                    $newGaleria->sc_id = 0;
                     $newGaleria->save();
                     $requerimiento->galerias_id = $newGaleria->id;
 
@@ -133,6 +135,7 @@ class ReqCasoController extends Controller
                         "observacion" => $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         "archivo" => $path,
                         "caso_id" => $inputReq->caso_id,
+                        "tipo" => 'Requerimiento',
                     ]);
 
                     // START Bloque de código que genera un registro de auditoría manualmente
@@ -156,6 +159,7 @@ class ReqCasoController extends Controller
                     $newArchivo->observacion = $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
                     $newArchivo->archivo = $path;
                     $newArchivo->caso_id = $inputReq->caso_id;
+                    $newArchivo->tipo = 'Requerimiento';
                     $newArchivo->save();
                     $requerimiento->archivos_id = $newArchivo->id;
 
