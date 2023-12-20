@@ -37,7 +37,7 @@ class SoporteController extends Controller
                             "descripcion" => 'Imagen Soporte - ' . $caso_id,
                             "imagen" => $path,
                             "caso_id" => $caso_id,
-                            "tipo_gal_id" => 6,
+                            "tipo_gal_id" => 7,
                             "sc_id" => 0,
                         ]);
 
@@ -48,7 +48,8 @@ class SoporteController extends Controller
                             "titulo" => $nombreUnico,
                             "observacion" => 'Archivo Soporte - ' . $caso_id,
                             "archivo" => $path,
-                            "caso_id" => $caso_id
+                            "caso_id" => $caso_id,
+                            "tipo" => 'Formulario de Soporte'
                         ]);
 
                         // $archivosGuardados[] = $nuevoArchivo;
