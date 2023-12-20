@@ -60,7 +60,7 @@ class ContratosController extends Controller
         $data = DB::select("select p.alm_id,
                                     a.alm_nombre as nom_almacen,
                                     concat((case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as nom_cliente,
-                                    ve.tipoidentificacion as tipo_identificacion,
+                                    (case ve.ent_tipo_identificacion when '1' then 'CEDULA' when '2' then 'RUC' else 'PASAPORTE' end) as tipo_identificacion,
                                     ve.ent_identificacion as identificacion,
                                     (select distinct u.ubi_nombre from v_ubicacion u where u.ubi2_id = a.ubi_id) as provincia,
                                     (select distinct u.ubi2_nombre from v_ubicacion u where u.ubi2_id = a.ubi_id) as ciudad,
@@ -113,7 +113,7 @@ class ContratosController extends Controller
                                             join cgex cg on cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex
                             where c.cfa_id = " . $factura . " and not exists (select 1 from gex.producto_config pc where pc.tipo_servicio = 'G' and pc.pro_id = pr.pro_id)
                                     and not exists (select 1 from gex.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
-                            group by p.alm_id, a.alm_nombre, e.ent_nombres, e.ent_apellidos, ve.tipoidentificacion, ve.ent_identificacion, ve.dir_calle_principal, ve.dir_numeracion,
+                            group by p.alm_id, a.alm_nombre, e.ent_nombres, e.ent_apellidos, ve.ent_tipo_identificacion, ve.ent_identificacion, ve.dir_calle_principal, ve.dir_numeracion,
                                         ve.dir_calle_secundaria, vu.ubi_nombre, vu.ubi2_nombre, e.ent_email, pr.pro_id, tp.tpr_nombre, pr.pro_nombre, c.cfa_id, t.cti_sigla, p.alm_id, p.pve_numero,
                                         c.cfa_numero, c.cfa_fecha, m.mar_nombre, c2.numero, cg.num_meses, c.cfa_fecha, a.ubi_id, e.ent_telefono_principal, e.ent_id");
 
