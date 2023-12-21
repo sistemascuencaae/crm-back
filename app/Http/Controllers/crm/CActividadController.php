@@ -7,39 +7,53 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
 use App\Models\crm\CTipoActividad;
 use App\Models\User;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CActividadController extends Controller
 {
     public function addCTipoActividad(Request $request)
     {
         try {
-            $actividad = CTipoActividad::create($request->all());
+            $data = DB::transaction(function () use ($request) {
 
-            // $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+                $actividad = CTipoActividad::create($request->all());
 
-            // // START Bloque de código que genera un registro de auditoría manualmente
-            // $audit = new Audits();
-            // $audit->user_id = Auth::id();
-            // $audit->event = 'created';
-            // $audit->auditable_type = CTipoActividad::class;
-            // $audit->auditable_id = $actividad->id;
-            // $audit->user_type = User::class;
-            // $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            // $audit->url = $request->fullUrl();
-            // // Establecer old_values y new_values
-            // $audit->old_values = json_encode($actividad);
-            // $audit->new_values = json_encode([]);
-            // $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            // $audit->accion = 'addCTipoActividad';
-            // $audit->save();
-            // // END Auditoria
+                // $actividades = CTipoActividad::orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            $actividades = CTipoActividad::where('tab_id', $actividad->tab_id)->orderBy('id', 'DESC')->get();
+                // // START Bloque de código que genera un registro de auditoría manualmente
+                // $audit = new Audits();
+                // $audit->user_id = Auth::id();
+                // $audit->event = 'created';
+                // $audit->auditable_type = CTipoActividad::class;
+                // $audit->auditable_id = $actividad->id;
+                // $audit->user_type = User::class;
+                // $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                // $audit->url = $request->fullUrl();
+                // // Establecer old_values y new_values
+                // $audit->old_values = json_encode($actividad);
+                // $audit->new_values = json_encode([]);
+                // $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                // $audit->accion = 'addCTipoActividad';
+                // $audit->save();
+                // // END Auditoria
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $actividades));
+                $actividades = CTipoActividad::where('tab_id', $actividad->tab_id)->orderBy('id', 'DESC')->get();
+
+                // Formatear las fechas
+                $actividades->transform(function ($item) {
+                    $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                    $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                    return $item;
+                });
+
+                return $actividades;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -49,6 +63,13 @@ class CActividadController extends Controller
     {
         try {
             $actividades = CTipoActividad::where('tab_id', $tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+            // Formatear las fechas
+            $actividades->transform(function ($item) {
+                $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                return $item;
+            });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
@@ -101,31 +122,44 @@ class CActividadController extends Controller
     public function editCTipoActividad(Request $request, $id)
     {
         try {
-            $actividad = CTipoActividad::findOrFail($id);
+            $data = DB::transaction(function () use ($request, $id) {
 
-            // // Obtener el old_values (valor antiguo)
-            // $audit = new Audits();
-            // $valorAntiguo = $actividad;
-            // $audit->old_values = json_encode($valorAntiguo);
+                $actividad = CTipoActividad::findOrFail($id);
 
-            $actividad->update($request->all());
+                // // Obtener el old_values (valor antiguo)
+                // $audit = new Audits();
+                // $valorAntiguo = $actividad;
+                // $audit->old_values = json_encode($valorAntiguo);
 
-            // // START Bloque de código que genera un registro de auditoría manualmente
-            // $audit->user_id = Auth::id();
-            // $audit->event = 'updated';
-            // $audit->auditable_type = CTipoActividad::class;
-            // $audit->auditable_id = $actividad->id;
-            // $audit->user_type = User::class;
-            // $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            // $audit->url = $request->fullUrl();
-            // // Establecer old_values y new_values
-            // $audit->new_values = json_encode($actividad);
-            // $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            // $audit->accion = 'editCTipoActividad';
-            // $audit->save();
-            // // END Auditoria
+                $actividad->update($request->all());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $actividad));
+                // // START Bloque de código que genera un registro de auditoría manualmente
+                // $audit->user_id = Auth::id();
+                // $audit->event = 'updated';
+                // $audit->auditable_type = CTipoActividad::class;
+                // $audit->auditable_id = $actividad->id;
+                // $audit->user_type = User::class;
+                // $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                // $audit->url = $request->fullUrl();
+                // // Establecer old_values y new_values
+                // $audit->new_values = json_encode($actividad);
+                // $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                // $audit->accion = 'editCTipoActividad';
+                // $audit->save();
+                // // END Auditoria
+
+
+                $actividad->refresh();
+
+                // Formatear las fechas
+                $actividad->formatted_updated_at = Carbon::parse($actividad->updated_at)->format('Y-m-d H:i:s');
+                $actividad->formatted_created_at = Carbon::parse($actividad->created_at)->format('Y-m-d H:i:s');
+
+                return $actividad;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
