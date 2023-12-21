@@ -91,7 +91,9 @@ class FormController extends Controller
                 'campo.valor' => function ($query) use ($userId) {
                     $query->where('user_id', $userId);
                 },
-            ])->find($id);
+                //->orderBy('orden', 'asc') colocar esto para ordenar los campos
+            ])
+            ->find($id);
             if ($data) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
             } else {

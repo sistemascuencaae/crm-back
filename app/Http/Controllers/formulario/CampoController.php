@@ -83,7 +83,7 @@ class CampoController extends Controller
             $data = DB::transaction(function () use ($request) {
                 $dataCampo = $request->all();
                 $newCampo = FormCampo::create($dataCampo);
-                $newCampo->nombre = 'FORMCAMPO'.$newCampo->id;
+                $newCampo->nombre = 'FORMCAMPO' . $newCampo->id;
                 $newCampo->form_control_name = 'FORMCAMPO' . $newCampo->id;
                 $newCampo->save();
                 if ($newCampo->tipo_campo_id == 2) {
@@ -148,7 +148,7 @@ class CampoController extends Controller
                 $campoData = $request->all();
                 $campo = FormCampo::findOrFail($id);
                 $campo->update($campoData);
-                $this->reordenarCamposEditados($campo->form_id, $campo);
+                $this->reordenarCampos($campo);
                 $formularioController = new FormController();
                 return $formularioController->obtenerFormularioCompleto($campo->form_id);
             });
@@ -181,14 +181,11 @@ class CampoController extends Controller
     {
         try {
             $data = FormCampo::withTrashed()->find($id);
-            //$data->restore();
-            $this->restaurarCampo($data->form_id, $data);
+            $data->restore();
+            $this->reordenarCampos($data);
             $formularioController = new FormController();
-
             $result = $formularioController->obtenerFormularioCompleto($data->form_id);
-
             return response()->json(RespuestaApi::returnResultado('success', 'Restaurado con éxito.', $result));
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         }
@@ -207,8 +204,7 @@ class CampoController extends Controller
         }
     }
 
-
-    public function reordenarCampos($newCampo)
+    public function reordenarCampos1($newCampo)
     {
         // Obtener los campos ordenados por 'orden' de manera ascendente
         $campos = FormCampo::whereNull('deleted_at')
@@ -238,9 +234,6 @@ class CampoController extends Controller
         }
     }
 
-
-
-
     public function reordenarCamposEliminados($formId, $campoEliminado)
     {
         // Obtener los campos ordenados por 'orden' de manera ascendente
@@ -261,19 +254,46 @@ class CampoController extends Controller
     {
         // Obtener los campos ordenados por 'orden' de manera ascendente
         $campos = FormCampo::whereNull('deleted_at')
-            ->where('form_id', $formId)
+            ->where('form_id', $campoEditado->form_id)
+            ->where('id', '<>', $campoEditado->id)
             ->orderBy('orden', 'asc')
             ->get();
-        // Recorrer el array para actualizar el campo 'orden' en la base de datos
-        foreach ($campos as $index => $campo) {
-            if ($campo->id == $campoEditado->id) {
-            } else {
-                // Incrementar el índice ya que 'orden' suele ser 1-indexed
-                $nuevoOrden = $index + 1;
-                // Actualizar el campo 'orden' en la base de datos
-                $campo->update(['orden' => $nuevoOrden]);
+
+
+        // Verificar si ya existe un campo con el mismo orden
+        $existingCampo = null;
+        foreach ($campos as $campo) {
+            if ($campo->orden == $campoEditado->orden) {
+                $existingCampo = $campo;
+                break;
             }
         }
+
+        // // Si existe, incrementar el orden de los campos siguientes
+        if ($existingCampo) {
+            foreach ($campos as $index => $campo) {
+                if ($campo->orden >= $campoEditado->orden && $campo->id !== $campoEditado->id) {
+                    $campo->orden++;
+                    echo ('$campo->orden: ' . json_encode($campo->orden));
+                    $campo->save();
+                }
+            }
+        }
+        // // Obtener los campos ordenados por 'orden' de manera ascendente
+        // $campos = FormCampo::whereNull('deleted_at')
+        //     ->where('form_id', $formId)
+        //     ->orderBy('orden', 'asc')
+        //     ->get();
+        // // Recorrer el array para actualizar el campo 'orden' en la base de datos
+        // foreach ($campos as $index => $campo) {
+        //     if ($campo->id == $campoEditado->id) {
+        //     } else {
+        //         // Incrementar el índice ya que 'orden' suele ser 1-indexed
+        //         $nuevoOrden = $index + 1;
+        //         // Actualizar el campo 'orden' en la base de datos
+        //         $campo->update(['orden' => $nuevoOrden]);
+        //     }
+        // }
     }
 
     public function restaurarCampo($formId, $campoEliminado)
@@ -295,15 +315,6 @@ class CampoController extends Controller
         // $campoEliminado->orden = $ordenTemporal;
         // $campoEliminado->save();
     }
-
-
-
-
-
-
-
-
-
 
 
     public function restaurarCampoManual($formId, $campoEliminado)
@@ -331,5 +342,38 @@ class CampoController extends Controller
         }
         $campoEliminado->orden = $ordenTemporal;
         $campoEliminado->save();
+    }
+
+
+
+    public function reordenarCampos($newCampo)
+    {
+        // Obtener los campos ordenados por 'orden' de manera ascendente
+        $campos = FormCampo::whereNull('deleted_at')
+            ->where('form_id', $newCampo->form_id)
+            ->where('id', '<>', $newCampo->id)
+            ->orderBy('orden', 'asc')
+            ->get();
+        // Verificar si ya existe un campo con el mismo orden
+        $existingCampo = null;
+        $indexExiste = -1;
+        foreach ($campos as $index => $campo) {
+            if ($campo->orden == $newCampo->orden && $campo->id !== $newCampo->id) {
+                $existingCampo = $campo;
+                $indexExiste = $index;
+                break;
+            }
+        }
+        if ($indexExiste !== -1 && $existingCampo !== null) {
+            $campos->splice($indexExiste, 0, [$newCampo]);
+        }else{
+            // $campos->push($newCampo);
+            $campos->splice($newCampo->orden===0?1: $newCampo->orden - 1, 0, [$newCampo]);
+        }
+        foreach ($campos as $index => $campo) {
+            $campo->orden = $index + 1;
+            $campo->save();
+        }
+
     }
 }
