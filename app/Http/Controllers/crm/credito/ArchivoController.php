@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\Audits;
@@ -65,10 +66,20 @@ class ArchivoController extends Controller
 
                 $data = Archivo::where('caso_id', $request->caso_id)->get();
 
-                // Formatear las fechas
-                $data->transform(function ($item) {
-                    $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
-                    $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                // // Formatear las fechas
+                // $data->transform(function ($item) {
+                //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                //     return $item;
+                // });
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at'];
+                // Utilizar la función map para transformar y obtener una nueva colección
+                $data->map(function ($item) use ($dateFields) {
+                    // $this->formatoFechaItem($item, $dateFields);
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
                     return $item;
                 });
 
@@ -124,10 +135,20 @@ class ArchivoController extends Controller
                 // $data = DB::select('select * from crm.archivos where caso_id =' . $request->caso_id);
                 $data = Archivo::where('caso_id', $request->caso_id)->get();
 
-                // Formatear las fechas
-                $data->transform(function ($item) {
-                    $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
-                    $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                // // Formatear las fechas
+                // $data->transform(function ($item) {
+                //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                //     return $item;
+                // });
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at'];
+                // Utilizar la función map para transformar y obtener una nueva colección
+                $data->map(function ($item) use ($dateFields) {
+                    // $this->formatoFechaItem($item, $dateFields);
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
                     return $item;
                 });
 
@@ -146,10 +167,20 @@ class ArchivoController extends Controller
         try {
             $data = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
 
-            // Formatear las fechas
-            $data->transform(function ($item) {
-                $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
-                $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            // // Formatear las fechas
+            // $data->transform(function ($item) {
+            //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            //     return $item;
+            // });
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                // $this->formatoFechaItem($item, $dateFields);
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
                 return $item;
             });
 
@@ -222,12 +253,17 @@ class ArchivoController extends Controller
                 $audit->save();
                 // END Auditoria
 
-                // Recargar el modelo para obtener las fechas actualizadas
-                $archivo->refresh();
+                // // Recargar el modelo para obtener las fechas actualizadas
+                // $archivo->refresh();
 
-                // Formatear las fechas
-                $archivo->formatted_updated_at = Carbon::parse($archivo->updated_at)->format('Y-m-d H:i:s');
-                $archivo->formatted_created_at = Carbon::parse($archivo->created_at)->format('Y-m-d H:i:s');
+                // // Formatear las fechas
+                // $archivo->formatted_updated_at = Carbon::parse($archivo->updated_at)->format('Y-m-d H:i:s');
+                // $archivo->formatted_created_at = Carbon::parse($archivo->created_at)->format('Y-m-d H:i:s');
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($archivo, $dateFields);
 
                 return $archivo;
             });

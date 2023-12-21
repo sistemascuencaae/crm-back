@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
 use App\Models\crm\CTipoActividad;
@@ -43,10 +44,20 @@ class CActividadController extends Controller
 
                 $actividades = CTipoActividad::where('tab_id', $actividad->tab_id)->orderBy('id', 'DESC')->get();
 
-                // Formatear las fechas
-                $actividades->transform(function ($item) {
-                    $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
-                    $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                // // Formatear las fechas
+                // $actividades->transform(function ($item) {
+                //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                //     return $item;
+                // });
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at'];
+                // Utilizar la función map para transformar y obtener una nueva colección
+                $actividades->map(function ($item) use ($dateFields) {
+                    // $this->formatoFechaItem($item, $dateFields);
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
                     return $item;
                 });
 
@@ -64,10 +75,20 @@ class CActividadController extends Controller
         try {
             $actividades = CTipoActividad::where('tab_id', $tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            // Formatear las fechas
-            $actividades->transform(function ($item) {
-                $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
-                $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            // // Formatear las fechas
+            // $actividades->transform(function ($item) {
+            //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            //     return $item;
+            // });
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $actividades->map(function ($item) use ($dateFields) {
+                // $this->formatoFechaItem($item, $dateFields);
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
                 return $item;
             });
 
@@ -149,11 +170,16 @@ class CActividadController extends Controller
                 // // END Auditoria
 
 
-                $actividad->refresh();
+                // $actividad->refresh();
 
-                // Formatear las fechas
-                $actividad->formatted_updated_at = Carbon::parse($actividad->updated_at)->format('Y-m-d H:i:s');
-                $actividad->formatted_created_at = Carbon::parse($actividad->created_at)->format('Y-m-d H:i:s');
+                // // Formatear las fechas
+                // $actividad->formatted_updated_at = Carbon::parse($actividad->updated_at)->format('Y-m-d H:i:s');
+                // $actividad->formatted_created_at = Carbon::parse($actividad->created_at)->format('Y-m-d H:i:s');
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($actividad, $dateFields);
 
                 return $actividad;
             });

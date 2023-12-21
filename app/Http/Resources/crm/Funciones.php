@@ -36,10 +36,12 @@ class Funciones
         }
       }
 
-      // Eliminar las propiedades originales si lo deseas
-      foreach ($FechasTransformar as $nombreCampo) {
-        unset($arrayUobjeto->$nombreCampo);
-      }
+      // NO LO ELIMINO SI NO TOCA CAMBIAR EN EL CODIGO DEL FRONT LOS CAMPOS DE FECHAS POR FECHAX_FORMATEADO
+
+      // // Eliminar las propiedades originales si lo deseas
+      // foreach ($FechasTransformar as $nombreCampo) {
+      //   unset($arrayUobjeto->$nombreCampo);
+      // }
     } catch (\Throwable $th) {
       throw $th;
     }
