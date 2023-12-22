@@ -11,6 +11,7 @@ use App\Models\Formulario\FormCampoValor;
 use App\Models\Formulario\FormTipoCampo;
 use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormValor;
+use App\Models\Formulario\Parametro;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -38,9 +39,11 @@ class CampoController extends Controller
         try {
             $tipos = FormTipoCampo::all();
             $likertList = FormCampoLikert::all();
+            //$parametros = Parametro::with('parametrosHijos')->get();
             $data = (object) [
                 "tipos" => $tipos,
-                "likertList" => $likertList
+                "likertList" => $likertList,
+                //"parametros" => $parametros
             ];
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (\Throwable $th) {
@@ -56,7 +59,6 @@ class CampoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         }
     }
-
     public function listAll()
     {
         try {
@@ -75,8 +77,6 @@ class CampoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
         }
     }
-
-
     public function add(Request $request)
     {
         try {
@@ -85,6 +85,7 @@ class CampoController extends Controller
                 $newCampo = FormCampo::create($dataCampo);
                 $newCampo->nombre = 'FORMCAMPO' . $newCampo->id;
                 $newCampo->form_control_name = 'FORMCAMPO' . $newCampo->id;
+
                 $newCampo->save();
                 if ($newCampo->tipo_campo_id == 2) {
                     $camposLikers = FormCampoLikert::all();
@@ -104,8 +105,7 @@ class CampoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
         }
     }
-
-    public function addCampoValor(Request $request)
+    public function addCampoValor1(Request $request)
     {
         try {
             $userId = Auth::id();
@@ -139,7 +139,50 @@ class CampoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
         }
     }
+    public function addCampoValor(Request $request)
+    {
+        try {
+            //$userId = Auth::id();
+            $userId = $request->input('user_id');
+            $valor = $request->all();
+            $campoId = $request->input('campoId');
+            $valor['user_id'] = $userId;
 
+            if ($request->input('id') !== 0) {
+                // Actualizar el registro existente
+                $modificarCampo = FormValor::find($valor['id']);
+                $modificarCampo->update($valor);
+
+                // También puedes actualizar el campo en FormCampoValor si es necesario
+                // ...
+
+                $result = FormValor::find($valor['id']);
+            } else {
+                // Crear un nuevo registro
+                $newValor = FormValor::create($valor);
+                $newCampoValor = FormCampoValor::create([
+                    "valor_id" => $newValor->id,
+                    "campo_id" => $campoId
+                ]);
+
+                $result = FormValor::find($newValor->id);
+            }
+
+            // $data = Formulario::with([
+            //     'campo.tipo',
+            //     'campo.likert',
+            //     'campo.valor' => function ($query) use ($userId) {
+            //         $query->where('user_id', $userId);
+            //     },
+            // ])->first();
+            $campo = FormCampo::find($campoId);
+            $data = $this->getNombreControles($campo->form_id, $userId);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al realizar la operación.', $th->getMessage()));
+        }
+    }
     public function edit(Request $request, $id)
     {
 
@@ -203,7 +246,6 @@ class CampoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         }
     }
-
     public function reordenarCampos1($newCampo)
     {
         // Obtener los campos ordenados por 'orden' de manera ascendente
@@ -233,7 +275,6 @@ class CampoController extends Controller
             }
         }
     }
-
     public function reordenarCamposEliminados($formId, $campoEliminado)
     {
         // Obtener los campos ordenados por 'orden' de manera ascendente
@@ -249,7 +290,6 @@ class CampoController extends Controller
             $campo->update(['orden' => $nuevoOrden]);
         }
     }
-
     public function reordenarCamposEditados($formId, $campoEditado)
     {
         // Obtener los campos ordenados por 'orden' de manera ascendente
@@ -295,7 +335,6 @@ class CampoController extends Controller
         //     }
         // }
     }
-
     public function restaurarCampo($formId, $campoEliminado)
     {
         $ordenTemporal = $campoEliminado->orden;
@@ -315,8 +354,6 @@ class CampoController extends Controller
         // $campoEliminado->orden = $ordenTemporal;
         // $campoEliminado->save();
     }
-
-
     public function restaurarCampoManual($formId, $campoEliminado)
     {
         echo ('$formId: ' . json_encode($formId));
@@ -343,9 +380,6 @@ class CampoController extends Controller
         $campoEliminado->orden = $ordenTemporal;
         $campoEliminado->save();
     }
-
-
-
     public function reordenarCampos($newCampo)
     {
         // Obtener los campos ordenados por 'orden' de manera ascendente
@@ -366,14 +400,35 @@ class CampoController extends Controller
         }
         if ($indexExiste !== -1 && $existingCampo !== null) {
             $campos->splice($indexExiste, 0, [$newCampo]);
-        }else{
+        } else {
             // $campos->push($newCampo);
-            $campos->splice($newCampo->orden===0?1: $newCampo->orden - 1, 0, [$newCampo]);
+            $campos->splice($newCampo->orden === 0 ? 1 : $newCampo->orden - 1, 0, [$newCampo]);
         }
         foreach ($campos as $index => $campo) {
             $campo->orden = $index + 1;
             $campo->save();
         }
-
+    }
+    public function getNombreControles($formId, $userId)
+    {
+        try {
+            $data = DB::select("SELECT
+                fc.form_control_name,
+                CASE
+                    WHEN ftc.nombre = 'TEXTO' THEN fv.valor_texto::TEXT
+                    WHEN ftc.nombre IN ('LIKERT','NUMERO', 'SELECCION UNICA') THEN fv.valor_entero::text
+                    WHEN ftc.nombre IN ('FECHA') THEN fv.valor_date::TEXT
+                END AS valor_real
+                FROM
+                crm.form_campo fc
+                LEFT JOIN crm.form_campo_valor fcv ON fcv.campo_id = fc.id
+                LEFT JOIN crm.form_valor fv ON fv.id = fcv.valor_id
+                left join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
+                WHERE
+                fc.form_id = ? and fv.user_id = ? order by fc.orden asc;", [$formId, $userId]);
+            return $data;
+        } catch (\Throwable $th) {
+            return null;
+        }
     }
 }

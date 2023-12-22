@@ -23,7 +23,8 @@ class FormCampo extends Model
         'fcl_id',
         'orden',
         'form_secc_id',
-        'deleted_at'
+        'par_id',
+        'deleted_at',
     ];
     protected $hidden = ['created_at', 'updated_at'];
     public function valor()
@@ -41,5 +42,9 @@ class FormCampo extends Model
     public function campoLikerts()
     {
         return $this->hasMany(CampoLikert::class, 'campo_id', 'id');
+    }
+    public function parametro()
+    {
+        return $this->belongsTo(Parametro::class, 'par_id', 'id');
     }
 }

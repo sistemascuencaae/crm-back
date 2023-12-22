@@ -7,6 +7,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\Formulario\FormSeccion;
 use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormUserCompletoView;
+use App\Models\Formulario\Parametro;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -26,13 +27,23 @@ class FormController extends Controller
     {
         try {
             $userId = Auth::id();
+            $parametros = Parametro::with('parametroHijos')->get();
+            $formulario = Formulario::with([
+                'campo.tipo',
+                'campo.likert',
+                'campo.parametro.parametroHijos',
+                'campo.valor' => function ($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                },
+            ])->find($formId);
             $secciones = FormSeccion::where('form_id', $formId)
             ->where('estado', true)
             ->orderBy('orden', 'asc')
             ->get();
             $data = (object) [
-                "secciones" => $secciones
-
+                "secciones" => $secciones,
+                "parametros" => $parametros,
+                "formulario" => $formulario
             ];
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
@@ -71,8 +82,8 @@ class FormController extends Controller
             // $data = Formulario::with('campo.tipo', 'campo.likert')->withTrashed()->get();
             $data = Formulario::withTrashed()
                 ->with(['campo' => function ($query) {
-                    $query->withTrashed()->with('tipo', 'likert');
-                }])
+                    $query->withTrashed()->with('tipo', 'likert', 'parametro.parametroHijos');
+                }],)
                 ->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
@@ -88,6 +99,7 @@ class FormController extends Controller
             $data = Formulario::with([
                 'campo.tipo',
                 'campo.likert',
+                'campo.parametro.parametroHijos',
                 'campo.valor' => function ($query) use ($userId) {
                     $query->where('user_id', $userId);
                 },
@@ -123,12 +135,10 @@ class FormController extends Controller
     {
         $data = Formulario::withTrashed()
             ->with(['campo' => function ($query) {
-                $query->withTrashed()->with('tipo', 'likert');
+                $query->withTrashed()->with('tipo', 'likert', 'parametro.parametroHijos');
             }])
             ->where('id', $id)
             ->first();
-
-
         return $data;
     }
 }
