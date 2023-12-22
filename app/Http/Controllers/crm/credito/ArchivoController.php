@@ -64,7 +64,7 @@ class ArchivoController extends Controller
                     // END Auditoria
                 }
 
-                $data = Archivo::where('caso_id', $request->caso_id)->get();
+                $data = Archivo::where('caso_id', $request->caso_id)->orderBy('id', 'desc')->get();
 
                 // // Formatear las fechas
                 // $data->transform(function ($item) {
@@ -133,7 +133,7 @@ class ArchivoController extends Controller
                 // END Auditoria
 
                 // $data = DB::select('select * from crm.archivos where caso_id =' . $request->caso_id);
-                $data = Archivo::where('caso_id', $request->caso_id)->get();
+                $data = Archivo::where('caso_id', $request->caso_id)->orderBy('id', 'desc')->get();
 
                 // // Formatear las fechas
                 // $data->transform(function ($item) {
