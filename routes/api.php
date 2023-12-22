@@ -63,6 +63,8 @@ use App\Http\Controllers\crm\series\DespachoController;
 use App\Http\Controllers\crm\series\InventarioController;
 use App\Http\Controllers\crm\series\KardexSeriesController;
 use App\Http\Controllers\crm\garantias\ContratosController;
+use App\Http\Controllers\crm\garantias\RelacionUsuariosAlamcenGexController;
+use App\Http\Controllers\crm\garantias\VentasTotalesGexController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use Illuminate\Support\Facades\Route;
 
@@ -581,6 +583,20 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/datosContrato/{factura}', [ContratosController::class, 'datosContrato']);
     Route::post('/grabaContrato', [ContratosController::class, 'grabaContrato']);
     Route::get('/eliminaContrato/{almacen}/{numero}', [ContratosController::class, 'eliminaContrato']);
+
+    //Relacion Usuarios Almacen Gex
+    Route::get('/listadoRelaUsuAlma', [RelacionUsuariosAlamcenGexController::class, 'listado']);
+    Route::get('/listadoUsuariosRela', [RelacionUsuariosAlamcenGexController::class, 'usuarios']);
+    Route::get('/listadoAlmacenesRela', [RelacionUsuariosAlamcenGexController::class, 'almacenes']);
+    Route::post('/grabaRelaUsuAlma', [RelacionUsuariosAlamcenGexController::class, 'grabaRela']);
+    Route::get('/byRelaUsuAlma/{usuario}/{almacen}', [RelacionUsuariosAlamcenGexController::class, 'byRela']);
+    Route::get('/eliminaRelaUsuAlma/{usuario}/{almacen}', [RelacionUsuariosAlamcenGexController::class, 'eliminaRela']);
+
+    //Ventas Totales Gex
+    Route::get('/listadoAlamaUsu/{usuario}', [VentasTotalesGexController::class, 'almacenes']);
+    Route::get('/listadoVendedores', [VentasTotalesGexController::class, 'vendedores']);
+    Route::get('/ventasTotalesGex/{almacen}/{usuario}/{vendedor}/{fecIni}/{fecFin}', [VentasTotalesGexController::class, 'VentasTotalesGex']);
+    Route::get('/ventasTotalesGexAlmacen/{almacen}/{usuario}/{fecIni}/{fecFin}', [VentasTotalesGexController::class, 'VentasTotalesGexAlmacen']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
