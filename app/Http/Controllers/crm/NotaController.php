@@ -45,7 +45,7 @@ class NotaController extends Controller
                 // END Auditoria
 
                 // $data = DB::select('select * from crm.nota where caso_id =' . $request->caso_id);
-                $data = Nota::where('caso_id', $request->caso_id)->get();
+                $data = Nota::where('caso_id', $request->caso_id)->orderBy('id', 'desc')->get();
 
                 // Especificar las propiedades que representan fechas en tu objeto Nota
                 $dateFields = ['created_at', 'updated_at'];
