@@ -23,6 +23,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\TipoCasoFormulasController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
@@ -62,6 +63,8 @@ use App\Http\Controllers\crm\garantias\GEXController;
 use App\Http\Controllers\crm\series\PreIngresoController;
 use App\Http\Controllers\crm\series\DespachoController;
 use App\Http\Controllers\crm\series\InventarioController;
+use App\Http\Controllers\crm\series\KardexSeriesController;
+use App\Http\Controllers\crm\garantias\ContratosController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
@@ -298,6 +301,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listByTablerosIdWithFases/{tab_id}', [TableroController::class, 'listByTablerosIdWithFases']); // listar tableros con sus fases
     Route::get('/editMiembrosByTableroId/{id}', [TableroController::class, 'editMiembrosByTableroId']); // Editar los miembros del tablero
 
+    Route::get('/listTableroByDepId/{dep_id}', [TableroController::class, 'listTableroByDepId']); // listar
+
     // DEPARTAMENTO
 
     Route::get('/allDepartamento', [DepartamentoController::class, 'allDepartamento']); // listar
@@ -405,6 +410,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listUsuariosByTableroId/{tablero_id}', [UserController::class, 'listUsuariosByTableroId']); // listar usuarios del tablero
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
 
+    Route::get('/listAlmacenes', [UserController::class, 'listAlmacenes']); // listar almacenes
+
     // NOTIFICACIONES
 
     Route::get('/allByDepartamento/{id}', [NotificacionesController::class, 'allByDepartamento']);
@@ -459,7 +466,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // Perfil Analistas
 
-    Route::get('/listAllPerfilAnalistas', [PerfilAnalistasController::class, 'listAllPerfilAnalistas']); // listar
+    Route::get('/listAllPerfilAnalistas', [PerfilAnalistasController::class, 'listAllPerfilAnalistas']); // guardar
     Route::post('/addPerfilAnalistas', [PerfilAnalistasController::class, 'addPerfilAnalistas']); // guardar
     Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
     Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
@@ -467,6 +474,15 @@ Route::group(["prefix" => "crm"], function ($router) {
     // CONTROL TIEMPOS CASO
 
     Route::post('/editCalcularTiemposCaso/{caso_id}', [CasoController::class, 'editCalcularTiemposCaso']); // Editar
+
+    // TIPO CASO FORMULAS
+
+    Route::get('/listTpoCasoFormulasById/{tab_id}/{tc_id}', [TipoCasoFormulasController::class, 'listTpoCasoFormulasById']); // listar por la llave tab_id y tc_id
+    Route::get('/listTpoCasoFormulas', [TipoCasoFormulasController::class, 'listTpoCasoFormulas']); // listar all
+    Route::get('/listTpoCasoFormulasActivos', [TipoCasoFormulasController::class, 'listTpoCasoFormulasActivos']); // listar activos
+    Route::post('/addTipoCasoFormulas', [TipoCasoFormulasController::class, 'addTipoCasoFormulas']); // guardar
+    Route::post('/editTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
+    Route::delete('/deleteTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
 
 });
 
@@ -612,6 +628,19 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byInventarioProc/{numero}', [InventarioController::class, 'byInventarioProc']);
     Route::get('/anulaInventario/{numero}', [InventarioController::class, 'anulaInventario']);
     Route::get('/eliminaInventario/{numero}', [InventarioController::class, 'eliminaInventario']);
+
+    //Kardex de Series
+    Route::get('/listadoProdKar', [KardexSeriesController::class, 'productos']);
+    Route::get('/listadoBodegasKar', [KardexSeriesController::class, 'bodegas']);
+    Route::get('/kardexSeries/{fecIni}/{fecFin}/{bodega}/{producto}/{tipo}/{serie}', [KardexSeriesController::class, 'kardexSeries']);
+
+    //Contratos GEX
+    Route::get('/contratosGex', [ContratosController::class, 'listado']);
+    Route::get('/almacenes', [ContratosController::class, 'almacenes']);
+    Route::get('/facturas/{almacen}', [ContratosController::class, 'facturas']);
+    Route::get('/datosContrato/{factura}', [ContratosController::class, 'datosContrato']);
+    Route::post('/grabaContrato', [ContratosController::class, 'grabaContrato']);
+    Route::get('/eliminaContrato/{almacen}/{numero}', [ContratosController::class, 'eliminaContrato']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);

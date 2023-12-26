@@ -52,9 +52,19 @@ class CasoController extends Controller
     public function add(Request $request)
     {
         $casoInput = $request->all();
-        $miembros = $request->input('miembros');
+        // $miembros = $request->input('miembros');
+        $miembros2 = $request->input('miembros');
+
+        // Verificar si $miembros2 es un string
+        if (is_string($miembros2)) {
+            // Convertir la cadena en un array usando la coma como delimitador
+            $miembros = array_map('intval', explode(',', $miembros2));
+        } else {
+            $miembros = $miembros2;
+        }
+
         try {
-            $casoCreado = DB::transaction(function () use ($casoInput, $miembros) {
+            $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
 
                 $userLoginId = 1; //auth('api')->user()->id;
                 $caso = new Caso($casoInput);
@@ -95,6 +105,10 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
                 $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
+
+                $soporteController = new SoporteController();
+                $soporteController->addGaleriaArchivos($request, $caso->id);
+
                 return $this->getCaso($caso->id);
             });
             broadcast(new TableroEvent($casoCreado));
@@ -122,7 +136,7 @@ class CasoController extends Controller
             $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
             $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Caso creado con exito.', $casoCreado));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $th->getMessage()));
         }
@@ -136,11 +150,15 @@ class CasoController extends Controller
             ->orderBy('id', 'ASC')
             ->get();
 
-        // Formatear las fechas
-        $data->transform(function ($item) {
-            $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
-            return $item;
-        });
+       // Especificar las propiedades que representan fechas en tu objeto Nota
+       $dateFields = ['created_at', 'updated_at'];
+       // Utilizar la función map para transformar y obtener una nueva colección
+       $data->map(function ($item) use ($dateFields) {
+           // $this->formatoFechaItem($item, $dateFields);
+           $funciones = new Funciones();
+           $funciones->formatoFechaItem($item, $dateFields);
+           return $item;
+       });
 
         return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
     }
