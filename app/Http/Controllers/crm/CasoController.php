@@ -150,11 +150,15 @@ class CasoController extends Controller
             ->orderBy('id', 'ASC')
             ->get();
 
-        // Formatear las fechas
-        $data->transform(function ($item) {
-            $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
-            return $item;
-        });
+       // Especificar las propiedades que representan fechas en tu objeto Nota
+       $dateFields = ['created_at', 'updated_at'];
+       // Utilizar la función map para transformar y obtener una nueva colección
+       $data->map(function ($item) use ($dateFields) {
+           // $this->formatoFechaItem($item, $dateFields);
+           $funciones = new Funciones();
+           $funciones->formatoFechaItem($item, $dateFields);
+           return $item;
+       });
 
         return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
     }
