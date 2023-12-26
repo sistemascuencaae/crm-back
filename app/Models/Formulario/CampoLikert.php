@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class CampoLikert extends Model
 {
     protected $table = 'crm.campo_likert';
+
+    protected $fillable = [
+        'campo_id',
+        'fcl_id',
+    ];
     protected $hidden = ['created_at', 'updated_at', 'deleted_at'];
     public function formCampo()
     {
