@@ -37,9 +37,10 @@ class FormController extends Controller
                 },
             ])->find($formId);
             $secciones = FormSeccion::where('form_id', $formId)
-            ->where('estado', true)
-            ->orderBy('orden', 'asc')
-            ->get();
+                ->where('estado', true)
+                ->orderBy('orden', 'asc')
+                ->get();
+
             $data = (object) [
                 "secciones" => $secciones,
                 "parametros" => $parametros,
@@ -105,7 +106,7 @@ class FormController extends Controller
                 },
                 //->orderBy('orden', 'asc') colocar esto para ordenar los campos
             ])
-            ->find($id);
+                ->find($id);
             if ($data) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
             } else {
@@ -129,6 +130,36 @@ class FormController extends Controller
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
         }
+    }
+
+    public function impresion($formId,$userId)
+    {
+        $data = $this->camposImprimir($formId, $userId);
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+    }
+
+    public function camposImprimir($formId, $userId)
+    {
+        $data = DB::select("SELECT
+            fc.orden,
+            fv.user_id,
+            fc.titulo,
+            fcl.puntos as puntos_tipo_liker,
+            fv.valor_texto,
+            fv.valor_entero,
+            fv.valor_date,
+            fv.valor_decimal,
+            fv.valor_boolean,
+            fv.valor_json,
+            fv.valor_array,
+            fcl.nombre as nombre_campo_liker
+            from crm.form_campo fc
+            left join crm.form_campo_valor fcv on fcv.campo_id = fc.id
+            left join crm.form_valor fv on fv.id = fcv.valor_id
+            inner join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
+            left join crm.form_campo_likert fcl on fcl.id = fv.valor_entero and fc.tipo_campo_id = 2
+            where fc.form_id = ? and fv.user_id = ? order by orden asc", [$formId, $userId]);
+        return $data;
     }
 
     public function obtenerFormularioCompleto($id)
