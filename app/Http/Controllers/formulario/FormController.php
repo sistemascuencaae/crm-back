@@ -22,11 +22,37 @@ class FormController extends Controller
         ]]);
     }
 
-
-    public function store($formId)
+    public function storeA($formId)
     {
         try {
-            $userId = Auth::id();
+            //$userId = Auth::id();
+            $parametros = Parametro::with('parametroHijos')->get();
+            $formulario = Formulario::with([
+                'campo.tipo',
+                'campo.likert',
+                'campo.parametro.parametroHijos',
+            ])->find($formId);
+            $secciones = FormSeccion::where('form_id', $formId)
+                ->where('estado', true)
+                ->orderBy('orden', 'asc')
+                ->get();
+
+            $data = (object) [
+                "secciones" => $secciones,
+                "parametros" => $parametros,
+                "formulario" => $formulario
+            ];
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+    }
+
+
+    public function storeB($formId, $userId)
+    {
+        try {
+            //$userId = Auth::id();
             $parametros = Parametro::with('parametroHijos')->get();
             $formulario = Formulario::with([
                 'campo.tipo',
@@ -41,10 +67,14 @@ class FormController extends Controller
                 ->orderBy('orden', 'asc')
                 ->get();
 
+            $campoController = new CampoController();
+
+            $totalesSecciones = $campoController->getTotalesSecciones($formId, $userId);
             $data = (object) [
                 "secciones" => $secciones,
                 "parametros" => $parametros,
-                "formulario" => $formulario
+                "formulario" => $formulario,
+                "totalesSecciones" => $totalesSecciones
             ];
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
@@ -132,7 +162,7 @@ class FormController extends Controller
         }
     }
 
-    public function impresion($formId,$userId)
+    public function impresion($formId, $userId)
     {
         $data = $this->camposImprimir($formId, $userId);
         return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
