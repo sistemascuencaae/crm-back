@@ -177,8 +177,13 @@ class CampoController extends Controller
             // ])->first();
             $campo = FormCampo::find($campoId);
             $data = $this->getNombreControles($campo->form_id, $userId);
+            $seccionesActualizadas = $this->getTotalesSecciones($campo->form_id, $userId);
+            $result = (object)[
+                "nombresControles" => '',//$data,
+                "totalesSecciones" => $seccionesActualizadas
+            ];
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $result));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al realizar la operación.', $th->getMessage()));
         }
@@ -426,6 +431,26 @@ class CampoController extends Controller
                 left join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
                 WHERE
                 fc.form_id = ? and fv.user_id = ? order by fc.orden asc;", [$formId, $userId]);
+            return $data;
+        } catch (\Throwable $th) {
+            return null;
+        }
+    }
+    public function getTotalesSecciones($formId, $userId){
+        try {
+            $data = DB::select("SELECT
+                fc.form_secc_id,
+                fv.user_id,
+                fc.tipo_campo_id,
+                fc.form_id,
+                fc.titulo,
+                (select fcl.puntos  from crm.form_campo_likert fcl where fcl.id = fv.valor_entero limit 1) as puntos
+                from
+                crm.form_campo fc
+                left join crm.form_tipo_campo ftc on ftc.id = fc.id
+                left join crm.form_campo_valor fcv on fcv.campo_id = fc.id
+                left join crm.form_valor fv on fv.id = fcv.valor_id
+                where fc.form_id = ? and fv.user_id = ? and fc.tipo_campo_id = 2  order by 1 asc", [$formId, $userId]);
             return $data;
         } catch (\Throwable $th) {
             return null;
