@@ -488,6 +488,7 @@ class CasoController extends Controller
                     'fase.tablero',
                     'estadodos',
                 )->find($caso_id);
+
                 $casoEnProceso->fas_id = $new_fase_id;
                 $casoEnProceso->user_id = $new_user_id;
                 $casoEnProceso->estado_2 = $estado_2;
@@ -497,6 +498,7 @@ class CasoController extends Controller
                 $casoEnProceso->fase_anterior_id = $fase_anterior_id;
                 $casoEnProceso->user_anterior_id = $user_anterior_id;
                 $casoEnProceso->save();
+                $this->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
                 $emailController = new EmailController();
                 $emailController->send_emailCambioFase($caso_id, $casoEnProceso->fas_id);
                 //$this->enviarCorreoCliente($caso_id);

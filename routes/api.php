@@ -68,6 +68,7 @@ use App\Http\Controllers\crm\garantias\ContratosController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
+use App\Http\Controllers\formulario\FormSeccionController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -210,11 +211,15 @@ Route::group([], function ($router) {
 });
 
 Route::group(["prefix" => "form"], function ($router) {
-    Route::get('/list', [FormController::class, 'list']); //
+    Route::get('/list', [FormController::class, 'list']);
+    Route::get('/storeA/{formId}', [FormController::class, 'storeA']);
+    Route::get('/storeB/{formId}/{userId}', [FormController::class, 'storeB']);
     Route::get('/listByDepar/{depId}/{userId}', [FormController::class, 'listByDepar']); //
     Route::get('/formUser/{depId}/{userId}', [FormController::class, 'formUser']); //formUser
     Route::get('/byId/{formId}', [FormController::class, 'byId']); //formUser
-    Route::get('/listAll', [FormController::class, 'listAll']);
+    Route::get('/listAll', [FormController::class, 'listAll']); //
+    Route::get('/impresion/{formId}/{userId}', [FormController::class, 'impresion']);//impresion
+    Route::put('/edit/{id}', [FormController::class, 'edit']);
 });
 Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::get('/store', [CampoController::class, 'store']);
@@ -226,7 +231,13 @@ Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::get('/restoreById/{id}', [CampoController::class, 'restoreById']);
     Route::put('/edit/{id}', [CampoController::class, 'edit']);
     Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
-    Route::post('/add', [CampoController::class, 'add']);
+    Route::post('/add', [CampoController::class, 'add']); //addCampoValor
+    Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']);//addCampoValor
+});
+Route::group(['prefix' => 'form/seccion'], function ($router) {
+    Route::get('/store', [FormSeccionController::class, 'store']);
+    Route::post('/add', [FormSeccionController::class, 'add']);
+    Route::put('/edit/{id}', [FormSeccionController::class, 'edit']);
 });
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
