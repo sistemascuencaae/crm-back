@@ -21,16 +21,17 @@ class CampoController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => [
-            'full',
             'store',
-            'add',
-            'byId',
             'list',
             'listAll',
-            'edit',
-            'deleted',
+            'full',
+            'add',
+            'listAll',
+            'addCampoValor1',
+            'addCampoValor',
             'restoreById',
-            'delete',
+            'restoreById',
+            'deleteById',
             'deleteById'
         ]]);
     }

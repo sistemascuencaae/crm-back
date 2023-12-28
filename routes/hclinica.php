@@ -52,6 +52,8 @@ Route::group([
     'prefix' => 'paciente-dos',
 ], function () {
     Route::get('byIdentificacion/{ident}', [PacienteDosController::class, 'byIdentificacion']);
+    Route::put('edit/{id}', [PacienteDosController::class, 'edit']);
+    Route::post('add', [PacienteDosController::class, 'add']);
 });
 
 Route::group([
