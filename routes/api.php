@@ -65,6 +65,9 @@ use App\Http\Controllers\crm\series\KardexSeriesController;
 use App\Http\Controllers\crm\garantias\ContratosController;
 use App\Http\Controllers\crm\garantias\RelacionUsuariosAlamcenGexController;
 use App\Http\Controllers\crm\garantias\VentasTotalesGexController;
+use App\Http\Controllers\crm\series\InventarioFechaSeriesController;
+use App\Http\Controllers\crm\series\InformeInventarioSeriesController;
+use App\Http\Controllers\crm\series\ComparativoSeriesController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use Illuminate\Support\Facades\Route;
 
@@ -581,6 +584,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/almacenes', [ContratosController::class, 'almacenes']);
     Route::get('/facturas/{almacen}', [ContratosController::class, 'facturas']);
     Route::get('/datosContrato/{factura}', [ContratosController::class, 'datosContrato']);
+    Route::get('/byContrato/{almacen}/{numero}', [ContratosController::class, 'byContrato']);
     Route::post('/grabaContrato', [ContratosController::class, 'grabaContrato']);
     Route::get('/eliminaContrato/{almacen}/{numero}', [ContratosController::class, 'eliminaContrato']);
 
@@ -597,6 +601,21 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listadoVendedores', [VentasTotalesGexController::class, 'vendedores']);
     Route::get('/ventasTotalesGex/{almacen}/{usuario}/{vendedor}/{fecIni}/{fecFin}', [VentasTotalesGexController::class, 'VentasTotalesGex']);
     Route::get('/ventasTotalesGexAlmacen/{almacen}/{usuario}/{fecIni}/{fecFin}', [VentasTotalesGexController::class, 'VentasTotalesGexAlmacen']);
+
+    //Inventario a la Fecha de Series
+    Route::get('/listadoProdInvFec', [InventarioFechaSeriesController::class, 'productos']);
+    Route::get('/listadoBodegasInvFec', [InventarioFechaSeriesController::class, 'bodegas']);
+    Route::get('/invFecSeries/{fecCorte}/{bodega}/{producto}', [InventarioFechaSeriesController::class, 'invFecSeries']);
+
+    //Informe de Inventario de Series
+    Route::get('/listadoInv/{bodega}', [InformeInventarioSeriesController::class, 'inventarios']);
+    Route::get('/listadoBodegasInfInv', [InformeInventarioSeriesController::class, 'bodegas']);
+    Route::get('/infInvSeries/{bodega}/{numero}', [InformeInventarioSeriesController::class, 'infInvSeries']);
+
+    //Comparativo de Series
+    Route::get('/listadoInvCompa/{bodega}', [ComparativoSeriesController::class, 'inventarios']);
+    Route::get('/listadoBodegasCompa', [ComparativoSeriesController::class, 'bodegas']);
+    Route::get('/comparativoSeries/{fecCorte}/{bodega}/{numero}', [ComparativoSeriesController::class, 'comparativoSeries']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
