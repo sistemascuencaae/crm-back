@@ -224,19 +224,6 @@ class RobotCasoController extends Controller
         // //--- retorna opcion 1 hasta el momento
     }
 
-    private function analizarPerfilAnalista($usuarios)
-    {
-    }
-
-    private function analizarCasosPorUsario($usuarios)
-    {
-        $casosUsuario = new Collection();
-
-        //2068
-        //2067
-        //2066
-    }
-
 
     public function getUsuarioTablero($userCreadorId, $tableroCreacionId)
     {

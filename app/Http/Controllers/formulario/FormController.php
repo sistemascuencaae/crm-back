@@ -25,7 +25,6 @@ class FormController extends Controller
     public function storeA($formId)
     {
         try {
-            //$userId = Auth::id();
             $parametros = Parametro::with('parametroHijos')->get();
             $formulario = Formulario::with([
                 'campo.tipo',
@@ -49,17 +48,16 @@ class FormController extends Controller
     }
 
 
-    public function storeB($formId, $userId)
+    public function storeB($formId, $pacId)
     {
         try {
-            //$userId = Auth::id();
             $parametros = Parametro::with('parametroHijos')->get();
             $formulario = Formulario::with([
                 'campo.tipo',
                 'campo.likert',
                 'campo.parametro.parametroHijos',
-                'campo.valor' => function ($query) use ($userId) {
-                    $query->where('user_id', $userId);
+                'campo.valor' => function ($query) use ($pacId) {
+                    $query->where('pac_id', $pacId);
                 },
             ])->find($formId);
             $secciones = FormSeccion::where('form_id', $formId)
@@ -69,7 +67,7 @@ class FormController extends Controller
 
             $campoController = new CampoController();
 
-            $totalesSecciones = $campoController->getTotalesSecciones($formId, $userId);
+            $totalesSecciones = $campoController->getTotalesSecciones($formId, $pacId);
             $data = (object) [
                 "secciones" => $secciones,
                 "parametros" => $parametros,
@@ -83,21 +81,21 @@ class FormController extends Controller
     }
 
 
-    public function formUser($formId, $userId)
+    public function formUser($formId, $pacId)
     {
 
         try {
-            $data = FormUserCompletoView::where('form_id', $formId)->where('user_id', $userId)->get();
+            $data = FormUserCompletoView::where('form_id', $formId)->where('pac_id', $pacId)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
         }
     }
-    public function listByDepar($id, $userId)
+    public function listByDepar($id, $pacId)
     {
         try {
-            $data = Formulario::with(['campo.tipo', 'campo.valor' => function ($query) use ($userId) {
-                $query->where('crm.form_valor.user_id', $userId)->get(); // Limitar a un solo resultado
+            $data = Formulario::with(['campo.tipo', 'campo.valor' => function ($query) use ($pacId) {
+                $query->where('crm.form_valor.pac_id', $pacId)->get(); // Limitar a un solo resultado
             }])->where('dep_id', $id)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
@@ -123,29 +121,29 @@ class FormController extends Controller
         }
     }
 
-    public function byId($id)
-    {
-        try {
-            $userId = Auth::id();
-            $data = Formulario::with([
-                'campo.tipo',
-                'campo.likert',
-                'campo.parametro.parametroHijos',
-                'campo.valor' => function ($query) use ($userId) {
-                    $query->where('user_id', $userId);
-                },
-                //->orderBy('orden', 'asc') colocar esto para ordenar los campos
-            ])
-                ->find($id);
-            if ($data) {
-                return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
-            } else {
-                return response()->json(RespuestaApi::returnResultado('error', 'El id no existe', $id));
-            }
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
-        }
-    }
+    // public function byId($id)
+    // {
+    //     try {
+    //         $userId = Auth::id();
+    //         $data = Formulario::with([
+    //             'campo.tipo',
+    //             'campo.likert',
+    //             'campo.parametro.parametroHijos',
+    //             'campo.valor' => function ($query) use ($userId) {
+    //                 $query->where('user_id', $userId);
+    //             },
+    //             //->orderBy('orden', 'asc') colocar esto para ordenar los campos
+    //         ])
+    //             ->find($id);
+    //         if ($data) {
+    //             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
+    //         } else {
+    //             return response()->json(RespuestaApi::returnResultado('error', 'El id no existe', $id));
+    //         }
+    //     } catch (\Throwable $th) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
+    //     }
+    // }
 
     public function edit(Request $request, $id)
     {
@@ -162,13 +160,13 @@ class FormController extends Controller
         }
     }
 
-    public function impresion($formId, $userId)
+    public function impresion($formId, $pacId)
     {
-        $data = $this->camposImprimir($formId, $userId);
+        $data = $this->camposImprimir($formId, $pacId);
         return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
     }
 
-    public function camposImprimir($formId, $userId)
+    public function camposImprimir($formId, $pacId)
     {
         $data = DB::select("SELECT
             fc.orden,
@@ -188,7 +186,7 @@ class FormController extends Controller
             left join crm.form_valor fv on fv.id = fcv.valor_id
             inner join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
             left join crm.form_campo_likert fcl on fcl.id = fv.valor_entero and fc.tipo_campo_id = 2
-            where fc.form_id = ? and fv.user_id = ? order by orden asc", [$formId, $userId]);
+            where fc.form_id = ? and fv.pac_id = ? order by orden asc", [$formId, $pacId]);
         return $data;
     }
 

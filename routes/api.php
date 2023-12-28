@@ -239,6 +239,7 @@ Route::group(['prefix' => 'form/seccion'], function ($router) {
     Route::post('/add', [FormSeccionController::class, 'add']);
     Route::put('/edit/{id}', [FormSeccionController::class, 'edit']);
 });
+
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
