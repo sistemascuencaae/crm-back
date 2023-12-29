@@ -16,10 +16,15 @@ class PacienteDosController extends Controller
         ]]);
     }
 
-    public function byIdentificacion($identificacion)
+    public function byIdentificacion($identificacion, $pacId)
     {
         try {
-            $results = Paciente::where('pac_identificacion', $identificacion)->first();
+            if($identificacion === '0'){
+                $results = Paciente::find($pacId);
+            }else{
+
+                $results = Paciente::where('pac_identificacion', $identificacion)->first();
+            }
             if ($results) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $results));
             } else {
