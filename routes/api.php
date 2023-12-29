@@ -45,7 +45,6 @@ use App\Http\Controllers\crm\RespuestasCasoController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
-use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
@@ -294,7 +293,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTablero', [TableroController::class, 'addTablero']); // guardar
     Route::get('/listTableroByUser/{user_id}', [TableroController::class, 'listTableroByUser']); // listar
     Route::get('/listTableroMisCasos/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
-    Route::post('/updateTablero/{id}', [TableroController::class, 'updateTablero']); // Editar
+    Route::post('/editTablero/{id}', [TableroController::class, 'editTablero']); // Editar
     Route::get('/listAllTableros', [TableroController::class, 'listAll']); // listar tablero mis casos
     Route::get('/listAllTablerosActivos', [TableroController::class, 'listAllTablerosActivos']); // listar tableros inactivos
     Route::get('/listAllTablerosInactivos', [TableroController::class, 'listAllTablerosInactivos']); // listar tableros inactivos
@@ -312,10 +311,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addDepartamento', [DepartamentoController::class, 'addDepartamento']); // guardar
     Route::post('/editDepartamento/{id}', [DepartamentoController::class, 'editDepartamento']); // Editar
     Route::delete('/deleteDepartamento/{id}', [DepartamentoController::class, 'deleteDepartamento']); // Eliminar
-
-    // TIPO_TABLERO
-
-    Route::get('/allTipoTablero', [TipoTableroController::class, 'allTipoTablero']); // listar
 
     // NOTAS
 
