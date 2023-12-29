@@ -407,6 +407,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
 
     Route::get('/listAlmacenes', [UserController::class, 'listAlmacenes']); // listar almacenes
+    
+    Route::post('/editEnLineaUser/{user_id}', [UserController::class, 'editEnLineaUser']); // editar en linea del usuario
 
     // NOTIFICACIONES
 

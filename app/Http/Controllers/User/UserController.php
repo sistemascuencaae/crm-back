@@ -179,4 +179,25 @@ class UserController extends Controller
         }
     }
 
+    public function editEnLineaUser(Request $request, $user_id)
+    {
+        try {
+            $usuario = $request->all();
+
+            $data = DB::transaction(function () use ($usuario, $user_id, $request) {
+
+                $usuario = User::findOrFail($user_id);
+
+                $usuario->update([
+                    "en_linea" => $request->en_linea,
+                ]);
+
+                return User::where('id', $usuario->id)->first();
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 }
