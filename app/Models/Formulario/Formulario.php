@@ -16,7 +16,8 @@ class Formulario extends Model
         'nombre',
         'descripcion',
         'estado',
-        'dep_id'
+        'dep_id',
+        'tipo'
     ];
     protected $hidden = ['created_at', 'deleted_at'];
     public function campo()
