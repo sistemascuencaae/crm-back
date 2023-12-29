@@ -18,7 +18,7 @@ class FormController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => [
-            'list', 'listByDepar', 'formUser', 'listAll', 'storeA', 'storeB', 'formUser', 'getTotalesSecciones', 'impresion'
+            'list', 'listByDepar', 'formUser', 'listAll', 'storeA', 'storeB', 'formUser', 'getTotalesSecciones', 'impresion', 'listAnonimos'
         ]]);
     }
 
@@ -100,6 +100,16 @@ class FormController extends Controller
                 $query->where('crm.form_valor.pac_id', $pacId)->get(); // Limitar a un solo resultado
             }])->where('dep_id', $id)->get();
 
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+    }
+
+    public function listAnonimos()
+    {
+        try {
+            $data = DB::select("SELECT * from crm.formularios_anonimos where fecha_resuelto notnull");
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
