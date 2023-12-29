@@ -32,7 +32,8 @@ class CampoController extends Controller
             'restoreById',
             'restoreById',
             'deleteById',
-            'deleteById'
+            'deleteById',
+            'edit'
         ]]);
     }
     public function store()

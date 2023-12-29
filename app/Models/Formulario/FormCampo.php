@@ -38,7 +38,7 @@ class FormCampo extends Model
     }
     public function likert()
     {
-        return $this->belongsToMany(FormCampoLikert::class, 'crm.campo_likert', 'campo_id', 'fcl_id');
+        return $this->belongsToMany(FormCampoLikert::class, 'crm.form_campolikert_union', 'campo_id', 'fcl_id');
     }
     public function campoLikerts()
     {
