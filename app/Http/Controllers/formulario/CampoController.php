@@ -171,9 +171,11 @@ class CampoController extends Controller
             $campo = FormCampo::find($campoId);
             $data = $this->getNombreControles($campo->form_id, $pacId);
             $seccionesActualizadas = $this->getTotalesSecciones($campo->form_id, $pacId);
+            $formController = new FormController();
             $result = (object)[
                 "nombresControles" => '',//$data,
-                "totalesSecciones" => $seccionesActualizadas
+                "totalesSecciones" => $seccionesActualizadas,
+                "camposImprimir" => $formController->camposImprimir($campo->form_id, $pacId)
             ];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $result));

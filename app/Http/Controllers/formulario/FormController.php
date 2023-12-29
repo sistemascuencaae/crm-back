@@ -68,11 +68,13 @@ class FormController extends Controller
             $campoController = new CampoController();
 
             $totalesSecciones = $campoController->getTotalesSecciones($formId, $pacId);
+            $camposImprimir = $this->camposImprimir($formId, $pacId);
             $data = (object) [
                 "secciones" => $secciones,
                 "parametros" => $parametros,
                 "formulario" => $formulario,
-                "totalesSecciones" => $totalesSecciones
+                "totalesSecciones" => $totalesSecciones,
+                "camposImprimir" => $camposImprimir
             ];
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
@@ -170,23 +172,24 @@ class FormController extends Controller
     {
         $data = DB::select("SELECT
             fc.orden,
+            fc.form_secc_id,
+            ftc.nombre as tipo_nombre,
             fv.user_id,
+            fv.pac_id,
             fc.titulo,
-            fcl.puntos as puntos_tipo_liker,
             fv.valor_texto,
             fv.valor_entero,
             fv.valor_date,
             fv.valor_decimal,
             fv.valor_boolean,
             fv.valor_json,
-            fv.valor_array,
-            fcl.nombre as nombre_campo_liker
-            from crm.form_campo fc
-            left join crm.form_campo_valor fcv on fcv.campo_id = fc.id
-            left join crm.form_valor fv on fv.id = fcv.valor_id
-            inner join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
-            left join crm.form_campo_likert fcl on fcl.id = fv.valor_entero and fc.tipo_campo_id = 2
-            where fc.form_id = ? and fv.pac_id = ? order by orden asc", [$formId, $pacId]);
+            fv.valor_array
+from
+crm.form_campo fc
+left join crm.form_campo_valor fcv on fcv.campo_id = fc.id
+left join crm.form_valor fv on fv.id = fcv.valor_id
+left join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
+where fc.form_id = ? and fv.pac_id = ? or fv.pac_id isnull order by 1 asc", [$formId, $pacId]);
         return $data;
     }
 
