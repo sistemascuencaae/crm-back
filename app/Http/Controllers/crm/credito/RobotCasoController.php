@@ -129,6 +129,8 @@ class RobotCasoController extends Controller
                 return $casoEnProceso;
             }
         }
+        //EL TABLERO ES EL USUARIO ANTERIOR
+        
         //--- usuarios en linea del nuevo tablero
         $usuariosNuevoTablero = DB::select("SELECT * FROM crm.usuarios_casos WHERE tab_id = ?", [$formula->tablero_id]);
         $userMenorNumCasos = $this->organizarCasos($usuariosNuevoTablero);
@@ -222,19 +224,6 @@ class RobotCasoController extends Controller
 
 
         // //--- retorna opcion 1 hasta el momento
-    }
-
-    private function analizarPerfilAnalista($usuarios)
-    {
-    }
-
-    private function analizarCasosPorUsario($usuarios)
-    {
-        $casosUsuario = new Collection();
-
-        //2068
-        //2067
-        //2066
     }
 
 

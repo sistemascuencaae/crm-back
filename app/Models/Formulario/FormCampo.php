@@ -24,6 +24,7 @@ class FormCampo extends Model
         'orden',
         'form_secc_id',
         'par_id',
+        'modificar',
         'deleted_at',
     ];
     protected $hidden = ['created_at', 'updated_at'];
@@ -37,7 +38,7 @@ class FormCampo extends Model
     }
     public function likert()
     {
-        return $this->belongsToMany(FormCampoLikert::class, 'crm.campo_likert', 'campo_id', 'fcl_id');
+        return $this->belongsToMany(FormCampoLikert::class, 'crm.form_campolikert_union', 'campo_id', 'fcl_id');
     }
     public function campoLikerts()
     {

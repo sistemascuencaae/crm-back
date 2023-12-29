@@ -21,17 +21,19 @@ class CampoController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => [
-            'full',
             'store',
-            'add',
-            'byId',
             'list',
             'listAll',
-            'edit',
-            'deleted',
+            'full',
+            'add',
+            'listAll',
+            'addCampoValor1',
+            'addCampoValor',
             'restoreById',
-            'delete',
-            'deleteById'
+            'restoreById',
+            'deleteById',
+            'deleteById',
+            'edit'
         ]]);
     }
     public function store()
@@ -108,11 +110,11 @@ class CampoController extends Controller
     public function addCampoValor1(Request $request)
     {
         try {
-            $userId = Auth::id();
-            DB::transaction(function () use ($request, $userId) {
+            $pacId = $request->input('pac_id');
+            DB::transaction(function () use ($request, $pacId) {
                 $valor = $request->all();
                 $campoId = $request->input('campoId');
-                $valor['user_id'] = $userId;
+                $valor['pac_id'] = $pacId;
 
                 if ($request->input('id')) {
                     $modificarCampo = FormValor::find($valor['id']);
@@ -130,8 +132,8 @@ class CampoController extends Controller
             $data = Formulario::with([
                 'campo.tipo',
                 'campo.likert',
-                'campo.valor' => function ($query) use ($userId) {
-                    $query->where('user_id', $userId);
+                'campo.valor' => function ($query) use ($pacId) {
+                    $query->where('pac_id', $pacId);
                 },
             ]);
             return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
@@ -142,11 +144,10 @@ class CampoController extends Controller
     public function addCampoValor(Request $request)
     {
         try {
-            //$userId = Auth::id();
-            $userId = $request->input('user_id');
+            $pacId = $request->input('pac_id');
             $valor = $request->all();
             $campoId = $request->input('campoId');
-            $valor['user_id'] = $userId;
+            $valor['pac_id'] = $pacId;
 
             if ($request->input('id') !== 0) {
                 // Actualizar el registro existente
@@ -168,19 +169,14 @@ class CampoController extends Controller
                 $result = FormValor::find($newValor->id);
             }
 
-            // $data = Formulario::with([
-            //     'campo.tipo',
-            //     'campo.likert',
-            //     'campo.valor' => function ($query) use ($userId) {
-            //         $query->where('user_id', $userId);
-            //     },
-            // ])->first();
             $campo = FormCampo::find($campoId);
-            $data = $this->getNombreControles($campo->form_id, $userId);
-            $seccionesActualizadas = $this->getTotalesSecciones($campo->form_id, $userId);
+            $data = $this->getNombreControles($campo->form_id, $pacId);
+            $seccionesActualizadas = $this->getTotalesSecciones($campo->form_id, $pacId);
+            $formController = new FormController();
             $result = (object)[
                 "nombresControles" => '',//$data,
-                "totalesSecciones" => $seccionesActualizadas
+                "totalesSecciones" => $seccionesActualizadas,
+                "camposImprimir" => $formController->camposImprimir($campo->form_id, $pacId)
             ];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $result));
@@ -414,7 +410,7 @@ class CampoController extends Controller
             $campo->save();
         }
     }
-    public function getNombreControles($formId, $userId)
+    public function getNombreControles($formId, $pacId)
     {
         try {
             $data = DB::select("SELECT
@@ -430,17 +426,18 @@ class CampoController extends Controller
                 LEFT JOIN crm.form_valor fv ON fv.id = fcv.valor_id
                 left join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
                 WHERE
-                fc.form_id = ? and fv.user_id = ? order by fc.orden asc;", [$formId, $userId]);
+                fc.form_id = ? and fv.pacId = ? order by fc.orden asc;", [$formId, $pacId]);
             return $data;
         } catch (\Throwable $th) {
             return null;
         }
     }
-    public function getTotalesSecciones($formId, $userId){
+    public function getTotalesSecciones($formId, $pacId){
         try {
             $data = DB::select("SELECT
                 fc.form_secc_id,
                 fv.user_id,
+                fv.pac_id,
                 fc.tipo_campo_id,
                 fc.form_id,
                 fc.titulo,
@@ -450,7 +447,7 @@ class CampoController extends Controller
                 left join crm.form_tipo_campo ftc on ftc.id = fc.id
                 left join crm.form_campo_valor fcv on fcv.campo_id = fc.id
                 left join crm.form_valor fv on fv.id = fcv.valor_id
-                where fc.form_id = ? and fv.user_id = ? and fc.tipo_campo_id = 2  order by 1 asc", [$formId, $userId]);
+                where fc.form_id = ? and fv.pac_id = ? and fc.tipo_campo_id = 2  order by 1 asc", [$formId, $pacId]);
             return $data;
         } catch (\Throwable $th) {
             return null;
