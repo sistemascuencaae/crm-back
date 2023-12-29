@@ -146,18 +146,18 @@ class CampoController extends Controller
         try {
             $pacId = $request->input('pac_id');
             $valor = $request->all();
+            //echo ('$valor->id: '.json_encode($valor['id']));
             $campoId = $request->input('campoId');
-            $valor['pac_id'] = $pacId;
-
+            $valorReal = null;
             if ($request->input('id') !== 0) {
                 // Actualizar el registro existente
                 $modificarCampo = FormValor::find($valor['id']);
-                $modificarCampo->update($valor);
-
-                // También puedes actualizar el campo en FormCampoValor si es necesario
-                // ...
-
+                //echo ('$modificarCampo: '.json_encode($modificarCampo));
+                if($modificarCampo){
+                    $modificarCampo->update($valor);
+                }
                 $result = FormValor::find($valor['id']);
+                $valorReal = $result;
             } else {
                 // Crear un nuevo registro
                 $newValor = FormValor::create($valor);
@@ -165,8 +165,8 @@ class CampoController extends Controller
                     "valor_id" => $newValor->id,
                     "campo_id" => $campoId
                 ]);
-
                 $result = FormValor::find($newValor->id);
+                $valorReal = $result;
             }
 
             $campo = FormCampo::find($campoId);
@@ -176,7 +176,8 @@ class CampoController extends Controller
             $result = (object)[
                 "nombresControles" => '',//$data,
                 "totalesSecciones" => $seccionesActualizadas,
-                "camposImprimir" => $formController->camposImprimir($campo->form_id, $pacId)
+                "camposImprimir" => $formController->camposImprimir($campo->form_id, $pacId),
+                "valorReal"=> $valorReal
             ];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $result));
