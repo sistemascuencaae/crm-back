@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\FormOcupacional;
 
 
-class FormularioController extends Controller
+class   FormularioController extends Controller
 {
     use FormatResponseTrait;
     public function __construct()
@@ -54,7 +54,7 @@ class FormularioController extends Controller
             left join public.almacen alm on fo.alm_id = alm.alm_id
             left join public.ciudad ciu on ciu.ciu_id= pac.ciudad_id
             WHERE pac.pac_id = $id
-            UNION 
+            UNION
             SELECT 'APTITUD-MEDICA' as tipo_formulario,fam.fam_id as fo_id ,pac.pac_id,'' as alm_nombre,ciu.ciu_nombre, fam.created_at as creacion, fam.updated_at as actualizacion, fam.fam_estado as estado, pac.pac_primer_apellido, pac.pac_segundo_apellido, pac.pac_primero_nombre, pac.pac_segundo_nombre FROM hclinico.formulario_aptitudmedica fam
             left join hclinico.paciente pac on pac.pac_id = fam.pac_id
             left join public.ciudad ciu on ciu.ciu_id= pac.ciudad_id

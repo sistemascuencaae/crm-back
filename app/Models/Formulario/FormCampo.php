@@ -11,7 +11,6 @@ class FormCampo extends Model
     use HasFactory;
     use SoftDeletes;
     protected $table = 'crm.form_campo';
-    protected $dates = ['deleted_at'];
     protected $fillable = [
         'nombre',
         'titulo',
@@ -22,9 +21,13 @@ class FormCampo extends Model
         'tipo_campo_id',
         'form_control_name',
         'fcl_id',
-        'orden'
+        'orden',
+        'form_secc_id',
+        'par_id',
+        'modificar',
+        'deleted_at',
     ];
-    protected $hidden = ['created_at', 'updated_at', 'deleted_at'];
+    protected $hidden = ['created_at', 'updated_at'];
     public function valor()
     {
         return $this->belongsToMany(FormValor::class, 'crm.form_campo_valor', 'campo_id', 'valor_id');
@@ -35,10 +38,14 @@ class FormCampo extends Model
     }
     public function likert()
     {
-        return $this->belongsToMany(FormCampoLikert::class, 'crm.campo_likert', 'campo_id', 'fcl_id');
+        return $this->belongsToMany(FormCampoLikert::class, 'crm.form_campolikert_union', 'campo_id', 'fcl_id');
     }
     public function campoLikerts()
     {
         return $this->hasMany(CampoLikert::class, 'campo_id', 'id');
+    }
+    public function parametro()
+    {
+        return $this->belongsTo(Parametro::class, 'par_id', 'id');
     }
 }

@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
 use App\Models\crm\DTipoActividad;
 use App\Models\crm\Miembros;
 use App\Models\User;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -125,6 +127,25 @@ class DActividadController extends Controller
             END AS descripcion_pos_descripcion")
                 ->orderBy('id', 'DESC')->get();
 
+            // // Formatear las fechas
+            // $actividades->transform(function ($item) {
+            //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+            //     return $item;
+            // });
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $actividades->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -143,6 +164,25 @@ class DActividadController extends Controller
                 ELSE descripcion 
             END AS descripcion_pos_descripcion")
                 ->orderBy('id', 'DESC')->get();
+
+            // // Formatear las fechas
+            // $actividades->transform(function ($item) {
+            //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+            //     return $item;
+            // });
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $actividades->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
         } catch (Exception $e) {
@@ -212,6 +252,25 @@ class DActividadController extends Controller
                     $miembro->save();
                 }
 
+                // // Formatear las fechas
+                // $data->transform(function ($item) {
+                //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+                //     return $item;
+                // });
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                // Utilizar la función map para transformar y obtener una nueva colección
+                $data->map(function ($item) use ($dateFields) {
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
+                    return $item;
+                });
+
                 return $data;
             });
 
@@ -225,6 +284,7 @@ class DActividadController extends Controller
     public function updateDActividad(Request $request, $id)
     {
         try {
+
             $usuarioMiembro = $request->input('usuario');
 
             $actividad = DTipoActividad::findOrFail($id);
@@ -256,7 +316,7 @@ class DActividadController extends Controller
                 CASE 
                     WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
                     ELSE descripcion 
-                END AS descripcion_pos_descripcion")
+                    END AS descripcion_pos_descripcion")
 
                     ->first();
 
@@ -277,6 +337,18 @@ class DActividadController extends Controller
                 if (!$miemb) {
                     $miembro->save();
                 }
+
+                // Formatear las fechas
+                // $data->formatted_updated_at = Carbon::parse($data->updated_at)->format('Y-m-d H:i:s');
+                // $data->formatted_created_at = Carbon::parse($data->created_at)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_inicio = Carbon::parse($data->fecha_inicio)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_fin = Carbon::parse($data->fecha_fin)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_conclusion = Carbon::parse($data->fecha_conclusion)->format('Y-m-d H:i:s');
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($data, $dateFields);
 
                 return $data;
             });
@@ -299,6 +371,25 @@ class DActividadController extends Controller
                     ELSE descripcion 
                 END AS descripcion_pos_descripcion")
                 ->orderBy('id', 'DESC')->get();
+
+            // // Formatear las fechas
+            // $actividades->transform(function ($item) {
+            //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+            //     return $item;
+            // });
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $actividades->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
@@ -380,6 +471,25 @@ class DActividadController extends Controller
                     $miembro->save();
                 }
 
+                // // Formatear las fechas
+                // $data->transform(function ($item) {
+                //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+                //     return $item;
+                // });
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                // Utilizar la función map para transformar y obtener una nueva colección
+                $data->map(function ($item) use ($dateFields) {
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
+                    return $item;
+                });
+
                 return $data;
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
@@ -439,6 +549,18 @@ class DActividadController extends Controller
                     $miembro->save();
                 }
 
+                // // Formatear las fechas
+                // $data->formatted_updated_at = Carbon::parse($data->updated_at)->format('Y-m-d H:i:s');
+                // $data->formatted_created_at = Carbon::parse($data->created_at)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_inicio = Carbon::parse($data->fecha_inicio)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_fin = Carbon::parse($data->fecha_fin)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_conclusion = Carbon::parse($data->fecha_conclusion)->format('Y-m-d H:i:s');
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($data, $dateFields);
+
                 return $data;
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
@@ -481,7 +603,7 @@ class DActividadController extends Controller
                     "acc_publico" => $request->acc_publico,
                 ]);
 
-                return DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')
+                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')
                     // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
 
                     ->selectRaw("*, 
@@ -491,6 +613,20 @@ class DActividadController extends Controller
                 END AS descripcion_pos_descripcion")
 
                     ->first();
+
+                // // Formatear las fechas
+                // $data->formatted_updated_at = Carbon::parse($data->updated_at)->format('Y-m-d H:i:s');
+                // $data->formatted_created_at = Carbon::parse($data->created_at)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_inicio = Carbon::parse($data->fecha_inicio)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_fin = Carbon::parse($data->fecha_fin)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_conclusion = Carbon::parse($data->fecha_conclusion)->format('Y-m-d H:i:s');
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($data, $dateFields);
+
+                return $data;
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));

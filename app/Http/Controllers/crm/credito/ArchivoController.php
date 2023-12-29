@@ -3,16 +3,17 @@
 namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\Audits;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Exception;
-use Log;
 
 class ArchivoController extends Controller
 {
@@ -24,89 +25,138 @@ class ArchivoController extends Controller
     public function addArrayArchivos(Request $request, $caso_id)
     {
         try {
-            $archivos = $request->file("archivos"); // Acceder a los archivos utilizando la clave "archivos"
-            $archivosGuardados = [];
 
-            foreach ($archivos as $archivoData) {
-                $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName(); // Obtener el nombre único del archivo
+            $archivos = DB::transaction(function () use ($request, $caso_id) {
 
-                $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
+                $archivos = $request->file("archivos"); // Acceder a los archivos utilizando la clave "archivos"
+                $archivosGuardados = [];
 
-                $nuevoArchivo = Archivo::create([
-                    "titulo" => $nombreUnico,
-                    "observacion" => $request->input("observaciones")[0],
-                    // Acceder a la observación de cada archivo
-                    "archivo" => $path,
-                    "caso_id" => $caso_id
-                ]);
+                foreach ($archivos as $archivoData) {
+                    $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName(); // Obtener el nombre único del archivo
 
-                $archivosGuardados[] = $nuevoArchivo;
-                // START Bloque de código que genera un registro de auditoría manualmente
-                $audit = new Audits();
-                $audit->user_id = Auth::id();
-                $audit->event = 'created';
-                $audit->auditable_type = Archivo::class;
-                $audit->auditable_id = $nuevoArchivo->id;
-                $audit->user_type = User::class;
-                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-                $audit->url = $request->fullUrl();
-                // Establecer old_values y new_values
-                $audit->old_values = json_encode($nuevoArchivo);
-                $audit->new_values = json_encode([]);
-                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-                $audit->accion = 'addArchivo';
-                $audit->save();
-                // END Auditoria
-            }
+                    $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
 
-            $archivos = Archivo::where('caso_id', $request->caso_id)->get();
+                    $nuevoArchivo = Archivo::create([
+                        "titulo" => $nombreUnico,
+                        "observacion" => $request->input("observaciones")[0],
+                        // Acceder a la observación de cada archivo
+                        "archivo" => $path,
+                        "caso_id" => $caso_id,
+                        "tipo" => 'Caso',
+                    ]);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron con éxito', $archivos));
+                    $archivosGuardados[] = $nuevoArchivo;
+                    // START Bloque de código que genera un registro de auditoría manualmente
+                    $audit = new Audits();
+                    $audit->user_id = Auth::id();
+                    $audit->event = 'created';
+                    $audit->auditable_type = Archivo::class;
+                    $audit->auditable_id = $nuevoArchivo->id;
+                    $audit->user_type = User::class;
+                    $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                    $audit->url = $request->fullUrl();
+                    // Establecer old_values y new_values
+                    $audit->old_values = json_encode($nuevoArchivo);
+                    $audit->new_values = json_encode([]);
+                    $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                    $audit->accion = 'addArchivo';
+                    $audit->save();
+                    // END Auditoria
+                }
+
+                $data = Archivo::where('caso_id', $request->caso_id)->orderBy('id', 'desc')->get();
+
+                // // Formatear las fechas
+                // $data->transform(function ($item) {
+                //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                //     return $item;
+                // });
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at'];
+                // Utilizar la función map para transformar y obtener una nueva colección
+                $data->map(function ($item) use ($dateFields) {
+                    // $this->formatoFechaItem($item, $dateFields);
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
+                    return $item;
+                });
+
+                return $data;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivos));
 
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error excepcionnn', $e));
         }
     }
 
     public function addArchivo(Request $request, $caso_id)
     {
         try {
-            $file = $request->file("archivo");
-            $titulo = $file->getClientOriginalName();
 
-            // $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
-            $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+            $archivos = DB::transaction(function () use ($request, $caso_id) {
 
-            $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta del archivo en la que se encuentra
+                $file = $request->file("archivo");
+                $titulo = $file->getClientOriginalName();
 
-            $archivo = Archivo::create([
-                "titulo" => $caso_id . '-' . $titulo,
-                "observacion" => $request->observacion,
-                "archivo" => $path,
-                "caso_id" => $request->caso_id
-            ]);
+                // $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
+                $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
 
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit = new Audits();
-            $audit->user_id = Auth::id();
-            $audit->event = 'created';
-            $audit->auditable_type = Archivo::class;
-            $audit->auditable_id = $archivo->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->old_values = json_encode($archivo);
-            $audit->new_values = json_encode([]);
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->accion = 'addArchivo';
-            $audit->save();
-            // END Auditoria
+                $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta del archivo en la que se encuentra
 
-            // $data = DB::select('select * from crm.archivos where caso_id =' . $request->caso_id);
-            $archivos = Archivo::where('caso_id', $request->caso_id)->get();
+                $archivo = Archivo::create([
+                    "titulo" => $caso_id . '-' . $titulo,
+                    "observacion" => $request->observacion,
+                    "archivo" => $path,
+                    "caso_id" => $request->caso_id,
+                    "tipo" => 'Caso',
+                ]);
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                $audit->user_id = Auth::id();
+                $audit->event = 'created';
+                $audit->auditable_type = Archivo::class;
+                $audit->auditable_id = $archivo->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->old_values = json_encode($archivo);
+                $audit->new_values = json_encode([]);
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'addArchivo';
+                $audit->save();
+                // END Auditoria
+
+                // $data = DB::select('select * from crm.archivos where caso_id =' . $request->caso_id);
+                $data = Archivo::where('caso_id', $request->caso_id)->orderBy('id', 'desc')->get();
+
+                // // Formatear las fechas
+                // $data->transform(function ($item) {
+                //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                //     return $item;
+                // });
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at'];
+                // Utilizar la función map para transformar y obtener una nueva colección
+                $data->map(function ($item) use ($dateFields) {
+                    // $this->formatoFechaItem($item, $dateFields);
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
+                    return $item;
+                });
+
+                return $data;
+            });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivos));
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -115,26 +165,46 @@ class ArchivoController extends Controller
     public function listArchivoByCasoId($caso_id)
     {
         try {
-            $archivos = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
+            $data = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
 
-            return response()->json(
-                RespuestaApi::returnResultado(
-                    'success',
-                    'Se listo con éxito',
-                    $archivos->map(function ($archivo) {
-                        return [
-                            "id" => $archivo->id,
-                            "titulo" => $archivo->titulo,
-                            "observacion" => $archivo->observacion,
-                            "tipo" => $archivo->tipo,
-                            "archivo" => $archivo->archivo,
-                            "caso_id" => $archivo->caso_id,
-                            "created_at" => $archivo->created_at,
-                            "updated_at" => $archivo->updated_at,
-                        ];
-                    }),
-                )
-            );
+            // // Formatear las fechas
+            // $data->transform(function ($item) {
+            //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            //     return $item;
+            // });
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                // $this->formatoFechaItem($item, $dateFields);
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            // return response()->json(
+            //     RespuestaApi::returnResultado(
+            //         'success',
+            //         'Se listo con éxito',
+            //         $data->map(function ($archivo) {
+            //             return [
+            //                 "id" => $archivo->id,
+            //                 "titulo" => $archivo->titulo,
+            //                 "observacion" => $archivo->observacion,
+            //                 "tipo" => $archivo->tipo,
+            //                 "archivo" => $archivo->archivo,
+            //                 "caso_id" => $archivo->caso_id,
+            //                 "created_at" => $archivo->created_at,
+            //                 "updated_at" => $archivo->updated_at,
+            //             ];
+            //         }),
+            //     )
+            // );
+
+            return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -143,45 +213,62 @@ class ArchivoController extends Controller
     public function editArchivo(Request $request, $id)
     {
         try {
-            $archivo = Archivo::findOrFail($id);
+            $resultado = DB::transaction(function () use ($request, $id) {
 
-            // Obtener el old_values (valor antiguo)
-            $valorAntiguo = $archivo->observacion;
+                $archivo = Archivo::findOrFail($id);
 
-            // $file = $request->file("archivo");
-            // $titulo = $file->getClientOriginalName();
-            // if ($request->hasFile("archivo")) {
-            //     if ($archivo->archivo) { //Aqui eliminamos la imagen anterior
-            //         Storage::delete($archivo->archivo); //Aqui pasa la rta de la imagen para eliminarlo
-            //     }
-            //     $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA CATEGORIAS
-            //     $request->request->add(["archivo" => $path]); //Aqui obtenemos la nueva ruta de la imagen al request
-            // }
+                // Obtener el old_values (valor antiguo)
+                $valorAntiguo = $archivo->observacion;
 
-            $archivo->update([
-                // "titulo" => $titulo,
-                "observacion" => $request->observacion,
-                // "archivo" => $path,
-            ]);
+                // $file = $request->file("archivo");
+                // $titulo = $file->getClientOriginalName();
+                // if ($request->hasFile("archivo")) {
+                //     if ($archivo->archivo) { //Aqui eliminamos la imagen anterior
+                //         Storage::delete($archivo->archivo); //Aqui pasa la rta de la imagen para eliminarlo
+                //     }
+                //     $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA CATEGORIAS
+                //     $request->request->add(["archivo" => $path]); //Aqui obtenemos la nueva ruta de la imagen al request
+                // }
 
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit = new Audits();
-            $audit->user_id = Auth::id();
-            $audit->event = 'updated';
-            $audit->auditable_type = Archivo::class;
-            $audit->auditable_id = $archivo->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->old_values = json_encode(['observacion' => $valorAntiguo]); // json_encode para convertir en string ese array
-            $audit->new_values = json_encode(['observacion' => $archivo->observacion]); // json_encode para convertir en string ese array
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->accion = 'editArchivo';
-            $audit->save();
-            // END Auditoria
+                $archivo->update([
+                    // "titulo" => $titulo,
+                    "observacion" => $request->observacion,
+                    // "archivo" => $path,
+                ]);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $archivo));
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = Archivo::class;
+                $audit->auditable_id = $archivo->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->old_values = json_encode(['observacion' => $valorAntiguo]); // json_encode para convertir en string ese array
+                $audit->new_values = json_encode(['observacion' => $archivo->observacion]); // json_encode para convertir en string ese array
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'editArchivo';
+                $audit->save();
+                // END Auditoria
+
+                // // Recargar el modelo para obtener las fechas actualizadas
+                // $archivo->refresh();
+
+                // // Formatear las fechas
+                // $archivo->formatted_updated_at = Carbon::parse($archivo->updated_at)->format('Y-m-d H:i:s');
+                // $archivo->formatted_created_at = Carbon::parse($archivo->created_at)->format('Y-m-d H:i:s');
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($archivo, $dateFields);
+
+                return $archivo;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $resultado));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -189,41 +276,59 @@ class ArchivoController extends Controller
 
     public function deleteArchivo(Request $request, $id)
     {
+        $archivoPath = ''; // Inicializar la variable
+
         try {
-            $archivo = Archivo::findOrFail($id);
-            // Obtener el old_values (valor antiguo)
-            $valorAntiguo = $archivo;
+            $data = DB::transaction(function () use ($request, $id, &$archivoPath) {
+                $archivo = Archivo::findOrFail($id);
 
-            // $url = str_replace("storage", "public", $archivo->archivo); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
-            // Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
+                // Obtener el old_values (valor antiguo)
+                $valorAntiguo = $archivo;
 
-            Storage::disk('nas')->delete($archivo->archivo); //Mandamos a borrar la foto de nuestra carpeta storage
+                // Almacenar la ruta del archivo antes de intentar eliminarlo
+                $archivoPath = $archivo->archivo;
 
-            $archivo->delete();
+                // Intentar obtener el contenido del archivo
+                $archivoNas = Storage::disk('nas')->get($archivoPath);
 
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit = new Audits();
-            $audit->user_id = Auth::id();
-            $audit->event = 'deleted';
-            $audit->auditable_type = Archivo::class;
-            $audit->auditable_id = $archivo->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->old_values = json_encode($valorAntiguo);
-            $audit->new_values = json_encode([]);
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->accion = 'deleteArchivo';
-            $audit->save();
-            // END Auditoria
+                // Eliminar el archivo de la base de datos
+                $archivo->delete();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $archivo));
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                $audit->user_id = Auth::id();
+                $audit->event = 'deleted';
+                $audit->auditable_type = Archivo::class;
+                $audit->auditable_id = $archivo->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->old_values = json_encode($valorAntiguo);
+                $audit->new_values = json_encode([]);
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'deleteArchivo';
+                $audit->save();
+                // END Auditoria
+
+                return $archivo; // Retornar el contenido del archivo eliminado
+            });
+
+            // Si todo ha ido bien, eliminar definitivamente el archivo
+            Storage::disk('nas')->delete($archivoPath);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $data));
         } catch (Exception $e) {
+            // En caso de error, restaurar el archivo desde la variable temporal
+            if (!empty($archivoPath)) {
+                Storage::disk('nas')->put($archivoPath, $data);
+            }
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
-
     }
+
+
 
 
     /////////////////////////////////////////////////  DOCUMENTOS EQUIFAX  /////////////////////////////////////////////////////////////////////
