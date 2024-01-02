@@ -440,7 +440,7 @@ class CampoController extends Controller
 	            fc.form_id,
                 fv.pac_id,
                 fcc.id,
-                fcc.orden,
+                fcc.orden as orden_seccion,
                 fcc.nombre as seccion,
                 SUM(fcl.puntos) as tu_puntaje,
                 CASE
@@ -483,7 +483,7 @@ class CampoController extends Controller
                 ftc.id = 2 and fc.form_id = ? and fv.pac_id = ?
             GROUP BY
                 1, 2, 3, 4, 5
-            ORDER BY 2 ASC;", [$formId, $pacId]);
+            ORDER BY 2 asc;", [$formId, $pacId]);
             return $data;
         } catch (\Throwable $th) {
             return null;
