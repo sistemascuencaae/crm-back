@@ -14,6 +14,7 @@ class FormValor extends Model
     protected $dates = ['deleted_at'];
     protected $fillable = [
         'user_id',
+        'pac_id',
         'valor_texto',
         'valor_date',
         'valor_array',

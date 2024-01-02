@@ -217,6 +217,7 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::get('/formUser/{depId}/{userId}', [FormController::class, 'formUser']); //formUser
     Route::get('/byId/{formId}', [FormController::class, 'byId']); //formUser
     Route::get('/listAll', [FormController::class, 'listAll']); //
+    Route::get('/listAnonimos', [FormController::class, 'listAnonimos']);
     Route::get('/impresion/{formId}/{userId}', [FormController::class, 'impresion']);//impresion
     Route::put('/edit/{id}', [FormController::class, 'edit']);
 });
@@ -238,6 +239,7 @@ Route::group(['prefix' => 'form/seccion'], function ($router) {
     Route::post('/add', [FormSeccionController::class, 'add']);
     Route::put('/edit/{id}', [FormSeccionController::class, 'edit']);
 });
+
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
