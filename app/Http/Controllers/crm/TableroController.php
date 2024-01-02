@@ -211,7 +211,7 @@ class TableroController extends Controller
         }
     }
 
-    public function updateTablero(Request $request, $id)
+    public function editTablero(Request $request, $id)
     {
         try {
             $eliminados = $request->input('eliminados');
@@ -223,7 +223,6 @@ class TableroController extends Controller
                 Tablero::where('id', $id)
                     ->update([
                         'dep_id' => $tablero['dep_id'],
-                        'titab_id' => $tablero['titab_id'],
                         'nombre' => $tablero['nombre'],
                         'descripcion' => $tablero['descripcion'],
                         'estado' => $tablero['estado'],
