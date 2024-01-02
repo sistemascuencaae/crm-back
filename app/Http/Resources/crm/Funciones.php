@@ -59,6 +59,7 @@ class Funciones
 
         Log::info('Controller: ' . $controller . ' | Ruta Funcion: ' . $rutaFuncion . ' | Usuario: ' . $user_id . ' | IP Usuario:' . $user_ip . ' | Mensaje: ' . $msg . $id_objeto);
     }
+
     public function logError($controller, $rutaFuncion, $user_id, $user_ip, $msg, $id_objeto = null, $exception)
     { // $exeption es el objeto de error que lanza los try catch
 
