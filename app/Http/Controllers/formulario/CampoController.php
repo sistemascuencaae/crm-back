@@ -153,7 +153,7 @@ class CampoController extends Controller
                 // Actualizar el registro existente
                 $modificarCampo = FormValor::find($valor['id']);
                 //echo ('$modificarCampo: '.json_encode($modificarCampo));
-                if($modificarCampo){
+                if ($modificarCampo) {
                     $modificarCampo->update($valor);
                 }
                 $result = FormValor::find($valor['id']);
@@ -174,10 +174,10 @@ class CampoController extends Controller
             $seccionesActualizadas = $this->getTotalesSecciones($campo->form_id, $pacId);
             $formController = new FormController();
             $result = (object)[
-                "nombresControles" => '',//$data,
+                "nombresControles" => '', //$data,
                 "totalesSecciones" => $seccionesActualizadas,
                 "camposImprimir" => $formController->camposImprimir($campo->form_id, $pacId),
-                "valorReal"=> $valorReal
+                "valorReal" => $valorReal
             ];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $result));
@@ -433,22 +433,57 @@ class CampoController extends Controller
             return null;
         }
     }
-    public function getTotalesSecciones($formId, $pacId){
+    public function getTotalesSecciones($formId, $pacId)
+    {
         try {
             $data = DB::select("SELECT
-                fc.form_secc_id,
-                fv.user_id,
+	            fc.form_id,
                 fv.pac_id,
-                fc.tipo_campo_id,
-                fc.form_id,
-                fc.titulo,
-                (select fcl.puntos  from crm.form_campo_likert fcl where fcl.id = fv.valor_entero limit 1) as puntos
-                from
+                fcc.id,
+                fcc.orden,
+                fcc.nombre as seccion,
+                SUM(fcl.puntos) as tu_puntaje,
+                CASE
+                    -- SECCIONES DE LA BASE DE PRUBAS
+                    -- WHEN SUM(fcl.puntos) BETWEEN 13 AND 16 and fcc.id in (8) THEN 'RIESGO BAJO'
+                    -- WHEN SUM(fcl.puntos) BETWEEN 8 AND 12 and fcc.id in (7) THEN 'RIESGO MEDIO'
+                    -- WHEN SUM(fcl.puntos) BETWEEN 4 AND 7 and fcc.id in (1) THEN 'RIESGO ALTO'
+
+                    -- SECCIONES DE LA BASE DE PRODUCCION
+                    WHEN SUM(fcl.puntos) BETWEEN 13 AND 16 and fcc.id in (2,3) THEN 'RIESGO BAJO'
+                    WHEN SUM(fcl.puntos) BETWEEN 8 AND 12 and fcc.id in (2,3) THEN 'RIESGO MEDIO'
+                    WHEN SUM(fcl.puntos) BETWEEN 4 AND 7 and fcc.id in (2,3) THEN 'RIESGO ALTO'
+
+
+                    WHEN SUM(fcl.puntos) BETWEEN 18 AND 24 and fcc.id in (4,6) THEN 'RIESGO BAJO'
+                    WHEN SUM(fcl.puntos) BETWEEN 12 AND 17 and fcc.id in (4,6) THEN 'RIESGO MEDIO'
+                    WHEN SUM(fcl.puntos) BETWEEN 6 AND 11 and fcc.id in (4,6) THEN 'RIESGO ALTO'
+
+		            WHEN SUM(fcl.puntos) BETWEEN 13 AND 16 and fcc.id in (5) THEN 'RIESGO BAJO'
+                    WHEN SUM(fcl.puntos) BETWEEN 8 AND 12 and fcc.id in (5) THEN 'RIESGO MEDIO'
+                    WHEN SUM(fcl.puntos) BETWEEN 4 AND 7 and fcc.id in (5) THEN 'RIESGO ALTO'
+
+                    WHEN SUM(fcl.puntos) BETWEEN 16 AND 20 and fcc.id in (7,8) THEN 'RIESGO BAJO'
+                    WHEN SUM(fcl.puntos) BETWEEN 10 AND 15 and fcc.id in (7,8) THEN 'RIESGO MEDIO'
+                    WHEN SUM(fcl.puntos) between 5 AND 9 and fcc.id in (7,8) THEN 'RIESGO ALTO'
+
+		            WHEN SUM(fcl.puntos) BETWEEN 73 AND 96 and fcc.id in (9) THEN 'RIESGO BAJO'
+                    WHEN SUM(fcl.puntos) BETWEEN 49 AND 72 and fcc.id in (9) THEN 'RIESGO MEDIO'
+                    WHEN SUM(fcl.puntos) between 24 AND 48 and fcc.id in (9) THEN 'RIESGO ALTO'
+            ELSE 'RIESGO NO DETERMINADO'
+                END AS riesgo
+            FROM
                 crm.form_campo fc
-                left join crm.form_tipo_campo ftc on ftc.id = fc.id
-                left join crm.form_campo_valor fcv on fcv.campo_id = fc.id
-                left join crm.form_valor fv on fv.id = fcv.valor_id
-                where fc.form_id = ? and fv.pac_id = ? and fc.tipo_campo_id = 2  order by 1 asc", [$formId, $pacId]);
+            left JOIN crm.formulario_seccion fcc ON fcc.id = fc.form_secc_id
+            LEFT JOIN crm.form_campo_valor fcv ON fcv.campo_id = fc.id
+            LEFT JOIN crm.form_valor fv ON fv.id = fcv.valor_id
+            LEFT JOIN crm.form_campo_likert fcl ON fcl.id = fv.valor_entero
+            LEFT JOIN crm.form_tipo_campo ftc ON ftc.id = fc.tipo_campo_id
+            WHERE
+                ftc.id = 2 and fc.form_id = ? and fv.pac_id = ?
+            GROUP BY
+                1, 2, 3, 4, 5
+            ORDER BY 2 ASC;", [$formId, $pacId]);
             return $data;
         } catch (\Throwable $th) {
             return null;
