@@ -89,6 +89,16 @@ class ClienteCrmController extends Controller
         try {
             DB::beginTransaction();
 
+            // Validar la identificación para que no se repita
+            $identificacionExistente = ClienteCrm::where('identificacion', $request->identificacion)
+                ->where('ent_id', '!=', $id)
+                ->first();
+
+            if ($identificacionExistente) {
+                // La identificación ya existe para otro cliente
+                return response()->json(RespuestaApi::returnResultado('error', 'El número de identificación ya está registrada para otro cliente', ''));
+            }
+
             $cliente = ClienteCrm::where('ent_id', $id)->firstOrFail();
             $cliente->update($request->except('telefonos'));
 
