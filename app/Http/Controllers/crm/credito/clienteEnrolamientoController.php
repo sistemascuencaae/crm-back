@@ -43,10 +43,6 @@ class ClienteEnrolamientoController extends Controller
     public function addClienteEnrolamiento(Request $request)
     {
         try {
-
-            $log = new Funciones();
-            $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Creando enrolamiento');
-
             if (!$request->has('casoId')) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
             }
@@ -209,11 +205,13 @@ class ClienteEnrolamientoController extends Controller
                 return $data;
             });
 
-            $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito el Enrolamiento');
+
+            $log = new Funciones();
+            $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito el Cliente Enrolamiento');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
-            $log->logError(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear el emrolamiento', $e);
+            $log->logError(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear el Cliente Enrolamiento', $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }

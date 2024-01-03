@@ -21,12 +21,9 @@ class EtiquetaController extends Controller
     public function addEtiqueta(Request $request)
     {
         try {
-
-            $log = new Funciones();
-            $log->logInfo(EtiquetaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Creando una Etiqueta');
-
             $etiqueta = Etiqueta::create($request->all());
 
+            $log = new Funciones();
             $log->logInfo(EtiquetaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito la Etiqueta');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $etiqueta));

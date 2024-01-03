@@ -113,7 +113,7 @@ class TableroController extends Controller
             })->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy('id', 'desc')->get();
 
             $log = new Funciones();
-            $log->logInfo(TableroController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los tableros por user_id: ' . $user_id);
+            $log->logInfo(TableroController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los tableros por user_id: ', $user_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
         } catch (Exception $e) {
@@ -126,10 +126,6 @@ class TableroController extends Controller
     {
         try {
             $tab = $request->all();
-
-            // Inicia el log para indicar que se está actualizando el tablero
-            $log = new Funciones();
-            $log->logInfo(TableroController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Creando un tablero');
 
             $t = DB::transaction(function () use ($tab) {
                 $tablero = Tablero::create($tab);
@@ -234,8 +230,8 @@ class TableroController extends Controller
                 return $tablero;
             });
 
-            // Log exitoso después de completar la transacción
-            $log->logInfo(TableroController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo el tablero con exito, con el ID: ', $t->id);
+            $log = new Funciones();
+            $log->logInfo(TableroController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito el tablero con el ID: ', $t->id);
 
             $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $t->id)->first();
 
@@ -252,10 +248,6 @@ class TableroController extends Controller
             $eliminados = $request->input('eliminados');
             $usuarios = $request->input('usuarios');
             $tablero = $request->all();
-
-            // Inicia el log para indicar que se está actualizando el tablero
-            $log = new Funciones();
-            $log->logInfo(TableroController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Actualizando el tablero con ID: ', $id);
 
             $tab = DB::transaction(function () use ($tablero, $id, $eliminados, $usuarios) {
                 // Actualiza la información del tablero
@@ -285,15 +277,14 @@ class TableroController extends Controller
                 return $tablero;
             });
 
-            // Log exitoso después de completar la transacción
-            $log->logInfo(TableroController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Tablero actualizado con exito con el ID: ', $id);
+            $log = new Funciones();
+            $log->logInfo(TableroController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito el tablero con el ID: ', $id);
 
             $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $tab['id'])->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $dataRe));
         } catch (Exception $e) {
             $log->logError(TableroController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al actualizar el tablero: ', $id, $e);
-
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar el tablero', $e->getMessage()));
         }
     }
