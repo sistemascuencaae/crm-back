@@ -4,9 +4,11 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\Audits;
+use App\Models\crm\credito\SolicitudCredito;
 use App\Models\crm\Galeria;
 use App\Models\crm\RequerimientoCaso;
 use App\Models\User;
@@ -225,7 +227,7 @@ class ReqCasoController extends Controller
                         $galeria->update([
                             "descripcion" => $requerimiento->descripcion, // : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         ]);
-                        echo ('$galeria->descripcion: '.json_encode($galeria->descripcion));
+                        echo ('$galeria->descripcion: ' . json_encode($galeria->descripcion));
                     }
                     if ($requerimiento->tipo_campo == 'archivo' && $requerimiento->archivos_id != null) {
                         $archivo = Archivo::find($requerimiento->archivos_id);
@@ -306,11 +308,10 @@ class ReqCasoController extends Controller
 
     public function addSolicitudCreditoReqCaso(Request $request)
     {
+        $log = new Funciones();
         try {
-
             $casoId = $request->input('caso_id');
             $archivo = $request->input('valor_varchar');
-
 
             $solicitudCreditoController = new solicitudCreditoController();
 
@@ -325,7 +326,6 @@ class ReqCasoController extends Controller
 
             $requerimientosCaso = RequerimientoCaso::where('caso_id', $casoId)
                 ->orderBy('id', 'asc')
-                ->orderBy('id', 'asc')
                 ->get();
 
             $data = (object) [
@@ -333,16 +333,11 @@ class ReqCasoController extends Controller
                 "solicitudCredito" => $solicitudCredito
             ];
 
-
-
-
-
-
             // START Bloque de código que genera un registro de auditoría manualmente
             $audit = new Audits();
             $audit->user_id = Auth::id();
             $audit->event = 'created';
-            $audit->auditable_type = solicitudCredito::class;
+            $audit->auditable_type = SolicitudCredito::class;
             $audit->auditable_id = $solicitudCredito->id;
             $audit->user_type = User::class;
             $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
@@ -356,8 +351,11 @@ class ReqCasoController extends Controller
             $audit->save();
             //END Auditoria
 
+            $log->logInfo(ReqCasoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito la solicitud de credito en el caso: #', $casoId);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(ReqCasoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear la solicitud de credito en el caso: #', $casoId, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
