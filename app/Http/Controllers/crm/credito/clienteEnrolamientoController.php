@@ -21,6 +21,7 @@ class ClienteEnrolamientoController extends Controller
 
     public function listEnrolamientosById(Request $request, $cli_id, $caso_id)
     {
+        $log = new Funciones();
         try {
             $respuesta = ClienteEnrolamiento::where(function ($query) use ($cli_id, $caso_id) {
                 $query->where('cli_id', $cli_id)
@@ -30,7 +31,7 @@ class ClienteEnrolamientoController extends Controller
                 ->orderBy('id', 'ASC')
                 ->get();
 
-            $log = new Funciones();
+
             $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los enrolamientos del cliente: ' . $cli_id . ' , del caso #' . $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
@@ -42,6 +43,7 @@ class ClienteEnrolamientoController extends Controller
 
     public function addClienteEnrolamiento(Request $request)
     {
+        $log = new Funciones();
         try {
             if (!$request->has('casoId')) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
@@ -206,7 +208,7 @@ class ClienteEnrolamientoController extends Controller
             });
 
 
-            $log = new Funciones();
+
             $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito el Cliente Enrolamiento');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
@@ -333,6 +335,7 @@ class ClienteEnrolamientoController extends Controller
     // }
     public function clienteEnroladoById(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $enrolamiento = ClienteEnrolamiento::find($id);
             $enrolId = $enrolamiento['Uid'];
@@ -343,7 +346,7 @@ class ClienteEnrolamientoController extends Controller
                     }
                 ])->first();
 
-            $log = new Funciones();
+
 
             if ($clienteEnrolado) {
                 $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito el enrolamiento con el ID: ', $id);
@@ -417,6 +420,7 @@ class ClienteEnrolamientoController extends Controller
 
     public function addArchivosFirmadosEnrolamiento(Request $request)
     {
+        $log = new Funciones();
         try {
             $error = null;
             $exitoso = null;
@@ -510,8 +514,6 @@ class ClienteEnrolamientoController extends Controller
                     return null; // Se realiza la transacción
                 }
             });
-
-            $log = new Funciones();
 
             if ($error) {
                 $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), $error);

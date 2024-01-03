@@ -24,6 +24,7 @@ class ArchivoController extends Controller
 
     public function addArrayArchivos(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $archivos = DB::transaction(function () use ($request, $caso_id) {
 
@@ -85,7 +86,6 @@ class ArchivoController extends Controller
                 return $data;
             });
 
-            $log = new Funciones();
             $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito los archivos en el caso: #', $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivos));
@@ -98,6 +98,7 @@ class ArchivoController extends Controller
 
     public function addArchivo(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $archivos = DB::transaction(function () use ($request, $caso_id) {
 
@@ -157,7 +158,6 @@ class ArchivoController extends Controller
                 return $data;
             });
 
-            $log = new Funciones();
             $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito el archivo en el caso: #', $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivos));
@@ -170,6 +170,7 @@ class ArchivoController extends Controller
 
     public function listArchivoByCasoId(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $data = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
 
@@ -209,7 +210,6 @@ class ArchivoController extends Controller
             //     )
             // );
 
-            $log = new Funciones();
             $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los archivos del caso: #', $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
@@ -222,6 +222,7 @@ class ArchivoController extends Controller
 
     public function editArchivo(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $resultado = DB::transaction(function () use ($request, $id) {
 
@@ -278,7 +279,6 @@ class ArchivoController extends Controller
                 return $archivo;
             });
 
-            $log = new Funciones();
             $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito el archivo con el ID: ', $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $resultado));
@@ -291,7 +291,7 @@ class ArchivoController extends Controller
     public function deleteArchivo(Request $request, $id)
     {
         $archivoPath = ''; // Inicializar la variable
-
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($request, $id, &$archivoPath) {
                 $archivo = Archivo::findOrFail($id);
@@ -331,7 +331,6 @@ class ArchivoController extends Controller
             // Si todo ha ido bien, eliminar definitivamente el archivo
             Storage::disk('nas')->delete($archivoPath);
 
-            $log = new Funciones();
             $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se elimino con exito el archivo con el ID: ', $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $data));
@@ -356,6 +355,7 @@ class ArchivoController extends Controller
     // Lista todos los archivos que esten en la carpeta archivos_sin_firma del NAS
     public function listArchivosSinFirmaEquifaxByCasoId(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($caso_id) {
                 $folderPath = $caso_id . "/archivos_sin_firma"; // Ruta de la carpeta en tu NAS
@@ -367,7 +367,7 @@ class ArchivoController extends Controller
                 return Archivo::whereIn('archivo', $archivosNAS)->orderBy('archivo', 'ASC')->get();
             });
 
-            $log = new Funciones();
+
             $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los archivos sin firma de Equifax del caso: #', $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
@@ -380,6 +380,7 @@ class ArchivoController extends Controller
     // Agrega archivos para mandar a firmar en la carpeta archivos_sin_firmar
     public function addArchivosEquifax(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($request, $caso_id) {
                 $archivos = $request->file("archivos"); // Acceder a los archivos utilizando la clave "archivos"
@@ -415,7 +416,7 @@ class ArchivoController extends Controller
                 return $archivosGuardados;
             });
 
-            $log = new Funciones();
+
             $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito los archivos de Equifax en el caso: #', $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
@@ -428,6 +429,7 @@ class ArchivoController extends Controller
 
     public function editArchivosEquifax(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($request, $id) {
                 $archivo = Archivo::findOrFail($id);
@@ -468,7 +470,7 @@ class ArchivoController extends Controller
                 }
             });
 
-            $log = new Funciones();
+
             $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito el archivo de Equifax con el ID: ', $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
@@ -482,12 +484,13 @@ class ArchivoController extends Controller
 
     public function listArchivosEquifaxFirmadosByCasoId(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($caso_id) {
                 return Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->where('tipo', 'equifax')->get();
             });
 
-            $log = new Funciones();
+
             $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los archivos firmados de Equifax del caso: #', $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));

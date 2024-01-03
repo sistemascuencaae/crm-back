@@ -19,13 +19,12 @@ use Illuminate\Support\Facades\DB;
 
 class solicitudCreditoController extends Controller
 {
-
     public function listSolicitudCreditoByClienteId(Request $request, $cliente_id)
     {
+        $log = new Funciones();
         try {
             $respuesta = SolicitudCredito::where('cliente_id', $cliente_id)->with('caso.estadodos')->orderBy("id", "asc")->get();
 
-            $log = new Funciones();
             $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las solicitudes de credito del cliente, con el ID: ', $cliente_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
@@ -37,6 +36,7 @@ class solicitudCreditoController extends Controller
 
     public function editSolicitudCredito(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $solicitudCredito = solicitudCredito::findOrFail($id);
 
@@ -44,7 +44,6 @@ class solicitudCreditoController extends Controller
             $audit = new Audits();
             $valorAntiguo = $solicitudCredito;
             $audit->old_values = json_encode($valorAntiguo);
-
 
             $solicitudCredito->update($request->all());
 
@@ -63,7 +62,6 @@ class solicitudCreditoController extends Controller
             $audit->save();
             // END Auditoria
 
-            $log = new Funciones();
             $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito la solicitud de credito, con el ID: ', $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $solicitudCredito));
@@ -75,10 +73,10 @@ class solicitudCreditoController extends Controller
 
     public function listSolicitudCreditoByEntidadId(Request $request, $ent_id)
     {
+        $log = new Funciones();
         try {
             $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ent_id', $ent_id)->get();
 
-            $log = new Funciones();
             $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las solicitudes de credito por ent_id: ', $ent_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
@@ -90,6 +88,7 @@ class solicitudCreditoController extends Controller
 
     public function listSolicitudCreditoByRucCedula(Request $request, $ruc_cedula)
     {
+        $log = new Funciones();
         try {
             $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ruc_cedula', $ruc_cedula)->get();
 
@@ -97,7 +96,6 @@ class solicitudCreditoController extends Controller
             //     "solicitudesCredito" => $solicitudesCredito,
             // ]);
 
-            $log = new Funciones();
             $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las solicitudes de credito por RUC o CEDULA: ', $ruc_cedula);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
@@ -132,6 +130,7 @@ class solicitudCreditoController extends Controller
 
     public function solicitudByIdentificacion(Request $request, $entIdentificacion, $userId)
     {
+        $log = new Funciones();
         try {
             $user = DB::selectOne('SELECT u.name, alm.alm_nombre  from crm.users u
         inner join public.puntoventa pve on pve.pve_id = u.pve_id
@@ -146,7 +145,6 @@ class solicitudCreditoController extends Controller
                 "userName" => $user->name
             ];
 
-            $log = new Funciones();
             $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito la solicitud de credito por entIdentificacion: ', $entIdentificacion);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));

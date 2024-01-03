@@ -21,10 +21,11 @@ class ParentescoController extends Controller
 
     public function listParentesco(Request $request)
     {
+        $log = new Funciones();
         try {
             $respuesta = Parentesco::orderBy("id", "asc")->get();
 
-            $log = new Funciones();
+
             $log->logInfo(ParentescoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los parentescos');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
