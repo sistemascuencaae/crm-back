@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Etiqueta;
 use App\Models\crm\Parentesco;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ParentescoController extends Controller
@@ -17,13 +19,17 @@ class ParentescoController extends Controller
         $this->middleware('auth:api');
     }
 
-    public function listParentesco()
+    public function listParentesco(Request $request)
     {
         try {
             $respuesta = Parentesco::orderBy("id", "asc")->get();
 
+            $log = new Funciones();
+            $log->logInfo(ParentescoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los parentescos');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {
+            $log->logError(ParentescoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar los parentescos', $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
