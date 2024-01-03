@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\crm\auditoria;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Request as RequestFacade;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ClienteAditoriaController extends Controller
 {
     public function cliTabAmortizacion($cuentaanterior)
     {
+        $request = RequestFacade::instance();
+        $log = new Funciones();
         try {
-        $sql = "SELECT ent.ent_identificacion as cedula, date(cfa.cfa_fecha)as fecha,
+            $sql = "SELECT ent.ent_identificacion as cedula, date(cfa.cfa_fecha)as fecha,
         upper((select convertir_numeros_letras(capital + interes))::text) as cuotaletras, v.*
         from public.v_austro_creditos_pagos v
         left join public.ccomproba ccm on ccm.ccm_id = v.cuentaanterior::integer
@@ -21,12 +25,15 @@ class ClienteAditoriaController extends Controller
         left join public.entidad ent on ent.ent_id = cli.ent_id where cuentaanterior = ?
         order by cuentaanterior, subcuenta";
 
-        $data = DB::select($sql, [$cuentaanterior]);
+            $data = DB::select($sql, [$cuentaanterior]);
 
+            $log->logInfo(ClienteAditoriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Tabla amortizacion');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Tabla amortizacion', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Exception', $th->getMessage()));
+        } catch (\Throwable $e) {
+            $log->logError(ClienteAditoriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error en Tabla amortizacion', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Exception', $e->getMessage()));
         }
     }
 }
