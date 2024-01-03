@@ -130,7 +130,12 @@ class RobotCasoController extends Controller
             }
         }
         //EL TABLERO ES EL USUARIO ANTERIOR
-        
+        $usuarioAnterior = DB::selectOne("SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ?", [$casoEnProceso->user_anterior_id, $formula->tablero_id ]);
+        if($usuarioAnterior){
+            $casoEnProceso->user_id = $usuarioAnterior->user_id;
+            $casoEnProceso->save();
+            return $casoEnProceso;
+        }
         //--- usuarios en linea del nuevo tablero
         $usuariosNuevoTablero = DB::select("SELECT * FROM crm.usuarios_casos WHERE tab_id = ?", [$formula->tablero_id]);
         $userMenorNumCasos = $this->organizarCasos($usuariosNuevoTablero);
