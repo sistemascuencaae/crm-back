@@ -95,7 +95,7 @@ class CasoController extends Controller
                 //--------------------
                 $caso->estado_2 = $estadoInicial->id;
                 $caso->nombre = 'CASO # ' . $caso->id;
-                $caso->user_creador_id = $userLoginId;
+                //$caso->user_creador_id = $userLoginId;
                 $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
                 $caso->save();
                 for ($i = 0; $i < sizeof($miembros); $i++) {
@@ -142,6 +142,7 @@ class CasoController extends Controller
         }
     }
 
+
     // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
     public function listHistoricoEstadoCaso($caso_id)
     {
@@ -171,8 +172,12 @@ class CasoController extends Controller
 
     public function casoById($id)
     {
+        try {
         $data = $this->getCaso($id);
-        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consiguió con éxito', $data));
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e));
+        }
     }
 
     public function editFase(Request $request)
@@ -641,6 +646,7 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $th->getMessage()));
         }
     }
+
 
     public function getCaso($casoId)
     {
