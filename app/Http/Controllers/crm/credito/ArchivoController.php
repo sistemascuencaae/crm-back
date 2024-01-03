@@ -25,7 +25,6 @@ class ArchivoController extends Controller
     public function addArrayArchivos(Request $request, $caso_id)
     {
         try {
-
             $archivos = DB::transaction(function () use ($request, $caso_id) {
 
                 $archivos = $request->file("archivos"); // Acceder a los archivos utilizando la clave "archivos"
@@ -86,17 +85,20 @@ class ArchivoController extends Controller
                 return $data;
             });
 
+            $log = new Funciones();
+            $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito los archivos en el caso: #', $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivos));
 
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error excepcionnn', $e));
+            $log->logError(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear los archivos en el caso: #', $caso_id, $e);
+            return response()->json(RespuestaApi::returnResultado('error', 'Error excepcion', $e));
         }
     }
 
     public function addArchivo(Request $request, $caso_id)
     {
         try {
-
             $archivos = DB::transaction(function () use ($request, $caso_id) {
 
                 $file = $request->file("archivo");
@@ -155,14 +157,18 @@ class ArchivoController extends Controller
                 return $data;
             });
 
+            $log = new Funciones();
+            $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito el archivo en el caso: #', $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivos));
 
         } catch (Exception $e) {
+            $log->logError(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear el archivo en el caso: #', $caso_id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function listArchivoByCasoId($caso_id)
+    public function listArchivoByCasoId(Request $request, $caso_id)
     {
         try {
             $data = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
@@ -203,9 +209,13 @@ class ArchivoController extends Controller
             //     )
             // );
 
+            $log = new Funciones();
+            $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los archivos del caso: #', $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
 
         } catch (Exception $e) {
+            $log->logError(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar los archivos del caso: #', $caso_id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -268,8 +278,12 @@ class ArchivoController extends Controller
                 return $archivo;
             });
 
+            $log = new Funciones();
+            $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito el archivo con el ID: ', $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $resultado));
         } catch (Exception $e) {
+            $log->logError(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al actualizar el archivo con el ID: ', $id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -317,8 +331,14 @@ class ArchivoController extends Controller
             // Si todo ha ido bien, eliminar definitivamente el archivo
             Storage::disk('nas')->delete($archivoPath);
 
+            $log = new Funciones();
+            $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se elimino con exito el archivo con el ID: ', $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $data));
         } catch (Exception $e) {
+
+            $log->logError(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al eliminar el archivo con el ID: ', $id, $e);
+
             // En caso de error, restaurar el archivo desde la variable temporal
             if (!empty($archivoPath)) {
                 Storage::disk('nas')->put($archivoPath, $data);
@@ -334,7 +354,7 @@ class ArchivoController extends Controller
     /////////////////////////////////////////////////  DOCUMENTOS EQUIFAX  /////////////////////////////////////////////////////////////////////
 
     // Lista todos los archivos que esten en la carpeta archivos_sin_firma del NAS
-    public function listArchivosSinFirmaEquifaxByCasoId($caso_id)
+    public function listArchivosSinFirmaEquifaxByCasoId(Request $request, $caso_id)
     {
         try {
             $data = DB::transaction(function () use ($caso_id) {
@@ -346,8 +366,13 @@ class ArchivoController extends Controller
                 // Busca archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
                 return Archivo::whereIn('archivo', $archivosNAS)->orderBy('archivo', 'ASC')->get();
             });
+
+            $log = new Funciones();
+            $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los archivos sin firma de Equifax del caso: #', $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar archivos sin firma de Equifax del caso: #', $caso_id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -390,9 +415,13 @@ class ArchivoController extends Controller
                 return $archivosGuardados;
             });
 
+            $log = new Funciones();
+            $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito los archivos de Equifax en el caso: #', $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
 
         } catch (Exception $e) {
+            $log->logError(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear los archivos de Equifax en el caso: #', $caso_id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -439,22 +468,31 @@ class ArchivoController extends Controller
                 }
             });
 
+            $log = new Funciones();
+            $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito el archivo de Equifax con el ID: ', $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al actualizar el archivo de Equifax con el ID: ', $id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     // Lista de documentos de equifax FIRMADOS
 
-    public function listArchivosEquifaxFirmadosByCasoId($caso_id)
+    public function listArchivosEquifaxFirmadosByCasoId(Request $request, $caso_id)
     {
         try {
             $data = DB::transaction(function () use ($caso_id) {
                 return Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->where('tipo', 'equifax')->get();
             });
+
+            $log = new Funciones();
+            $log->logInfo(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los archivos firmados de Equifax del caso: #', $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(ArchivoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar archivos firmados de Equifax del caso: #', $caso_id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
