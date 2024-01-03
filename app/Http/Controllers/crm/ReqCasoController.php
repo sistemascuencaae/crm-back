@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Request as RequestFacade;
 
 class ReqCasoController extends Controller
 {
@@ -276,7 +277,15 @@ class ReqCasoController extends Controller
 
     public function listAll($casoId)
     {
-        $reqFase = DB::select('SELECT * FROM crm.requerimientos_predefinidos  where fase_id = ?', [$casoId]);
+        $request = RequestFacade::instance();
+        $log = new Funciones();
+        try {
+            $reqFase = DB::select('SELECT * FROM crm.requerimientos_predefinidos  where fase_id = ?', [$casoId]);
+            $log->logInfo(ReqCasoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo correctamente los requerimientos predefinidos');
+
+        } catch (\Throwable $e) {
+            $log->logError(ReqCasoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar los requerimientos predefinidos', $e);
+        }
 
         // echo ('$reqFase: ' . json_encode($reqFase));
 
@@ -294,15 +303,23 @@ class ReqCasoController extends Controller
 
     public function uploadReqArchivo($inputFormData)
     {
-        if ($inputFormData->hasFile('file')) {
-            $file = $inputFormData->file('file');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $file->storeAs('archivos', $fileName); // Almacenar en el almacenamiento de Laravel
+        $request = RequestFacade::instance();
+        $log = new Funciones();
+        try {
+            if ($inputFormData->hasFile('file')) {
+                $file = $inputFormData->file('file');
+                $fileName = time() . '_' . $file->getClientOriginalName();
+                $file->storeAs('archivos', $fileName); // Almacenar en el almacenamiento de Laravel
 
-            return response()->json(['message' => 'File uploaded successfully']);
+                $log->logInfo(ReqCasoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Archivo cargado correctamente');
+
+                return response()->json(['message' => 'File uploaded successfully']);
+            }
+
+            return response()->json(['message' => 'No file uploaded'], 400);
+        } catch (\Throwable $e) {
+            $log->logError(ReqCasoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al cargar el archivo', $e);
         }
-
-        return response()->json(['message' => 'No file uploaded'], 400);
     }
 
     public function addSolicitudCreditoReqCaso(Request $request)

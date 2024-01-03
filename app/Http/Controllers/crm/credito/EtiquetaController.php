@@ -24,7 +24,6 @@ class EtiquetaController extends Controller
         try {
             $etiqueta = Etiqueta::create($request->all());
 
-
             $log->logInfo(EtiquetaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito la Etiqueta');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $etiqueta));
@@ -39,7 +38,6 @@ class EtiquetaController extends Controller
         $log = new Funciones();
         try {
             $etiquetas = Etiqueta::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
-
 
             $log->logInfo(EtiquetaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las Etiquetas del caso #', $caso_id);
 
@@ -73,7 +71,6 @@ class EtiquetaController extends Controller
             $etiqueta = Etiqueta::findOrFail($id);
 
             $etiqueta->delete();
-
 
             $log->logInfo(EtiquetaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se elimino con exito la Etiqueta, con el ID: ', $id);
 

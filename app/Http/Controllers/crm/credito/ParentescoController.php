@@ -5,12 +5,10 @@ namespace App\Http\Controllers\crm\credito;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\Etiqueta;
 use App\Models\crm\Parentesco;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class ParentescoController extends Controller
 {
@@ -24,7 +22,6 @@ class ParentescoController extends Controller
         $log = new Funciones();
         try {
             $respuesta = Parentesco::orderBy("id", "asc")->get();
-
 
             $log->logInfo(ParentescoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los parentescos');
 

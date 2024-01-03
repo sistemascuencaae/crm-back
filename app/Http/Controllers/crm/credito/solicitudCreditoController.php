@@ -16,6 +16,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Request as RequestFacade;
 
 class solicitudCreditoController extends Controller
 {
@@ -156,6 +157,8 @@ class solicitudCreditoController extends Controller
 
     public function obtenerSolicitudCreditoActualizada($casoId)
     {
+        $request = RequestFacade::instance();
+        $log = new Funciones();
         try {
             $solicitudCredito = SolicitudCredito::with('cliente.telefonos', 'cliente.referencias.telefonos')->where('caso_id', $casoId)->first();
             // if($solicitudCredito){
@@ -207,8 +210,13 @@ class solicitudCreditoController extends Controller
                 }
                 return $solicitudCredito;
             }
-        } catch (\Throwable $th) {
-            throw $th;
+
+            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se obtuvo correctamente la solicitud actualizada del caso: #', $casoId);
+
+        } catch (\Throwable $e) {
+            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al obtener la solicitud actualizada del caso: # ', $casoId, $e);
+            // throw $th;
+            return $e;
         }
     }
 }
