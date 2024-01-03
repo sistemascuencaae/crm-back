@@ -20,10 +20,11 @@ class EtiquetaController extends Controller
 
     public function addEtiqueta(Request $request)
     {
+        $log = new Funciones();
         try {
             $etiqueta = Etiqueta::create($request->all());
 
-            $log = new Funciones();
+
             $log->logInfo(EtiquetaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito la Etiqueta');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $etiqueta));
@@ -35,10 +36,11 @@ class EtiquetaController extends Controller
 
     public function listEtiquetaByCasoId(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $etiquetas = Etiqueta::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
 
-            $log = new Funciones();
+
             $log->logInfo(EtiquetaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las Etiquetas del caso #', $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $etiquetas));
@@ -66,12 +68,13 @@ class EtiquetaController extends Controller
 
     public function deleteEtiqueta(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $etiqueta = Etiqueta::findOrFail($id);
 
             $etiqueta->delete();
 
-            $log = new Funciones();
+
             $log->logInfo(EtiquetaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se elimino con exito la Etiqueta, con el ID: ', $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $etiqueta));

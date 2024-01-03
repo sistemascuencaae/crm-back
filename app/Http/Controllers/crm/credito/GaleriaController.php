@@ -23,6 +23,7 @@ class GaleriaController extends Controller
 
     public function addGaleria(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             if ($request->hasFile("imagen_file")) {
                 $imagen = $request->file("imagen_file");
@@ -52,7 +53,7 @@ class GaleriaController extends Controller
             $audit->save();
             // END Auditoria
 
-            $log = new Funciones();
+
             $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito la imagen en el caso #', $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
@@ -111,11 +112,12 @@ class GaleriaController extends Controller
 
     public function listGaleriaByCasoId(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             // Recupera las galerías relacionadas con el caso_id desde la base de datos
             $galerias = Galeria::where('caso_id', $caso_id)->get();
 
-            $log = new Funciones();
+
             $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las imagenes del caso #', $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $galerias));
@@ -127,6 +129,7 @@ class GaleriaController extends Controller
 
     public function editGaleria(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $galeria = Galeria::findOrFail($id);
 
@@ -168,7 +171,7 @@ class GaleriaController extends Controller
             $audit->save();
             // END Auditoria
 
-            $log = new Funciones();
+
             $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito la imagen, con el ID: ', $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
@@ -180,6 +183,7 @@ class GaleriaController extends Controller
 
     public function deleteGaleria(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $galeria = Galeria::findOrFail($id);
             // Obtener el old_values (valor antiguo)
@@ -209,7 +213,7 @@ class GaleriaController extends Controller
             $audit->save();
             // END Auditoria
 
-            $log = new Funciones();
+
             $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se elimino con exito la imagen, con el ID: ', $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $galeria));
@@ -221,10 +225,11 @@ class GaleriaController extends Controller
 
     public function listGaleriaBySolicitudCreditoId(Request $request, $sc_id)
     {
+        $log = new Funciones();
         try {
             $ultimaFoto = Galeria::where('sc_id', $sc_id)->latest('id')->first();
 
-            $log = new Funciones();
+
             $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito la ultima foto de la solicitud de credito, con el ID: ', $sc_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $ultimaFoto));
