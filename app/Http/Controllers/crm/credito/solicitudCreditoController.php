@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\ClienteCrm;
 use App\Models\crm\credito\AvSolicitudCredito;
-use App\Models\crm\credito\ReferenciasAnexoOpenceo;
 use App\Models\crm\credito\SolicitudCredito;
-use App\Models\crm\RequerimientoCaso;
 use App\Models\User;
 use Carbon\Carbon;
 use Exception;
@@ -21,13 +20,17 @@ use Illuminate\Support\Facades\DB;
 class solicitudCreditoController extends Controller
 {
 
-    public function listSolicitudCreditoByClienteId($cliente_id)
+    public function listSolicitudCreditoByClienteId(Request $request, $cliente_id)
     {
         try {
             $respuesta = SolicitudCredito::where('cliente_id', $cliente_id)->with('caso.estadodos')->orderBy("id", "asc")->get();
 
+            $log = new Funciones();
+            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las solicitudes de credito del cliente, con el ID: ', $cliente_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {
+            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar las solicitudes de credito del cliente, con el ID: ', $cliente_id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -60,27 +63,32 @@ class solicitudCreditoController extends Controller
             $audit->save();
             // END Auditoria
 
+            $log = new Funciones();
+            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito la solicitud de credito, con el ID: ', $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $solicitudCredito));
         } catch (Exception $e) {
+            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al actualizar la solititud de credito, con el ID: ', $id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function listSolicitudCreditoByEntidadId($ent_id)
+    public function listSolicitudCreditoByEntidadId(Request $request, $ent_id)
     {
         try {
             $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ent_id', $ent_id)->get();
 
-            // return response()->json([
-            //     "solicitudesCredito" => $solicitudesCredito,
-            // ]);
+            $log = new Funciones();
+            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las solicitudes de credito por ent_id: ', $ent_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
         } catch (Exception $e) {
+            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar las solicitudes de credito por ent_id: ', $ent_id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function listSolicitudCreditoByRucCedula($ruc_cedula)
+    public function listSolicitudCreditoByRucCedula(Request $request, $ruc_cedula)
     {
         try {
             $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ruc_cedula', $ruc_cedula)->get();
@@ -88,8 +96,13 @@ class solicitudCreditoController extends Controller
             // return response()->json([
             //     "solicitudesCredito" => $solicitudesCredito,
             // ]);
+
+            $log = new Funciones();
+            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las solicitudes de credito por RUC o CEDULA: ', $ruc_cedula);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
         } catch (Exception $e) {
+            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar las solicitudes de credito por RUC o CEDULA: ', $ruc_cedula, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -117,7 +130,7 @@ class solicitudCreditoController extends Controller
     //     }
     // }
 
-    public function solicitudByIdentificacion($entIdentificacion, $userId)
+    public function solicitudByIdentificacion(Request $request, $entIdentificacion, $userId)
     {
         try {
             $user = DB::selectOne('SELECT u.name, alm.alm_nombre  from crm.users u
@@ -133,8 +146,12 @@ class solicitudCreditoController extends Controller
                 "userName" => $user->name
             ];
 
+            $log = new Funciones();
+            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito la solicitud de credito por entIdentificacion: ', $entIdentificacion);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar la solicitud de credito por entIdentificacion: ', $entIdentificacion, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
