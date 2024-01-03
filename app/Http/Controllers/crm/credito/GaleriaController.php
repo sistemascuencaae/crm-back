@@ -12,7 +12,6 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 
 class GaleriaController extends Controller
 {
@@ -53,12 +52,12 @@ class GaleriaController extends Controller
             $audit->save();
             // END Auditoria
 
-
-            $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito la imagen en el caso #', $caso_id);
+            $log->logInfo(GaleriaController::class, 'Se guardo con exito la imagen en el caso #' . $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
         } catch (Exception $e) {
-            $log->logError(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear la imagen en el caso #', $caso_id, $e);
+            $log->logError(GaleriaController::class, 'Error al guardar la imagen en el caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -110,19 +109,19 @@ class GaleriaController extends Controller
 
     // }
 
-    public function listGaleriaByCasoId(Request $request, $caso_id)
+    public function listGaleriaByCasoId($caso_id)
     {
         $log = new Funciones();
         try {
             // Recupera las galerías relacionadas con el caso_id desde la base de datos
             $galerias = Galeria::where('caso_id', $caso_id)->get();
 
-
-            $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las imagenes del caso #', $caso_id);
+            $log->logInfo(GaleriaController::class, 'Se listo con exito las imagenes del caso #' . $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $galerias));
         } catch (Exception $e) {
-            $log->logError(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar la imagenes del caso #', $caso_id, $e);
+            $log->logError(GaleriaController::class, 'Error al listar la imagenes del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -171,12 +170,12 @@ class GaleriaController extends Controller
             $audit->save();
             // END Auditoria
 
-
-            $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito la imagen, con el ID: ', $id);
+            $log->logInfo(GaleriaController::class, 'Se actualizo con exito la imagen, con el ID: ' . $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
         } catch (Exception $e) {
-            $log->logError(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al actualizar la imagen, con el ID: ', $id, $e);
+            $log->logError(GaleriaController::class, 'Error al actualizar la imagen, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -213,28 +212,28 @@ class GaleriaController extends Controller
             $audit->save();
             // END Auditoria
 
-
-            $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se elimino con exito la imagen, con el ID: ', $id);
+            $log->logInfo(GaleriaController::class, 'Se elimino con exito la imagen, con el ID: ' . $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $galeria));
         } catch (Exception $e) {
-            $log->logError(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al eliminar la imagen, con el ID: ', $id, $e);
+            $log->logError(GaleriaController::class, 'Error al eliminar la imagen, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function listGaleriaBySolicitudCreditoId(Request $request, $sc_id)
+    public function listGaleriaBySolicitudCreditoId($sc_id)
     {
         $log = new Funciones();
         try {
             $ultimaFoto = Galeria::where('sc_id', $sc_id)->latest('id')->first();
 
-
-            $log->logInfo(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito la ultima foto de la solicitud de credito, con el ID: ', $sc_id);
+            $log->logInfo(GaleriaController::class, 'Se listo con exito la ultima foto de la solicitud de credito, con el ID: ' . $sc_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $ultimaFoto));
         } catch (Exception $e) {
-            $log->logError(GaleriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar la ultima imagen de la solicitud de credito, con el ID: ', $sc_id, $e);
+            $log->logError(GaleriaController::class, 'Error al listar la ultima imagen de la solicitud de credito, con el ID: ' . $sc_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }

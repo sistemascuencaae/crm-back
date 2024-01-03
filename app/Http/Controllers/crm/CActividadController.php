@@ -5,19 +5,16 @@ namespace App\Http\Controllers\crm;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\Audits;
 use App\Models\crm\CTipoActividad;
-use App\Models\User;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CActividadController extends Controller
 {
     public function addCTipoActividad(Request $request)
     {
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($request) {
 
@@ -64,14 +61,19 @@ class CActividadController extends Controller
                 return $actividades;
             });
 
+            $log->logInfo(CActividadController::class, 'Se guardo con exito la actividad');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CActividadController::class, 'Error al guadar la actividad', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function listCTipoActividadByIdTablero($tab_id)
     {
+        $log = new Funciones();
         try {
             $actividades = CTipoActividad::where('tab_id', $tab_id)->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
@@ -92,19 +94,28 @@ class CActividadController extends Controller
                 return $item;
             });
 
+            $log->logInfo(CActividadController::class, 'Se listo con exito los tipos de actividades por tab_id: ' . $tab_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(CActividadController::class, 'Error al listar los tipos de actividades por tab_id: ' . $tab_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function listCTipoActividadByIdTableroEstadoActivo($tab_id)
     {
+        $log = new Funciones();
         try {
             $actividades = CTipoActividad::where('tab_id', $tab_id)->where('estado', true)->orderBy('id', 'DESC')->get();
 
+            $log->logInfo(CActividadController::class, 'Se listo con exito los tipos de actividades en estado activo, por el tab_id: ' . $tab_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(CActividadController::class, 'Error al listar los tipos de actividades en estado activo, por el tab_id: ' . $tab_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -142,6 +153,7 @@ class CActividadController extends Controller
 
     public function editCTipoActividad(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($request, $id) {
 
@@ -184,15 +196,20 @@ class CActividadController extends Controller
                 return $actividad;
             });
 
+            $log->logInfo(CActividadController::class, 'Se actualizo con exito el tipo de actividad, con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
 
         } catch (Exception $e) {
+            $log->logError(CActividadController::class, 'Error al actualizar el tipo de actividad, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function deleteCTipoActividad(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $actividad = CTipoActividad::findOrFail($id);
 
@@ -218,8 +235,12 @@ class CActividadController extends Controller
             // $audit->save();
             // // END Auditoria
 
+            $log->logInfo(CActividadController::class, 'Se elimino con exito el tipo de actividad, con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $actividad));
         } catch (Exception $e) {
+            $log->logError(CActividadController::class, 'Error al eliminar el tipo de actividad, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }

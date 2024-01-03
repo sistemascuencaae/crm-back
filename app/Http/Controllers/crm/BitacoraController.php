@@ -3,15 +3,16 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use Exception;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BitacoraController extends Controller
 {
     public function listBitacoraByCasoId($caso_id)
     {
+        $log = new Funciones();
         try {
             $bitacora = DB::select("select adi.*,ur.name,gal.titulo, fas.nombre as fase_actual_nombre, tab.nombre as tablero_actual_nombre, fas1.nombre as fase_anterior_nombre, tab1.nombre as tablero_anterior_nombre,
                                     u1.name as usuario_actual, u2.name as usuario_anterior
@@ -42,8 +43,12 @@ class BitacoraController extends Controller
                                     where cas.id = " . $caso_id . "
                                     order By 1 DESC");
 
+            $log->logInfo(BitacoraController::class, 'Se listo con exito la bitacora del caso: # ' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $bitacora));
         } catch (Exception $e) {
+            $log->logError(BitacoraController::class, 'Error al listar la bitacora del caso: #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }

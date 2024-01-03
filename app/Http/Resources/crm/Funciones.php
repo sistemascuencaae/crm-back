@@ -4,6 +4,8 @@ namespace App\Http\Resources\crm;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Request as RequestFacade;
+use Illuminate\Support\Facades\Auth;
 
 class Funciones
 {
@@ -47,30 +49,54 @@ class Funciones
     }
   }
 
-  public function logInfo($controller, $rutaFuncion, $user_id, $user_ip, $msg, $id_objeto = null)
-  { // id_objeto es, por ejemplo un tablero.id, caso.id, usuario.id    
+  // public function logInfo($controller, $rutaFuncion, $user_id, $user_ip, $msg, $id_objeto = null)
+  // { // id_objeto es, por ejemplo un tablero.id, caso.id, usuario.id    
 
-    // ejemplo de como llenar la funcion
+  //   Log::info('Controller: ' . $controller . ' | Ruta Funcion: ' . $rutaFuncion . ' | Usuario: ' . $user_id . ' | IP Usuario:' . $user_ip . ' | Mensaje: ' . $msg . $id_objeto);
+  // }
 
-    // $controller = TableroController::class;
-    // $rutaFuncion = $request->fullUrl(); // Obtén la URL de la solicitud actual
-    // $user_id = Auth::id();
-    // $user_ip = $request->ip();
+  // public function logError($controller, $rutaFuncion, $user_id, $user_ip, $msg, $id_objeto = null, $exception)
+  // { // $exeption es el objeto de error que lanza los try catch
 
-    Log::info('Controller: ' . $controller . ' | Ruta Funcion: ' . $rutaFuncion . ' | Usuario: ' . $user_id . ' | IP Usuario:' . $user_ip . ' | Mensaje: ' . $msg . $id_objeto);
+  //   Log::error('Controller: ' . $controller . ' | Ruta Funcion: ' . $rutaFuncion . ' | Usuario: ' . $user_id . ' | IP Usuario:' . $user_ip . ' | Mensaje: ' . $msg . $id_objeto . ' | Error: ' . $exception->getMessage() . ' | En la linea (' . $exception->getLine() . ')');
+  // }
+
+  public function logInfo($controller, $msg)
+  {
+    $request = RequestFacade::instance();
+
+    Log::info(
+      'Controller: ' . $controller
+      . ' | Ruta Funcion: ' . $request->fullUrl()
+      . ' | Usuario: ' . Auth::id()
+      . ' | IP Usuario:' . $request->ip()
+      . ' | Mensaje: ' . $msg
+    );
   }
 
-  public function logError($controller, $rutaFuncion, $user_id, $user_ip, $msg, $id_objeto = null, $exception)
-  { // $exeption es el objeto de error que lanza los try catch
+  public function logError($controller, $msg, $exception = null)
+  {
+    $request = RequestFacade::instance();
 
-    // ejemplo de como llenar la funcion
-
-    // $controller = TableroController::class;
-    // $rutaFuncion = $request->fullUrl(); // Obtén la URL de la solicitud actual
-    // $user_id = Auth::id();
-    // $user_ip = $request->ip();
-
-    Log::error('Controller: ' . $controller . ' | Ruta Funcion: ' . $rutaFuncion . ' | Usuario: ' . $user_id . ' | IP Usuario:' . $user_ip . ' | Mensaje: ' . $msg . $id_objeto . ' | Error: ' . $exception->getMessage() . ' | En la linea (' . $exception->getLine() . ')');
+    if ($exception) {
+      Log::error(
+        'Controller: ' . $controller
+        . ' | Ruta Funcion: ' . $request->fullUrl()
+        . ' | Usuario: ' . Auth::id()
+        . ' | IP Usuario:' . $request->ip()
+        . ' | Mensaje: ' . $msg
+        . ' | Error: ' . $exception->getMessage()
+        . ' | En la linea (' . $exception->getLine() . ')'
+      );
+    } else {
+      Log::error(
+        'Controller: ' . $controller
+        . ' | Ruta Funcion: ' . $request->fullUrl()
+        . ' | Usuario: ' . Auth::id()
+        . ' | IP Usuario:' . $request->ip()
+        . ' | Mensaje: ' . $msg
+      );
+    }
   }
 
 }
