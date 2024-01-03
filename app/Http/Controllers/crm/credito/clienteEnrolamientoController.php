@@ -15,11 +15,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Request as RequestFacade;
 
 class ClienteEnrolamientoController extends Controller
 {
-    public function listEnrolamientosById(Request $request, $cli_id, $caso_id)
+    public function listEnrolamientosById($cli_id, $caso_id)
     {
         $log = new Funciones();
         try {
@@ -31,11 +30,12 @@ class ClienteEnrolamientoController extends Controller
                 ->orderBy('id', 'ASC')
                 ->get();
 
-            $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito los enrolamientos del cliente: ' . $cli_id . ' , del caso #' . $caso_id);
+            $log->logInfo(ClienteEnrolamientoController::class, 'Se listo con exito los enrolamientos del cliente: ' . $cli_id . ' , del caso #' . $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {
-            $log->logError(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar los enrolamientos del cliente ' . $cli_id . ' , del caso #' . $caso_id, $e);
+            $log->logError(ClienteEnrolamientoController::class, 'Error al listar los enrolamientos del cliente ' . $cli_id . ' , del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -206,11 +206,11 @@ class ClienteEnrolamientoController extends Controller
                 return $data;
             });
 
-            $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito el Cliente Enrolamiento');
+            $log->logInfo(ClienteEnrolamientoController::class, 'Se creo con exito el Cliente Enrolamiento');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
-            $log->logError(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear el Cliente Enrolamiento', $e);
+            $log->logError(ClienteEnrolamientoController::class, 'Error al crear el Cliente Enrolamiento', $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -330,7 +330,7 @@ class ClienteEnrolamientoController extends Controller
     //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $th));
     //     }
     // }
-    public function clienteEnroladoById(Request $request, $id)
+    public function clienteEnroladoById($id)
     {
         $log = new Funciones();
         try {
@@ -344,22 +344,24 @@ class ClienteEnrolamientoController extends Controller
                 ])->first();
 
             if ($clienteEnrolado) {
-                $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito el enrolamiento con el ID: ', $id);
+                $log->logInfo(ClienteEnrolamientoController::class, 'Se listo con exito el enrolamiento con el ID: ' . $id);
+
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $clienteEnrolado));
             } else {
-                $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Cliente no enrrolado con el ID: ', $id);
+                $log->logError(ClienteEnrolamientoController::class, 'Cliente no enrrolado con el ID: ' . $id);
+
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no enrrolado', $id));
             }
 
         } catch (Exception $e) {
-            $log->logError(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar el enrolamiento con el ID: ', $id, $e);
+            $log->logError(ClienteEnrolamientoController::class, 'Error al listar el enrolamiento con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function actualizarReqCaso($reqCasoId, $casoId, $statusEnrol, $clienteEnrolamiento)
     {
-        $request = RequestFacade::instance();
         $log = new Funciones();
 
         $casoCedulaCliente = DB::selectOne("SELECT cli.identificacion  from crm.caso ca
@@ -386,11 +388,11 @@ class ClienteEnrolamientoController extends Controller
                 $reqCaso->save();
             }
 
-            $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo correctamente el requerimiento');
+            $log->logInfo(ClienteEnrolamientoController::class, 'Se actualizo correctamente el requerimiento');
 
             return $reqCaso;
         } catch (\Throwable $e) {
-            $log->logError(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al actualizar el requerimiento', $e);
+            $log->logError(ClienteEnrolamientoController::class, 'Error al actualizar el requerimiento', $e);
             return $e;
         }
     }
@@ -407,19 +409,21 @@ class ClienteEnrolamientoController extends Controller
                 $validEnrolCli = DB::selectOne('SELECT * from crm.temp_enrolamiento_cliente
                 where cli_id = ? and req_caso_id = ? and  caso_id = ?', [$cliId, $reqCasoId, $casoId]);
                 if (!$validEnrolCli) {
-                    $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Proceso terminado.');
+                    $log->logError(ClienteEnrolamientoController::class, 'Proceso terminado.');
+
                     return response()->json(RespuestaApi::returnResultado('error', 'Error', 'Proceso terminado.'));
                 } else {
-                    $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Proceso incompleto');
-                    return response()->json(RespuestaApi::returnResultado('success', 'Proceso incompleto', 'Proceso incompleto.'));
+                    $log->logInfo(ClienteEnrolamientoController::class, 'Proceso completo');
+
+                    return response()->json(RespuestaApi::returnResultado('success', 'Proceso completo', 'Proceso completo.'));
                 }
             } else {
-                $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'El los datos de enrolamiento no son validos.');
+                $log->logError(ClienteEnrolamientoController::class, 'El los datos de enrolamiento no son validos.');
 
                 return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El los datos de enrolamiento no son validos.'));
             }
         } catch (Exception $e) {
-            $log->logError(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al validar el requerimiento', $e);
+            $log->logError(ClienteEnrolamientoController::class, 'Error al validar el requerimiento', $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -523,14 +527,17 @@ class ClienteEnrolamientoController extends Controller
             });
 
             if ($error) {
-                $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), $error);
+                $log->logError(ClienteEnrolamientoController::class, $error);
+
                 return response()->json(RespuestaApi::returnResultado('error', $error, ''));
             } else {
-                $log->logInfo(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito los archivos firmados del enrolamiento');
+                $log->logInfo(ClienteEnrolamientoController::class, 'Se guardaron con exito los archivos firmados del enrolamiento');
+
                 return response()->json(RespuestaApi::returnResultado('success', $exitoso, ''));
             }
         } catch (Exception $e) {
-            $log->logError(ClienteEnrolamientoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear los archivos firmados del enrolamiento', $e);
+            $log->logError(ClienteEnrolamientoController::class, 'Error al crear los archivos firmados del enrolamiento', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }

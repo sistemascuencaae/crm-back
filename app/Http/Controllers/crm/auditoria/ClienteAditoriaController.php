@@ -5,15 +5,12 @@ namespace App\Http\Controllers\crm\auditoria;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
-use Illuminate\Support\Facades\Request as RequestFacade;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ClienteAditoriaController extends Controller
 {
     public function cliTabAmortizacion($cuentaanterior)
     {
-        $request = RequestFacade::instance();
         $log = new Funciones();
         try {
             $sql = "SELECT ent.ent_identificacion as cedula, date(cfa.cfa_fecha)as fecha,
@@ -27,11 +24,11 @@ class ClienteAditoriaController extends Controller
 
             $data = DB::select($sql, [$cuentaanterior]);
 
-            $log->logInfo(ClienteAditoriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Tabla amortizacion');
+            $log->logInfo(ClienteAditoriaController::class, 'Tabla amortizacion');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Tabla amortizacion', $data));
         } catch (\Throwable $e) {
-            $log->logError(ClienteAditoriaController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error en Tabla amortizacion', $e);
+            $log->logError(ClienteAditoriaController::class, 'Error en Tabla amortizacion', $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Exception', $e->getMessage()));
         }
