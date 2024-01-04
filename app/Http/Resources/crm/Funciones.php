@@ -3,7 +3,9 @@
 namespace App\Http\Resources\crm;
 
 use Carbon\Carbon;
-use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Request as RequestFacade;
+use Illuminate\Support\Facades\Auth;
 
 class Funciones
 {
@@ -44,6 +46,56 @@ class Funciones
       // }
     } catch (\Throwable $th) {
       throw $th;
+    }
+  }
+
+  // public function logInfo($controller, $rutaFuncion, $user_id, $user_ip, $msg, $id_objeto = null)
+  // { // id_objeto es, por ejemplo un tablero.id, caso.id, usuario.id    
+
+  //   Log::info('Controller: ' . $controller . ' | Ruta Funcion: ' . $rutaFuncion . ' | Usuario: ' . $user_id . ' | IP Usuario:' . $user_ip . ' | Mensaje: ' . $msg . $id_objeto);
+  // }
+
+  // public function logError($controller, $rutaFuncion, $user_id, $user_ip, $msg, $id_objeto = null, $exception)
+  // { // $exeption es el objeto de error que lanza los try catch
+
+  //   Log::error('Controller: ' . $controller . ' | Ruta Funcion: ' . $rutaFuncion . ' | Usuario: ' . $user_id . ' | IP Usuario:' . $user_ip . ' | Mensaje: ' . $msg . $id_objeto . ' | Error: ' . $exception->getMessage() . ' | En la linea (' . $exception->getLine() . ')');
+  // }
+
+  public function logInfo($controller, $msg)
+  {
+    $request = RequestFacade::instance();
+
+    Log::info(
+      'Controller: ' . $controller
+      . ' | Ruta Funcion: ' . $request->fullUrl()
+      . ' | Usuario: ' . Auth::id()
+      . ' | IP Usuario:' . $request->ip()
+      . ' | Mensaje: ' . $msg
+    );
+  }
+
+  public function logError($controller, $msg, $exception = null)
+  {
+    $request = RequestFacade::instance();
+
+    if ($exception) {
+      Log::error(
+        'Controller: ' . $controller
+        . ' | Ruta Funcion: ' . $request->fullUrl()
+        . ' | Usuario: ' . Auth::id()
+        . ' | IP Usuario:' . $request->ip()
+        . ' | Mensaje: ' . $msg
+        . ' | Error: ' . $exception->getMessage()
+        . ' | En la linea (' . $exception->getLine() . ')'
+      );
+    } else {
+      Log::error(
+        'Controller: ' . $controller
+        . ' | Ruta Funcion: ' . $request->fullUrl()
+        . ' | Usuario: ' . Auth::id()
+        . ' | IP Usuario:' . $request->ip()
+        . ' | Mensaje: ' . $msg
+      );
     }
   }
 
