@@ -19,24 +19,25 @@ use Illuminate\Support\Facades\DB;
 
 class solicitudCreditoController extends Controller
 {
-
-    public function listSolicitudCreditoByClienteId(Request $request, $cliente_id)
+    public function listSolicitudCreditoByClienteId($cliente_id)
     {
+        $log = new Funciones();
         try {
             $respuesta = SolicitudCredito::where('cliente_id', $cliente_id)->with('caso.estadodos')->orderBy("id", "asc")->get();
 
-            $log = new Funciones();
-            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las solicitudes de credito del cliente, con el ID: ', $cliente_id);
+            $log->logInfo(solicitudCreditoController::class, 'Se listo con exito las solicitudes de credito del cliente, con el ID: ' . $cliente_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {
-            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar las solicitudes de credito del cliente, con el ID: ', $cliente_id, $e);
+            $log->logError(solicitudCreditoController::class, 'Error al listar las solicitudes de credito del cliente, con el ID: ' . $cliente_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function editSolicitudCredito(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $solicitudCredito = solicitudCredito::findOrFail($id);
 
@@ -44,7 +45,6 @@ class solicitudCreditoController extends Controller
             $audit = new Audits();
             $valorAntiguo = $solicitudCredito;
             $audit->old_values = json_encode($valorAntiguo);
-
 
             $solicitudCredito->update($request->all());
 
@@ -63,33 +63,35 @@ class solicitudCreditoController extends Controller
             $audit->save();
             // END Auditoria
 
-            $log = new Funciones();
-            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se actualizo con exito la solicitud de credito, con el ID: ', $id);
+            $log->logInfo(solicitudCreditoController::class, 'Se actualizo con exito la solicitud de credito, con el ID: ' . $id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $solicitudCredito));
         } catch (Exception $e) {
-            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al actualizar la solititud de credito, con el ID: ', $id, $e);
+            $log->logError(solicitudCreditoController::class, 'Error al actualizar la solititud de credito, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function listSolicitudCreditoByEntidadId(Request $request, $ent_id)
     {
+        $log = new Funciones();
         try {
             $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ent_id', $ent_id)->get();
 
-            $log = new Funciones();
-            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las solicitudes de credito por ent_id: ', $ent_id);
+            $log->logInfo(solicitudCreditoController::class, 'Se listo con exito las solicitudes de credito por ent_id: ' . $ent_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
         } catch (Exception $e) {
-            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar las solicitudes de credito por ent_id: ', $ent_id, $e);
+            $log->logError(solicitudCreditoController::class, 'Error al listar las solicitudes de credito por ent_id: ' . $ent_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function listSolicitudCreditoByRucCedula(Request $request, $ruc_cedula)
+    public function listSolicitudCreditoByRucCedula($ruc_cedula)
     {
+        $log = new Funciones();
         try {
             $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ruc_cedula', $ruc_cedula)->get();
 
@@ -97,12 +99,12 @@ class solicitudCreditoController extends Controller
             //     "solicitudesCredito" => $solicitudesCredito,
             // ]);
 
-            $log = new Funciones();
-            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito las solicitudes de credito por RUC o CEDULA: ', $ruc_cedula);
+            $log->logInfo(solicitudCreditoController::class, 'Se listo con exito las solicitudes de credito por RUC o CEDULA: ' . $ruc_cedula);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $solicitudesCredito));
         } catch (Exception $e) {
-            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar las solicitudes de credito por RUC o CEDULA: ', $ruc_cedula, $e);
+            $log->logError(solicitudCreditoController::class, 'Error al listar las solicitudes de credito por RUC o CEDULA: ' . $ruc_cedula, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -130,8 +132,9 @@ class solicitudCreditoController extends Controller
     //     }
     // }
 
-    public function solicitudByIdentificacion(Request $request, $entIdentificacion, $userId)
+    public function solicitudByIdentificacion($entIdentificacion, $userId)
     {
+        $log = new Funciones();
         try {
             $user = DB::selectOne('SELECT u.name, alm.alm_nombre  from crm.users u
         inner join public.puntoventa pve on pve.pve_id = u.pve_id
@@ -146,18 +149,18 @@ class solicitudCreditoController extends Controller
                 "userName" => $user->name
             ];
 
-            $log = new Funciones();
-            $log->logInfo(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se listo con exito la solicitud de credito por entIdentificacion: ', $entIdentificacion);
+            $log->logInfo(solicitudCreditoController::class, 'Se listo con exito la solicitud de credito por entIdentificacion: ' . $entIdentificacion);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
         } catch (Exception $e) {
-            $log->logError(solicitudCreditoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al listar la solicitud de credito por entIdentificacion: ', $entIdentificacion, $e);
+            $log->logError(solicitudCreditoController::class, 'Error al listar la solicitud de credito por entIdentificacion: ' . $entIdentificacion, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function obtenerSolicitudCreditoActualizada($casoId)
     {
+        $log = new Funciones();
         try {
             $solicitudCredito = SolicitudCredito::with('cliente.telefonos', 'cliente.referencias.telefonos')->where('caso_id', $casoId)->first();
             // if($solicitudCredito){
@@ -209,8 +212,13 @@ class solicitudCreditoController extends Controller
                 }
                 return $solicitudCredito;
             }
-        } catch (\Throwable $th) {
-            throw $th;
+
+            $log->logInfo(solicitudCreditoController::class, 'Se obtuvo correctamente la solicitud actualizada del caso: #' . $casoId);
+
+        } catch (\Throwable $e) {
+            $log->logError(solicitudCreditoController::class, 'Error al obtener la solicitud actualizada del caso: # ' . $casoId, $e);
+            // throw $th;
+            return $e;
         }
     }
 }

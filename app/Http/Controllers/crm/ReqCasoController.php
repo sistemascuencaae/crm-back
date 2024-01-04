@@ -23,6 +23,8 @@ class ReqCasoController extends Controller
     // tipo archivo test
     public function editReqTipoFile(Request $request)
     {
+        $log = new Funciones();
+
         $reqCaso = $request->input('reqCaso');
         $inputReq = json_decode($reqCaso);
         $tipoArchivo = $request->input('tipoArchivo');
@@ -197,23 +199,23 @@ class ReqCasoController extends Controller
             //     ->orderBy('id', 'asc')
             //     ->get();
 
+            $log->logInfo(ReqCasoController::class, 'Se actualizo con exito el requerimiento, con el ID: ' . $inputReq->id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $requerimiento));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
+        } catch (Exception $e) {
+            $log->logError(ReqCasoController::class, 'Error al actualizar el requerimiento, con el ID: ' . $inputReq->id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
         }
     }
 
     public function edit(Request $request)
     {
+        $log = new Funciones();
+
+        $id = $request->input('id');
         try {
-
-            $id = $request->input('id');
-
             $requerimiento = RequerimientoCaso::find($id);
-
-            // Obtener el old_values (valor antiguo)
-
 
             if ($requerimiento) {
                 DB::transaction(function () use ($requerimiento, $request) {
@@ -257,29 +259,38 @@ class ReqCasoController extends Controller
                     //echo ('$requerimiento: '.json_encode($requerimiento));
                 });
 
-
-
-
                 $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))
                     ->orderBy('id', 'asc')
                     ->orderBy('id', 'asc')
                     ->get();
+
+                $log->logInfo(ReqCasoController::class, 'Se actualizo con exito el requerimiento, con el ID: ' . $id);
+
                 return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $reqCaso));
             } else {
+                $log->logError(ReqCasoController::class, 'El requerimiento no existe, con el ID: ' . $id);
+
                 return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento no existe.', $requerimiento));
             }
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), ''));
+        } catch (Exception $e) {
+            $log->logError(ReqCasoController::class, 'Error al actualizar el requerimiento, con el ID: ' . $id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
         }
     }
 
     public function listAll($casoId)
     {
+        $log = new Funciones();
+        try {
+            $reqFase = DB::select('SELECT * FROM crm.requerimientos_predefinidos  where fase_id = ?', [$casoId]);
+            $log->logInfo(ReqCasoController::class, 'Se listo correctamente los requerimientos predefinidos');
 
+        } catch (\Throwable $e) {
+            $log->logError(ReqCasoController::class, 'Error al listar los requerimientos predefinidos', $e);
+        }
 
-        $reqFase = DB::select('SELECT * FROM crm.requerimientos_predefinidos  where fase_id = ?', [$casoId]);
-
-        echo ('$reqFase: ' . json_encode($reqFase));
+        // echo ('$reqFase: ' . json_encode($reqFase));
 
         // try {
         //     $data = RequerimientoCaso::where('caso_id',$casoId)->get();
@@ -288,21 +299,31 @@ class ReqCasoController extends Controller
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         // }
     }
+
     public function list()
     {
     }
 
     public function uploadReqArchivo($inputFormData)
     {
-        if ($inputFormData->hasFile('file')) {
-            $file = $inputFormData->file('file');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $file->storeAs('archivos', $fileName); // Almacenar en el almacenamiento de Laravel
+        $log = new Funciones();
+        try {
+            if ($inputFormData->hasFile('file')) {
+                $file = $inputFormData->file('file');
+                $fileName = time() . '_' . $file->getClientOriginalName();
+                $file->storeAs('archivos', $fileName); // Almacenar en el almacenamiento de Laravel
 
-            return response()->json(['message' => 'File uploaded successfully']);
+                $log->logInfo(ReqCasoController::class, 'Archivo cargado correctamente');
+
+                return response()->json(['message' => 'File uploaded successfully']);
+            }
+
+            $log->logError(ReqCasoController::class, 'No se ha subido ningún archivo');
+
+            return response()->json(['message' => 'No file uploaded'], 400);
+        } catch (\Throwable $e) {
+            $log->logError(ReqCasoController::class, 'Error al cargar el archivo', $e);
         }
-
-        return response()->json(['message' => 'No file uploaded'], 400);
     }
 
     public function addSolicitudCreditoReqCaso(Request $request)
@@ -350,25 +371,33 @@ class ReqCasoController extends Controller
             $audit->save();
             //END Auditoria
 
-            $log->logInfo(ReqCasoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Se creo con exito la solicitud de credito en el caso: #', $casoId);
+            $log->logInfo(ReqCasoController::class, 'Se creo con exito la solicitud de credito en el caso: #' . $casoId);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
-            $log->logError(ReqCasoController::class, $request->fullUrl(), Auth::id(), $request->ip(), 'Error al crear la solicitud de credito en el caso: #', $casoId, $e);
+            $log->logError(ReqCasoController::class, 'Error al crear la solicitud de credito en el caso: #' . $casoId, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function listaReqCasoId($casoId)
     {
+        $log = new Funciones();
         try {
             $reqs = RequerimientoCaso::where('caso_id', $casoId)
                 ->orderBy('id', 'asc')
                 ->orderBy('orden', 'asc')
                 ->get();
+
+            $log->logInfo(ReqCasoController::class, 'Se listo con exito los requerimientos del caso: #' . $casoId);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Datos obtenidos con exito', $reqs));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), ''));
+        } catch (Exception $e) {
+            $log->logError(ReqCasoController::class, 'Error al listar los requerimientos del caso: #' . $casoId, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
         }
     }
+
 }
