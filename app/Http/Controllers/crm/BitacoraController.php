@@ -16,14 +16,16 @@ class BitacoraController extends Controller
         try {
             $bitacora = DB::select("select adi.*,ur.name,gal.titulo, fas.nombre as fase_actual_nombre, tab.nombre as tablero_actual_nombre, fas1.nombre as fase_anterior_nombre, tab1.nombre as tablero_anterior_nombre,
                                     u1.name as usuario_actual, u2.name as usuario_anterior
+
                                     from crm.audits adi
+                            
                                     left join crm.archivos arc on arc.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Archivo'
                                     left join crm.galerias gal on gal.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Galeria'
                                     left join crm.nota n on n.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Nota'
                                     left join crm.caso caso on caso.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Caso'
                                     left join crm.comentarios c on c.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\Comentarios'
                                     left join crm.dtipo_actividad dta on dta.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\DTipoActividad'
-                                    left join crm.solicitud_credito sc on sc.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\credito\solicitudCredito'
+                                    left join crm.solicitud_credito sc on sc.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\credito\SolicitudCredito'
                                     left join crm.requerimientos_caso rq on rq.id = adi.auditable_id and adi.auditable_type = 'App\Models\crm\RequerimientoCaso'
                                     left join crm.caso cas on cas.id = arc.caso_id or cas.id = gal.caso_id or cas.id = n.caso_id or cas.id = caso.id
 

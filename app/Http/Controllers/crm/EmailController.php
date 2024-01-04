@@ -123,17 +123,24 @@ class EmailController extends Controller
                 $emailsSendCli = DB::selectOne("SELECT  em.emails, em.email_cliente, em.auto from crm.fase fa
                 inner join crm.email em on em.fase_id = fa.id
                 where fa.id = :faseId", ['faseId' => $fase_id]);
-                $datosCliente = DB::selectOne("SELECT cli.email, cli.nombre_comercial from crm.caso ca
+
+                // echo json_encode($emailsSendCli);
+
+                if ($emailsSendCli) {
+                    $datosCliente = DB::selectOne("SELECT cli.email, cli.nombre_comercial from crm.caso ca
                 inner join crm.cliente cli on cli.id = ca.cliente_id
                 where ca.id = :casoId", ['casoId' => $caso_id]);
 
-                $result = (object) [
-                    "email" => $datosCliente->email,
-                    "emails" => $emailsSendCli->auto == true ? $emailsSendCli->emails : "",
-                    "email_cliente" => $emailsSendCli->email_cliente,
-                    "nombre_comercial" => $datosCliente->nombre_comercial,
-                    "auto" => $emailsSendCli->auto
-                ];
+                    $result = (object) [
+                        "email" => $datosCliente->email,
+                        "emails" => $emailsSendCli->auto == true ? $emailsSendCli->emails : "",
+                        "email_cliente" => $emailsSendCli->email_cliente,
+                        "nombre_comercial" => $datosCliente->nombre_comercial,
+                        "auto" => $emailsSendCli->auto
+                    ];
+                } else {
+                    return response()->json(RespuestaApi::returnResultado('error', 'No existe un correo electrónico relacionado con esta fase', ''));
+                }
             }
 
             if (!$result || !$object) {

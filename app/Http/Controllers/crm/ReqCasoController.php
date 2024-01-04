@@ -229,6 +229,9 @@ class ReqCasoController extends Controller
                         $galeria->update([
                             "descripcion" => $requerimiento->descripcion, // : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         ]);
+
+                        // echo ('$galeria->descripcion: ' . json_encode($galeria->descripcion));
+
                     }
                     if ($requerimiento->tipo_campo == 'archivo' && $requerimiento->archivos_id != null) {
                         $archivo = Archivo::find($requerimiento->archivos_id);
@@ -236,6 +239,8 @@ class ReqCasoController extends Controller
                             "observacion" => $requerimiento->descripcion, // : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         ]);
                     }
+
+                    
                     $audit = new Audits();
                     $valorAntiguo = $requerimiento;
                     $audit->old_values = json_encode($valorAntiguo);
