@@ -39,6 +39,18 @@ class TableroController extends Controller
         }
     }
 
+    public function usuariosTablero($tabId)
+    {
+        try {
+            $usuariosTablero = DB::select("SELECT u.* from crm.tablero_user tu
+            left join crm.users u on u.id = tu.user_id
+            where tu.tab_id = ?", [$tabId]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuariosTablero));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function listByTablerosIdWithFases($tab_id)
     {
         $log = new Funciones();
@@ -366,5 +378,4 @@ class TableroController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
 }

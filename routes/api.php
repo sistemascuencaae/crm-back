@@ -154,6 +154,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
+    Route::put('/actualizarCaso/{casoId}', [CasoController::class, 'actualizarCaso']);//
     //---------------------------------------------------------------->PRUEBAS
     Route::get('/actualizarReqCaso/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
     /************************  FORMULARIOS   *********************** */
@@ -196,6 +197,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
 
     Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
+
+
 
 });
 Route::group(["prefix" => "crm/audi"], function ($router) {
@@ -302,7 +305,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllTablerosWithFases', [TableroController::class, 'listAllTablerosWithFases']); // listar tableros con sus fases
     Route::get('/listByTablerosIdWithFases/{tab_id}', [TableroController::class, 'listByTablerosIdWithFases']); // listar tableros con sus fases
     Route::get('/editMiembrosByTableroId/{id}', [TableroController::class, 'editMiembrosByTableroId']); // Editar los miembros del tablero
-
+    Route::get('/usuariosTablero/{tabId}', [TableroController::class, 'usuariosTablero']); // usuariosTablero
     Route::get('/listTableroByDepId/{dep_id}', [TableroController::class, 'listTableroByDepId']); // listar
 
     // DEPARTAMENTO
@@ -409,7 +412,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
 
     Route::get('/listAlmacenes', [UserController::class, 'listAlmacenes']); // listar almacenes
-    
+
     Route::post('/editEnLineaUser/{user_id}', [UserController::class, 'editEnLineaUser']); // editar en linea del usuario
 
     // NOTIFICACIONES
