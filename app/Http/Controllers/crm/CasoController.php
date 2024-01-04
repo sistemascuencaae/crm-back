@@ -30,6 +30,7 @@ use App\Models\crm\Fase;
 use App\Models\openceo\CPedidoProforma;
 use App\Models\User;
 use Carbon\Carbon;
+use DateTime;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,11 +42,11 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-                [
-                    //'add',
-                    //'addCasoOPMICreativa'
+            [
+                //'add',
+                //'addCasoOPMICreativa'
 
-                ]
+            ]
         ]);
     }
 
@@ -151,15 +152,15 @@ class CasoController extends Controller
             ->orderBy('id', 'ASC')
             ->get();
 
-       // Especificar las propiedades que representan fechas en tu objeto Nota
-       $dateFields = ['created_at', 'updated_at'];
-       // Utilizar la función map para transformar y obtener una nueva colección
-       $data->map(function ($item) use ($dateFields) {
-           // $this->formatoFechaItem($item, $dateFields);
-           $funciones = new Funciones();
-           $funciones->formatoFechaItem($item, $dateFields);
-           return $item;
-       });
+        // Especificar las propiedades que representan fechas en tu objeto Nota
+        $dateFields = ['created_at', 'updated_at'];
+        // Utilizar la función map para transformar y obtener una nueva colección
+        $data->map(function ($item) use ($dateFields) {
+            // $this->formatoFechaItem($item, $dateFields);
+            $funciones = new Funciones();
+            $funciones->formatoFechaItem($item, $dateFields);
+            return $item;
+        });
 
         return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
     }
@@ -173,8 +174,8 @@ class CasoController extends Controller
     public function casoById($id)
     {
         try {
-        $data = $this->getCaso($id);
-        return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
+            $data = $this->getCaso($id);
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e));
         }
@@ -1078,7 +1079,6 @@ class CasoController extends Controller
                     $registroAnterior->update([
                         "tiempo_cambio" => $tiempoCambio,
                     ]);
-
                 } else {
 
                     // start diferencia de tiempos en horas minutos y segundos
@@ -1100,7 +1100,6 @@ class CasoController extends Controller
                     $this->editCalcularTiemposCaso($casoNuevo->caso_id); // calculamos los tiempos de caso pero como las dos horas del sistema y del nuevo caso son la misma por eso me da 00:00:00
 
                 }
-
             });
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
@@ -1139,7 +1138,6 @@ class CasoController extends Controller
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
@@ -1147,93 +1145,98 @@ class CasoController extends Controller
 
     public function addCasoOPMICreativa($cppId)
     {
-        //FASEID = 396 TABLEROID = 193 usuario = 7 tipoCaso = 76 departamentoId = 1
-        $opm = DB::selectOne("
-              select
+        $opm = DB::selectOne("SELECT
               cli.cli_id,
-              cli.ent_id
+              ent.ent_id,
+              (cti.cti_sigla || '-'|| alm.alm_codigo || '-' || pve.pve_numero ||'-' || cpp.cpp_numero) as comprobante,
+              cpp.emp_id
               from cpedido_proforma cpp
-              join cliente cli on cli.cli_id = cpp.cli_id
-              join empleado emp on emp.emp_id = cpp.emp_id
-              join entidad entemp on entemp.ent_id = emp.ent_id
+              join public.cliente cli on cli.cli_id = cpp.cli_id
+              join public.entidad ent on ent.ent_id = cli.ent_id
+              inner join public.ctipocom cti on cti.cti_id = cpp.cti_id
+              inner join public.puntoventa pve on pve.pve_id = cpp.pve_id
+              inner join public.almacen alm on alm.alm_id = pve.alm_id
               where cpp.cpp_id = ?
         ", [$cppId]);
-        //--- fase id
-        $faseId = 396;
-        //--- tablero id
-        $tableroId = 193;
-        //--- departamento id del tablero
-        $deparId = 1;
-        //--- usuario general del tablero id
-        $userId = 7;
-        //--- tipo caso generado en el tablero
-        $tipoCasoId = 76;
-        //--- cliente id openceo
-        $clienteId = $opm->cli_id;
-        //--- entidad id openceo
-        $entId = $opm->ent_id;
-        //--- miembros
-        $miembrosAdminTablero = DB::select('select u.id from crm.tablero_user tu
-              inner join crm.users u on u.id = tu.user_id
-              where tu.tab_id = 193 and u.usu_tipo in (2,3);');
-        $miembros = [];
-        foreach ($miembrosAdminTablero as $miembro) {
-            array_push($miembros, $miembro->id);
+        if (!$opm) {
+            return null;
         }
-        //--- fecha vencimiento
-        $horaActualEcuador = Carbon::now('America/Guayaquil');
-        $nuevaHora = $horaActualEcuador->addHours(2);
-        $fechaVencimiento = $nuevaHora->toDateTimeString();
-        //---
-
-        $objetoJson = (object) [
-            "id" => null,
-            "fas_id" => $faseId,
-            "nombre" => 'Solicitud de credito aplicación movil)',
-            "descripcion" => 'Pedido generado desde la aplicacion',
-            "estado" => true,
-            "orden" => 1,
-            "ent_id" => $entId,
-            "user_id" => $userId,
-            "prioridad" => 1,
-            "fecha_vencimiento" => $fechaVencimiento,
-            "fase_anterior_id" => $faseId,
-            "user" => null,
-            "entidad" => null,
-            "miembros" => $miembros,
-            "comentarios" => null,
-            "resumen" => null,
-            "bloqueado" => false,
-            "bloqueado_user" => "",
-            "tar_id" => null,
-            "ctt_id" => null,
-            "tareas" => null,
-            "tc_id" => $tipoCasoId,
-            "tableroId" => $tableroId,
-            "estado_2" => null,
-            "fase_creacion_id" => $faseId,
-            "tablero_creacion_id" => $tableroId,
-            "dep_creacion_id" => $deparId,
-            "fase_anterior_id_reasigna" => $faseId,
-            "user_anterior_id" => $userId,
-            "cpp_id" => $cppId,
-        ];
-
-        $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
-        $emailCliente = DB::selectOne('select ent_email from entidad where ent_id = ?', [$opm->ent_id]);
-        //$email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
-        if (!$emailCliente) {
-            $t = new EmailController();
-            $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
+        //--- Configuracion del destino del caso
+        $configuracion = DB::selectOne("SELECT tcf.* from crm.tipo_caso tc
+        inner join crm.tipo_caso_formulas tcf on tcf.tc_id = tc.id
+        where tc.nombre = 'SOLICITUD DE CREDITO APP MOVIL' and tc.estado = true limit 1;");
+        if ($configuracion && $opm) {
+            //--- Add miembros administradores del tablero
+            $miembrosAdminTablero = DB::select('SELECT u.id from crm.tablero_user tu
+            inner join crm.users u on u.id = tu.user_id
+            where tu.tab_id = ? and u.usu_tipo in (2,3);', [$configuracion->tab_id]);
+            $miembros = [];
+            foreach ($miembrosAdminTablero as $miembro) {
+                array_push($miembros, $miembro->id);
+            }
+            // usuario de acuerdo al empleado existe en el tablero
+            $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
+              left join crm.tablero_user tu on tu.user_id = us.id
+              where emp_id = ? and tu.tab_id = ?", [$opm->emp_id, $configuracion->tab_id]);
+            // Obtener la fecha actual
+            $fechaActual = now();
+            // Convertir la cadena de tiempo a un objeto DateTime
+            $tiempoVencimiento = DateTime::createFromFormat('H:i:s', $configuracion->tiempo_vencimiento);
+            // Sumar el intervalo de tiempo a la fecha actual
+            $fechaVencimiento = $fechaActual->add($tiempoVencimiento->diff(new DateTime()));
+            $objetoJson = (object) [
+                "id" => null,
+                "fas_id" => $configuracion->fase_id,
+                "nombre" => 'Solicitud de credito aplicación movil)',
+                "descripcion" => 'Pedido:'.$opm->comprobante.', generado desde la aplicacion',
+                "estado" => $configuracion->estado,
+                "orden" => 1,
+                "ent_id" => $opm->ent_id,
+                "user_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                "prioridad" => $configuracion->prioridad,
+                "fecha_vencimiento" => $fechaVencimiento,
+                "fase_anterior_id" => $configuracion->fase_id,
+                "user" => null,
+                "entidad" => null,
+                "miembros" => $miembros,
+                "comentarios" => null,
+                "resumen" => null,
+                "bloqueado" => false,
+                "bloqueado_user" => "",
+                "tar_id" => null,
+                "ctt_id" => null,
+                "tareas" => null,
+                "tc_id" => $configuracion->tc_id,
+                "tableroId" => $configuracion->tab_id,
+                "estado_2" => $configuracion->estado_2,
+                "fase_creacion_id" => $configuracion->fase_id,
+                "tablero_creacion_id" => $configuracion->tab_id,
+                "dep_creacion_id" => $configuracion->dep_id,
+                "fase_anterior_id_reasigna" => $configuracion->fase_id,
+                "user_anterior_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                "user_creador_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                "cpp_id" => $cppId,
+            ];
+            $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
+            $emailCliente = DB::selectOne('select ent_email from entidad where ent_id = ?', [$opm->ent_id]);
+            //$email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
+            if (!$emailCliente) {
+                $t = new EmailController();
+                $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
+            } else {
+                $t = new EmailController();
+                $t->send_email($emailCliente->ent_email, $dataEmail);
+            }
+            $requestData = json_decode(json_encode($objetoJson), true);
+            $request = new Request($requestData);
+            return $this->add($request);
         } else {
-            $t = new EmailController();
-            $t->send_email($emailCliente->ent_email, $dataEmail);
+            return null;
         }
-
-        $requestData = json_decode(json_encode($objetoJson), true);
-        $request = new Request($requestData);
-        return $this->add($request);
     }
+
+
+
     // public function enviarCorreoCliente($casoId){
     //     if ($sendEmail) {
     //         if ($sendEmail->auto) {
@@ -1253,5 +1256,27 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    public function actualizarCaso(Request $request, $casoId){
+        try {
+
+            $casoData = $request->all();
+            if (!$casoId) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
+            }
+            $caso = Caso::find($casoId);
+            if ($caso) {
+                $caso->update($casoData);
+                $data = $this->getCaso($casoId);
+                broadcast(new TableroEvent($data));
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+            }
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
 
 }
