@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\ClienteCrm;
 use App\Models\crm\TelefonosCliente;
@@ -19,11 +20,16 @@ class ClienteCrmController extends Controller
 
     public function listClienteCrmById(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $respuesta = ClienteCrm::where('id', $id)->with('telefonos', 'referencias.telefonos')->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $respuesta));
+            $log->logInfo(ClienteCrmController::class, 'Se listo con exito el cliente del CRM');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {
+            $log->logError(ClienteCrmController::class, 'Error al listar el cliente del CRM', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -86,8 +92,20 @@ class ClienteCrmController extends Controller
 
     public function editClienteCrm(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             DB::beginTransaction();
+
+            // Validar la identificación para que no se repita
+            $identificacionExistente = ClienteCrm::where('identificacion', $request->identificacion)
+                ->where('ent_id', '!=', $id)
+                ->first();
+
+            if ($identificacionExistente) {
+                $log->logError(ClienteCrmController::class, 'El número de identificación ya está registrada para otro cliente');
+                // La identificación ya existe para otro cliente
+                return response()->json(RespuestaApi::returnResultado('error', 'El número de identificación ya está registrada para otro cliente', ''));
+            }
 
             $cliente = ClienteCrm::where('ent_id', $id)->firstOrFail();
             $cliente->update($request->except('telefonos'));
@@ -118,18 +136,16 @@ class ClienteCrmController extends Controller
 
             $respuesta = ClienteCrm::where('id', $cliente->id)->with('telefonos')->first();
 
+            $log->logInfo(ClienteCrmController::class, 'Se actualizo con exito el cliente del CRM');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $respuesta));
         } catch (Exception $e) {
             DB::rollback();
+            $log->logError(ClienteCrmController::class, 'Error al actualizar el cliente del CRM', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-
-
-
-
-
 
     // public function deleteClienteCrm(Request $request, $id)
     // {

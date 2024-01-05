@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\ActividadesFormulas;
 use App\Models\crm\CondicionesFaseMover;
@@ -24,9 +25,27 @@ class TableroController extends Controller
 
     public function listAllTablerosWithFases()
     {
+        $log = new Funciones();
         try {
             $tableros = Tablero::where('estado', true)->with('fase', 'estados')->orderBy('id', 'desc')->get();
+
+            $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros con sus fases');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar todos los tableros con sus fases', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function usuariosTablero($tabId)
+    {
+        try {
+            $usuariosTablero = DB::select("SELECT u.* from crm.tablero_user tu
+            left join crm.users u on u.id = tu.user_id
+            where tu.tab_id = ?", [$tabId]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuariosTablero));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -34,10 +53,16 @@ class TableroController extends Controller
 
     public function listByTablerosIdWithFases($tab_id)
     {
+        $log = new Funciones();
         try {
             $tablero = Tablero::where('id', $tab_id)->where('estado', true)->with('fase.respuestas')->first();
+
+            $log->logInfo(TableroController::class, 'Se listo con exito el tablero con el tab_id: ' . $tab_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tablero));
         } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar el tablero con el tab_id: ' . $tab_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -45,10 +70,16 @@ class TableroController extends Controller
     //LISTA DE TODOS LOS TABLEROS
     public function listAll()
     {
+        $log = new Funciones();
         try {
             $tableros = Tablero::with('tableroUsuario')->orderBy('id', 'desc')->get();
+
+            $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
         } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar todos los tableros', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -56,25 +87,32 @@ class TableroController extends Controller
     // start para superUsuario
     public function listAllTablerosActivos()
     {
+        $log = new Funciones();
         try {
             $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("id", "desc")->get();
 
+            $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros activos');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
         } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar todos los tableros activos', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function listAllTablerosInactivos()
     {
+        $log = new Funciones();
         try {
             $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("id", "desc")->get();
 
-            // return response()->json([
-            //     "tableros" => $tableros,
-            // ]);
+            $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros inactivos');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
         } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar todos los tableros inactivos', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -82,24 +120,29 @@ class TableroController extends Controller
 
     public function listTableroByUser($user_id)
     {
+        $log = new Funciones();
         try {
             // $tableros = Tablero::where("tableroUsuario", $user_id)->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("id", "desc")->get();
             $tableros = Tablero::whereHas('tableroUsuario', function ($query) use ($user_id) {
                 $query->where('user_id', $user_id);
             })->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy('id', 'desc')->get();
-            // return response()->json([
-            //     "tableros" => $tableros,
-            // ]);
+
+            $log->logInfo(TableroController::class, 'Se listo con exito los tableros por user_id: ' . $user_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tableros));
         } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los tableros por user_id: ' . $user_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function addTablero(Request $request)
     {
+        $log = new Funciones();
         try {
             $tab = $request->all();
+
             $t = DB::transaction(function () use ($tab) {
                 $tablero = Tablero::create($tab);
                 for ($i = 0; $i < sizeof($tab['usuarios']); $i++) {
@@ -203,38 +246,44 @@ class TableroController extends Controller
                 return $tablero;
             });
 
+            $log->logInfo(TableroController::class, 'Se guardo con exito el tablero con el ID: ' . $t->id);
+
             $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $t->id)->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $dataRe));
         } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al guardar un tablero', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function updateTablero(Request $request, $id)
+    public function editTablero(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $eliminados = $request->input('eliminados');
             $usuarios = $request->input('usuarios');
             $tablero = $request->all();
 
-            //echo(json_encode($eliminados[0]['id']));
             $tab = DB::transaction(function () use ($tablero, $id, $eliminados, $usuarios) {
+                // Actualiza la información del tablero
                 Tablero::where('id', $id)
                     ->update([
                         'dep_id' => $tablero['dep_id'],
-                        'titab_id' => $tablero['titab_id'],
                         'nombre' => $tablero['nombre'],
                         'descripcion' => $tablero['descripcion'],
                         'estado' => $tablero['estado'],
                     ]);
 
+                // Elimina usuarios según la información proporcionada
                 for ($i = 0; $i < sizeof($eliminados); $i++) {
                     if ($id && $eliminados[$i]['id']) {
                         DB::delete("DELETE FROM crm.tablero_user WHERE tab_id = " . $id . " and user_id = " . $eliminados[$i]['id']);
                     }
                 }
 
+                // Agrega usuarios según la información proporcionada
                 for ($i = 0; $i < sizeof($usuarios); $i++) {
                     $tabl = TableroUsuario::where('tab_id', $id)->where('user_id', $usuarios[$i])->first();
                     if (!$tabl) {
@@ -245,19 +294,23 @@ class TableroController extends Controller
                 return $tablero;
             });
 
+            $log->logInfo(TableroController::class, 'Se actualizo con exito el tablero con el ID: ' . $id);
+
             $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $tab['id'])->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $dataRe));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+            $log->logError(TableroController::class, 'Error al actualizar el tablero: ' . $id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar el tablero', $e->getMessage()));
         }
     }
 
     public function listTableroMisCasos($user_id)
     {
+        $log = new Funciones();
         try {
-
-            $data = VistaMisCasos::with('miembros.usuario.departamento', 'estadodos')->where('id_usuario_miembro', $user_id)->get();
+            $data = VistaMisCasos::where('id_usuario_miembro', $user_id)->with('miembros.usuario.departamento', 'estadodos')->get();
 
             // $data1 = DB::select("select
             // u.id as id_usuario_miembro,  u.name as usuario_miembro,u2.name as dueno_caso, cs.nombre as nombre, cs.id as caso_id,
@@ -284,21 +337,45 @@ class TableroController extends Controller
             //     "depUserTablero" => null
             // ];
 
+            $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos, con el user_id: ' . $user_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function editMiembrosByTableroId($id)
     {
+        $log = new Funciones();
         try {
             $tablero = Tablero::where('id', $id)->with('tableroUsuario.usuario.departamento')->first();
 
+            $log->logInfo(TableroController::class, 'Se listo con exito los miembros del tablero con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tablero));
         } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los miembros del tablero con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
+    public function listTableroByDepId($dep_id)
+    {
+        $log = new Funciones();
+        try {
+            $data = Tablero::where('dep_id', $dep_id)->where('estado', true)->with('fase')->get();
+
+            $log->logInfo(TableroController::class, 'Se listo con exito los tableros, por departamento ID: ' . $dep_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los tableros, por departamento ID: ' . $dep_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 }

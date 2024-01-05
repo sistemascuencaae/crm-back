@@ -14,10 +14,15 @@ class ControlTiemposCaso extends Model
     protected $fillable = [
         "caso_id",
         "est_caso_id",
+        "estado_caso",
         "tiempo_cambio",
+        "fase",
         "fase_id",
         "tipo",
         "user_id",
+        "usuario",
+        "tab_id",
+        "tablero",
     ];
 
     public function setCreatedAtAttribute($value)
