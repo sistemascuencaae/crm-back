@@ -120,6 +120,24 @@ class ContratosController extends Controller
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
 
+    public function byContrato($almacen, $numero)
+    {
+        $data = ContratoGex::get()->where('alm_id', $almacen)->where('numero', $numero)->first();
+        $data['almacenes'] = DB::selectOne("select alm_id, alm_nombre from almacen a where a.alm_id = " . $data['alm_id']);
+        $data['facturas'] = DB::selectOne("select c.cfa_id, concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
+                                            from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                                            join ctipocom t on c.cti_id = t.cti_id
+                                                            join dfactura d on c.cfa_id = d.cfa_id
+                                            where p.alm_id = " . $almacen . " and c.cfa_id = " . $data['cfa_id'] . "
+                                            group by c.cfa_id, t.cti_sigla,p.alm_id, p.pve_numero, c.cfa_numero");
+
+        if($data){
+            return response()->json(RespuestaApi::returnResultado('success', 'Contrato Encontrado', $data));
+        }else{
+            return response()->json(RespuestaApi::returnResultado('error', 'El Contrato no existe', []));
+        }
+    }
+
     public function grabaContrato(Request $request)
     {
         try {
