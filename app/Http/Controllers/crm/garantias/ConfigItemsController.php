@@ -18,7 +18,7 @@ class ConfigItemsController extends Controller
     
     public function listado()
     {
-        $data = DB::select("select p.pro_id, p.pro_codigo, p.pro_nombre as descripcion, case pc.tipo_servicio when 'G' then 'GEX' when 'S' then 'SEGURO' when 'P' then 'PRODUCTO' when 'A' then 'PRODUCTO A/C' end as tipo,
+        $data = DB::select("select pc.config_id, p.pro_codigo, p.pro_nombre as descripcion, case pc.tipo_servicio when 'G' then 'GEX' when 'S' then 'SEGURO' when 'P' then 'PRODUCTO' when 'A' then 'PRODUCTO A/C' end as tipo,
                                    pc.porc_gex, pc.meses_garantia
                             from producto p join gex.producto_config pc on p.pro_id = pc.pro_id");
 
@@ -39,13 +39,13 @@ class ConfigItemsController extends Controller
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
 
-    public function byConfig($producto)
+    public function byConfig($config)
     {
-        $data = ConfigItems::with('partes')->get()->where('pro_id', $producto)->first();
-        $data['producto'] = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p where p.pro_id = " . $producto)[0];
+        $data = ConfigItems::with('partes')->get()->where('config_id', $config)->first();
+        $data['producto'] = DB::selectone("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p where p.pro_id = " . $data['pro_id']);
 
         foreach ($data['partes'] as $p) {
-            $parte = DB::select("select p.descripcion from gex.partes p where p.parte_id = " . $p['parte_id'])[0];
+            $parte = DB::selectone("select p.descripcion from gex.partes p where p.parte_id = " . $p['parte_id']);
             $p['parte'] = $parte->descripcion;
         }
 
@@ -62,6 +62,7 @@ class ConfigItemsController extends Controller
             DB::transaction(function() use ($request){
                 date_default_timezone_set("America/Guayaquil");
                 
+                $config_id = 0;
                 $pro_id = $request->input('pro_id');
                 $tipo_servicio = $request->input('tipo_servicio');
                 $porc_gex = $request->input('porc_gex');
@@ -70,8 +71,10 @@ class ConfigItemsController extends Controller
                 $fecha_modifica = null;
     
                 if ($request->input('modifica') == 'N') {
+                    $config_id = ConfigItems::max('config_id') + 1;
                     $fecha_crea = date("Y-m-d h:i:s");
                 } else {
+                    $config_id = $request->input('config_id');
                     $fecha_crea = $request->input('fecha_crea');
                     $fecha_modifica = date("Y-m-d h:i:s");
                 }
@@ -80,8 +83,9 @@ class ConfigItemsController extends Controller
                 $usuario_modifica = $request->input('usuario_modifica');
     
                 DB::table('gex.producto_config')->updateOrInsert(
-                    ['pro_id' => $pro_id],
+                    ['config_id' => $config_id],
                     [
+                    'config_id' => $config_id,
                     'pro_id' => $pro_id,
                     'tipo_servicio' => $tipo_servicio,
                     'porc_gex' => $porc_gex,
@@ -94,16 +98,16 @@ class ConfigItemsController extends Controller
             
                 $detalle = $request->input('partes');
                 
-                DB::table('gex.producto_partes')->where('pro_id',$pro_id)->delete();
+                DB::table('gex.producto_partes')->where('config_id',$config_id)->delete();
 
                 foreach ($detalle as $d) {
                     DB::table('gex.producto_partes')->updateOrInsert(
                         [
-                            'pro_id' => $d['pro_id'],
+                            'config_id' => $d['config_id'],
                             'parte_id' => $d['parte_id'],
                         ],
                         [
-                            'pro_id' => $d['pro_id'],
+                            'config_id' => $d['config_id'],
                             'parte_id' => $d['parte_id'],
                             'meses_garantia' => $d['meses_garantia'],
                         ]);
@@ -118,11 +122,11 @@ class ConfigItemsController extends Controller
         }
     }
 
-    public function eliminaConfig($producto) {
+    public function eliminaConfig($config) {
         try {
             DB::transaction(function() use ($producto){
-                DB::table('gex.producto_partes')->where('pro_id',$producto)->delete();
-                DB::table('gex.producto_config')->where('pro_id',$producto)->delete();
+                DB::table('gex.producto_partes')->where('config_id',$config)->delete();
+                DB::table('gex.producto_config')->where('config_id',$config)->delete();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Configuración eliminada con exito', []));
