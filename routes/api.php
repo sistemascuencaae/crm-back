@@ -64,6 +64,11 @@ use App\Http\Controllers\crm\series\DespachoController;
 use App\Http\Controllers\crm\series\InventarioController;
 use App\Http\Controllers\crm\series\KardexSeriesController;
 use App\Http\Controllers\crm\garantias\ContratosController;
+use App\Http\Controllers\crm\garantias\RelacionUsuariosAlamcenGexController;
+use App\Http\Controllers\crm\garantias\VentasTotalesGexController;
+use App\Http\Controllers\crm\series\InventarioFechaSeriesController;
+use App\Http\Controllers\crm\series\InformeInventarioSeriesController;
+use App\Http\Controllers\crm\series\ComparativoSeriesController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
@@ -154,6 +159,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
+    Route::put('/actualizarCaso/{casoId}', [CasoController::class, 'actualizarCaso']);//
     //---------------------------------------------------------------->PRUEBAS
     Route::get('/actualizarReqCaso/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
     /************************  FORMULARIOS   *********************** */
@@ -196,6 +202,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
 
     Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
+
+
 
 });
 Route::group(["prefix" => "crm/audi"], function ($router) {
@@ -302,7 +310,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllTablerosWithFases', [TableroController::class, 'listAllTablerosWithFases']); // listar tableros con sus fases
     Route::get('/listByTablerosIdWithFases/{tab_id}', [TableroController::class, 'listByTablerosIdWithFases']); // listar tableros con sus fases
     Route::get('/editMiembrosByTableroId/{id}', [TableroController::class, 'editMiembrosByTableroId']); // Editar los miembros del tablero
-
+    Route::get('/usuariosTablero/{tabId}', [TableroController::class, 'usuariosTablero']); // usuariosTablero
     Route::get('/listTableroByDepId/{dep_id}', [TableroController::class, 'listTableroByDepId']); // listar
 
     // DEPARTAMENTO
@@ -409,7 +417,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
 
     Route::get('/listAlmacenes', [UserController::class, 'listAlmacenes']); // listar almacenes
-    
+
     Route::post('/editEnLineaUser/{user_id}', [UserController::class, 'editEnLineaUser']); // editar en linea del usuario
 
     // NOTIFICACIONES
@@ -639,8 +647,38 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/almacenes', [ContratosController::class, 'almacenes']);
     Route::get('/facturas/{almacen}', [ContratosController::class, 'facturas']);
     Route::get('/datosContrato/{factura}', [ContratosController::class, 'datosContrato']);
+    Route::get('/byContrato/{almacen}/{numero}', [ContratosController::class, 'byContrato']);
     Route::post('/grabaContrato', [ContratosController::class, 'grabaContrato']);
     Route::get('/eliminaContrato/{almacen}/{numero}', [ContratosController::class, 'eliminaContrato']);
+
+    //Relacion Usuarios Almacen Gex
+    Route::get('/listadoRelaUsuAlma', [RelacionUsuariosAlamcenGexController::class, 'listado']);
+    Route::get('/listadoUsuariosRela', [RelacionUsuariosAlamcenGexController::class, 'usuarios']);
+    Route::get('/listadoAlmacenesRela', [RelacionUsuariosAlamcenGexController::class, 'almacenes']);
+    Route::post('/grabaRelaUsuAlma', [RelacionUsuariosAlamcenGexController::class, 'grabaRela']);
+    Route::get('/byRelaUsuAlma/{usuario}/{almacen}', [RelacionUsuariosAlamcenGexController::class, 'byRela']);
+    Route::get('/eliminaRelaUsuAlma/{usuario}/{almacen}', [RelacionUsuariosAlamcenGexController::class, 'eliminaRela']);
+
+    //Ventas Totales Gex
+    Route::get('/listadoAlamaUsu/{usuario}', [VentasTotalesGexController::class, 'almacenes']);
+    Route::get('/listadoVendedores', [VentasTotalesGexController::class, 'vendedores']);
+    Route::get('/ventasTotalesGex/{almacen}/{usuario}/{vendedor}/{fecIni}/{fecFin}', [VentasTotalesGexController::class, 'VentasTotalesGex']);
+    Route::get('/ventasTotalesGexAlmacen/{almacen}/{usuario}/{fecIni}/{fecFin}', [VentasTotalesGexController::class, 'VentasTotalesGexAlmacen']);
+
+    //Inventario a la Fecha de Series
+    Route::get('/listadoProdInvFec', [InventarioFechaSeriesController::class, 'productos']);
+    Route::get('/listadoBodegasInvFec', [InventarioFechaSeriesController::class, 'bodegas']);
+    Route::get('/invFecSeries/{fecCorte}/{bodega}/{producto}', [InventarioFechaSeriesController::class, 'invFecSeries']);
+
+    //Informe de Inventario de Series
+    Route::get('/listadoInv/{bodega}', [InformeInventarioSeriesController::class, 'inventarios']);
+    Route::get('/listadoBodegasInfInv', [InformeInventarioSeriesController::class, 'bodegas']);
+    Route::get('/infInvSeries/{bodega}/{numero}', [InformeInventarioSeriesController::class, 'infInvSeries']);
+
+    //Comparativo de Series
+    Route::get('/listadoInvCompa/{bodega}', [ComparativoSeriesController::class, 'inventarios']);
+    Route::get('/listadoBodegasCompa', [ComparativoSeriesController::class, 'bodegas']);
+    Route::get('/comparativoSeries/{fecCorte}/{bodega}/{numero}', [ComparativoSeriesController::class, 'comparativoSeries']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
