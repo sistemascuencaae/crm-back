@@ -22,6 +22,8 @@ use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
+use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\TipoCasoFormulasController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
 use App\Http\Controllers\crm\CTareaController;
@@ -43,7 +45,6 @@ use App\Http\Controllers\crm\RespuestasCasoController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
-use App\Http\Controllers\crm\TipoTableroController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
@@ -69,6 +70,9 @@ use App\Http\Controllers\crm\series\InventarioFechaSeriesController;
 use App\Http\Controllers\crm\series\InformeInventarioSeriesController;
 use App\Http\Controllers\crm\series\ComparativoSeriesController;
 use App\Http\Controllers\crm\TableroProcesosController;
+use App\Http\Controllers\formulario\CampoController;
+use App\Http\Controllers\formulario\FormController;
+use App\Http\Controllers\formulario\FormSeccionController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -155,6 +159,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
+    Route::put('/actualizarCaso/{casoId}', [CasoController::class, 'actualizarCaso']);//
     //---------------------------------------------------------------->PRUEBAS
     Route::get('/actualizarReqCaso/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
     /************************  FORMULARIOS   *********************** */
@@ -182,7 +187,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAnalistas/{tableroId}', [UserController::class, 'listAnalistas']);
     Route::get('/listUsuariosActivos', [UserController::class, 'listUsuariosActivos']);
 
-    Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']);//list
+    Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']); //list
 
     /************************  OPENCEO   *********************** */
 
@@ -198,6 +203,8 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
 
+
+
 });
 Route::group(["prefix" => "crm/audi"], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
@@ -208,6 +215,37 @@ Route::group(["prefix" => "crm/robot"], function ($router) {
 
 Route::group([], function ($router) {
     Route::post('/token', [EquifaxController::class, 'loginEquifax']);
+});
+
+Route::group(["prefix" => "form"], function ($router) {
+    Route::get('/list', [FormController::class, 'list']);
+    Route::get('/storeA/{formId}', [FormController::class, 'storeA']);
+    Route::get('/storeB/{formId}/{userId}', [FormController::class, 'storeB']);
+    Route::get('/listByDepar/{depId}/{userId}', [FormController::class, 'listByDepar']); //
+    Route::get('/formUser/{depId}/{userId}', [FormController::class, 'formUser']); //formUser
+    Route::get('/byId/{formId}', [FormController::class, 'byId']); //formUser
+    Route::get('/listAll', [FormController::class, 'listAll']); //
+    Route::get('/listAnonimos', [FormController::class, 'listAnonimos']);
+    Route::get('/impresion/{formId}/{userId}', [FormController::class, 'impresion']);//impresion
+    Route::put('/edit/{id}', [FormController::class, 'edit']);
+});
+Route::group(['prefix' => 'form/campo'], function ($router) {
+    Route::get('/store', [CampoController::class, 'store']);
+    Route::get('/full/{id}', [CampoController::class, 'full']);
+    Route::get('/list', [CampoController::class, 'list']);
+    Route::get('/listAll', [CampoController::class, 'listAll']);
+    Route::get('/byId/{id}', [CampoController::class, 'byId']);
+    Route::get('/deleted', [CampoController::class, 'deleted']);
+    Route::get('/restoreById/{id}', [CampoController::class, 'restoreById']);
+    Route::put('/edit/{id}', [CampoController::class, 'edit']);
+    Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
+    Route::post('/add', [CampoController::class, 'add']); //addCampoValor
+    Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']);//addCampoValor
+});
+Route::group(['prefix' => 'form/seccion'], function ($router) {
+    Route::get('/store', [FormSeccionController::class, 'store']);
+    Route::post('/add', [FormSeccionController::class, 'add']);
+    Route::put('/edit/{id}', [FormSeccionController::class, 'edit']);
 });
 
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
@@ -265,13 +303,15 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTablero', [TableroController::class, 'addTablero']); // guardar
     Route::get('/listTableroByUser/{user_id}', [TableroController::class, 'listTableroByUser']); // listar
     Route::get('/listTableroMisCasos/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
-    Route::post('/updateTablero/{id}', [TableroController::class, 'updateTablero']); // Editar
+    Route::post('/editTablero/{id}', [TableroController::class, 'editTablero']); // Editar
     Route::get('/listAllTableros', [TableroController::class, 'listAll']); // listar tablero mis casos
     Route::get('/listAllTablerosActivos', [TableroController::class, 'listAllTablerosActivos']); // listar tableros inactivos
     Route::get('/listAllTablerosInactivos', [TableroController::class, 'listAllTablerosInactivos']); // listar tableros inactivos
     Route::get('/listAllTablerosWithFases', [TableroController::class, 'listAllTablerosWithFases']); // listar tableros con sus fases
     Route::get('/listByTablerosIdWithFases/{tab_id}', [TableroController::class, 'listByTablerosIdWithFases']); // listar tableros con sus fases
     Route::get('/editMiembrosByTableroId/{id}', [TableroController::class, 'editMiembrosByTableroId']); // Editar los miembros del tablero
+    Route::get('/usuariosTablero/{tabId}', [TableroController::class, 'usuariosTablero']); // usuariosTablero
+    Route::get('/listTableroByDepId/{dep_id}', [TableroController::class, 'listTableroByDepId']); // listar
 
     // DEPARTAMENTO
 
@@ -281,10 +321,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addDepartamento', [DepartamentoController::class, 'addDepartamento']); // guardar
     Route::post('/editDepartamento/{id}', [DepartamentoController::class, 'editDepartamento']); // Editar
     Route::delete('/deleteDepartamento/{id}', [DepartamentoController::class, 'deleteDepartamento']); // Eliminar
-
-    // TIPO_TABLERO
-
-    Route::get('/allTipoTablero', [TipoTableroController::class, 'allTipoTablero']); // listar
 
     // NOTAS
 
@@ -300,6 +336,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editarTipoCaso/{id}', [CasoController::class, 'editarTipoCaso']);
     Route::post('/editObservacion/{id}', [CasoController::class, 'editObservacion']); // Editar la observación del caso
     Route::get('/listHistoricoEstadoCaso/{caso_id}', [CasoController::class, 'listHistoricoEstadoCaso']); // listado/ historico de los estados del caso
+    Route::get('/listHistorialCaso/{caso_id}', [CasoController::class, 'listHistorialCaso']); // listado/ historico de los estados del caso
 
     // CTAREA
 
@@ -379,6 +416,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listUsuariosByTableroId/{tablero_id}', [UserController::class, 'listUsuariosByTableroId']); // listar usuarios del tablero
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
 
+    Route::get('/listAlmacenes', [UserController::class, 'listAlmacenes']); // listar almacenes
+
+    Route::post('/editEnLineaUser/{user_id}', [UserController::class, 'editEnLineaUser']); // editar en linea del usuario
+
     // NOTIFICACIONES
 
     Route::get('/allByDepartamento/{id}', [NotificacionesController::class, 'allByDepartamento']);
@@ -433,10 +474,23 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // Perfil Analistas
 
-    Route::get('/listAllPerfilAnalistas', [PerfilAnalistasController::class, 'listAllPerfilAnalistas']); // listar
+    Route::get('/listAllPerfilAnalistas', [PerfilAnalistasController::class, 'listAllPerfilAnalistas']); // guardar
     Route::post('/addPerfilAnalistas', [PerfilAnalistasController::class, 'addPerfilAnalistas']); // guardar
     Route::post('/editPerfilAnalistas/{id}', [PerfilAnalistasController::class, 'editPerfilAnalistas']); // Editar
     Route::delete('/deletePerfilAnalistas/{id}', [PerfilAnalistasController::class, 'deletePerfilAnalistas']); // Eliminar
+
+    // CONTROL TIEMPOS CASO
+
+    Route::post('/editCalcularTiemposCaso/{caso_id}', [CasoController::class, 'editCalcularTiemposCaso']); // Editar
+
+    // TIPO CASO FORMULAS
+
+    Route::get('/listTpoCasoFormulasById/{tab_id}/{tc_id}', [TipoCasoFormulasController::class, 'listTpoCasoFormulasById']); // listar por la llave tab_id y tc_id
+    Route::get('/listTpoCasoFormulas', [TipoCasoFormulasController::class, 'listTpoCasoFormulas']); // listar all
+    Route::get('/listTpoCasoFormulasActivos', [TipoCasoFormulasController::class, 'listTpoCasoFormulasActivos']); // listar activos
+    Route::post('/addTipoCasoFormulas', [TipoCasoFormulasController::class, 'addTipoCasoFormulas']); // guardar
+    Route::post('/editTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
+    Route::delete('/deleteTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
 
 });
 
@@ -458,6 +512,7 @@ Route::group(["prefix" => "credito"], function ($router) {
 
     Route::post('/addClienteEnrolamiento', [ClienteEnrolamientoController::class, 'addClienteEnrolamiento']); // Guardar la imagen de equifax
     Route::get('/clienteEnroladoById/{id}', [ClienteEnrolamientoController::class, 'clienteEnroladoById']); // listar datos cliente enrolado por caso_id
+    Route::post('/validarReqCasoCliente', [ClienteEnrolamientoController::class, 'validarReqCasoCliente']); // Guardar la imagen de equifax addClienteEnrolByCliente
     Route::post('/addArchivosFirmadosEnrolamiento', [ClienteEnrolamientoController::class, 'addArchivosFirmadosEnrolamiento']); // guardar los archivos firmados
     Route::get('/listEnrolamientosById/{cli_id}/{caso_id}', [ClienteEnrolamientoController::class, 'listEnrolamientosById']); // lista todos los enrolamientos del cliente
 
@@ -482,6 +537,14 @@ Route::group(["prefix" => "credito"], function ($router) {
 
     Route::get('/listTipoTelefono', [TipoTelefonoController::class, 'listTipoTelefono']); // listar
 
+    // Email - correo electronico
+
+    Route::post('/send_emailCambioFase/{caso_id}/{fase_id}', [EmailController::class, 'send_emailCambioFase']); // Envia un correo cuando cambia de fase
+    Route::post('/send_emailLinkEnrolamiento', [EmailController::class, 'send_emailLinkEnrolamiento']); // Envia un correo con el link del enrolamiento
+
+    Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
+    Route::post('/addEmail', [EmailController::class, 'addEmail']);
+    Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
 
 });
 

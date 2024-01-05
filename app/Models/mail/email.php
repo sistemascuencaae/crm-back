@@ -1,21 +1,25 @@
 <?php
 
-namespace App\Models\crm;
+namespace App\Models\mail;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
-use OwenIt\Auditing\Contracts\Auditable;
-use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class TipoTablero extends Model
+class Email extends Model
 {
+    protected $table = 'crm.email';
 
-    use HasFactory;
-
-    protected $table = 'crm.tipo_tablero';
-
-    protected $fillable = ["nombre", "descripcion", "estado"];
+    protected $fillable = [
+        'asunto',
+        'cuerpo',
+        'fase_id',
+        'auto',
+        'email_cliente',
+        'emails',
+        'firma',
+        'cuerpo2',
+        'cuerpo3',
+    ];
 
     public function setCreatedAtAttribute($value)
     {
@@ -27,4 +31,5 @@ class TipoTablero extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
+
 }

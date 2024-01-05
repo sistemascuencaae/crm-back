@@ -9,6 +9,7 @@ use App\Http\Controllers\FormularioController;
 use App\Http\Controllers\GaleriaController;
 use App\Http\Controllers\FormAptiMedicaController;
 use App\Http\Controllers\FormConsumoDrogasController;
+use App\Http\Controllers\hclinico\PacienteDosController;
 use App\Http\Controllers\PruebasApi;
 use App\Http\Controllers\ReporteFormularios;
 
@@ -45,6 +46,14 @@ Route::group([
     Route::delete('delete/{id}', [PacienteController::class, 'delete']);
     Route::get('getImage/{filename}', [PacienteController::class, 'getImage']);
     Route::post('addImage', [PacienteController::class, 'addImage']);
+});
+
+Route::group([
+    'prefix' => 'paciente-dos',
+], function () {
+    Route::get('byIdentificacion/{ident}/{pacId}', [PacienteDosController::class, 'byIdentificacion']);
+    Route::put('edit/{id}', [PacienteDosController::class, 'edit']);
+    Route::post('add', [PacienteDosController::class, 'add']);
 });
 
 Route::group([
@@ -110,7 +119,7 @@ Route::group([
 Route::group([
     'prefix' => 'pruebasApi',
 ], function(){
-    Route::get('/prueba', [PruebasApi::class, 'prueba']);
+    //Route::get('/prueba', [PruebasApi::class, 'prueba']);
 });
 
 

@@ -18,7 +18,7 @@ class Tablero extends Model
 
     protected $table = 'crm.tablero';
 
-    protected $fillable = ["nombre", "descripcion", "estado", "titab_id", "dep_id"];
+    protected $fillable = ["nombre", "descripcion", "estado", "dep_id"];
 
     public function setCreatedAtAttribute($value)
     {

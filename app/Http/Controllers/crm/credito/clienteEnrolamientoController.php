@@ -4,6 +4,7 @@ namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\credito\ClienteEnrolamiento;
@@ -11,15 +12,15 @@ use App\Models\crm\Galeria;
 use App\Models\crm\RequerimientoCaso;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use LDAP\Result;
 
 class ClienteEnrolamientoController extends Controller
 {
-
     public function listEnrolamientosById($cli_id, $caso_id)
     {
+        $log = new Funciones();
         try {
             $respuesta = ClienteEnrolamiento::where(function ($query) use ($cli_id, $caso_id) {
                 $query->where('cli_id', $cli_id)
@@ -29,14 +30,19 @@ class ClienteEnrolamientoController extends Controller
                 ->orderBy('id', 'ASC')
                 ->get();
 
+            $log->logInfo(ClienteEnrolamientoController::class, 'Se listo con exito los enrolamientos del cliente: ' . $cli_id . ' , del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {
+            $log->logError(ClienteEnrolamientoController::class, 'Error al listar los enrolamientos del cliente ' . $cli_id . ' , del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function addClienteEnrolamiento(Request $request)
     {
+        $log = new Funciones();
         try {
             if (!$request->has('casoId')) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
@@ -192,16 +198,141 @@ class ClienteEnrolamientoController extends Controller
                     "reqCaso" => $reqCaso
                 ];
 
+                $validEnrolCli = DB::selectOne('SELECT * from crm.temp_enrolamiento_cliente
+                where cli_id = ? and req_caso_id = ? and  caso_id = ?', [$cliId, $request->input('reqCasoId'), $caso_id]);
+                if ($validEnrolCli) {
+                    DB::delete('DELETE FROM crm.temp_enrolamiento_cliente WHERE id = ?', [$validEnrolCli->id]);
+                }
                 return $data;
             });
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $th));
+
+            $log->logInfo(ClienteEnrolamientoController::class, 'Se creo con exito el Cliente Enrolamiento');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(ClienteEnrolamientoController::class, 'Error al crear el Cliente Enrolamiento', $e);
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
+    // public function addClienteEnrolByCliente(Request $request)
+    // {
+    //     try {
+
+
+
+
+    //         if (!$request->has('casoId')) {
+    //             return response()->json(RespuestaApi::returnResultado('error', 'El número de caso no existe', ''));
+    //         }
+    //         if (!$request->has('datosEnrolamiento')) {
+    //             return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
+    //         }
+
+    //         $reqCasoId = $request->input('reqCasoId');
+    //         $casoId = $request->input('casoId');
+    //         $cliId = $request->input('cliId');
+    //         if ($reqCasoId && $casoId && $cliId) {
+    //             $validEnrolCli = DB::selectOne('SELECT * from crm.temp_enrolamiento_cliente
+    //             where cli_id = ? and req_caso_id = ? and  caso_id = ?', [$cliId, $reqCasoId, $casoId]);
+    //             if (!$validEnrolCli) {
+    //                 return response()->json(RespuestaApi::returnResultado('error', 'Error', 'Proceso terminado.'));
+    //             }else{
+    //                 $idProcesoEnrolamie = $validEnrolCli->id;
+    //             }
+    //         }else{
+    //             return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El los datos de enrolamiento no son validos.'));
+    //         }
+
+
+
+
+
+    //         $data = DB::transaction(function () use ($request) {
+
+    //             $estatusEnrolamiento = $request->input('statusEnrol');
+    //             $cliId = $request->input('cliId');
+    //             $datosEnrolamiento = json_decode($request->input('datosEnrolamiento'), true);
+
+    //             $caso_id = $request->input('casoId');
+
+    //             //START CODIGO EN CASO DE QUERER ACTUALIZAR UN CLIENTE ENROLAMIENTO
+    //             //END CODIGO EN CASO DE QUERER ACTUALIZAR UN CLIENTE ENROLAMIENTO
+
+    //             if (!isset($datosEnrolamiento['Images']) || empty($datosEnrolamiento['Images'])) {
+    //                 $data = (object) [
+    //                     "error" => 'El objeto datosEnrolamiento no contiene imágenes'
+    //                 ];
+    //                 return $data; //response()->json(RespuestaApi::returnResultado('error', 'El objeto datosEnrolamiento no contiene imágenes', ''));
+    //             }
+
+    //             foreach ($datosEnrolamiento['Images'] as $imagen) {
+    //                 $titulo = $imagen['ImageTypeName'];
+    //                 $descripcion = $imagen['ImageTypeName'];
+
+    //                 $imagenBase64 = $imagen['Image'];
+    //                 $imagenData = base64_decode($imagenBase64);
+
+    //                 if ($imagen['ImageTypeName'] === 'Video de Liveness') {
+    //                     $nombre = $titulo . '.mp4';
+    //                 } else {
+    //                     $nombre = $titulo . '.png';
+    //                 }
+    //                 $fechaOriginal = $datosEnrolamiento['CreationDate'];
+    //                 $fechaFormateada = str_replace([':', ' '], ['_', '_'], $fechaOriginal);
+    //                 $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
+    //                 file_put_contents($ruta, $imagenData);
+
+    //                 Galeria::create([
+    //                     'caso_id' => $caso_id,
+    //                     'titulo' => $titulo,
+    //                     'descripcion' => $descripcion,
+    //                     'imagen' => $caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre,
+    //                     'tipo_gal_id' => 1,
+    //                     'equifax' => true,
+    //                     'enrolamiento_id' => $datosEnrolamiento['Uid']
+    //                 ]);
+    //             }
+
+    //             $enrolamientoId = $datosEnrolamiento['Uid'];
+    //             unset($datosEnrolamiento['Images']);
+    //             $datosEnrolamiento['Extras'] = json_encode($datosEnrolamiento['Extras']);
+    //             $datosEnrolamiento['SignedDocuments'] = json_encode($datosEnrolamiento['SignedDocuments']);
+    //             $datosEnrolamiento['Scores'] = json_encode($datosEnrolamiento['Scores']);
+    //             $datosEnrolamiento['cli_id'] = $cliId;
+    //             $clienteEnrolamiento = ClienteEnrolamiento::create($datosEnrolamiento);
+
+    //             $clieEnrolado = ClienteEnrolamiento::where('id', $clienteEnrolamiento->id)
+    //                 ->with([
+    //                     'imagenes' => function ($query) use ($enrolamientoId) {
+    //                         $query->where('equifax', true)->where('enrolamiento_id', $enrolamientoId);
+    //                     }
+    //                 ])->first();
+
+
+    //             $casoController = new CasoController();
+    //             $reqCaso = $this->actualizarReqCaso($request->input('reqCasoId'), $caso_id, $estatusEnrolamiento, $clienteEnrolamiento);
+    //             //$reqCaso = RequerimientoCaso::find($request->input('reqCasoId'));
+    //             $data = (object) [
+    //                 "caso" => $casoController->getCaso($caso_id),
+    //                 "clienteEnrolamiento" => $clieEnrolado,
+    //                 "reqCaso" => $reqCaso
+    //             ];
+
+    //             return $data;
+    //         });
+
+    //         if($idProcesoEnrolamie){
+    //             DB::delete('DELETE FROM crm.temp_enrolamiento_cliente WHERE id = ?', [$idProcesoEnrolamie]);
+    //         }
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardaron los elementos con éxito', $data));
+    //     } catch (\Throwable $th) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $th));
+    //     }
+    // }
     public function clienteEnroladoById($id)
     {
+        $log = new Funciones();
         try {
             $enrolamiento = ClienteEnrolamiento::find($id);
             $enrolId = $enrolamiento['Uid'];
@@ -213,27 +344,33 @@ class ClienteEnrolamientoController extends Controller
                 ])->first();
 
             if ($clienteEnrolado) {
+                $log->logInfo(ClienteEnrolamientoController::class, 'Se listo con exito el enrolamiento con el ID: ' . $id);
+
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $clienteEnrolado));
             } else {
+                $log->logError(ClienteEnrolamientoController::class, 'Cliente no enrrolado con el ID: ' . $id);
+
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no enrrolado', $id));
             }
+
         } catch (Exception $e) {
+            $log->logError(ClienteEnrolamientoController::class, 'Error al listar el enrolamiento con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-
     public function actualizarReqCaso($reqCasoId, $casoId, $statusEnrol, $clienteEnrolamiento)
     {
+        $log = new Funciones();
 
         $casoCedulaCliente = DB::selectOne("SELECT cli.identificacion  from crm.caso ca
         inner join crm.cliente cli on cli.id = ca.cliente_id where ca.id = ?", [$casoId]);
         $enrolamientoCedulaCliente = DB::selectOne(
             'SELECT ce."IdNumber" from crm.cliente_enrolamiento ce
         left join crm.cliente cli on cli.id = ce.cli_id where ce.caso_id = ? and ce.id = ?',
-            [$casoId,  $clienteEnrolamiento->id]
+            [$casoId, $clienteEnrolamiento->id]
         );
-
 
         //echo ('enrolamientoCedulaCliente: ' . json_encode($enrolamientoCedulaCliente));
         //echo ('$casoCedulaCliente: ' . json_encode($casoCedulaCliente));
@@ -250,14 +387,51 @@ class ClienteEnrolamientoController extends Controller
                 $reqCaso->valor_int = $clienteEnrolamiento->id;
                 $reqCaso->save();
             }
+
+            $log->logInfo(ClienteEnrolamientoController::class, 'Se actualizo correctamente el requerimiento');
+
             return $reqCaso;
-        } catch (\Throwable $th) {
-            return $th;
+        } catch (\Throwable $e) {
+            $log->logError(ClienteEnrolamientoController::class, 'Error al actualizar el requerimiento', $e);
+            return $e;
+        }
+    }
+
+    public function validarReqCasoCliente(Request $request)
+    {
+        $log = new Funciones();
+        try {
+
+            $reqCasoId = $request->input('reqCasoId');
+            $casoId = $request->input('casoId');
+            $cliId = $request->input('cliId');
+            if ($reqCasoId && $casoId && $cliId) {
+                $validEnrolCli = DB::selectOne('SELECT * from crm.temp_enrolamiento_cliente
+                where cli_id = ? and req_caso_id = ? and  caso_id = ?', [$cliId, $reqCasoId, $casoId]);
+                if (!$validEnrolCli) {
+                    $log->logError(ClienteEnrolamientoController::class, 'Proceso terminado.');
+
+                    return response()->json(RespuestaApi::returnResultado('error', 'Error', 'Proceso terminado.'));
+                } else {
+                    $log->logInfo(ClienteEnrolamientoController::class, 'Proceso completo');
+
+                    return response()->json(RespuestaApi::returnResultado('success', 'Proceso completo', 'Proceso completo.'));
+                }
+            } else {
+                $log->logError(ClienteEnrolamientoController::class, 'El los datos de enrolamiento no son validos.');
+
+                return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El los datos de enrolamiento no son validos.'));
+            }
+        } catch (Exception $e) {
+            $log->logError(ClienteEnrolamientoController::class, 'Error al validar el requerimiento', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function addArchivosFirmadosEnrolamiento(Request $request)
     {
+        $log = new Funciones();
         try {
             $error = null;
             $exitoso = null;
@@ -353,11 +527,17 @@ class ClienteEnrolamientoController extends Controller
             });
 
             if ($error) {
+                $log->logError(ClienteEnrolamientoController::class, $error);
+
                 return response()->json(RespuestaApi::returnResultado('error', $error, ''));
             } else {
+                $log->logInfo(ClienteEnrolamientoController::class, 'Se guardaron con exito los archivos firmados del enrolamiento');
+
                 return response()->json(RespuestaApi::returnResultado('success', $exitoso, ''));
             }
         } catch (Exception $e) {
+            $log->logError(ClienteEnrolamientoController::class, 'Error al crear los archivos firmados del enrolamiento', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
