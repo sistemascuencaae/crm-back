@@ -21,10 +21,12 @@ class ParametrosController extends Controller
             $paises = DB::select("SELECT * FROM crm.crm_pais");
             $provincias = DB::select("SELECT * FROM crm.crm_provincia");
             $cantones = DB::select("SELECT * FROM crm.crm_canton");
+            $parroquias = DB::select("SELECT * FROM crm.crm_parroquia");
             $data = (object) [
                 "paises" => $paises,
                 "provincias" => $provincias,
-                "cantones" => $cantones
+                "cantones" => $cantones,
+                "parroquias" => $parroquias
             ];
            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (\Throwable $th) {
