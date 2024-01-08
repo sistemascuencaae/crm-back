@@ -68,11 +68,13 @@ class FormController extends Controller
             $campoController = new CampoController();
 
             $totalesSecciones = $campoController->getTotalesSecciones($formId, $pacId);
+            $totalGlobalForm = $campoController->getTotalGlobalForm($formId, $pacId);
             $camposImprimir = $this->camposImprimir($formId, $pacId);
             $data = (object) [
                 "secciones" => $secciones,
                 "parametros" => $parametros,
                 "formulario" => $formulario,
+                "totalGlobalForm" => $totalGlobalForm,
                 "totalesSecciones" => $totalesSecciones,
                 "camposImprimir" => $camposImprimir
             ];

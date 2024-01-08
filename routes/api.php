@@ -73,6 +73,7 @@ use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
+use App\Http\Controllers\ParametrosController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -247,6 +248,13 @@ Route::group(['prefix' => 'form/seccion'], function ($router) {
     Route::post('/add', [FormSeccionController::class, 'add']);
     Route::put('/edit/{id}', [FormSeccionController::class, 'edit']);
 });
+//----------------------- PARAMETROS DIRECCION ----------------------------------------------
+Route::group(['prefix' => 'parametros'], function ($router) {
+    Route::get('/direccion', [ParametrosController::class, 'direccion']); //
+    Route::get('/direccionParroquias/{cantonId}', [ParametrosController::class, 'direccionParroquias']);//direccionParroquias
+});
+
+//parametrosDireccion
 
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
 //----------------------- FIN RUTAS FELIPE ----------------------------------------------
