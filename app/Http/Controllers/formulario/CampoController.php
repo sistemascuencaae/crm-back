@@ -172,10 +172,12 @@ class CampoController extends Controller
             $campo = FormCampo::find($campoId);
             $data = $this->getNombreControles($campo->form_id, $pacId);
             $seccionesActualizadas = $this->getTotalesSecciones($campo->form_id, $pacId);
+            $totalGlobalForm = $this->getTotalGlobalForm($campo->form_id, $pacId);
             $formController = new FormController();
             $result = (object)[
                 "nombresControles" => '', //$data,
                 "totalesSecciones" => $seccionesActualizadas,
+                "totalGlobalForm" => $totalGlobalForm,
                 "camposImprimir" => $formController->camposImprimir($campo->form_id, $pacId),
                 "valorReal" => $valorReal
             ];
@@ -428,6 +430,30 @@ class CampoController extends Controller
                 left join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
                 WHERE
                 fc.form_id = ? and fv.pacId = ? order by fc.orden asc;", [$formId, $pacId]);
+            return $data;
+        } catch (\Throwable $th) {
+            return null;
+        }
+    }
+
+    public function getTotalGlobalForm($formId, $pacId){
+        try {
+            $data = DB::selectOne("SELECT
+            fc.form_id,
+            fv.pac_id,
+            sum(fcl.puntos) as total
+            FROM
+                crm.form_campo fc
+            left JOIN crm.formulario_seccion fcc ON fcc.id = fc.form_secc_id
+            LEFT JOIN crm.form_campo_valor fcv ON fcv.campo_id = fc.id
+            LEFT JOIN crm.form_valor fv ON fv.id = fcv.valor_id
+            LEFT JOIN crm.form_campo_likert fcl ON fcl.id = fv.valor_entero
+            LEFT JOIN crm.form_tipo_campo ftc ON ftc.id = fc.tipo_campo_id
+            WHERE
+                ftc.id = 2 and fc.form_id = ? and fv.pac_id = ?
+            GROUP BY
+                1, 2
+            ORDER BY 2 asc limit 1;", [$formId, $pacId]);
             return $data;
         } catch (\Throwable $th) {
             return null;
