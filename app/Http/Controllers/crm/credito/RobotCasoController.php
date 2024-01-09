@@ -100,48 +100,7 @@ class RobotCasoController extends Controller
         $casoController = new CasoController();
         $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
 
-        /*---------******** ANALISIS DE USUARIOS ********------------- */
-        //---Si el nuevo tablero es el tablero de creacio reasigna al creador
-        if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
-            //---pregunta si el usuario sigue en el tablero
-            $userTab = $this->getUsuarioTablero($casoEnProceso->user_creador_id, $casoEnProceso->tablero_creacion_id);
-            if ($userTab) {
-                $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
-                $casoEnProceso->save();
 
-                $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
-                //$casoController->enviarCorreoCliente($casoEnProceso->id);
-                $this->addMiembro($casoEnProceso->user_id, $casoId);
-
-                // start diferencia de tiempos en horas minutos y segundos
-                $CasoController = new CasoController();
-                $tipo = 2;
-                $CasoController->calcularTiemposCaso(
-                    $casoEnProceso,
-                    $casoEnProceso->id,
-                    $casoEnProceso->estado_2,
-                    $casoEnProceso->fas_id,
-                    $tipo,
-                    $casoEnProceso->user_id
-                );
-                // end diferencia de tiempos en horas minutos y segundos
-
-                return $casoEnProceso;
-            }
-        }
-        //EL TABLERO ES EL USUARIO ANTERIOR
-        $usuarioAnterior = DB::selectOne("SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ?", [$casoEnProceso->user_anterior_id, $formula->tablero_id ]);
-        if($usuarioAnterior){
-            $casoEnProceso->user_id = $usuarioAnterior->user_id;
-            $casoEnProceso->save();
-            return $casoEnProceso;
-        }
-        //--- usuarios en linea del nuevo tablero
-        $usuariosNuevoTablero = DB::select("SELECT * FROM crm.usuarios_casos WHERE tab_id = ?", [$formula->tablero_id]);
-        $userMenorNumCasos = $this->organizarCasos($usuariosNuevoTablero);
-        $this->addMiembro($userMenorNumCasos->usu_id, $casoId);
-        $casoEnProceso->user_id = $userMenorNumCasos->usu_id;
-        $casoEnProceso->save();
 
         // start diferencia de tiempos en horas minutos y segundos
         $CasoController = new CasoController();
@@ -155,6 +114,38 @@ class RobotCasoController extends Controller
             $casoEnProceso->user_id
         );
         // end diferencia de tiempos en horas minutos y segundos
+
+
+
+        /*---------******** ANALISIS DE USUARIOS ********------------- */
+        //---Si el nuevo tablero es el tablero de creacio reasigna al creador
+        if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
+            //---pregunta si el usuario sigue en el tablero
+            $userTab = $this->getUsuarioTablero($casoEnProceso->user_creador_id, $casoEnProceso->tablero_creacion_id);
+            if ($userTab) {
+                $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
+                $casoEnProceso->save();
+
+                $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+                //$casoController->enviarCorreoCliente($casoEnProceso->id);
+                $this->addMiembro($casoEnProceso->user_id, $casoId);
+
+                return $casoEnProceso;
+            }
+        }
+        //EL TABLERO ES EL USUARIO ANTERIOR
+        $usuarioAnterior = DB::selectOne("SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ?", [$casoEnProceso->user_anterior_id, $formula->tablero_id]);
+        if ($usuarioAnterior) {
+            $casoEnProceso->user_id = $usuarioAnterior->user_id;
+            $casoEnProceso->save();
+            return $casoEnProceso;
+        }
+        //--- usuarios en linea del nuevo tablero
+        $usuariosNuevoTablero = DB::select("SELECT * FROM crm.usuarios_casos WHERE tab_id = ?", [$formula->tablero_id]);
+        $userMenorNumCasos = $this->organizarCasos($usuariosNuevoTablero);
+        $this->addMiembro($userMenorNumCasos->usu_id, $casoId);
+        $casoEnProceso->user_id = $userMenorNumCasos->usu_id;
+        $casoEnProceso->save();
 
         $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
         return $casoEnProceso;
