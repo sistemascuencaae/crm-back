@@ -7,6 +7,7 @@ use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
 use App\Models\crm\Galeria;
+use App\Models\crm\RequerimientoCaso;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
@@ -154,6 +155,14 @@ class GaleriaController extends Controller
             }
 
             $galeria->update($request->all());
+
+            // si la imagen es de un requerimiento actualizar el requerimiento
+            $reqCaso = RequerimientoCaso::where('galerias_id', $galeria->id)->first();
+            if($reqCaso){
+                $reqCaso->descripcion = $galeria->descripcion;
+                $reqCaso->valor_varchar = $galeria->imagen;
+                $reqCaso->save();
+            }
 
             // START Bloque de código que genera un registro de auditoría manualmente
             $audit->user_id = Auth::id();
