@@ -172,8 +172,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']);
     Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
     Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']); //
-
-
+    Route::get('/listReqCasoId/{casoId}', [ReqCasoController::class, 'listReqCasoId']);
 
     Route::post('/addTarea', [TareaController::class, 'add']);
     Route::get('/listTareas', [TareaController::class, 'list']);
