@@ -60,7 +60,7 @@ class ReqCasoController extends Controller
 
                     $galeria->update([
                         "titulo" => $requerimiento->titulo,
-                        "descripcion" => $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        "descripcion" => 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '."\n". $requerimiento->descripcion,//$requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         "imagen" => $path,
                         "caso_id" => $inputReq->caso_id,
                         "tipo_gal_id" => 8, // Tipo Requerimiento es el id 8
@@ -85,7 +85,7 @@ class ReqCasoController extends Controller
                 } else {
                     $newGaleria = new Galeria();
                     $newGaleria->titulo = $requerimiento->titulo;
-                    $newGaleria->descripcion = $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
+                    $newGaleria->descripcion = 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '. "\n". $requerimiento->descripcion;//$requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
                     $newGaleria->imagen = $path;
                     $newGaleria->caso_id = $inputReq->caso_id;
                     $newGaleria->tipo_gal_id = 8;
@@ -240,7 +240,7 @@ class ReqCasoController extends Controller
                         ]);
                     }
 
-                    
+
                     $audit = new Audits();
                     $valorAntiguo = $requerimiento;
                     $audit->old_values = json_encode($valorAntiguo);
