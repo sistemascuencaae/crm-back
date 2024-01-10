@@ -8,13 +8,11 @@ use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
-use App\Models\ChatGroups;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\ClienteCrm;
 use App\Models\crm\ControlTiemposCaso;
 use App\Models\crm\credito\ClienteEnrolamiento;
-use App\Models\crm\DTipoTarea;
 use App\Models\crm\Estados;
 use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Miembros;
@@ -42,16 +40,18 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-            [
-                //'add',
-                //'addCasoOPMICreativa'
+                [
+                    //'add',
+                    //'addCasoOPMICreativa'
 
-            ]
+                ]
         ]);
     }
 
     public function add(Request $request)
     {
+        $log = new Funciones();
+
         $casoInput = $request->all();
         // $miembros = $request->input('miembros');
         $miembros2 = $request->input('miembros');
@@ -137,52 +137,82 @@ class CasoController extends Controller
             $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
             $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
 
+            $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $th->getMessage()));
+        } catch (\Throwable $e) {
+            $log->logError(CasoController::class, 'Error al guardar el caso', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
         }
     }
-
 
     // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
     public function listHistoricoEstadoCaso($caso_id)
     {
-        $data = Audits::where('auditable_id', $caso_id)
-            ->whereIn('accion', ['addCaso', 'cambioEstado'])
-            ->orderBy('id', 'ASC')
-            ->get();
+        $log = new Funciones();
+        try {
+            $data = Audits::where('auditable_id', $caso_id)
+                ->whereIn('accion', ['addCaso', 'cambioEstado'])
+                ->orderBy('id', 'ASC')
+                ->get();
 
-        // Especificar las propiedades que representan fechas en tu objeto Nota
-        $dateFields = ['created_at', 'updated_at'];
-        // Utilizar la función map para transformar y obtener una nueva colección
-        $data->map(function ($item) use ($dateFields) {
-            // $this->formatoFechaItem($item, $dateFields);
-            $funciones = new Funciones();
-            $funciones->formatoFechaItem($item, $dateFields);
-            return $item;
-        });
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                // $this->formatoFechaItem($item, $dateFields);
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
 
-        return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
+            $log->logInfo(CasoController::class, 'Se listo con exito los estados del caso');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar los estados del caso', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     public function list()
     {
-        $data = Caso::with('caso.user', 'caso.clienteCrm')->get();
-        return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigio con exito', $data));
+        $log = new Funciones();
+        try {
+            $data = Caso::with('caso.user', 'caso.clienteCrm')->get();
+
+            $log->logInfo(CasoController::class, 'Se listo con exito las fases');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'El listado de fases se consigio con exito', $data));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar las fases', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     public function casoById($id)
     {
+        $log = new Funciones();
         try {
             $data = $this->getCaso($id);
+
+            $log->logInfo(CasoController::class, 'Se listo con exito el caso: #' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar el caso: #' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e));
         }
     }
 
     public function editFase(Request $request)
     {
+        $log = new Funciones();
+
         $casoId = $request->input('casoId');
         $faseId = $request->input('faseId');
         $faseAnteriorId = $request->input('faseAnteriorId');
@@ -238,8 +268,13 @@ class CasoController extends Controller
             $emailController = new EmailController();
             $emailController->send_emailCambioFase($caso->id, $caso->fas_id);
             //$this->enviarCorreoCliente($caso->id);
+
+            $log->logInfo(CasoController::class, 'Se actualizo la fase del caso con exito');
+
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar la fase del caso', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e));
         }
     }
@@ -248,23 +283,32 @@ class CasoController extends Controller
     {
         // $data = Caso::with('user', 'clienteCrm', 'cTipoTarea.dTipoTarea')->where('id', $id)->get();
         // return response()->json(RespuestaApi::returnResultado('success', 'El caso se listo con éxito', $data));
+        $log = new Funciones();
+
         try {
 
             $data = $this->getCaso($id);
 
+            $log->logInfo(CasoController::class, 'Se listo con exito el caso: #' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar el caso: #' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function bloqueoCaso(Request $request)
     {
+        $log = new Funciones();
+
+        $data = [];
+        $casoId = $request->input("casoId");
+        $bloqueado = $request->input("bloqueado");
+        $bloqueado_user = $request->input("bloqueado_user");
+
         try {
-            $data = [];
-            $casoId = $request->input("casoId");
-            $bloqueado = $request->input("bloqueado");
-            $bloqueado_user = $request->input("bloqueado_user");
             $caso = Caso::find($casoId);
             if ($caso) {
                 $caso->bloqueado = $bloqueado;
@@ -274,9 +318,14 @@ class CasoController extends Controller
             }
             $data = $this->getCaso($casoId);
             broadcast(new TableroEvent($data));
+
+            $log->logInfo(CasoController::class, 'Caso #' . $casoId . ' bloqueado por: ' . $bloqueado_user);
+
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $th->getMessage()));
+        } catch (\Throwable $e) {
+            $log->logError(CasoController::class, 'Error al actualizar el bloqueo del caso #' . $casoId, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
         }
     }
 
@@ -293,17 +342,24 @@ class CasoController extends Controller
 
     public function listMiembrosCasoById($caso_id)
     {
+        $log = new Funciones();
+
         try {
             $miembros = Miembros::where('caso_id', $caso_id)->with('usuario')->orderBy('id', 'DESC')->get();
 
+            $log->logInfo(CasoController::class, 'Se listo con exito los miembros del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $miembros));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar los miembros del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function editMiembrosCaso(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $eliminados = $request->input('eliminados');
             $usuarios = $request->input('usuarios');
@@ -332,14 +388,20 @@ class CasoController extends Controller
             });
 
             $dataRe = $this->getCaso($caso_id);
+
+            $log->logInfo(CasoController::class, 'Se actualizo con exito los miembros del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar los miembros del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function editPrioridadCaso(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $caso = $request->all();
 
@@ -375,14 +437,19 @@ class CasoController extends Controller
 
             $data = $this->getCaso($caso_id);
 
+            $log->logInfo(CasoController::class, 'Se actualizo con exito la prioridad del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar la prioridad del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function editarTipoCaso(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $caso = $request->all();
 
@@ -423,14 +490,19 @@ class CasoController extends Controller
 
             $data = $this->getCaso($caso_id);
 
+            $log->logInfo(CasoController::class, 'Se actualizo con exito el tipo_Caso del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar el tipo_Caso del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function editObservacion(Request $request, $caso_id)
     {
+        $log = new Funciones();
         try {
             $caso = Caso::findOrFail($caso_id);
 
@@ -462,14 +534,20 @@ class CasoController extends Controller
 
             $data = $this->getCaso($caso_id);
 
+            $log->logInfo(CasoController::class, 'Se actualizo con exito la descripción del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar la descripción del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function reasignarCaso(Request $request)
     {
+        $log = new Funciones();
+
         $caso_id = $request->input('caso_id');
         $audit = new Audits();
         try {
@@ -569,46 +647,63 @@ class CasoController extends Controller
             $audit->save();
             // END Auditoria
 
+            $log->logInfo(CasoController::class, 'Se reasigno con exito el caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al reasignar el caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function respuestaCaso(Request $request)
     {
+        $log = new Funciones();
+
+        $estadoFormId = $request->input('estadoFormId');
+        $casoId = $request->input('casoId');
+
         try {
-
-            $estadoFormId = $request->input('estadoFormId');
-            $casoId = $request->input('casoId');
-
 
             $formula = EstadosFormulas::find($estadoFormId);
             if (!$formula) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La formula no existe.'));
             }
+
             $casoEnProceso = Caso::find($casoId);
             if (!$casoEnProceso) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
             }
+
             $casoEnProceso->fas_id = $formula->fase_id;
             $casoEnProceso->estado_2 = $formula->est_id_proximo;
             $casoEnProceso->save();
             $data = $this->getCaso($casoEnProceso->id);
+
             broadcast(new ReasignarCasoEvent($data));
+
+            $log->logInfo(CasoController::class, 'Se actualizo con exito la respuesta del caso #' . $casoId);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar la respuesta del caso #' . $casoId, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function depUserTablero($casoId)
     {
+        $log = new Funciones();
+
         try {
             $tableros = Tablero::with('tableroUsuario.usuario')->where('estado', true)->get();
             $departamentos = DB::select("SELECT * from crm.departamento where estado = true");
             $fases = DB::select("SELECT * from crm.fase where estado = true");
+
             $estados = Estados::all();
+
             $depUserTablero = DB::select(
                 'SELECT
             d.id as dep_anterior_id,
@@ -631,6 +726,7 @@ class CasoController extends Controller
             where c.id = ? limit 1;',
                 [$casoId]
             );
+
             $data = (object) [
                 "departamentos" => $departamentos,
                 "tableros" => $tableros,
@@ -642,44 +738,61 @@ class CasoController extends Controller
             if ($depUserTablero) {
                 $data->depUserTablero = $depUserTablero[0];
             }
+
+            $log->logInfo(CasoController::class, 'Exito depUserTablero');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Exito', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $th->getMessage()));
+        } catch (\Throwable $e) {
+            $log->logError(CasoController::class, 'Error depUserTablero', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
-
     public function getCaso($casoId)
     {
-        $tabId = DB::select('SELECT t.id FROM crm.caso co
+        $log = new Funciones();
+
+        try {
+            $tabId = DB::select('SELECT t.id FROM crm.caso co
             inner join crm.fase fa on fa.id = co.fas_id
             inner join crm.tablero t on t.id = fa.tab_id
-        where co.id = ' . $casoId)[0];
-        return Caso::with([
-            'user',
-            'userCreador',
-            'clienteCrm',
-            'resumen',
-            'tareas' => function ($query) use ($tabId) {
-                $query->where('tab_id', $tabId->id);
-            },
-            'actividad',
-            'Etiqueta',
-            'miembros.usuario.departamento',
-            'Galeria',
-            'Archivo',
-            'req_caso' => function ($query) {
-                $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-            },
-            'tablero',
-            'fase.tablero',
-            'estadodos'
+                where co.id = ' . $casoId)[0];
 
-        ])->where('id', $casoId)->first();
+            $log->logInfo(CasoController::class, 'Se listo con exito el caso #' . $casoId);
+
+            return Caso::with([
+                'user',
+                'userCreador',
+                'clienteCrm',
+                'resumen',
+                'tareas' => function ($query) use ($tabId) {
+                    $query->where('tab_id', $tabId->id);
+                },
+                'actividad',
+                'Etiqueta',
+                'miembros.usuario.departamento',
+                'Galeria',
+                'Archivo',
+                'req_caso' => function ($query) {
+                    $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                },
+                'tablero',
+                'fase.tablero',
+                'estadodos'
+
+            ])->where('id', $casoId)->first();
+
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar el caso #' . $casoId, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     public function getNotificacion($descripcion, $tipo, $usuarioAccion, $casoId, $userId, $faseId, $user_name_actual)
     {
+        $log = new Funciones();
         try {
             $tabDepa = DB::select('SELECT t.id as tab_id, d.id as dep_id FROM crm.tablero t inner join crm.fase f on f.tab_id = t.id
             inner join crm.departamento d on d.id = t.dep_id
@@ -706,8 +819,13 @@ class CasoController extends Controller
             // } catch (\Throwable $th) {
             //     return null;
             // }
+
+            $log->logInfo(CasoController::class, 'Se listo con exito la notificacion');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar la notificacion', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
@@ -780,43 +898,55 @@ class CasoController extends Controller
         //         [$casoId, $faseId]
         //     );
         // }
+        $log = new Funciones();
 
-        $reqFase = DB::select(
-            'SELECT rp.* from crm.requerimientos_predefinidos rp
+        try {
+            $reqFase = DB::select(
+                'SELECT rp.* from crm.requerimientos_predefinidos rp
                 left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
                 WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden asc',
-            [$casoId, $faseId]
-        );
+                [$casoId, $faseId]
+            );
 
-        for ($i = 0; $i < sizeof($reqFase); $i++) {
-            $reqCaso = new RequerimientoCaso();
-            $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
-            $reqCaso->user_requiere_id = $userCreadorId;
-            $reqCaso->titulo = $reqFase[$i]->nombre;
-            $reqCaso->fas_id = $reqFase[$i]->fase_id;
-            $reqCaso->tab_id = $reqFase[$i]->tab_id;
-            $reqCaso->tipo_campo = $reqFase[$i]->tipo;
-            $reqCaso->caso_id = $casoId;
-            $reqCaso->requerido = $reqFase[$i]->requerido;
-            $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
-            $reqCaso->orden = $reqFase[$i]->orden;
-            $reqCaso->acc_publico = $reqFase[$i]->acc_publico;
-            if ($reqCaso->tipo_campo == 'lista') {
-                $array = explode(',', $reqCaso->valor_lista);
-                $nuevoArray = array();
+            for ($i = 0; $i < sizeof($reqFase); $i++) {
+                $reqCaso = new RequerimientoCaso();
+                $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
+                $reqCaso->user_requiere_id = $userCreadorId;
+                $reqCaso->titulo = $reqFase[$i]->nombre;
+                $reqCaso->fas_id = $reqFase[$i]->fase_id;
+                $reqCaso->tab_id = $reqFase[$i]->tab_id;
+                $reqCaso->tipo_campo = $reqFase[$i]->tipo;
+                $reqCaso->caso_id = $casoId;
+                $reqCaso->requerido = $reqFase[$i]->requerido;
+                $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
+                $reqCaso->orden = $reqFase[$i]->orden;
+                $reqCaso->acc_publico = $reqFase[$i]->acc_publico;
 
-                foreach ($array as $item) {
-                    $objeto = array(
-                        'id' => $item,
-                        'valor' => $item
-                    );
-                    $nuevoArray[] = $objeto;
+                if ($reqCaso->tipo_campo == 'lista') {
+                    $array = explode(',', $reqCaso->valor_lista);
+                    $nuevoArray = array();
+
+                    foreach ($array as $item) {
+                        $objeto = array(
+                            'id' => $item,
+                            'valor' => $item
+                        );
+                        $nuevoArray[] = $objeto;
+                    }
+
+                    $reqCaso->valor_multiple = json_encode($nuevoArray);
                 }
 
-                $reqCaso->valor_multiple = json_encode($nuevoArray);
+                $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
+                $reqCaso->save();
             }
-            $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
-            $reqCaso->save();
+
+            $log->logInfo(CasoController::class, 'Se agregaron con exito los requerimientos de la fase ' . $faseId . ', en el caso #' . $casoId);
+
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al agregar los requerimientos de la fase ' . $faseId . ', en el caso #' . $casoId, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
@@ -845,6 +975,8 @@ class CasoController extends Controller
 
     public function validarClienteSolicitudCredito($entId)
     {
+        $log = new Funciones();
+
         try {
             $data = DB::transaction(function () use ($entId) {
 
@@ -887,6 +1019,7 @@ class CasoController extends Controller
                     LEFT JOIN cliente cli ON cli.ent_id = ent.ent_id
                     LEFT JOIN cliente_anexo cliane ON cliane.cli_id = cli.cli_id
                     where ent.ent_id = ? and cliane.cliane_identificacion_conyuge <> null", [$entId]);
+
                 //crear nuevo cliente
                 $nuevoCliente = new ClienteCrm();
                 $nuevoCliente->ent_id = $entidadPublic->ent_id;
@@ -897,6 +1030,7 @@ class CasoController extends Controller
                 $nuevoCliente->nombre_comercial = $entidadPublic->ent_apellidos . ' ' . $entidadPublic->ent_nombres;
                 $nuevoCliente->fechanacimiento = $entidadPublic->ent_fechanacimiento;
                 $nuevoCliente->email = $entidadPublic->ent_email;
+
                 if ($clienteSC) {
                     $nuevoCliente->pai_nombre = $clienteSC->pai_nombre;
                     $nuevoCliente->ctn_nombre = $clienteSC->ctn_nombre;
@@ -918,6 +1052,7 @@ class CasoController extends Controller
                     $nuevoCliente->activos_totales = $clienteSC->activos_totales;
                     $nuevoCliente->pasivos_totales = $clienteSC->pasivos_totales;
                 }
+
                 if ($clienteConyuge) {
                     $nuevoCliente->cedula_conyuge = $clienteConyuge->numerodocumento;
                     $nuevoCliente->nombres_conyuge = $clienteConyuge->primernombre;
@@ -925,8 +1060,8 @@ class CasoController extends Controller
                     $nuevoCliente->sexo_conyuge = $clienteConyuge->sexo;
                     $nuevoCliente->fecha_nacimiento_conyuge = $clienteConyuge->fecha_nacimiento;
                 }
-                $nuevoCliente->save();
 
+                $nuevoCliente->save();
 
                 if ($telefonosCliDynamo != null) {
                     $telefonoCliente = new TelefonosCliente();
@@ -954,9 +1089,6 @@ class CasoController extends Controller
                         $telefonoCliente->save();
                     }
                 }
-
-
-
 
                 $clienteReferencias = DB::select("SELECT
 		    split_part(btrim(refane.refane_nombre::text), ' '::text, 2) AS refane2_apellpa,
@@ -1018,14 +1150,20 @@ class CasoController extends Controller
                 return $resul;
             });
 
+            $log->logInfo(CasoController::class, 'Exito al validar el cliente en la solicitud de credito');
+
             return $data;
-        } catch (\Throwable $th) {
-            return $th;
+        } catch (\Throwable $e) {
+            $log->logError(CasoController::class, 'Error al validar el cliente en la solicitud de credito', $e);
+
+            return $e;
         }
     }
 
     public function calcularTiemposCaso($caso, $caso_id, $estado_2, $fase_id, $tipo, $user_id)
     {
+        $log = new Funciones();
+
         // Tipo
         // 1 reasignacion manual
         // 2 automatica por formulas
@@ -1101,13 +1239,20 @@ class CasoController extends Controller
 
                 }
             });
+
+            $log->logInfo(CasoController::class, 'Exito al calcular los tiempos del caso #' . $caso_id);
+
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al calcular los tiempos del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function editCalcularTiemposCaso($caso_id)
     {
+        $log = new Funciones();
+
         try {
             $data = DB::transaction(function () use ($caso_id) {
 
@@ -1137,15 +1282,23 @@ class CasoController extends Controller
                 return $ultimoRegistro;
             });
 
+            $log->logInfo(CasoController::class, 'Se actualizo con exito el tiempo del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar el tiempo del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function addCasoOPMICreativa($cppId)
     {
-        $opm = DB::selectOne("SELECT
+        $log = new Funciones();
+
+        try {
+
+            $opm = DB::selectOne("SELECT
               cli.cli_id,
               ent.ent_id,
               (cti.cti_sigla || '-'|| alm.alm_codigo || '-' || pve.pve_numero ||'-' || cpp.cpp_numero) as comprobante,
@@ -1158,84 +1311,94 @@ class CasoController extends Controller
               inner join public.almacen alm on alm.alm_id = pve.alm_id
               where cpp.cpp_id = ?
         ", [$cppId]);
-        if (!$opm) {
-            return null;
-        }
-        //--- Configuracion del destino del caso
-        $configuracion = DB::selectOne("SELECT tcf.* from crm.tipo_caso tc
+            if (!$opm) {
+                return null;
+            }
+            //--- Configuracion del destino del caso
+            $configuracion = DB::selectOne("SELECT tcf.* from crm.tipo_caso tc
         inner join crm.tipo_caso_formulas tcf on tcf.tc_id = tc.id
         where tc.nombre = 'SOLICITUD DE CREDITO APP MOVIL' and tc.estado = true limit 1;");
-        if ($configuracion && $opm) {
-            //--- Add miembros administradores del tablero
-            $miembrosAdminTablero = DB::select('SELECT u.id from crm.tablero_user tu
+
+            if ($configuracion && $opm) {
+                //--- Add miembros administradores del tablero
+                $miembrosAdminTablero = DB::select('SELECT u.id from crm.tablero_user tu
             inner join crm.users u on u.id = tu.user_id
             where tu.tab_id = ? and u.usu_tipo in (2,3);', [$configuracion->tab_id]);
-            $miembros = [];
-            foreach ($miembrosAdminTablero as $miembro) {
-                array_push($miembros, $miembro->id);
-            }
-            // usuario de acuerdo al empleado existe en el tablero
-            $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
+                $miembros = [];
+                foreach ($miembrosAdminTablero as $miembro) {
+                    array_push($miembros, $miembro->id);
+                }
+                // usuario de acuerdo al empleado existe en el tablero
+                $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
               left join crm.tablero_user tu on tu.user_id = us.id
               where emp_id = ? and tu.tab_id = ?", [$opm->emp_id, $configuracion->tab_id]);
-            // Obtener la fecha actual
-            $fechaActual = now();
-            // Convertir la cadena de tiempo a un objeto DateTime
-            $tiempoVencimiento = DateTime::createFromFormat('H:i:s', $configuracion->tiempo_vencimiento);
-            // Sumar el intervalo de tiempo a la fecha actual
-            $fechaVencimiento = $fechaActual->add($tiempoVencimiento->diff(new DateTime()));
-            $objetoJson = (object) [
-                "id" => null,
-                "fas_id" => $configuracion->fase_id,
-                "nombre" => 'Solicitud de credito aplicación movil)',
-                "descripcion" => 'Pedido:'.$opm->comprobante.', generado desde la aplicacion',
-                "estado" => $configuracion->estado,
-                "orden" => 1,
-                "ent_id" => $opm->ent_id,
-                "user_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
-                "prioridad" => $configuracion->prioridad,
-                "fecha_vencimiento" => $fechaVencimiento,
-                "fase_anterior_id" => $configuracion->fase_id,
-                "user" => null,
-                "entidad" => null,
-                "miembros" => $miembros,
-                "comentarios" => null,
-                "resumen" => null,
-                "bloqueado" => false,
-                "bloqueado_user" => "",
-                "tar_id" => null,
-                "ctt_id" => null,
-                "tareas" => null,
-                "tc_id" => $configuracion->tc_id,
-                "tableroId" => $configuracion->tab_id,
-                "estado_2" => $configuracion->estado_2,
-                "fase_creacion_id" => $configuracion->fase_id,
-                "tablero_creacion_id" => $configuracion->tab_id,
-                "dep_creacion_id" => $configuracion->dep_id,
-                "fase_anterior_id_reasigna" => $configuracion->fase_id,
-                "user_anterior_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
-                "user_creador_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
-                "cpp_id" => $cppId,
-            ];
-            $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
-            $emailCliente = DB::selectOne('select ent_email from entidad where ent_id = ?', [$opm->ent_id]);
-            //$email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
-            if (!$emailCliente) {
-                $t = new EmailController();
-                $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
+                // Obtener la fecha actual
+                $fechaActual = now();
+                // Convertir la cadena de tiempo a un objeto DateTime
+                $tiempoVencimiento = DateTime::createFromFormat('H:i:s', $configuracion->tiempo_vencimiento);
+                // Sumar el intervalo de tiempo a la fecha actual
+                $fechaVencimiento = $fechaActual->add($tiempoVencimiento->diff(new DateTime()));
+                $objetoJson = (object) [
+                    "id" => null,
+                    "fas_id" => $configuracion->fase_id,
+                    "nombre" => 'Solicitud de credito aplicación movil)',
+                    "descripcion" => 'Pedido:' . $opm->comprobante . ', generado desde la aplicacion',
+                    "estado" => $configuracion->estado,
+                    "orden" => 1,
+                    "ent_id" => $opm->ent_id,
+                    "user_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                    "prioridad" => $configuracion->prioridad,
+                    "fecha_vencimiento" => $fechaVencimiento,
+                    "fase_anterior_id" => $configuracion->fase_id,
+                    "user" => null,
+                    "entidad" => null,
+                    "miembros" => $miembros,
+                    "comentarios" => null,
+                    "resumen" => null,
+                    "bloqueado" => false,
+                    "bloqueado_user" => "",
+                    "tar_id" => null,
+                    "ctt_id" => null,
+                    "tareas" => null,
+                    "tc_id" => $configuracion->tc_id,
+                    "tableroId" => $configuracion->tab_id,
+                    "estado_2" => $configuracion->estado_2,
+                    "fase_creacion_id" => $configuracion->fase_id,
+                    "tablero_creacion_id" => $configuracion->tab_id,
+                    "dep_creacion_id" => $configuracion->dep_id,
+                    "fase_anterior_id_reasigna" => $configuracion->fase_id,
+                    "user_anterior_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                    "user_creador_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                    "cpp_id" => $cppId,
+                ];
+                $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
+                $emailCliente = DB::selectOne('select ent_email from entidad where ent_id = ?', [$opm->ent_id]);
+                //$email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
+                if (!$emailCliente) {
+                    $t = new EmailController();
+                    $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
+                } else {
+                    $t = new EmailController();
+                    $t->send_email($emailCliente->ent_email, $dataEmail);
+                }
+                $requestData = json_decode(json_encode($objetoJson), true);
+                $request = new Request($requestData);
+
+                $log->logInfo(CasoController::class, 'Se creo con exito el caso desde la App');
+
+                return $this->add($request);
             } else {
-                $t = new EmailController();
-                $t->send_email($emailCliente->ent_email, $dataEmail);
+                $log->logError(CasoController::class, 'No se creo el caso, porque falta la configuracion de destino del caso o el OPM');
+
+                return null;
             }
-            $requestData = json_decode(json_encode($objetoJson), true);
-            $request = new Request($requestData);
-            return $this->add($request);
-        } else {
-            return null;
+
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al crear caso desde la App', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
-
 
     // public function enviarCorreoCliente($casoId){
     //     if ($sendEmail) {
@@ -1248,35 +1411,54 @@ class CasoController extends Controller
 
     public function listHistorialCaso($caso_id)
     {
+        $log = new Funciones();
+
         try {
             $data = ControlTiemposCaso::where('caso_id', $caso_id)->orderBy('id', 'ASC')->get();
 
+            $log->logInfo(CasoController::class, 'Se listo con exito el historial del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar el historial del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
-    public function actualizarCaso(Request $request, $casoId){
-        try {
+    public function actualizarCaso(Request $request, $casoId)
+    {
+        $log = new Funciones();
 
+        try {
             $casoData = $request->all();
+
             if (!$casoId) {
+                $log->logError(CasoController::class, 'El caso #' . $casoId . ' no existe' . $casoId);
+
                 return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
             }
+
             $caso = Caso::find($casoId);
+
             if ($caso) {
                 $caso->update($casoData);
                 $data = $this->getCaso($casoId);
                 broadcast(new TableroEvent($data));
-                return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+
+                $log->logInfo(CasoController::class, 'Se actualizo con exito el caso #' . $casoId);
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
             }
+
+            $log->logError(CasoController::class, 'El caso #' . $casoId . ' no existe' . $casoId);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
         } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar el caso #' . $casoId, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
-
 
 }

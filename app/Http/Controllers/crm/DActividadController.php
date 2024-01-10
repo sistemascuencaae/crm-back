@@ -9,7 +9,6 @@ use App\Models\crm\Audits;
 use App\Models\crm\DTipoActividad;
 use App\Models\crm\Miembros;
 use App\Models\User;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -109,8 +108,11 @@ class DActividadController extends Controller
 
 
     // LISTA PARA USUARIO COMUN
+
     public function listActividadesByDepIdCasoId($caso_id, $dep_id)
     {
+        $log = new Funciones();
+
         try {
             $actividades = DTipoActividad::where('caso_id', $caso_id)
                 ->where(function ($query) use ($dep_id) {
@@ -146,8 +148,12 @@ class DActividadController extends Controller
                 return $item;
             });
 
+            $log->logInfo(DActividadController::class, 'Se listo con exito las actividades del departamento con el ID: ' . $dep_id . ' del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al listar las actividades del departamento con el ID: ' . $dep_id . ' del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -155,6 +161,8 @@ class DActividadController extends Controller
     // LISTA PARA SUPER USUARIO
     public function listAllActividadesByCasoId($caso_id)
     {
+        $log = new Funciones();
+
         try {
             $actividades = DTipoActividad::where('caso_id', $caso_id)
                 ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
@@ -184,8 +192,12 @@ class DActividadController extends Controller
                 return $item;
             });
 
+            $log->logInfo(DActividadController::class, 'Se listo con exito todas las actividades del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al listar todas las actividades del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -193,6 +205,8 @@ class DActividadController extends Controller
 
     public function addDTipoActividad(Request $request)
     {
+        $log = new Funciones();
+
         try {
             $usuarioMiembro = $request->input('usuario');
 
@@ -274,15 +288,20 @@ class DActividadController extends Controller
                 return $data;
             });
 
+            $log->logInfo(DActividadController::class, 'Se guardo con exito la actividad');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al guardar la actividad', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function updateDActividad(Request $request, $id)
     {
+        $log = new Funciones();
+
         try {
 
             $usuarioMiembro = $request->input('usuario');
@@ -353,8 +372,12 @@ class DActividadController extends Controller
                 return $data;
             });
 
+            $log->logInfo(DActividadController::class, 'Se actualizo con exito la actividad, con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al actualizar la actividad, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -363,6 +386,8 @@ class DActividadController extends Controller
 
     public function listActividadesByUserId($user_id)
     {
+        $log = new Funciones();
+
         try {
             $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id') // Aquí especificamos que solo queremos el campo 'cliente_id' de la tabla 'caso')
                 ->selectRaw("*, 
@@ -391,8 +416,12 @@ class DActividadController extends Controller
                 return $item;
             });
 
+            $log->logInfo(DActividadController::class, 'Se listo con exito las actividades del usuario con el ID: ' . $user_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al listar las actividades del usuario con el ID: ' . $user_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -428,6 +457,8 @@ class DActividadController extends Controller
 
     public function addDTipoActividadTabla(Request $request, $user_id)
     {
+        $log = new Funciones();
+
         try {
             $usuarioMiembro = $request->input('usuario');
 
@@ -492,14 +523,21 @@ class DActividadController extends Controller
 
                 return $data;
             });
+
+            $log->logInfo(DActividadController::class, 'Se guardo con exito la actividad');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al guardar la actividad', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function updateDActividadTabla(Request $request, $id, $user_id)
     {
+        $log = new Funciones();
+
         try {
             $usuarioMiembro = $request->input('usuario');
             $actividad = DTipoActividad::findOrFail($id);
@@ -563,8 +601,13 @@ class DActividadController extends Controller
 
                 return $data;
             });
+
+            $log->logInfo(DActividadController::class, 'Se cerro con exito la actividad, con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al cerrar la actividad, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -572,6 +615,8 @@ class DActividadController extends Controller
     // LISTA PARA EL CALENDARIO
     public function listActividadesIniciadasByUserId($user_id)
     {
+        $log = new Funciones();
+
         try {
             $actividades = DTipoActividad::where('user_id', $user_id)
                 ->whereHas('estado_actividad', function ($query) {
@@ -581,8 +626,12 @@ class DActividadController extends Controller
                 ->orderBy('id', 'DESC')
                 ->get();
 
+            $log->logInfo(DActividadController::class, 'Se listo con exito las actividades INICIADAS del usuario con el ID: ' . $user_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al listar las actividades INICIADAS del usuario con el ID: ' . $user_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -592,6 +641,8 @@ class DActividadController extends Controller
     // Editar el acceso publico o privado de una actividad
     public function editAccesoActividad(Request $request, $actividad_id)
     {
+        $log = new Funciones();
+
         try {
             $actividad = $request->all();
 
@@ -629,8 +680,12 @@ class DActividadController extends Controller
                 return $data;
             });
 
+            $log->logInfo(DActividadController::class, 'Se actualizo con exito el acceso de la actividad, con el ID: ' . $actividad_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al actualizar el acceso de la actividad, con el ID: ' . $actividad_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }

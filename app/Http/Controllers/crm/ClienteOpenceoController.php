@@ -3,28 +3,30 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\AvCasoCliente;
-use App\Models\crm\Caso;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use PhpParser\Node\Expr\Cast\Object_;
 
 class ClienteOpenceoController extends Controller
 {
 
     public function list($parametro)
     {
+        $log = new Funciones();
 
         try {
             $data = DB::select("SELECT * FROM public.cliente WHERE UPPER(CONCAT(cli_codigo,'-',ent_nombre_comercial)) like '%" . $parametro . "%' limit 100");
+
+            $log->logInfo(ClienteOpenceoController::class, 'Se listo con exito los clientes');
+
             return response()->json(RespuestaApi::returnResultado('success', 'El listado de clientes', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Exception', $th->getMessage()));
+        } catch (\Throwable $e) {
+            $log->logError(ClienteOpenceoController::class, 'Error al listar los clientes', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Exception', $e->getMessage()));
         }
     }
-
-
 
     //CON PAGIONADOR
     // public function list(Request $request)
@@ -43,26 +45,30 @@ class ClienteOpenceoController extends Controller
 
     // }
 
-
     public function byCedula($cedula)
     {
+        $log = new Funciones();
+
         try {
             $data = DB::table('public.cliente')
                 ->where('cli_codigo', 'like', '%' . $cedula . '%')
                 ->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'El listado de clientes', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Exception', $th->getMessage()));
+            $log->logInfo(ClienteOpenceoController::class, 'Se listo con exito el cliente con cedula: ' . $cedula);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'El listado del cliente', $data));
+        } catch (\Throwable $e) {
+            $log->logError(ClienteOpenceoController::class, 'Error al listar el cliente con cedula: ' . $cedula, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Exception', $e->getMessage()));
         }
     }
 
-
     public function clienteCasoList($tabId)
     {
+        $log = new Funciones();
+
         try {
-
-
             //               {
             //     name: "Congo",
             //     series: [
@@ -73,9 +79,6 @@ class ClienteOpenceoController extends Controller
             //       { value: 32, name: "Fri 23" },
             //     ],
             //   },
-
-
-
 
             $listaAvCC = AvCasoCliente::where('tab_id', $tabId)->get();
 
@@ -89,13 +92,13 @@ class ClienteOpenceoController extends Controller
                 'dataCharLine' => $dataCharLine,
             ];
 
-
-
-
+            $log->logInfo(ClienteOpenceoController::class, 'Se listo con exito los casos del cliente');
 
             return response()->json(RespuestaApi::returnResultado('success', 'El listado de clientes', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Exception', $th->getMessage()));
+        } catch (\Throwable $e) {
+            $log->logError(ClienteOpenceoController::class, 'Error al listar los casos del cliente', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Exception', $e->getMessage()));
         }
     }
 }
