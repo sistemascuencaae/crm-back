@@ -1052,7 +1052,7 @@ class CasoController extends Controller
                         "fase_id" => $fase_id,
                         "tipo" => $tipo,
                         "user_id" => $user_id,
-                        "usuario" => $userNuevo->name,
+                        "usuario" => $userNuevo->usu_alias,
                         "tab_id" => $faseNueva->tablero->id,
                         "tablero" => $faseNueva->tablero->nombre,
                     ]);
@@ -1091,7 +1091,7 @@ class CasoController extends Controller
                         "fase_id" => $caso->fas_id,
                         "tipo" => $tipo,
                         "user_id" => $caso->user_id,
-                        "usuario" => $caso->user->name,
+                        "usuario" => $caso->user->usu_alias,
                         "tab_id" => $caso->tablero->id,
                         "tablero" => $caso->tablero->nombre,
                     ]);
