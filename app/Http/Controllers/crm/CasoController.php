@@ -284,6 +284,7 @@ class CasoController extends Controller
         // $data = Caso::with('user', 'clienteCrm', 'cTipoTarea.dTipoTarea')->where('id', $id)->get();
         // return response()->json(RespuestaApi::returnResultado('success', 'El caso se listo con éxito', $data));
         $log = new Funciones();
+
         try {
 
             $data = $this->getCaso($id);
@@ -301,11 +302,13 @@ class CasoController extends Controller
     public function bloqueoCaso(Request $request)
     {
         $log = new Funciones();
+
+        $data = [];
+        $casoId = $request->input("casoId");
+        $bloqueado = $request->input("bloqueado");
+        $bloqueado_user = $request->input("bloqueado_user");
+
         try {
-            $data = [];
-            $casoId = $request->input("casoId");
-            $bloqueado = $request->input("bloqueado");
-            $bloqueado_user = $request->input("bloqueado_user");
             $caso = Caso::find($casoId);
             if ($caso) {
                 $caso->bloqueado = $bloqueado;
@@ -658,9 +661,10 @@ class CasoController extends Controller
     {
         $log = new Funciones();
 
+        $estadoFormId = $request->input('estadoFormId');
+        $casoId = $request->input('casoId');
+
         try {
-            $estadoFormId = $request->input('estadoFormId');
-            $casoId = $request->input('casoId');
 
             $formula = EstadosFormulas::find($estadoFormId);
             if (!$formula) {
