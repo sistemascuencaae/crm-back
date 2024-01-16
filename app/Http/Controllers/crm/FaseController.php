@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\CondicionesFaseMover;
 use App\Models\crm\Fase;
@@ -20,26 +21,40 @@ class FaseController extends Controller
 
     public function list(Request $request)
     {
+        $log = new Funciones();
         $tabId = $request->input('tabId');
         try {
 
             $data = $this->listarfases($tabId);
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con existo', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('exception', 'Al listar', $th->getMessage()));
+
+            $log->logInfo(FaseController::class, 'Se listo con exito las fases');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+        } catch (\Throwable $e) {
+            $log->logError(FaseController::class, 'Error al listar las fases', $e);
+
+            return response()->json(RespuestaApi::returnResultado('exception', 'Al listar', $e->getMessage()));
         }
     }
 
     public function faseActualById($faseId)
     {
+        $log = new Funciones();
         try {
-            $faseActual = Fase::with('condicionFaseMover',)->where('id', $faseId)->first();
+            $faseActual = Fase::with('condicionFaseMover', )->where('id', $faseId)->first();
             if ($faseActual) {
+                $log->logInfo(FaseController::class, 'Fase actual');
+
                 return response()->json(RespuestaApi::returnResultado('success', 'Fase actual', $faseActual));
             }
-            return response()->json(RespuestaApi::returnResultado('success', 'Error al obtener fase actual', $faseId));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('exception', 'Error al obtener fase actual', $th->getMessage()));
+
+            $log->logError(FaseController::class, 'Error al obtener la fase actual');
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al obtener fase actual', $faseId));
+        } catch (\Throwable $e) {
+            $log->logError(FaseController::class, 'Error al obtener la fase actual', $e);
+
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error al obtener fase actual', $e->getMessage()));
         }
     }
 
@@ -60,6 +75,7 @@ class FaseController extends Controller
     public function edit(Request $request)
     {
         //$data = Fase::with('caso.user','caso.clienteCrm', 'caso.resumen', 'caso.tareas','caso.actividad')->where('tab_id',$tableroId)->get();
+        $log = new Funciones();
         try {
 
             $data = DB::transaction(function () use ($request) {
@@ -96,20 +112,24 @@ class FaseController extends Controller
                 return $faseSave;
             });
 
+            $log->logInfo(FaseController::class, 'Se actualizo con exito la fase');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('exception', 'Error al actualizar fase.', $th->getMessage()));
+        } catch (\Throwable $e) {
+            $log->logError(FaseController::class, 'Error al actualizar la fase.', $e);
+
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error al actualizar fase.', $e->getMessage()));
         }
     }
     public function add(Request $request)
     {
+        $log = new Funciones();
         try {
 
             $data = DB::transaction(function () use ($request) {
                 $idsFaseMover = json_encode($request->input('idsFaseMover'));
                 $condicion = CondicionesFaseMover::create([
-                    "parametro" =>  $idsFaseMover,
+                    "parametro" => $idsFaseMover,
                 ]);
 
                 //$faseCreada = Fase::create($request->all());
@@ -129,15 +149,19 @@ class FaseController extends Controller
                 return $fase;
             });
 
+            $log->logInfo(FaseController::class, 'Se guardo con exito la fase');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Fase creada con exito', $data));
         } catch (Exception $e) {
+            $log->logError(FaseController::class, 'Error al guardar la fase', $e);
+
             return response()->json(RespuestaApi::returnResultado('exception', 'Error al crear fase', $e));
         }
     }
 
     public function actualizarOrdenFases(Request $request)
     {
+        $log = new Funciones();
         try {
             $listaFases = $request->all();
 
@@ -146,7 +170,7 @@ class FaseController extends Controller
                 foreach ($listaFases as $item) {
                     $tabId = $item['tab_id'];
                     $fase = Fase::find($item['id']);
-                    $fase->orden =  $item['orden'];
+                    $fase->orden = $item['orden'];
                     $fase->save();
                 }
 
@@ -154,8 +178,13 @@ class FaseController extends Controller
 
             });
             $data = $this->listarFases($id);
+
+            $log->logInfo(FaseController::class, 'Se actualizo con exito el orden de las fases');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Fase creada con exito', $data));
         } catch (Exception $e) {
+            $log->logError(FaseController::class, 'Error al actualizar el orden de las fases', $e);
+
             return response()->json(RespuestaApi::returnResultado('exception', 'Error al crear fase', $e));
         }
     }

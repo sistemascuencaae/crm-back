@@ -22,6 +22,7 @@ class NotaController extends Controller
 
     public function addNota(Request $request)
     {
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($request) {
 
@@ -60,14 +61,19 @@ class NotaController extends Controller
                 return $data;
             });
 
+            $log->logInfo(NotaController::class, 'Se guardo con exito la nota');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(NotaController::class, 'Error al guardar la nota', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function listNotaByCasoId($caso_id)
     {
+        $log = new Funciones();
         try {
             $notas = Nota::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
 
@@ -89,14 +95,19 @@ class NotaController extends Controller
                 return $item;
             });
 
+            $log->logInfo(NotaController::class, 'Se listo con exito las notas del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notas));
         } catch (Exception $e) {
+            $log->logError(NotaController::class, 'Error al listar las notas del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function updateNota(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($request, $id) {
                 $nota = Nota::findOrFail($id);
@@ -140,14 +151,19 @@ class NotaController extends Controller
                 return $nota;
             });
 
+            $log->logInfo(NotaController::class, 'Se actualizo con exito la nota con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(NotaController::class, 'Error al actualizar la nota con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function deleteNota(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $data = DB::transaction(function () use ($request, $id) {
 
@@ -177,8 +193,12 @@ class NotaController extends Controller
                 return $nota;
             });
 
+            $log->logInfo(NotaController::class, 'Se elimino con exito la nota con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(NotaController::class, 'Error al eliminar la nota con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
