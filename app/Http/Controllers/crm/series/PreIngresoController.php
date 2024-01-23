@@ -262,6 +262,8 @@ class PreIngresoController extends Controller
                     'fecha_modifica' => $fecha_modifica,
                     ]);
 
+                DB::table('gex.dpreingreso')->where('numero',$numero)->delete();
+
                 foreach ($data['detalle'] as $d) {
                     DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
                 }
