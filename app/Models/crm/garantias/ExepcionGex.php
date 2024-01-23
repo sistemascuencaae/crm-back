@@ -21,8 +21,9 @@ class ExepcionGex extends Model implements Auditable
     public $timestamps = false;
 
     protected $fillable = [
-        "exce_id".
+        "exce_id",
         "pro_id",
+        "config_id",
         "porc_gex",
         "fecha_ini",
         "fecha_fin",
