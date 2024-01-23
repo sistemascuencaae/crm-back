@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\CTipoTarea;
 use App\Models\crm\DTipoTarea;
@@ -14,21 +15,30 @@ class CTareaController extends Controller
 {
     public function listTareasByIdTablero($tab_id)
     {
+        $log = new Funciones();
+
         try {
             $tareas = CTipoTarea::where('tab_id', $tab_id)->with('DTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
+            $log->logInfo(CTareaController::class, 'Se listo con exito las tareas del tablero, con el ID: ' . $tab_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tareas));
         } catch (Exception $e) {
+            $log->logError(CTareaController::class, 'Error al listar las tareas del tablero, con el ID: ' . $tab_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function addCTarea(Request $request)
     {
+        $log = new Funciones();
+
         try {
             $cTar = $request->all();
             $data = DB::transaction(function () use ($cTar) {
                 $cTarea = CTipoTarea::create($cTar);
+
                 for ($i = 0; $i < sizeof($cTar['tareas']); $i++) {
                     DTipoTarea::create([
                         "ctt_id" => $cTarea['id'],
@@ -43,8 +53,12 @@ class CTareaController extends Controller
                 return CTipoTarea::where('tab_id', $cTarea['tab_id'])->with('dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
             });
 
+            $log->logInfo(CTareaController::class, 'Se guardo con exito la tarea');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(CTareaController::class, 'Error al guardar la tarea', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -91,6 +105,8 @@ class CTareaController extends Controller
 
     public function updateCTarea(Request $request, $id)
     {
+        $log = new Funciones();
+
         try {
             $eliminados = $request->input('eliminados');
             $tareas = $request->input('tareas');
@@ -130,8 +146,12 @@ class CTareaController extends Controller
 
             $dataRe = CTipoTarea::with('dTipoTarea')->where('id', $id)->first();
 
+            $log->logInfo(CTareaController::class, 'Se actualizo con exito la tarea, con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $dataRe));
         } catch (Exception $e) {
+            $log->logError(CTareaController::class, 'Error al actualizar la tarea, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }

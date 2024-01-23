@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\ClienteCrm;
 use App\Models\crm\ReferenciasCliente;
@@ -13,9 +14,13 @@ use Illuminate\Support\Facades\DB;
 
 class ReferenciasClienteController extends Controller
 {
+
+    private $log;
+
     public function __construct()
     {
         $this->middleware('auth:api');
+        $this->log = new Funciones();
     }
 
     // metodo que ocupe para insertar los datos de referencias y telefonos de icreativa
@@ -79,13 +84,17 @@ class ReferenciasClienteController extends Controller
 
             $respuesta = ReferenciasCliente::where('id', $ref->id)->with('telefonos')->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se agregó con éxito', $respuesta));
+            $this->log->logInfo(ReferenciasClienteController::class, 'Se guardo con exito las referencias del cliente');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $respuesta));
         } catch (Exception $e) {
             DB::rollback();
+
+            $this->log->logError(ReferenciasClienteController::class, 'Error al guardar las referencias del cliente', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 
     public function editReferenciasCliente(Request $request, $id)
     {
@@ -120,13 +129,17 @@ class ReferenciasClienteController extends Controller
 
             $respuesta = ReferenciasCliente::where('id', $ref->id)->with('telefonos')->first();
 
+            $this->log->logInfo(ReferenciasClienteController::class, 'Se actualizo con exito las referencias del cliente');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $respuesta));
         } catch (Exception $e) {
             DB::rollback();
+
+            $this->log->logError(ReferenciasClienteController::class, 'Error al actualizar las referencias del cliente', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 
     // public function editReferenciasCliente(Request $request, $id)
     // {
@@ -158,7 +171,6 @@ class ReferenciasClienteController extends Controller
     //     }
     // }
 
-
     public function deleteReferenciasCliente(Request $request, $id)
     {
         try {
@@ -174,9 +186,14 @@ class ReferenciasClienteController extends Controller
 
             DB::commit();
 
+            $this->log->logInfo(ReferenciasClienteController::class, 'Se elimino con exito la referencia con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $respuesta));
         } catch (Exception $e) {
             DB::rollback();
+
+            $this->log->logError(ReferenciasClienteController::class, 'Error al eliminar la referencia con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -187,8 +204,12 @@ class ReferenciasClienteController extends Controller
         try {
             $respuesta = ReferenciasCliente::where('cli_id', $cli_id)->orderBy('id', 'ASC')->get();
 
+            $this->log->logInfo(ReferenciasClienteController::class, 'Se listo con exito las referencias del cliente con el ID: ' . $cli_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {
+            $this->log->logError(ReferenciasClienteController::class, 'Error al listar las referencias del cliente con el ID: ' . $cli_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
