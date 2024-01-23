@@ -336,12 +336,12 @@ class PreIngresoController extends Controller
 
     public function cargaDetalleIngreso($id, $tipo) {
         if ($tipo == 'INV') {
-            $data = DB::select("select pro_id, dmo_cantidad - (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
-                                                                where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo
+            $data = DB::select("select pro_id, dmo_cantidad - coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
+                                                                where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id),0) as saldo
                                 from dmovinv d where cmo_id = " . $id);
         } else {
-            $data = DB::select("select pro_id, dfac_cantidad - (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
-                                                                where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id) as saldo
+            $data = DB::select("select pro_id, dfac_cantidad - coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
+                                                                where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id),0) as saldo
                                 from dfactura d where cfa_id = " . $id);
         }
 
