@@ -69,6 +69,7 @@ use App\Http\Controllers\crm\garantias\VentasTotalesGexController;
 use App\Http\Controllers\crm\series\InventarioFechaSeriesController;
 use App\Http\Controllers\crm\series\InformeInventarioSeriesController;
 use App\Http\Controllers\crm\series\ComparativoSeriesController;
+use App\Http\Controllers\crm\garantias\VentasProductosGexController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
@@ -573,6 +574,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaConfig', [ConfigItemsController::class, 'grabaConfig']);
     Route::get('/byConfig/{producto}', [ConfigItemsController::class, 'byConfig']);
     Route::get('/eliminaConfig/{producto}', [ConfigItemsController::class, 'eliminaConfig']);
+    Route::post('/validaConfig', [ConfigItemsController::class, 'validaConfig']);
 
     //Relacion Lineas Gex
     Route::get('/listadoRelacion', [RelacionLineasGexController::class, 'listado']);
@@ -588,6 +590,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaExep', [ExepcionGexController::class, 'grabaExep']);
     Route::get('/byExcep/{excep}', [ExepcionGexController::class, 'byExcep']);
     Route::get('/eliminaExep/{excep}', [ExepcionGexController::class, 'eliminaExep']);
+    Route::get('/gexRelacionado/{tipo_producto}', [ExepcionGexController::class, 'gexRelacionado']);
+    Route::post('/validaExcep', [ExepcionGexController::class, 'validaExcep']);
 
     //Rubro de Reserva
     Route::get('/listadoRubros', [RubrosReservaController::class, 'listado']);
@@ -679,6 +683,16 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listadoInvCompa/{bodega}', [ComparativoSeriesController::class, 'inventarios']);
     Route::get('/listadoBodegasCompa', [ComparativoSeriesController::class, 'bodegas']);
     Route::get('/comparativoSeries/{fecCorte}/{bodega}/{numero}', [ComparativoSeriesController::class, 'comparativoSeries']);
+
+    //Ventas Productos
+    Route::get('/listadoLineasVentas', [VentasProductosGexController::class, 'lineas']);
+    Route::get('/listadoLineasMotosVentas', [VentasProductosGexController::class, 'lineasMotos']);
+    Route::get('/listadoProductosVentas/{tipoProd}', [VentasProductosGexController::class, 'productos']);
+    Route::get('/listadaoAlmacenesVentas', [VentasProductosGexController::class, 'almacenes']);
+    Route::get('/listadoFormasPago', [VentasProductosGexController::class, 'formasPago']);
+    Route::get('/listadoVendedoresVentas', [VentasProductosGexController::class, 'vendedores']);
+    Route::get('/VentasProductosGex/{tipoProd}/{producto}/{sucursal}/{formaPago}/{vendedor}/{fecIni}/{fecFin}', [VentasProductosGexController::class, 'VentasProductosGex']);
+    Route::get('/VentasMotosGex/{tipoProd}/{producto}/{sucursal}/{formaPago}/{vendedor}/{fecIni}/{fecFin}', [VentasProductosGexController::class, 'VentasMotosGex']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);

@@ -307,7 +307,7 @@ class PreIngresoController extends Controller
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join cliente l on c.cli_id = l.cli_id
                                         join entidad e on l.ent_id = e.ent_id
-                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cmo_fecha >= '2023-06-01'
+                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cmo_fecha >= '2024-01-01'
                                     and (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id) > coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
                                                                                                                         from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
                                                                                                                         where c2.cmo_id = c.cmo_id),0)
@@ -325,7 +325,7 @@ class PreIngresoController extends Controller
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join cliente l on c.cli_id = l.cli_id
                                         join entidad e on l.ent_id = e.ent_id
-                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cfa_fecha >= '2023-06-01'
+                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cfa_fecha >= '2024-01-01'
                                     and (select sum(d.dfac_cantidad) from dfactura d where d.cfa_id = c.cfa_id) > coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
                                                                                                                             from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
                                                                                                                             where c2.cfa_id = c.cfa_id),0)

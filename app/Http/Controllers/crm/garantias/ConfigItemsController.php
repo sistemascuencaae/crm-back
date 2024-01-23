@@ -18,9 +18,10 @@ class ConfigItemsController extends Controller
     
     public function listado()
     {
-        $data = DB::select("select pc.config_id, p.pro_codigo, p.pro_nombre as descripcion, case pc.tipo_servicio when 'G' then 'GEX' when 'S' then 'SEGURO' when 'P' then 'PRODUCTO' when 'A' then 'PRODUCTO A/C' end as tipo,
-                                   pc.porc_gex, pc.meses_garantia
-                            from producto p join gex.producto_config pc on p.pro_id = pc.pro_id");
+        $data = DB::select("select pc.config_id, p.pro_codigo, p.pro_nombre as descripcion, case pc.tipo_servicio when 'G' then 'GEX' when 'S' then 'SEGURO' when 'P' then 'PRODUCTO' when 'A' then 'PRODUCTO A/C' when 'M' then 'PRODUCTO MOTO' when 'N' then 'GEX MOTO' end as tipo,
+                                   pc.porc_gex, pc.meses_garantia, pc.km_garantia, pc.km_factor
+                            from producto p join gex.producto_config pc on p.pro_id = pc.pro_id
+                            order by p.pro_codigo");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
@@ -69,6 +70,8 @@ class ConfigItemsController extends Controller
                 $meses_garantia = $request->input('meses_garantia');
                 $fecha_crea = null;
                 $fecha_modifica = null;
+                $km_garantia = $request->input('km_garantia');
+                $km_factor = $request->input('km_factor');
     
                 if ($request->input('modifica') == 'N') {
                     $config_id = ConfigItems::max('config_id') + 1;
@@ -94,6 +97,8 @@ class ConfigItemsController extends Controller
                     'fecha_crea' => $fecha_crea,
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
+                    'km_garantia' => $km_garantia,
+                    'km_factor' => $km_factor,
                     ]);
             
                 $detalle = $request->input('partes');
@@ -103,11 +108,11 @@ class ConfigItemsController extends Controller
                 foreach ($detalle as $d) {
                     DB::table('gex.producto_partes')->updateOrInsert(
                         [
-                            'config_id' => $d['config_id'],
+                            'config_id' => $config_id,
                             'parte_id' => $d['parte_id'],
                         ],
                         [
-                            'config_id' => $d['config_id'],
+                            'config_id' => $config_id,
                             'parte_id' => $d['parte_id'],
                             'meses_garantia' => $d['meses_garantia'],
                         ]);
@@ -124,7 +129,7 @@ class ConfigItemsController extends Controller
 
     public function eliminaConfig($config) {
         try {
-            DB::transaction(function() use ($producto){
+            DB::transaction(function() use ($config){
                 DB::table('gex.producto_partes')->where('config_id',$config)->delete();
                 DB::table('gex.producto_config')->where('config_id',$config)->delete();
             });
@@ -132,6 +137,27 @@ class ConfigItemsController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Configuración eliminada con exito', []));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
+        }
+    }
+    
+    public function validaConfig(Request $request)
+    {
+        $pro_id = $request->input('pro_id');
+        $tipo_servicio = $request->input('tipo_servicio');
+        $porc_gex = $request->input('porc_gex');
+        $meses_garantia = $request->input('meses_garantia');
+        $km_factor = $request->input('km_factor');
+
+        if ($tipo_servicio == 'G' || $tipo_servicio == 'N') {
+            $data = ConfigItems::get()->where('pro_id', $pro_id)->where('tipo_servicio', $tipo_servicio)->where('porc_gex', $porc_gex)->where('meses_garantia', $meses_garantia)->where('km_factor', $km_factor)->first();
+        } else {
+            $data = ConfigItems::get()->where('pro_id', $pro_id)->first();
+        }
+        
+        if ($data){
+            return response()->json(RespuestaApi::returnResultado('error', 'Producto ya está configurado', []));
+        } else {
+            return response()->json(RespuestaApi::returnResultado('success', '', []));
         }
     }
 }

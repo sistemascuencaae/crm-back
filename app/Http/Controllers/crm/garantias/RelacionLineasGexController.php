@@ -18,7 +18,7 @@ class RelacionLineasGexController extends Controller
     
     public function listado()
     {
-        $data = DB::select("select rlg.config_id, rlg.tpr_id, p.pro_nombre, tp.tpr_nombre
+        $data = DB::select("select rlg.config_id, rlg.tpr_id, concat(p.pro_codigo, ' - ', p.pro_nombre, ' - ', pc.meses_garantia, ' meses - ', pc.porc_gex, '%') as pro_nombre, tp.tpr_nombre
                             from gex.rel_linea_gex rlg join tipo_producto tp on rlg.tpr_id = tp.tpr_id
                                                        join gex.producto_config pc on rlg.config_id = pc.config_id
                                                        join producto p on pc.pro_id = p.pro_id
@@ -31,7 +31,7 @@ class RelacionLineasGexController extends Controller
     {
         $data = DB::select("select pc.config_id, concat(p.pro_codigo, ' - ', p.pro_nombre, ' - ', pc.meses_garantia, ' meses - ', pc.porc_gex, '%') as presenta
                             from producto p join gex.producto_config pc on p.pro_id = pc.pro_id
-                            where pc.tipo_servicio = 'G'");
+                            where pc.tipo_servicio in ('G','N')");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }

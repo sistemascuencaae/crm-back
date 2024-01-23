@@ -18,7 +18,7 @@ class ExepcionGexController extends Controller
     
     public function listado()
     {
-        $data = DB::select("select eg.exce_id, p.pro_nombre as descripcion,
+        $data = DB::select("select eg.exce_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as descripcion,
                                     concat(p1.pro_nombre, ' - ', pc.meses_garantia, ' meses - ', pc.porc_gex, '%') as gex,
                                     concat(TO_CHAR(eg.fecha_ini::date, 'dd/mm/yyyy'), ' - ', TO_CHAR(eg.fecha_fin::date, 'dd/mm/yyyy')) as periodo,
                                     eg.porc_gex as porcentaje
@@ -120,6 +120,23 @@ class ExepcionGexController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Excepción eliminada con exito', []));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
+        }
+    }
+    
+    public function validaExcep(Request $request)
+    {
+        $pro_id = $request->input('pro_id');
+        $config_id = $request->input('config_id');
+        $porc_gex = $request->input('porc_gex');
+        $fecha_ini = $request->input('fecha_ini');
+        $fecha_fin = $request->input('fecha_fin');
+
+        $data = ExepcionGex::get()->where('pro_id', $pro_id)->where('config_id', $config_id)->where('porc_gex', $porc_gex)->where('fecha_ini', $fecha_ini)->where('fecha_fin', $fecha_fin)->first();
+        
+        if ($data){
+            return response()->json(RespuestaApi::returnResultado('error', 'Producto ya tiene excepción con los datos ingresados', []));
+        } else {
+            return response()->json(RespuestaApi::returnResultado('success', '', []));
         }
     }
 }

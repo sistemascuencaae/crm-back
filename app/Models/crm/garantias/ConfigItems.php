@@ -30,6 +30,8 @@ class ConfigItems extends Model implements Auditable
         "fecha_crea",
         "usuario_modifica",
         "fecha_modifica",
+        "km_garantia",
+        "km_factor"
     ];
     
     public function partes()
