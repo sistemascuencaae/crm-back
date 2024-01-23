@@ -153,8 +153,15 @@ class TableroController extends Controller
                     "parametro" => '[]',
                 ]);
 
-                $estadoCasoInicial = Estados::create([
+                Estados::create([
                     "nombre" => 'PENDIENTE',
+                    "estado" => true,
+                    "tab_id" => $tablero->id,
+                    "tipo_estado_id" => 1
+                ]);
+
+                Estados::create([
+                    "nombre" => 'TERMINADO',
                     "estado" => true,
                     "tab_id" => $tablero->id,
                     "tipo_estado_id" => 1

@@ -60,7 +60,7 @@ class ReqCasoController extends Controller
 
                     $galeria->update([
                         "titulo" => $requerimiento->titulo,
-                        "descripcion" => $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        "descripcion" => $requerimiento->descripcion,//'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '."\n". $requerimiento->descripcion,//$requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         "imagen" => $path,
                         "caso_id" => $inputReq->caso_id,
                         "tipo_gal_id" => 8, // Tipo Requerimiento es el id 8
@@ -85,7 +85,7 @@ class ReqCasoController extends Controller
                 } else {
                     $newGaleria = new Galeria();
                     $newGaleria->titulo = $requerimiento->titulo;
-                    $newGaleria->descripcion = $requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id;
+                    $newGaleria->descripcion = $requerimiento->descripcion;//'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '. "\n". $requerimiento->descripcion;
                     $newGaleria->imagen = $path;
                     $newGaleria->caso_id = $inputReq->caso_id;
                     $newGaleria->tipo_gal_id = 8;
@@ -219,28 +219,19 @@ class ReqCasoController extends Controller
 
             if ($requerimiento) {
                 DB::transaction(function () use ($requerimiento, $request) {
-
-                    //echo ('$requerimiento->descripcion: '.json_encode($requerimiento->descripcion));
-
-                    if ($requerimiento->tipo_campo == 'archivo' && $requerimiento->galerias_id != null) {
-
-                        //echo ('$requerimiento: '.json_encode($requerimiento));
+                    if (($requerimiento->tipo_campo == 'archivo' || $requerimiento->tipo_campo == 'pegar imagen' ) && $requerimiento->galerias_id != null) {
                         $galeria = Galeria::find($requerimiento->galerias_id);
                         $galeria->update([
-                            "descripcion" => $requerimiento->descripcion, // : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                            "descripcion" => $request->input('descripcion'),
                         ]);
-
-                        // echo ('$galeria->descripcion: ' . json_encode($galeria->descripcion));
-
                     }
-                    if ($requerimiento->tipo_campo == 'archivo' && $requerimiento->archivos_id != null) {
+                    if (($requerimiento->tipo_campo == 'archivo' || $requerimiento->tipo_campo == 'pegar imagen') && $requerimiento->archivos_id != null) {
                         $archivo = Archivo::find($requerimiento->archivos_id);
                         $archivo->update([
-                            "observacion" => $requerimiento->descripcion, // : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                            "observacion" => $request->input('descripcion'),
                         ]);
                     }
 
-                    
                     $audit = new Audits();
                     $valorAntiguo = $requerimiento;
                     $audit->old_values = json_encode($valorAntiguo);
@@ -307,6 +298,17 @@ class ReqCasoController extends Controller
 
     public function list()
     {
+    }
+
+    public function listReqCasoId($casoId)
+    {
+        try {
+            $data = RequerimientoCaso::where('caso_id', $casoId)->orderBy('orden', 'asc')->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+
     }
 
     public function uploadReqArchivo($inputFormData)
