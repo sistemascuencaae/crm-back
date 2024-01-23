@@ -16,13 +16,13 @@ class RelacionLineasGex extends Model implements Auditable
 
     protected $table = 'gex.rel_linea_gex';
 
-    protected $primaryKey = 'tpr_id, pro_id';
+    protected $primaryKey = 'tpr_id, config_id';
 
     public $timestamps = false;
 
     protected $fillable = [
         "tpr_id".
-        "pro_id",
+        "config_id",
         "usuario_crea",
         "fecha_crea",
         "usuario_modifica",
