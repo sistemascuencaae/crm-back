@@ -345,7 +345,7 @@ class ReqCasoController extends Controller
             $solicitudCredito = $solicitudCreditoController->obtenerSolicitudCreditoActualizada($casoId);
 
             $reqCaso = RequerimientoCaso::find($request->input('id'));
-            $reqCaso->marcado = true;
+            $reqCaso->marcado = $request->input('marcado');
             $reqCaso->valor_int = $solicitudCredito->id;
             $reqCaso->valor = $archivo;
             $reqCaso->valor_varchar = $archivo;

@@ -168,8 +168,8 @@ class solicitudCreditoController extends Controller
             // }
             $caso = Caso::with('userCreador')->find($casoId);
             $almacen = DB::selectOne('SELECT alm.* FROM crm.users usu
-            -- inner join public.puntoventa pve on pve.pve_id = usu.pve_id
             inner join public.almacen alm on alm.alm_id = usu.alm_id where usu.id = ? limit 1', [$caso->user_id]);
+
             if ($caso && $almacen) {
                 $cliente = ClienteCrm::with('referencias.telefonos')->find($caso->cliente_id);
                 if (!$solicitudCredito) {
@@ -215,6 +215,7 @@ class solicitudCreditoController extends Controller
 
             $log->logInfo(solicitudCreditoController::class, 'Se obtuvo correctamente la solicitud actualizada del caso: #' . $casoId);
 
+            return null;
         } catch (\Throwable $e) {
             $log->logError(solicitudCreditoController::class, 'Error al obtener la solicitud actualizada del caso: # ' . $casoId, $e);
             // throw $th;
