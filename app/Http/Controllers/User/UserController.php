@@ -83,6 +83,22 @@ class UserController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Esta cédula ya existe', ''));
             }
 
+            // SQL para sacar solo la columna emp_id del dynamo
+            // SELECT emp.emp_id 
+            // ROM entidad ent
+            // JOIN empleado emp ON ent.ent_id = emp.ent_id
+            // WHERE ent.ent_identificacion LIKE '%0102281953%';
+
+            $emp_id = DB::table('public.entidad')
+                ->join('public.empleado', 'entidad.ent_id', '=', 'empleado.ent_id')
+                ->where('entidad.ent_identificacion', 'LIKE', '%' . $request->cedula . '%')
+                ->pluck('empleado.emp_id')
+                ->first();
+
+            if ($emp_id) {
+                $request->merge(['emp_id' => $emp_id]);
+            }
+
             // Si no existe, crea el nuevo usuario
             User::create($request->all());
 
