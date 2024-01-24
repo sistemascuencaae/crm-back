@@ -52,5 +52,8 @@ class ContratoGex extends Model implements Auditable
         "fecha_crea",
         "usuario_modifica",
         "fecha_modifica",
+        "km_garantia",
+        "km_factor",
+        "tipo_servicio",
     ];
 }
