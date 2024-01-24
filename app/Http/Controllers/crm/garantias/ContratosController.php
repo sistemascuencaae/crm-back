@@ -96,7 +96,10 @@ class ContratosController extends Controller
                                     concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as factura_gex,
                                     cg.num_meses as meses_gex,
                                     c.cfa_fecha as fecha_desde,
-                                    c.cfa_fecha + cg.num_meses * interval'1 month'  as fecha_hasta
+                                    c.cfa_fecha + cg.num_meses * interval'1 month'  as fecha_hasta,
+                                    (select pc.km_garantia from gex.producto_config pc where pc.pro_id = pr.pro_id) as km_garantia,
+                                    (2) as km_factor,
+                                    (select pc.tipo_servicio from gex.producto_config pc where pc.pro_id = pr.pro_id) as tipo_servicio
                             from cfactura c join dfactura d on c.cfa_id = d.cfa_id
                                             join producto pr on d.pro_id = pr.pro_id
                                             join marca m on pr.mar_id = m.mar_id
@@ -190,6 +193,9 @@ class ContratosController extends Controller
                     $usuario_crea = $c['usuario_crea'];
                     $usuario_modifica = $c['usuario_modifica'];
                     $fecha_crea = date("Y-m-d h:i:s");
+                    $km_garantia = $c['km_garantia'];
+                    $km_factor = $c['km_factor'];
+                    $tipo_servicio = $c['tipo_servicio'];
 
                     DB::table('gex.contrato_gex')->insert(
                         [
@@ -224,6 +230,9 @@ class ContratosController extends Controller
                         'usuario_crea' => $usuario_crea,
                         'usuario_modifica' => $usuario_modifica,
                         'fecha_crea' => $fecha_crea,
+                        'km_garantia' => $km_garantia,
+                        'km_factor' => $km_factor,
+                        'tipo_servicio' => $tipo_servicio,
                         ]);
 
                     DB::table('gex.folios_contratos')->updateOrInsert(

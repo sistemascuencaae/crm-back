@@ -40,11 +40,11 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-                [
-                    //'add',
-                    //'addCasoOPMICreativa'
+            [
+                //'add',
+                //'addCasoOPMICreativa'
 
-                ]
+            ]
         ]);
     }
 
@@ -64,7 +64,7 @@ class CasoController extends Controller
             $miembros = $miembros2;
         }
 
-        try {
+        //try {
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
 
                 $userLoginId = 1; //auth('api')->user()->id;
@@ -140,11 +140,11 @@ class CasoController extends Controller
             $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
-        } catch (\Throwable $e) {
-            $log->logError(CasoController::class, 'Error al guardar el caso', $e);
+        // } catch (\Throwable $e) {
+        //     $log->logError(CasoController::class, 'Error al guardar el caso', $e);
 
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
-        }
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
+        // }
     }
 
     // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
@@ -782,7 +782,6 @@ class CasoController extends Controller
                 'estadodos'
 
             ])->where('id', $casoId)->first();
-
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al listar el caso #' . $casoId, $e);
 
@@ -942,7 +941,6 @@ class CasoController extends Controller
             }
 
             $log->logInfo(CasoController::class, 'Se agregaron con exito los requerimientos de la fase ' . $faseId . ', en el caso #' . $casoId);
-
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al agregar los requerimientos de la fase ' . $faseId . ', en el caso #' . $casoId, $e);
 
@@ -1241,7 +1239,6 @@ class CasoController extends Controller
             });
 
             $log->logInfo(CasoController::class, 'Exito al calcular los tiempos del caso #' . $caso_id);
-
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al calcular los tiempos del caso #' . $caso_id, $e);
 
@@ -1298,7 +1295,7 @@ class CasoController extends Controller
 
         try {
 
-            $opm = DB::selectOne("SELECT
+        $opm = DB::selectOne("SELECT
               cli.cli_id,
               ent.ent_id,
               (cti.cti_sigla || '-'|| alm.alm_codigo || '-' || pve.pve_numero ||'-' || cpp.cpp_numero) as comprobante,
@@ -1309,89 +1306,90 @@ class CasoController extends Controller
               inner join public.ctipocom cti on cti.cti_id = cpp.cti_id
               inner join public.puntoventa pve on pve.pve_id = cpp.pve_id
               inner join public.almacen alm on alm.alm_id = pve.alm_id
-              where cpp.cpp_id = ?
-        ", [$cppId]);
-            if (!$opm) {
-                return null;
-            }
-            //--- Configuracion del destino del caso
-            $configuracion = DB::selectOne("SELECT tcf.* from crm.tipo_caso tc
+              where cpp.cpp_id = ? ", [$cppId]);
+
+        if (!$opm) {
+            return null;
+        }
+        //--- Configuracion del destino del caso
+        $configuracion = DB::selectOne("SELECT tcf.* from crm.tipo_caso tc
         inner join crm.tipo_caso_formulas tcf on tcf.tc_id = tc.id
         where tc.nombre = 'SOLICITUD DE CREDITO APP MOVIL' and tc.estado = true limit 1;");
 
-            if ($configuracion && $opm) {
-                //--- Add miembros administradores del tablero
-                $miembrosAdminTablero = DB::select('SELECT u.id from crm.tablero_user tu
+        if ($configuracion && $opm) {
+            //--- Add miembros administradores del tablero
+            $miembrosAdminTablero = DB::select('SELECT u.id from crm.tablero_user tu
             inner join crm.users u on u.id = tu.user_id
             where tu.tab_id = ? and u.usu_tipo in (2,3);', [$configuracion->tab_id]);
-                $miembros = [];
-                foreach ($miembrosAdminTablero as $miembro) {
-                    array_push($miembros, $miembro->id);
-                }
-                // usuario de acuerdo al empleado existe en el tablero
-                $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
+            $miembros = [];
+            foreach ($miembrosAdminTablero as $miembro) {
+                array_push($miembros, $miembro->id);
+            }
+            // usuario de acuerdo al empleado existe en el tablero
+            $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
               left join crm.tablero_user tu on tu.user_id = us.id
               where emp_id = ? and tu.tab_id = ?", [$opm->emp_id, $configuracion->tab_id]);
-                // Obtener la fecha actual
-                $fechaActual = now();
-                // Convertir la cadena de tiempo a un objeto DateTime
-                $tiempoVencimiento = DateTime::createFromFormat('H:i:s', $configuracion->tiempo_vencimiento);
-                // Sumar el intervalo de tiempo a la fecha actual
-                $fechaVencimiento = $fechaActual->add($tiempoVencimiento->diff(new DateTime()));
-                $objetoJson = (object) [
-                    "id" => null,
-                    "fas_id" => $configuracion->fase_id,
-                    "nombre" => 'Solicitud de credito aplicación movil)',
-                    "descripcion" => 'Pedido:' . $opm->comprobante . ', generado desde la aplicacion',
-                    "estado" => $configuracion->estado,
-                    "orden" => 1,
-                    "ent_id" => $opm->ent_id,
-                    "user_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
-                    "prioridad" => $configuracion->prioridad,
-                    "fecha_vencimiento" => $fechaVencimiento,
-                    "fase_anterior_id" => $configuracion->fase_id,
-                    "user" => null,
-                    "entidad" => null,
-                    "miembros" => $miembros,
-                    "comentarios" => null,
-                    "resumen" => null,
-                    "bloqueado" => false,
-                    "bloqueado_user" => "",
-                    "tar_id" => null,
-                    "ctt_id" => null,
-                    "tareas" => null,
-                    "tc_id" => $configuracion->tc_id,
-                    "tableroId" => $configuracion->tab_id,
-                    "estado_2" => $configuracion->estado_2,
-                    "fase_creacion_id" => $configuracion->fase_id,
-                    "tablero_creacion_id" => $configuracion->tab_id,
-                    "dep_creacion_id" => $configuracion->dep_id,
-                    "fase_anterior_id_reasigna" => $configuracion->fase_id,
-                    "user_anterior_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
-                    "user_creador_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
-                    "cpp_id" => $cppId,
-                ];
-                $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
-                $emailCliente = DB::selectOne('select ent_email from entidad where ent_id = ?', [$opm->ent_id]);
-                //$email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
-                if (!$emailCliente) {
-                    $t = new EmailController();
-                    $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
-                } else {
-                    $t = new EmailController();
-                    $t->send_email($emailCliente->ent_email, $dataEmail);
-                }
-                $requestData = json_decode(json_encode($objetoJson), true);
-                $request = new Request($requestData);
-
-                $log->logInfo(CasoController::class, 'Se creo con exito el caso desde la App');
-
-                return $this->add($request);
+            // Obtener la fecha actual
+            $fechaActual = now();
+            // Convertir la cadena de tiempo a un objeto DateTime
+            $tiempoVencimiento = DateTime::createFromFormat('H:i:s', $configuracion->tiempo_vencimiento);
+            // Sumar el intervalo de tiempo a la fecha actual
+            $fechaVencimiento = $fechaActual->add($tiempoVencimiento->diff(new DateTime()));
+            $objetoJson = (object) [
+                "id" => null,
+                "fas_id" => $configuracion->fase_id,
+                "nombre" => 'Solicitud de credito aplicación movil)',
+                "descripcion" => 'Pedido:' . $opm->comprobante . ', generado desde la aplicacion',
+                "estado" => $configuracion->estado,
+                "orden" => 1,
+                "ent_id" => $opm->ent_id,
+                "user_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                "prioridad" => $configuracion->prioridad,
+                "fecha_vencimiento" => $fechaVencimiento,
+                "fase_anterior_id" => $configuracion->fase_id,
+                "user" => null,
+                "entidad" => null,
+                "miembros" => $miembros,
+                "comentarios" => null,
+                "resumen" => null,
+                "bloqueado" => false,
+                "bloqueado_user" => "",
+                "tar_id" => null,
+                "ctt_id" => null,
+                "tareas" => null,
+                "tc_id" => $configuracion->tc_id,
+                "tableroId" => $configuracion->tab_id,
+                "estado_2" => $configuracion->estado_2,
+                "fase_creacion_id" => $configuracion->fase_id,
+                "tablero_creacion_id" => $configuracion->tab_id,
+                "dep_creacion_id" => $configuracion->dep_id,
+                "fase_anterior_id_reasigna" => $configuracion->fase_id,
+                "user_anterior_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                "user_creador_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                "cpp_id" => $cppId,
+            ];
+            $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
+            $emailCliente = DB::selectOne('select ent_email from entidad where ent_id = ?', [$opm->ent_id]);
+            //$email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
+            if (!$emailCliente) {
+                $t = new EmailController();
+                $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
             } else {
-                $log->logError(CasoController::class, 'No se creo el caso, porque falta la configuracion de destino del caso o el OPM');
-
-                return null;
+                $t = new EmailController();
+                $t->send_email($emailCliente->ent_email, $dataEmail);
             }
+
+
+            $requestData = json_decode(json_encode($objetoJson), true);
+            $request = new Request($requestData);
+
+            $log->logInfo(CasoController::class, 'Se creo con exito el caso desde la App');
+
+            return $this->add($request);
+        } else {
+            $log->logError(CasoController::class, 'No se creo el caso, porque falta la configuracion de destino del caso o el OPM');
+            return null;
+        }
 
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al crear caso desde la App', $e);
@@ -1460,5 +1458,4 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
 }

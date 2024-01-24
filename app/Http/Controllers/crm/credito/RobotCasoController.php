@@ -95,13 +95,9 @@ class RobotCasoController extends Controller
         $audit->new_values = json_encode($casoEnProceso); // json_encode para convertir en string ese array
         $audit->save();
         // END Auditoria
-
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
         $casoController = new CasoController();
         $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
-
-
-
         // start diferencia de tiempos en horas minutos y segundos
         $CasoController = new CasoController();
         $tipo = 2;
@@ -114,9 +110,6 @@ class RobotCasoController extends Controller
             $casoEnProceso->user_id
         );
         // end diferencia de tiempos en horas minutos y segundos
-
-
-
         /*---------******** ANALISIS DE USUARIOS ********------------- */
         //---Si el nuevo tablero es el tablero de creacio reasigna al creador
         if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
@@ -134,7 +127,9 @@ class RobotCasoController extends Controller
             }
         }
         //EL TABLERO ES EL USUARIO ANTERIOR
-        $usuarioAnterior = DB::selectOne("SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ?", [$casoEnProceso->user_anterior_id, $formula->tablero_id]);
+        $usuarioAnterior = DB::selectOne("SELECT * FROM crm.tablero_user tu
+         inner join crm.users us on us.id = tu.user_id
+         where tu.user_id = ? and tu.tab_id = ? end us.en_linea = true", [$casoEnProceso->user_anterior_id, $formula->tablero_id]);
         if ($usuarioAnterior) {
             $casoEnProceso->user_id = $usuarioAnterior->user_id;
             $casoEnProceso->save();
@@ -225,7 +220,7 @@ class RobotCasoController extends Controller
 
     public function getUsuarioTablero($userCreadorId, $tableroCreacionId)
     {
-        $userTab = DB::selectOne('SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ?', [$userCreadorId, $tableroCreacionId]);
+        $userTab = DB::selectOne('SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ? and en_linea = true', [$userCreadorId, $tableroCreacionId]);
         return $userTab;
     }
 
