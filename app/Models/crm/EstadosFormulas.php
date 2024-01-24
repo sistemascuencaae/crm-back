@@ -16,7 +16,7 @@ class EstadosFormulas extends Model
 
     protected $table = 'crm.estados_formulas';
 
-    protected $fillable = ["est_id_actual", "fase_id_actual", "resp_id", "est_id_proximo", "tablero_id", "fase_id", 'tab_id'];
+    protected $fillable = ["est_id_actual", "fase_id_actual", "resp_id", "est_id_proximo", "tablero_id", "fase_id", 'tab_id', 'validar_req'];
 
     public function setCreatedAtAttribute($value)
     {
