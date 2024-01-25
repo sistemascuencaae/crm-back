@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\chat\ChatGroup;
 use App\Models\crm\Caso;
 use App\Models\crm\Fase;
 use App\Models\crm\Tablero;
@@ -43,7 +44,6 @@ Broadcast::channel('caso.comentarios.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('tablero.{id}', function ($user, $id) {
-
     $usuario = User::where("id", $user->id)->get();
     $tablero = Tablero::where("id", $id)->get();
     // echo('ingresamos al chanel'.json_encode($tablero));
@@ -52,17 +52,17 @@ Broadcast::channel('tablero.{id}', function ($user, $id) {
     } else {
         return false;
     }
-
-
-    // $usuario = User::where("id", $user->id)->first();
-    // $caso = Caso::where("user_id", $user->id)->first();
-    // if ($caso && $usuario) {
-    //     return true;
-    // } else {
-    //     return false;
-    // }
 });
 
+Broadcast::channel('chat.{id}', function ($user, $id) {
+    $usuario = User::where("id", $user->id)->first();
+    $chatGroup = ChatGroup::where("uniqd", $id)->first();
+    if ($chatGroup && $usuario) {
+        return true;
+    } else {
+        return false;
+    }
+});
 
 
 

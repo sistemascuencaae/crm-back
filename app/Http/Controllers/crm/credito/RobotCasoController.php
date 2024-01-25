@@ -28,7 +28,7 @@ class RobotCasoController extends Controller
 
     public function reasignarCaso(Request $request)
     {
-        try {
+        //try {
             $casoController = new CasoController();
             $estadoFormId = $request->input('estadoFormId');
             $casoId = $request->input('casoId');
@@ -38,9 +38,9 @@ class RobotCasoController extends Controller
             $data = $casoController->getCaso($casoModificado->id);
             broadcast(new ReasignarCasoEvent($data));
             return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al reasignar', $e));
-        }
+        // } catch (Exception $e) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al reasignar', $e));
+        // }
     }
 
     private function validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId, Request $request)
@@ -129,7 +129,7 @@ class RobotCasoController extends Controller
         //EL TABLERO ES EL USUARIO ANTERIOR
         $usuarioAnterior = DB::selectOne("SELECT * FROM crm.tablero_user tu
          inner join crm.users us on us.id = tu.user_id
-         where tu.user_id = ? and tu.tab_id = ? end us.en_linea = true", [$casoEnProceso->user_anterior_id, $formula->tablero_id]);
+         where tu.user_id = ? and tu.tab_id = ? and us.en_linea = true", [$casoEnProceso->user_anterior_id, $formula->tablero_id]);
         if ($usuarioAnterior) {
             $casoEnProceso->user_id = $usuarioAnterior->user_id;
             $casoEnProceso->save();
@@ -220,7 +220,10 @@ class RobotCasoController extends Controller
 
     public function getUsuarioTablero($userCreadorId, $tableroCreacionId)
     {
-        $userTab = DB::selectOne('SELECT * FROM crm.tablero_user where user_id = ? and tab_id = ? and en_linea = true', [$userCreadorId, $tableroCreacionId]);
+
+        $userTab = DB::selectOne('SELECT * FROM crm.tablero_user tu
+         inner join crm.users u on u.id = tu.user_id
+         where tu.user_id = ? and tu.tab_id = ? and u.en_linea = true', [$userCreadorId, $tableroCreacionId]);
         return $userTab;
     }
 

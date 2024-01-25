@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\ChatController;
+use App\Http\Controllers\chat\ChatController as ChatController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
@@ -161,7 +161,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
-    Route::put('/actualizarCaso/{casoId}', [CasoController::class, 'actualizarCaso']);//
+    Route::put('/actualizarCaso/{casoId}', [CasoController::class, 'actualizarCaso']); //
     //---------------------------------------------------------------->PRUEBAS
     Route::get('/actualizarReqCaso/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
     /************************  FORMULARIOS   *********************** */
@@ -199,14 +199,20 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     /************************  PEDIDO MOVIL OPENCEO   ****************** */
     Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
-
     Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
-
     Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
-
-
-
 });
+
+
+/************************  CHAT   ****************** */
+Route::group(["prefix" => "chat"], function ($router) {
+    Route::get('/list/{id}', [ChatController::class, 'list']);
+    Route::post('/sendMessage/{uniqd}', [ChatController::class, 'sendMessage']);
+});
+
+
+
+
 Route::group(["prefix" => "crm/audi"], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
 });
@@ -227,7 +233,7 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::get('/byId/{formId}', [FormController::class, 'byId']); //formUser
     Route::get('/listAll', [FormController::class, 'listAll']); //
     Route::get('/listAnonimos', [FormController::class, 'listAnonimos']);
-    Route::get('/impresion/{formId}/{userId}', [FormController::class, 'impresion']);//impresion
+    Route::get('/impresion/{formId}/{userId}', [FormController::class, 'impresion']); //impresion
     Route::put('/edit/{id}', [FormController::class, 'edit']);
 });
 Route::group(['prefix' => 'form/campo'], function ($router) {
@@ -241,7 +247,7 @@ Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::put('/edit/{id}', [CampoController::class, 'edit']);
     Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
     Route::post('/add', [CampoController::class, 'add']); //addCampoValor
-    Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']);//addCampoValor
+    Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']); //addCampoValor
 });
 Route::group(['prefix' => 'form/seccion'], function ($router) {
     Route::get('/store', [FormSeccionController::class, 'store']);
@@ -251,7 +257,7 @@ Route::group(['prefix' => 'form/seccion'], function ($router) {
 //----------------------- PARAMETROS DIRECCION ----------------------------------------------
 Route::group(['prefix' => 'parametros'], function ($router) {
     Route::get('/direccion', [ParametrosController::class, 'direccion']); //
-    Route::get('/direccionParroquias/{cantonId}', [ParametrosController::class, 'direccionParroquias']);//direccionParroquias
+    Route::get('/direccionParroquias/{cantonId}', [ParametrosController::class, 'direccionParroquias']); //direccionParroquias
 });
 
 //parametrosDireccion
@@ -553,7 +559,6 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
     Route::post('/addEmail', [EmailController::class, 'addEmail']);
     Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
-
 });
 
 
@@ -757,14 +762,3 @@ Route::group([
     Route::post('editMenu/{id}', [MenuController::class, 'editMenu']);
     Route::delete('deleteMenu/{id}', [MenuController::class, 'deleteMenu']);
 });
-
-
-
-
-
-
-
-
-
-
-
