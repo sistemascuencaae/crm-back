@@ -67,15 +67,26 @@ class JWTController extends Controller
         }
 
         if (!$token = auth()->attempt($validator->validated())) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            return response()->json(['error' => 'Usuario o contraseña incorrecta'], 401);
+            // return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         // Verifica si el usuario está activo
         $user = Auth::user();
         if (!$user || !$user->estado) {
             // El usuario no está activo
-            return response()->json(['error' => 'Usuario NO activo'], 401);
+            return response()->json(['error' => 'El usuario NO esta activo'], 403);
+            // Cuando un usuario intenta acceder a tu aplicación y está marcado como inactivo, 
+            // es común devolver un código de estado HTTP 403 - Forbidden. 
+            // El código de estado 403 indica que el servidor comprende la solicitud, pero se niega a autorizarla.
         }
+
+        // Lineas para poner "en Linea" al usuario al iniciar sesión
+        $usuario = User::findOrFail($user->id);
+
+        $usuario->update([
+            "en_linea" => true,
+        ]);
 
         return $this->respondWithToken($token);
     }
