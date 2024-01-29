@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\chat\ChatGroup;
+use App\Models\chat\ChatRoom;
 use App\Models\crm\Caso;
 use App\Models\crm\Fase;
 use App\Models\crm\Tablero;
@@ -56,8 +57,18 @@ Broadcast::channel('tablero.{id}', function ($user, $id) {
 
 Broadcast::channel('chat.{id}', function ($user, $id) {
     $usuario = User::where("id", $user->id)->first();
-    $chatGroup = ChatGroup::where("uniqd", $id)->first();
+    $chatGroup = ChatRoom::where("uniqd", $id)->first();
     if ($chatGroup && $usuario) {
+        return true;
+    } else {
+        return false;
+    }
+});
+
+
+Broadcast::channel('chat.refresh.{id}', function ($user, $id) {
+    $usuario = User::where("id", $user->id)->first();
+    if ($usuario) {
         return true;
     } else {
         return false;
