@@ -1337,12 +1337,16 @@ class CasoController extends Controller
             $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
               left join crm.tablero_user tu on tu.user_id = us.id
               where emp_id = ? and tu.tab_id = ?", [$opm->emp_id, $configuracion->tab_id]);
-            // Obtener la fecha actual
-            $fechaActual = now();
-            // Convertir la cadena de tiempo a un objeto DateTime
-            $tiempoVencimiento = DateTime::createFromFormat('H:i:s', $configuracion->tiempo_vencimiento);
-            // Sumar el intervalo de tiempo a la fecha actual
-            $fechaVencimiento = $fechaActual->add($tiempoVencimiento->diff(new DateTime()));
+            
+            // Fecha actual
+            $fechaActual = Carbon::now();
+
+            // Separar las horas, minutos y segundos
+            list($horas, $minutos, $segundos) = explode(':', $configuracion->tiempo_vencimiento);
+
+            // Sumar las horas, minutos y segundos
+            $fechaVencimiento = ($fechaActual->addHours($horas)->addMinutes($minutos)->addSeconds($segundos))->format('Y-m-d H:i:s');
+
             $objetoJson = (object) [
                 "id" => null,
                 "fas_id" => $configuracion->fase_id,
