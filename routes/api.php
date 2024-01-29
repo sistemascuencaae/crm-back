@@ -210,7 +210,8 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::get('/list/{id}', [ChatController::class, 'list']);
     Route::post('/sendMessage/{uniqd}/{userId}/{userDosId}', [ChatController::class, 'sendMessage']); //
     Route::get('/listChatsRooms/{userId}', [ChatController::class, 'listChatsRooms']); //
-    Route::get('/listarMensajes/{uniqd}', [ChatController::class, 'listarMensajes']);//
+    Route::get('/listarMensajes/{uniqd}', [ChatController::class, 'listarMensajes']); //
+    Route::get('/usuariosChat', [ChatController::class, 'usuariosChat']); //
 });
 
 

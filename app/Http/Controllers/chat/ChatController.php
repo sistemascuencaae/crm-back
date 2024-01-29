@@ -22,6 +22,21 @@ class ChatController extends Controller
         ]]);
     }
 
+    public function usuariosChat(){
+        try {
+            $data = DB::select("SELECT
+                u.id,
+                u.name,
+                u.email,
+                u.usu_alias
+            from crm.users u
+                where u.estado = true and u.usu_tipo <> 1");
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+    }
+
     public function listChatsRooms($userId)
     {
         try {

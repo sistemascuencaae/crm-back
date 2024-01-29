@@ -1255,6 +1255,14 @@ class CasoController extends Controller
 
                 $ultimoRegistro = ControlTiemposCaso::where('caso_id', $caso_id)->latest()->first();
 
+
+                //echo ('$ultimoRegistro: '.json_encode($ultimoRegistro));
+
+                // if($ultimoRegistro == null){
+                //     return;
+                // }
+
+
                 // Convierte las fechas a objetos Carbon para manejar la zona horaria
                 $created_at_actual = Carbon::parse($ultimoRegistro->created_at);
                 $horaSistema = Carbon::parse(date('H:i:s'));
