@@ -50,15 +50,13 @@ class ChatController extends Controller
             $data = DB::select("SELECT
                 cr.uniqd,
                 ch.user_id,
-                us1.name as useruno,
-                us2.name as userdos,
+                usescr.name as usuario,
                 ch.message,
                 ch.created_at
                 FROM crm.chat_groups cg
                 INNER JOIN crm.chat_rooms cr ON cr.chat_group_id  = cg.id
                 INNER JOIN crm.chats ch ON ch.chat_group_id = cg.id AND ch.chat_room_id = cr.id
-                left join crm.users us1 on us1.id = cr.primer_user
-                left join crm.users us2 on us2.id = cr.segundo_user
+                left join crm.users usescr on usescr.id = ch.user_id
                 WHERE cr.uniqd = ? order by ch.created_at asc", [$uniqd]);
             $chatsUserPrincipal = $this->chatsUsuario($userId);
             $chatsUserSecundario = $this->chatsUsuario($userDosId);
@@ -77,16 +75,14 @@ class ChatController extends Controller
         try {
             $data = DB::select("SELECT
                 cr.uniqd,
-                COALESCE(us1.id, us2.id) as user_id,
-                us1.name as useruno,
-                us2.name as userdos,
+                ch.user_id,
+                usescr.name as usuario,
                 ch.message,
                 ch.created_at
                 FROM crm.chat_groups cg
                 INNER JOIN crm.chat_rooms cr ON cr.chat_group_id  = cg.id
                 INNER JOIN crm.chats ch ON ch.chat_group_id = cg.id AND ch.chat_room_id = cr.id
-                left join crm.users us1 on us1.id = cr.primer_user
-                left join crm.users us2 on us2.id = cr.segundo_user
+                left join crm.users usescr on usescr.id = ch.user_id
                 WHERE cr.uniqd = ? order by ch.created_at asc", [$uniqd]);
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
@@ -97,26 +93,31 @@ class ChatController extends Controller
 
     public function chatsUsuario($userId)
     {
-        $data = DB::select("SELECT DISTINCT ON (cr.uniqd)
-    ch.user_id AS escrito_user_id,
-    ch.message,
-    ch.created_at,
-    cr.primer_user as user_uno_id,
-    cr.segundo_user as user_dos_id,
-    cg.uniqd as chatskey,
-    u1.name as username_uno,
-    u2.name as username_dos,
-    cr.uniqd as roomkey,
-    u2.avatar,
-    cr.id as chat_room_id,
-    cg.id as chat_group_id
-FROM crm.chats ch
-INNER JOIN crm.chat_groups cg ON cg.id = ch.chat_group_id
-INNER JOIN crm.chat_rooms cr ON cr.id = ch.chat_room_id
-INNER JOIN crm.users u1 ON u1.id = cr.primer_user
-INNER JOIN crm.users u2 ON u2.id = cr.segundo_user
-where cr.primer_user = ? or cr.segundo_user = ?
-ORDER BY cr.uniqd, ch.created_at DESC;", [$userId, $userId]);
+        $data = DB::select("SELECT
+	        DISTINCT ON (cr.uniqd)
+	        ch.user_id AS escrito_user_id,
+            ch.message,
+            CASE
+             WHEN cr.primer_user = ? THEN u2.name
+             WHEN cr.segundo_user  = ? THEN u1.name
+             ELSE 'Desconocido'
+            END AS remitente,
+            ch.created_at,
+            cr.primer_user as user_uno_id,
+            cr.segundo_user as user_dos_id,
+            u1.name as useruno,
+            u2.name as userdos,
+            cr.uniqd as roomkey,
+            u.avatar,
+            ch.chat_room_id,
+            ch.chat_group_id
+        from crm.chats ch
+        inner join crm.chat_rooms cr on cr.id = ch.chat_room_id and ch.chat_group_id = ch.chat_group_id
+        inner join crm.users u on u.id = ch.user_id
+        inner join crm.users u1 on u1.id = cr.primer_user
+        inner join crm.users u2 on u2.id = cr.segundo_user
+        where cr.primer_user = ? or cr.segundo_user = ? order by cr.uniqd, ch.created_at desc
+        ", [$userId, $userId, $userId, $userId]);
         return $data;
     }
 
