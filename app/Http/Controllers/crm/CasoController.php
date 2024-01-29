@@ -1255,6 +1255,14 @@ class CasoController extends Controller
 
                 $ultimoRegistro = ControlTiemposCaso::where('caso_id', $caso_id)->latest()->first();
 
+
+                //echo ('$ultimoRegistro: '.json_encode($ultimoRegistro));
+
+                // if($ultimoRegistro == null){
+                //     return;
+                // }
+
+
                 // Convierte las fechas a objetos Carbon para manejar la zona horaria
                 $created_at_actual = Carbon::parse($ultimoRegistro->created_at);
                 $horaSistema = Carbon::parse(date('H:i:s'));
@@ -1462,4 +1470,25 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    public function asignarmeCaso($casoId, $userId){
+        try {
+            $dataCaso = Caso::find($casoId);
+            if($dataCaso){
+                $dataCaso->user_id = $userId;
+                $dataCaso->save();
+                $caso = $this->getCaso($casoId);
+                broadcast(new TableroEvent($caso));
+                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $caso));
+            }
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+
+    }
+
+
+
+
 }

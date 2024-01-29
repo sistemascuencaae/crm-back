@@ -38,8 +38,8 @@ return [
             'options' => [
                 'cluster' => env('PUSHER_APP_CLUSTER'),
                 'encrypted' => false,
-                //  'host' => '192.168.1.127', //felipe produccion
-                'host' => '192.168.1.105',
+                 'host' => '192.168.1.127', //felipe produccion
+                // 'host' => '192.168.18.104',
 
                 'port' => 6001,
                 'scheme' => 'http'
