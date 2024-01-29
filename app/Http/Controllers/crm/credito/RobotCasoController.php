@@ -138,6 +138,17 @@ class RobotCasoController extends Controller
                 return $casoEnProceso;
             }
         }
+        //----------------------------------------------------------------
+
+        //EL TABLERO ES EL USUARIO ANTERIOR
+        $usuarioAnterior = DB::selectOne("SELECT us.* FROM crm.tablero_user tu
+         inner join crm.users us on us.id = tu.user_id
+         where us.id = ? and tu.tab_id = ?", [$casoEnProceso->user_anterior_id, $formula->tablero_id]);
+        if ($usuarioAnterior) {
+            $casoEnProceso->user_id = $usuarioAnterior->id;
+            $casoEnProceso->save();
+            return $casoEnProceso;
+        }
         if ($tableroActual->id == $formula->tablero_id){
             $casoEnProceso->save();
             return $casoEnProceso;
@@ -151,22 +162,6 @@ class RobotCasoController extends Controller
 
 
 
-        //----------------------------------------------------------------
-
-        //EL TABLERO ES EL USUARIO ANTERIOR
-        $usuarioAnterior = DB::selectOne("SELECT us.* FROM crm.tablero_user tu
-         inner join crm.users us on us.id = tu.user_id
-         where us.id = ? and tu.tab_id = ?", [$casoEnProceso->user_anterior_id, $formula->tablero_id]);
-        if ($usuarioAnterior) {
-            $casoEnProceso->user_id = $usuarioAnterior->id;
-            $casoEnProceso->save();
-            return $casoEnProceso;
-        }
-        $userGeneralNuevoTablero = DB::selectOne('SELECT u.* from crm.tablero_user tu
-        inner join crm.users u on u.id = tu.user_id
-        where u.usu_tipo = 1 and tu.tab_id = ? limit 1', [$formula->tablero_id]);
-        $casoEnProceso->user_id = $userGeneralNuevoTablero->id;
-        $casoEnProceso->save();
 
         $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
         return $casoEnProceso;
