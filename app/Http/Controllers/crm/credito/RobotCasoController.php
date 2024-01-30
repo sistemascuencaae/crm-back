@@ -83,6 +83,13 @@ class RobotCasoController extends Controller
                 }
             }
         }
+        // si se mueve en el mismo tablero y se encuentra asignado un usuario
+        if ($formula->tablero_id == $tableroActualId) {
+            $casoEnProceso->save();
+            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $this->calcularTiemposCaso($casoEnProceso);
+            return $casoEnProceso;
+        }
         //1.- si el nuevo tablero es el tablero de usuario creador
         if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
             $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
