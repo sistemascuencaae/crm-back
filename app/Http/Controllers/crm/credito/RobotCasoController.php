@@ -22,31 +22,119 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use PhpParser\Node\Expr\FuncCall;
 
 class RobotCasoController extends Controller
 {
 
     public function reasignarCaso(Request $request)
     {
-        //try {
-        $casoController = new CasoController();
-        $estadoFormId = $request->input('estadoFormId');
-        $casoId = $request->input('casoId');
-        $tableroActualId = $request->input('tableroActualId');
-        $facturaId = $request->input('facturaId');
-        $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId, $request);
-        $data = $casoController->getCaso($casoModificado->id);
-        broadcast(new ReasignarCasoEvent($data));
-        return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
-        // } catch (Exception $e) {
-        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al reasignar', $e));
-        // }
+        try {
+            $casoController = new CasoController();
+            $estadoFormId = $request->input('estadoFormId');
+            $casoId = $request->input('casoId');
+            $tableroActualId = $request->input('tableroActualId');
+            $facturaId = $request->input('facturaId');
+            $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
+            $data = $casoController->getCaso($casoModificado->id);
+            broadcast(new ReasignarCasoEvent($data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al reasignar', $e));
+        }
     }
 
+    public function validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId)
+    {
+        $emailController = new EmailController();
+        $casoEnProceso = Caso::find($casoId);
+        $formula = EstadosFormulas::find($estadoFormId);
+        if (!$casoEnProceso) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
+        }
+        if (!$formula) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La formula no existe.'));
+        }
+        //--- datos anteriores
+        $userAnteriorId = $casoEnProceso->user_id;
+        $faseAnteriorId = $casoEnProceso->fas_id;
+        //--- validaciones
+        $casoEnProceso->user_anterior_id = $casoEnProceso->user_id;
+        $casoEnProceso->fase_anterior_id = $casoEnProceso->fas_id;
+        $casoEnProceso->fase_anterior_id_reasigna = $casoEnProceso->fas_id;
+        $casoEnProceso->fas_id = $formula->fase_id;
+        $casoEnProceso->estado_2 = $formula->est_id_proximo;
+        $casoEnProceso->bloqueado = false;
+        $casoEnProceso->bloqueado_user = '';
 
+        //0.-  si el caso esta en la bandeja de entrada con el usuario general
+        if ($formula->tablero_id == $tableroActualId) {
+            $casoBandejaEntrada = DB::selectOne("SELECT fa.nombre, fa.orden, u.name from crm.caso ca
+            inner join crm.users u on u.id = ca.user_id
+            inner join crm.fase fa on fa.id = ca.fas_id
+            where u.usu_tipo = 1 and fa.fase_tipo = 1 and ca.id = $casoId");
+            if ($casoBandejaEntrada) {
+                $user_id = Auth::id();
+                if ($user_id) {
+                    $casoEnProceso->user_id = $user_id;
+                    $casoEnProceso->save();
+                    $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+                    $this->calcularTiemposCaso($casoEnProceso);
+                    return $casoEnProceso;
+                }
+            }
+        }
+        //1.- si el nuevo tablero es el tablero de usuario creador
+        if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
+            $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
+            $casoEnProceso->save();
+            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $this->calcularTiemposCaso($casoEnProceso);
+            return $casoEnProceso;
+        }
+        //2.- Asignar al usuario anterior
+        $controlTiemposCaso = DB::selectOne("SELECT
+            ctc.caso_id,
+            ctc.user_id,
+            U.usu_tipo,
+            ctc.tab_id,
+            ctc.fase_id
+            FROM crm.control_tiempos_caso ctc
+            inner join crm.users u on u.id = ctc.user_id
+            WHERE ctc.caso_id = ? and u.usu_tipo <> 1 and ctc.tab_id = ? order by ctc.created_at desc limit 1", [$casoId, $formula->tablero_id]);
+        if ($controlTiemposCaso) {
+            $casoEnProceso->user_id = $controlTiemposCaso->user_id;
+            $casoEnProceso->save();
+            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $this->calcularTiemposCaso($casoEnProceso);
+            return $casoEnProceso;
+        }
+        //3.- asignar al usuario general
+        $userGeneralNuevoTablero = DB::selectOne('SELECT u.* from crm.tablero_user tu
+        inner join crm.users u on u.id = tu.user_id
+        where u.usu_tipo = 1 and tu.tab_id = ? limit 1', [$formula->tablero_id]);
+        $casoEnProceso->user_id = $userGeneralNuevoTablero->id;
+        $casoEnProceso->save();
+        $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+        $this->calcularTiemposCaso($casoEnProceso);
+        return $casoEnProceso;
+    }
 
+    public function calcularTiemposCaso($caso)
+    {
+        $CasoController = new CasoController();
+        $tipo = 2;
+        $CasoController->calcularTiemposCaso(
+            $caso,
+            $caso->id,
+            $caso->estado_2,
+            $caso->fas_id,
+            $tipo,
+            $caso->user_id
+        );
+    }
 
-    private function validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId, $facturaId, Request $request)
+    private function validacionReasignacionUsuario3($estadoFormId, $casoId, $tableroActualId, $facturaId, Request $request)
     {
         $emailController = new EmailController();
         $formula = EstadosFormulas::find($estadoFormId);
@@ -59,13 +147,7 @@ class RobotCasoController extends Controller
         if (!$casoEnProceso) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
         }
-
-        //--- TABLERO ACTUAL DEL CASO
-        $tableroActual = DB::selectOne("SELECT t.* from crm.fase f
-        inner join crm.tablero t on t.id = f.tab_id where f.id = ?", [$casoEnProceso->fas_id]);
-        $faseAnteriorId = $casoEnProceso->fase_anterior_id;
-        $userAnteriorId = $casoEnProceso->user_anterior_id;
-        //---actualizacion de nueva fase y nuevo estado
+        //--- validaciones
         $casoEnProceso->user_anterior_id = $casoEnProceso->user_id;
         $casoEnProceso->fase_anterior_id = $casoEnProceso->fas_id;
         $casoEnProceso->fase_anterior_id_reasigna = $casoEnProceso->fas_id;
@@ -73,102 +155,40 @@ class RobotCasoController extends Controller
         $casoEnProceso->estado_2 = $formula->est_id_proximo;
         $casoEnProceso->bloqueado = false;
         $casoEnProceso->bloqueado_user = '';
-
-        $caso = Caso::find($casoId);
-        $casoAudit = Caso::with(
-            'user',
-            'userCreador',
-            'clienteCrm',
-            'fase.tablero',
-            'estadodos'
-        )->find($casoId); // Solo para el audits NADA MAS
-
-        $audit = new Audits();
-        // Obtener el old_values (valor antiguo)
-        $valorAntiguo = $casoAudit;
-        $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
-        // START Bloque de código que genera un registro de auditoría manualmente
-        $audit->user_id = Auth::id();
-        $audit->event = 'updated';
-        $audit->auditable_type = Caso::class;
-        $audit->auditable_id = $caso->id;
-        $audit->user_type = User::class;
-        $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-        $audit->url = $request->fullUrl();
-        $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-        $audit->estado_caso = $casoEnProceso->estadodos->nombre;
-        $audit->estado_caso_id = $casoEnProceso->estado_2;
-        $audit->accion = 'cambioEstado';
-        // Establecer old_values y new_values
-        $audit->new_values = json_encode($casoEnProceso); // json_encode para convertir en string ese array
-        $audit->save();
-        // END Auditoria
-        /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
-        $casoController = new CasoController();
-        $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
-        // start diferencia de tiempos en horas minutos y segundos
-        $CasoController = new CasoController();
-        $tipo = 2;
-        $CasoController->calcularTiemposCaso(
-            $casoEnProceso,
-            $casoEnProceso->id,
-            $casoEnProceso->estado_2,
-            $casoEnProceso->fas_id,
-            $tipo,
-            $casoEnProceso->user_id
-        );
-        // end diferencia de tiempos en horas minutos y segundos
-
-
-        /*---------******** ANALISIS DE USUARIOS ********------------- */
-        if ($faseAnteriorId === $formula->fase_id) {
-            $casoEnProceso->user_id = $userAnteriorId;
+        //1.- si se mueve en mismo tablero
+        if ($formula->tablero_id == $tableroActualId) {
             $casoEnProceso->save();
             return $casoEnProceso;
         }
-        //---Si el nuevo tablero es el tablero de creacio reasigna al creador
+        //2.- si el nuevo tablero es el tablero de usuario creador
         if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
-            //---pregunta si el usuario sigue en el tablero
-            $userTab = $this->getUsuarioTablero($casoEnProceso->user_creador_id, $casoEnProceso->tablero_creacion_id);
-            if ($userTab) {
-                $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
-                $casoEnProceso->save();
-                $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
-                $this->addMiembro($casoEnProceso->user_id, $casoId);
-                return $casoEnProceso;
-            }
+            $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
+            $casoEnProceso->save();
+            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $this->addMiembro($casoEnProceso->user_id, $casoId);
+            return $casoEnProceso;
         }
-        //----------------------------------------------------------------
-
-        //EL TABLERO ES EL USUARIO ANTERIOR
+        //3.- si el nuveo tablero es del usuario anterior
         $usuarioAnterior = DB::selectOne("SELECT us.* FROM crm.tablero_user tu
          inner join crm.users us on us.id = tu.user_id
          where us.id = ? and tu.tab_id = ?", [$casoEnProceso->user_anterior_id, $formula->tablero_id]);
         if ($usuarioAnterior) {
             $casoEnProceso->user_id = $usuarioAnterior->id;
             $casoEnProceso->save();
+            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
             return $casoEnProceso;
         }
-        if ($tableroActual->id == $formula->tablero_id){
-            $casoEnProceso->save();
-            return $casoEnProceso;
-        }
+        //4.- si es un tablero completamente nuevo
         $userGeneralNuevoTablero = DB::selectOne('SELECT u.* from crm.tablero_user tu
         inner join crm.users u on u.id = tu.user_id
         where u.usu_tipo = 1 and tu.tab_id = ? limit 1', [$formula->tablero_id]);
         $casoEnProceso->user_id = $userGeneralNuevoTablero->id;
         $casoEnProceso->save();
-        return $casoEnProceso;
-
-
-
-
         $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
         return $casoEnProceso;
     }
 
-
-    private function validacionReasignacionUsuario1($estadoFormId, $casoId, $tableroActualId, $facturaId, Request $request)
+    private function validacionReasignacionUsuarioUNo($estadoFormId, $casoId, $tableroActualId, $facturaId, Request $request)
     {
         $emailController = new EmailController();
         $formula = EstadosFormulas::find($estadoFormId);
@@ -302,12 +322,15 @@ class RobotCasoController extends Controller
 
     public function addMiembro($userId, $casoId)
     {
-        $userExiste = DB::selectOne("SELECT * from crm.miembros m where m.user_id = ? and m.caso_id = ?", [$userId, $casoId]);
-        if (!$userExiste) {
-            $miembro = new Miembros();
-            $miembro->user_id = $userId;
-            $miembro->caso_id = $casoId;
-            $miembro->save();
+        $userGeneral = DB::selectOne('SELECT * from crm.users WHERE id = ? and usu_tipo = 1', [$userId]);
+        if (!$userGeneral) {
+            $userExiste = DB::selectOne("SELECT * from crm.miembros m where m.user_id = ? and m.caso_id = ?", [$userId, $casoId]);
+            if (!$userExiste) {
+                $miembro = new Miembros();
+                $miembro->user_id = $userId;
+                $miembro->caso_id = $casoId;
+                $miembro->save();
+            }
         }
     }
 }
