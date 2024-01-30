@@ -66,7 +66,6 @@ class RobotCasoController extends Controller
         $casoEnProceso->estado_2 = $formula->est_id_proximo;
         $casoEnProceso->bloqueado = false;
         $casoEnProceso->bloqueado_user = '';
-
         //0.-  si el caso esta en la bandeja de entrada con el usuario general
         if ($formula->tablero_id == $tableroActualId) {
             $casoBandejaEntrada = DB::selectOne("SELECT fa.nombre, fa.orden, u.name from crm.caso ca
@@ -92,7 +91,7 @@ class RobotCasoController extends Controller
             $this->calcularTiemposCaso($casoEnProceso);
             return $casoEnProceso;
         }
-        //2.- Asignar al usuario anterior
+        //2.- Asignar al usuario anterior si es que existe en el control de tiempos
         $controlTiemposCaso = DB::selectOne("SELECT
             ctc.caso_id,
             ctc.user_id,
