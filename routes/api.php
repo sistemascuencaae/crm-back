@@ -207,11 +207,15 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 /************************  CHAT   ****************** */
 Route::group(["prefix" => "chat"], function ($router) {
-    Route::get('/list/{id}', [ChatController::class, 'list']);
-    Route::post('/sendMessage/{uniqd}/{userId}/{userDosId}', [ChatController::class, 'sendMessage']); //
-    Route::get('/listChatsRooms/{userId}', [ChatController::class, 'listChatsRooms']); //
-    Route::get('/listarMensajes/{uniqd}', [ChatController::class, 'listarMensajes']); //
-    Route::get('/usuariosChat', [ChatController::class, 'usuariosChat']); //
+    Route::get('/listConversaciones/{userId}', [ChatController::class, 'listConversaciones']);
+    Route::get('/listarMensajes/{converId}/{tipoConver}', [ChatController::class, 'listarMensajes']);
+    Route::post('/enviarMensaje/{converId}/{tipoConver}/{userRecibeMsgId}', [ChatController::class, 'enviarMensaje']);//
+    // Route::get('/list/{id}', [ChatController::class, 'list']);listConversaciones
+    // Route::post('/sendMessage/{uniqd}/{userId}/{userDosId}', [ChatController::class, 'sendMessage']); //
+    // Route::get('/listChatsRooms/{userId}', [ChatController::class, 'listChatsRooms']); //
+    // Route::get('/listarMensajes/{uniqd}', [ChatController::class, 'listarMensajes']); //
+    // Route::get('/usuariosChat', [ChatController::class, 'usuariosChat']); //
+    // Route::get('/verificarChat/{userLoginId}/{user_dos_id}', [ChatController::class, 'verificarChat']); //verificarChat
 });
 
 
