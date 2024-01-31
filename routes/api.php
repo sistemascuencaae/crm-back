@@ -619,7 +619,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listadoPreIngreso', [PreIngresoController::class, 'listado']);
     Route::get('/listadoProdPI', [PreIngresoController::class, 'productos']);
     Route::get('/listadoBodegas', [PreIngresoController::class, 'bodegas']);
-    Route::get('/listadoClientes', [PreIngresoController::class, 'clientes']);
+    Route::get('/listadoClientes/{busqueda}', [PreIngresoController::class, 'clientes']);
     Route::post('/grabaPreIngreso', [PreIngresoController::class, 'grabaPreIngreso']);
     Route::get('/byPreIngreso/{numero}', [PreIngresoController::class, 'byPreIngreso']);
     Route::get('/anulaPreIngreso/{numero}', [PreIngresoController::class, 'anulaPreIngreso']);
