@@ -5,6 +5,7 @@ namespace App\Http\Controllers\chat;
 use App\Events\SendMsgEvent;
 use App\Events\ChatEvent;
 use App\Events\EnviarMensajeEvent;
+use App\Events\RefreshChatConverEvent;
 use App\Events\RefreshChatRoomEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
@@ -28,20 +29,38 @@ class ChatController extends Controller
         ]]);
     }
 
-    public function enviarMensaje(Request $request,$converId, $tipoConver, $userRecibeMsgId)
+    public function enviarMensaje(Request $request, $converId, $tipoConver)
     {
         try {
             $user_id = Auth::id();
+            $userRecibeId = DB::selectOne("SELECT
+                CASE
+                 WHEN cc.user_uno_id = ? then cc.user_dos_id
+                 WHEN cc.user_dos_id = ? THEN cc.user_uno_id
+                 ELSE 0
+                END AS recibe
+                from crm.chat_conversaciones cc where cc.id = ?", [$user_id, $user_id, $converId]);
             $dataMensaje = $request->all();
             $data = ChatMensajes::create($dataMensaje);
+            $mensajes = $this->getMensajes($converId, $tipoConver);
             $dataConverPrinc = $this->getConversacionesUser($user_id);
-            $dataConverSecun = $this->getConversacionesUser($userRecibeMsgId);
-            broadcast(new EnviarMensajeEvent($data, $converId, $tipoConver));
-            broadcast(new RefreshChatRoomEvent($dataConverPrinc, $user_id));
-            broadcast(new RefreshChatRoomEvent($dataConverSecun, $userRecibeMsgId));
-            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+            broadcast(new RefreshChatConverEvent($dataConverPrinc, $user_id));
+            broadcast(new EnviarMensajeEvent($mensajes, $converId, $tipoConver));
+            if ($tipoConver === 'NORMAL') {
+                $dataConverSecun = $this->getConversacionesUser($userRecibeId->recibe);
+                broadcast(new RefreshChatConverEvent($dataConverSecun, $userRecibeId->recibe));
+            }
+            if ($tipoConver === 'GRUPAL') {
+                $miembros = DB::select("SELECT * FROM crm.chat_miembros_grupo WHERE chatgrupo_id = $converId");
+                foreach ($miembros as $key => $value) {
+                    $userMiembroId = $value->user_id;
+                    $dataConverSecun = $this->getConversacionesUser($userMiembroId);
+                    broadcast(new RefreshChatConverEvent($dataConverSecun, $userMiembroId));
+                }
+            }
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', []));
         } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al enviar mensaje.', $th));
         }
     }
 
@@ -69,10 +88,16 @@ class ChatController extends Controller
     {
         $mensajes[] = [];
         if ($tipoConver == 'NORMAL') {
-            $mensajes = ChatConversaciones::with('mensajesNormal.user')->find($converId);
+            $mensajes = ChatConversaciones::with(['mensajesNormal.user' => function ($query) {
+                $query->select(['id', 'name', 'email']);
+            }])
+                ->find($converId);
         }
         if ($tipoConver == 'GRUPAL') {
-            $mensajes = ChatGrupos::with('mensajesGrupal.user')->find($converId);
+            $mensajes = ChatGrupos::with(['mensajesGrupal.user' => function ($query) {
+                $query->select(['id', 'name', 'email']);
+            }])
+                ->find($converId);
         }
         return $mensajes;
     }

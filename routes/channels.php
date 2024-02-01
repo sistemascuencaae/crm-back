@@ -73,7 +73,6 @@ Broadcast::channel('conversacion.{id}.{tipo}', function ($user, $id, $tipo) {
     }
 });
 
-
 Broadcast::channel('chat.refresh.conver.{id}', function ($user, $id) {
     $usuario = User::where("id", $id)->first();
     if ($usuario) {

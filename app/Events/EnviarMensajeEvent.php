@@ -33,10 +33,10 @@ class EnviarMensajeEvent implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        $chatController = new ChatController();
-        $data = $chatController->getMensajes($this->converId, $this->tipoConver);
+        // $chatController = new ChatController();
+        // $data = $chatController->getMensajes($this->converId, $this->tipoConver);
         return [
-            'data' => $data
+            'data' => $this->data
         ];
     }
 
@@ -47,6 +47,6 @@ class EnviarMensajeEvent implements ShouldBroadcastNow
      */
     public function broadcastOn()
     {
-        return new PrivateChannel('conversacion.' . $this->converId. $this->tipoConver);
+        return new PrivateChannel('conversacion.' . $this->converId.'.'. $this->tipoConver);
     }
 }
