@@ -16,6 +16,8 @@ use App\Models\chat\ChatGrupos;
 use App\Models\chat\ChatMensajes;
 use App\Models\chat\ChatRoom;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -41,11 +43,11 @@ class ChatController extends Controller
                 END AS recibe
                 from crm.chat_conversaciones cc where cc.id = ?", [$user_id, $user_id, $converId]);
             $dataMensaje = $request->all();
-            $data = ChatMensajes::create($dataMensaje);
-            $mensajes = $this->getMensajes($converId, $tipoConver);
+            $mensajeGuardado = ChatMensajes::create($dataMensaje);
+            $dataMensajeCreado = ChatMensajes::with('user')->find($mensajeGuardado->id);
             $dataConverPrinc = $this->getConversacionesUser($user_id);
             broadcast(new RefreshChatConverEvent($dataConverPrinc, $user_id));
-            broadcast(new EnviarMensajeEvent($mensajes, $converId, $tipoConver));
+            broadcast(new EnviarMensajeEvent($dataMensajeCreado, $converId, $tipoConver));
             if ($tipoConver === 'NORMAL') {
                 $dataConverSecun = $this->getConversacionesUser($userRecibeId->recibe);
                 broadcast(new RefreshChatConverEvent($dataConverSecun, $userRecibeId->recibe));
@@ -64,10 +66,10 @@ class ChatController extends Controller
         }
     }
 
-    public function listarMensajes($converId, $tipoConver)
+    public function listarMensajes($converId, $tipoConver, $perPage)
     {
         try {
-            $data = $this->getMensajes($converId, $tipoConver);
+            $data = $this->getMensajes($converId, $tipoConver, $perPage);
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
@@ -84,22 +86,31 @@ class ChatController extends Controller
         }
     }
 
-    public function getMensajes($converId, $tipoConver)
+    public function getMensajes($converId, $tipoConver, $perPage)
     {
+        $limit = 10 * $perPage;
+
         $mensajes[] = [];
         if ($tipoConver == 'NORMAL') {
-            $mensajes = ChatConversaciones::with(['mensajesNormal.user' => function ($query) {
+            $listaMensajes = ChatConversaciones::with(['mensajesNormal.user' => function ($query) {
                 $query->select(['id', 'name', 'email']);
-            }])
-                ->find($converId);
+            }])->find($converId);
+            $data = json_decode($listaMensajes, true);
+            $mensajes = collect($data['mensajes_normal'])->sortByDesc('created_at')->values()->all();
         }
         if ($tipoConver == 'GRUPAL') {
-            $mensajes = ChatGrupos::with(['mensajesGrupal.user' => function ($query) {
+            $listaMensajes = ChatGrupos::with(['mensajesGrupal.user' => function ($query) {
                 $query->select(['id', 'name', 'email']);
-            }])
-                ->find($converId);
+            }])->find($converId);
+            $data = json_decode($listaMensajes, true);
+            $mensajes = collect($data['mensajes_grupal'])->sortByDesc('created_at')->values()->all();
         }
-        return $mensajes;
+        // Aplicar paginación
+        $currentPage = Paginator::resolveCurrentPage('page');
+        $pagedData = array_slice($mensajes, ($currentPage - 1) * $perPage, $perPage);
+        $mensajesPaginados = new LengthAwarePaginator($pagedData, count($mensajes), $perPage);
+
+        return $mensajesPaginados;
     }
 
     public function getConversacionesUser($userId)
