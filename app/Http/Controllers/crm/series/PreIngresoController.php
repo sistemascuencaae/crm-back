@@ -200,7 +200,8 @@ class PreIngresoController extends Controller
                 DB::table('gex.dpreingreso')->where('numero',$numero)->delete();
 
                 foreach ($data as $d) {
-                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                    DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
+                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
                 }
 
                 foreach ($detalle as $d) {
