@@ -15,6 +15,7 @@ use App\Models\chat\ChatGroup;
 use App\Models\chat\ChatGrupos;
 use App\Models\chat\ChatMensajes;
 use App\Models\chat\ChatRoom;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -29,6 +30,15 @@ class ChatController extends Controller
         $this->middleware('auth:api', ['except' => [
             'listConversaciones', 'listarMensajes'
         ]]);
+    }
+
+    public function usuariosParaChat(){
+        try {
+            $data = User::where('estado', true)->where('usu_tipo','<>', 1)->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
     }
 
     public function enviarMensaje(Request $request, $converId, $tipoConver)
