@@ -39,8 +39,8 @@ return [
             'driver' => 'ftp',
             // 'host' => '192.168.1.248', // La dirección IP o nombre de dominio de tu servidor FTP
             'host' => '191.100.27.176', // La dirección IP o nombre de dominio de tu servidor FTP
-            'username' => 'jsimbana', // Tu nombre de usuario FTP
-            'password' => '5k5KqtDC', // Tu contraseña FTP
+            'username' => 'lagila', // Tu nombre de usuario FTP
+            'password' => 'GnanHk0e', // Tu contraseña FTP
             'root' => '/crm', // Ruta raíz en el servidor FTP
             'port' => 2159, // Puerto FTP (normalmente 21)
             'passive' => true, // Modo pasivo (opcional)

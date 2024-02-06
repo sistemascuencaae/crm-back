@@ -13,6 +13,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class GaleriaController extends Controller
 {
@@ -24,12 +25,22 @@ class GaleriaController extends Controller
     public function addGaleria(Request $request, $caso_id)
     {
         $log = new Funciones();
+
         try {
             if ($request->hasFile("imagen_file")) {
                 $imagen = $request->file("imagen_file");
                 $titulo = $imagen->getClientOriginalName();
 
-                $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $titulo);
+                // Fecha actual
+                $fechaActual = Carbon::now();
+
+                // Formatear la fecha en formato deseado
+                // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+
+                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
 
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
             }
@@ -158,7 +169,7 @@ class GaleriaController extends Controller
 
             // si la imagen es de un requerimiento actualizar el requerimiento
             $reqCaso = RequerimientoCaso::where('galerias_id', $galeria->id)->first();
-            if($reqCaso){
+            if ($reqCaso) {
                 $reqCaso->descripcion = $galeria->descripcion;
                 $reqCaso->valor_varchar = $galeria->imagen;
                 $reqCaso->save();
