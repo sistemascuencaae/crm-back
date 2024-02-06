@@ -75,6 +75,7 @@ use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\ParametrosController;
+use App\Http\Controllers\WebSocketController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -92,7 +93,9 @@ use Illuminate\Support\Facades\Route;
 //     return $request->user();
 // });
 
+
 Route::group(['middleware' => 'api'], function ($router) {
+    Route::get('/websocket/active-channels-count', [WebSocketController::class, 'getActiveChannelsCount']);
 
     Route::post('/register', [JWTController::class, 'register']);
     Route::post('/login', [JWTController::class, 'login']);
@@ -207,11 +210,16 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 /************************  CHAT   ****************** */
 Route::group(["prefix" => "chat"], function ($router) {
-    Route::get('/list/{id}', [ChatController::class, 'list']);
-    Route::post('/sendMessage/{uniqd}/{userId}/{userDosId}', [ChatController::class, 'sendMessage']); //
-    Route::get('/listChatsRooms/{userId}', [ChatController::class, 'listChatsRooms']); //
-    Route::get('/listarMensajes/{uniqd}', [ChatController::class, 'listarMensajes']); //
-    Route::get('/usuariosChat', [ChatController::class, 'usuariosChat']); //
+    Route::get('/listConversaciones/{userId}', [ChatController::class, 'listConversaciones']);
+    Route::get('/listarMensajes/{converId}/{tipoConver}/{numeroPagina}', [ChatController::class, 'listarMensajes']);
+    Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']); //
+    Route::get('/usuariosParaChat', [ChatController::class, 'usuariosParaChat']);//
+    // Route::get('/list/{id}', [ChatController::class, 'list']);listConversaciones
+    // Route::post('/sendMessage/{uniqd}/{userId}/{userDosId}', [ChatController::class, 'sendMessage']); //
+    // Route::get('/listChatsRooms/{userId}', [ChatController::class, 'listChatsRooms']); //
+    // Route::get('/listarMensajes/{uniqd}', [ChatController::class, 'listarMensajes']); //
+    // Route::get('/usuariosChat', [ChatController::class, 'usuariosChat']); //
+    // Route::get('/verificarChat/{userLoginId}/{user_dos_id}', [ChatController::class, 'verificarChat']); //verificarChat
 });
 
 
