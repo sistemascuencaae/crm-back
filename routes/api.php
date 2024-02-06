@@ -162,6 +162,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
     Route::put('/actualizarCaso/{casoId}', [CasoController::class, 'actualizarCaso']); //
+    Route::put('/asignarmeCaso/{casoId}/{userId}', [CasoController::class, 'asignarmeCaso']); //
     //---------------------------------------------------------------->PRUEBAS
     Route::get('/actualizarReqCaso/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
     /************************  FORMULARIOS   *********************** */
@@ -207,7 +208,10 @@ Route::group(["prefix" => "crm"], function ($router) {
 /************************  CHAT   ****************** */
 Route::group(["prefix" => "chat"], function ($router) {
     Route::get('/list/{id}', [ChatController::class, 'list']);
-    Route::post('/sendMessage/{uniqd}', [ChatController::class, 'sendMessage']);
+    Route::post('/sendMessage/{uniqd}/{userId}/{userDosId}', [ChatController::class, 'sendMessage']); //
+    Route::get('/listChatsRooms/{userId}', [ChatController::class, 'listChatsRooms']); //
+    Route::get('/listarMensajes/{uniqd}', [ChatController::class, 'listarMensajes']); //
+    Route::get('/usuariosChat', [ChatController::class, 'usuariosChat']); //
 });
 
 
@@ -615,7 +619,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listadoPreIngreso', [PreIngresoController::class, 'listado']);
     Route::get('/listadoProdPI', [PreIngresoController::class, 'productos']);
     Route::get('/listadoBodegas', [PreIngresoController::class, 'bodegas']);
-    Route::get('/listadoClientes', [PreIngresoController::class, 'clientes']);
+    Route::get('/listadoClientes/{busqueda}', [PreIngresoController::class, 'clientes']);
     Route::post('/grabaPreIngreso', [PreIngresoController::class, 'grabaPreIngreso']);
     Route::get('/byPreIngreso/{numero}', [PreIngresoController::class, 'byPreIngreso']);
     Route::get('/anulaPreIngreso/{numero}', [PreIngresoController::class, 'anulaPreIngreso']);

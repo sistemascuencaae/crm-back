@@ -9,7 +9,7 @@ class Chat extends Model
 {
     use HasFactory;
     protected $table = 'crm.chats';
-    protected $fillable = ['chat_room_id', 'chat_group_id', 'message', 'galeria_id', 'archivo_id', 'read_at'];
+    protected $fillable = ['chat_room_id', 'chat_group_id', 'message', 'galeria_id', 'archivo_id', 'read_at','user_id'];
 
     public function chatRoom()
     {

@@ -6,6 +6,7 @@ use App\Events\NotificacionesCrmEvent;
 use App\Events\ReasignarCasoEvent;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
@@ -1255,6 +1256,14 @@ class CasoController extends Controller
 
                 $ultimoRegistro = ControlTiemposCaso::where('caso_id', $caso_id)->latest()->first();
 
+
+                //echo ('$ultimoRegistro: '.json_encode($ultimoRegistro));
+
+                // if($ultimoRegistro == null){
+                //     return;
+                // }
+
+
                 // Convierte las fechas a objetos Carbon para manejar la zona horaria
                 $created_at_actual = Carbon::parse($ultimoRegistro->created_at);
                 $horaSistema = Carbon::parse(date('H:i:s'));
@@ -1329,7 +1338,7 @@ class CasoController extends Controller
             $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
               left join crm.tablero_user tu on tu.user_id = us.id
               where emp_id = ? and tu.tab_id = ?", [$opm->emp_id, $configuracion->tab_id]);
-            
+
             // Fecha actual
             $fechaActual = Carbon::now();
 
@@ -1462,4 +1471,27 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    public function asignarmeCaso($casoId, $userId){
+        try {
+            $dataCaso = Caso::find($casoId);
+            if($dataCaso){
+                $robot = new RobotCasoController();
+                $robot->addMiembro($userId, $casoId);
+                $dataCaso->user_id = $userId;
+                $dataCaso->save();
+                $caso = $this->getCaso($casoId);
+                broadcast(new TableroEvent($caso));
+                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $caso));
+            }
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+
+    }
+
+
+
+
 }
