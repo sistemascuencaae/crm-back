@@ -1,11 +1,9 @@
 <?php
 
-use App\Models\chat\ChatGroup;
-use App\Models\chat\ChatRoom;
+use App\Models\chat\ChatConversaciones;
+use App\Models\chat\ChatGrupos;
 use App\Models\crm\Caso;
-use App\Models\crm\Fase;
 use App\Models\crm\Tablero;
-use App\Models\crm\Tarea;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
@@ -55,19 +53,28 @@ Broadcast::channel('tablero.{id}', function ($user, $id) {
     }
 });
 
-Broadcast::channel('chat.{id}', function ($user, $id) {
+Broadcast::channel('conversacion.{id}.{tipo}', function ($user, $id, $tipo) {
     $usuario = User::where("id", $user->id)->first();
-    $chatGroup = ChatRoom::where("uniqd", $id)->first();
-    if ($chatGroup && $usuario) {
-        return true;
-    } else {
-        return false;
+    if ($tipo === 'NORMAL') {
+        $conversacionNormales = ChatConversaciones::find($id);
+        if ($conversacionNormales && $usuario) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    if ($tipo === 'GRUPAL') {
+        $conversacionGrupales = ChatGrupos::find($id);
+        if ($conversacionGrupales && $usuario) {
+            return true;
+        } else {
+            return false;
+        }
     }
 });
 
-
-Broadcast::channel('chat.refresh.{id}', function ($user, $id) {
-    $usuario = User::where("id", $user->id)->first();
+Broadcast::channel('chat.refresh.conver.{id}', function ($user, $id) {
+    $usuario = User::where("id", $id)->first();
     if ($usuario) {
         return true;
     } else {
