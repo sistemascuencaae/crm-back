@@ -6,23 +6,24 @@ use App\Events\ReasignarCasoEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Controllers\crm\EmailController;
-use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
-use App\Models\crm\ControlTiemposCaso;
 use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Miembros;
-use App\Models\crm\RequerimientoCaso;
-use App\Models\crm\Tablero;
 use App\Models\User;
-use Carbon\Carbon;
 use Exception;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Request as RequestFacade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Collection;
+use App\Models\crm\ControlTiemposCaso;
+use App\Http\Resources\crm\Funciones;
+use App\Models\crm\RequerimientoCaso;
 use PhpParser\Node\Expr\FuncCall;
+use App\Models\crm\Tablero;
+use Carbon\Carbon;
 
 class RobotCasoController extends Controller
 {
@@ -66,6 +67,40 @@ class RobotCasoController extends Controller
         $casoEnProceso->estado_2 = $formula->est_id_proximo;
         $casoEnProceso->bloqueado = false;
         $casoEnProceso->bloqueado_user = '';
+
+        // AUDITORIA
+        $request = RequestFacade::instance();
+
+        // $caso = Caso::find($casoId);
+        $casoAudit = Caso::with(
+            'user',
+            'userCreador',
+            'clienteCrm',
+            'fase.tablero',
+            'estadodos'
+        )->find($casoId); // Solo para el audits NADA MAS
+
+        $audit = new Audits();
+        // Obtener el old_values (valor antiguo)
+        $valorAntiguo = $casoAudit;
+        $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
+        // START Bloque de código que genera un registro de auditoría manualmente
+        $audit->user_id = Auth::id();
+        $audit->event = 'updated';
+        $audit->auditable_type = Caso::class;
+        $audit->auditable_id = $casoAudit->id;
+        $audit->user_type = User::class;
+        $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+        $audit->url = $request->fullUrl();
+        $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+        $audit->estado_caso = $casoEnProceso->estadodos->nombre;
+        $audit->estado_caso_id = $casoEnProceso->estado_2;
+        $audit->accion = 'cambioEstado';
+        // Establecer old_values y new_values
+        $audit->new_values = json_encode($casoEnProceso); // json_encode para convertir en string ese array
+        $audit->save();
+        // END Auditoria
+
         //0.-  si el caso esta en la bandeja de entrada con el usuario general
         if ($formula->tablero_id == $tableroActualId) {
             $casoBandejaEntrada = DB::selectOne("SELECT fa.nombre, fa.orden, u.name from crm.caso ca

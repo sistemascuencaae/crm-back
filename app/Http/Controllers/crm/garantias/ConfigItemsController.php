@@ -147,11 +147,15 @@ class ConfigItemsController extends Controller
         $porc_gex = $request->input('porc_gex');
         $meses_garantia = $request->input('meses_garantia');
         $km_factor = $request->input('km_factor');
+        $modifica = $request->input('modifica');
+        $data = null;
 
-        if ($tipo_servicio == 'G' || $tipo_servicio == 'N') {
-            $data = ConfigItems::get()->where('pro_id', $pro_id)->where('tipo_servicio', $tipo_servicio)->where('porc_gex', $porc_gex)->where('meses_garantia', $meses_garantia)->where('km_factor', $km_factor)->first();
-        } else {
-            $data = ConfigItems::get()->where('pro_id', $pro_id)->first();
+        if ($modifica == 'N'){
+            if ($tipo_servicio == 'G' || $tipo_servicio == 'N') {
+                $data = ConfigItems::get()->where('pro_id', $pro_id)->where('tipo_servicio', $tipo_servicio)->where('porc_gex', $porc_gex)->where('meses_garantia', $meses_garantia)->where('km_factor', $km_factor)->first();
+            } else {
+                $data = ConfigItems::get()->where('pro_id', $pro_id)->first();
+            }
         }
         
         if ($data){
