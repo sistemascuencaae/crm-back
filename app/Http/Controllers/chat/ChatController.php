@@ -15,12 +15,17 @@ use App\Models\chat\ChatGroup;
 use App\Models\chat\ChatGrupos;
 use App\Models\chat\ChatMensajes;
 use App\Models\chat\ChatRoom;
+use App\Models\crm\Archivo;
+use App\Models\crm\Galeria;
 use App\Models\User;
+use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ChatController extends Controller
@@ -235,4 +240,66 @@ class ChatController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
         }
     }
+
+    public function addGaleriaArchivosChat(Request $request)
+    {
+        try {
+            DB::transaction(function () use ($request) {
+
+                $archivos = $request->file("archivos");
+                // $archivosGuardados = [];
+
+                foreach ($archivos as $archivoData) {
+
+                    // Fecha actual
+                    $fechaActual = Carbon::now();
+
+                    // Formatear la fecha en formato deseado
+                    // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+
+                    // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                    $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                    $nombreUnico = $fecha_actual . '-' . $archivoData->getClientOriginalName();
+                    $extension = $archivoData->getClientOriginalExtension();
+
+
+                    if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif'])) {
+                        $path = Storage::disk('nas')->putFileAs('nombre-chat' . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
+
+                        $nuevaImagen = Galeria::create([
+                            "titulo" => 'Imagen Chat - ' . 'nuemro o llave chat', // poner el numero de chat o algo
+                            "descripcion" => 'Imagen Chat - ' . 'nuemro o llave chat', // poner el numero de chat o algo
+                            "imagen" => $path,
+                            // "caso_id" => $caso_id,
+                            // "tipo_gal_id" => 7, // 7 porque es tipo galeria 'Formulario de Soporte'
+                            // "sc_id" => 0,
+                        ]);
+
+                        // $archivosGuardados[] = $nuevaImagen;
+                    } else {
+                        $path = Storage::disk('nas')->putFileAs('nombre-chat' . "/archivos", $archivoData, $nombreUnico); // crear una carpeta para chat
+                        $nuevoArchivo = Archivo::create([
+                            "titulo" => $nombreUnico,
+                            "observacion" => 'Archivo Chat - ' . 'nuemro o llave chat', // poner el numero de chat o algo
+                            "archivo" => $path,
+                            // "caso_id" => $caso_id,
+                            "tipo" => 'Chat'
+                        ]);
+
+                        // $archivosGuardados[] = $nuevoArchivo;
+                    }
+
+                }
+
+            });
+
+            // return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivosGuardados));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', ''));
+
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
