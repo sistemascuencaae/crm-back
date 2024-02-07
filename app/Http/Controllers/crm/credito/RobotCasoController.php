@@ -100,7 +100,9 @@ class RobotCasoController extends Controller
         $audit->new_values = json_encode($casoEnProceso); // json_encode para convertir en string ese array
         $audit->save();
         // END Auditoria
-
+        /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
+        $casoController = new CasoController();
+        $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
         //0.-  si el caso esta en la bandeja de entrada con el usuario general
         if ($formula->tablero_id == $tableroActualId) {
             $casoBandejaEntrada = DB::selectOne("SELECT fa.nombre, fa.orden, u.name from crm.caso ca

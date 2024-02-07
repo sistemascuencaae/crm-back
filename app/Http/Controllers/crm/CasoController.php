@@ -66,81 +66,81 @@ class CasoController extends Controller
         }
 
         //try {
-            $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
+        $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
 
-                $userLoginId = 1; //auth('api')->user()->id;
-                $caso = new Caso($casoInput);
-                //$caso->estado_2 = 1;
-                $caso->save();
-                //buscar las tareas predefinidas
-                //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
-                $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
+            $userLoginId = 1; //auth('api')->user()->id;
+            $caso = new Caso($casoInput);
+            //$caso->estado_2 = 1;
+            $caso->save();
+            //buscar las tareas predefinidas
+            //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
+            $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
                 inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
                 inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
                 where tc.id = ?', [$caso->tc_id]);
-                //insertar en la tabla tareas
-                foreach ($arrayDtipoTareas as $dtt) {
-                    $tarea = new Tareas();
-                    $tarea->nombre = $dtt->nombre;
-                    $tarea->requerido = $dtt->requerido;
-                    $tarea->estado = $dtt->estado;
-                    $tarea->ctt_id = $caso->ctt_id;
-                    $tarea->tab_id = $dtt->tab_id;
-                    $tarea->marcado = false;
-                    $caso->tareas()->save($tarea);
-                }
-                // $newGrupo = new ChatGroups();
-                // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
-                // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
-                //$newGrupo->save();
-                $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
-                //--------------------
-                $caso->estado_2 = $estadoInicial->id;
-                $caso->nombre = 'CASO # ' . $caso->id;
-                //$caso->user_creador_id = $userLoginId;
-                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
-                $caso->save();
-                for ($i = 0; $i < sizeof($miembros); $i++) {
-                    $miembro = new Miembros();
-                    $miembro->user_id = $miembros[$i];
-                    //$miembro->chat_group_id = $newGrupo->id;
-                    $caso->miembros()->save($miembro);
-                }
-                $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
+            //insertar en la tabla tareas
+            foreach ($arrayDtipoTareas as $dtt) {
+                $tarea = new Tareas();
+                $tarea->nombre = $dtt->nombre;
+                $tarea->requerido = $dtt->requerido;
+                $tarea->estado = $dtt->estado;
+                $tarea->ctt_id = $caso->ctt_id;
+                $tarea->tab_id = $dtt->tab_id;
+                $tarea->marcado = false;
+                $caso->tareas()->save($tarea);
+            }
+            // $newGrupo = new ChatGroups();
+            // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
+            // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
+            //$newGrupo->save();
+            $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
+            //--------------------
+            $caso->estado_2 = $estadoInicial->id;
+            $caso->nombre = 'CASO # ' . $caso->id;
+            //$caso->user_creador_id = $userLoginId;
+            $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+            $caso->save();
+            for ($i = 0; $i < sizeof($miembros); $i++) {
+                $miembro = new Miembros();
+                $miembro->user_id = $miembros[$i];
+                //$miembro->chat_group_id = $newGrupo->id;
+                $caso->miembros()->save($miembro);
+            }
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
 
-                $soporteController = new SoporteController();
-                $soporteController->addGaleriaArchivos($request, $caso->id);
+            $soporteController = new SoporteController();
+            $soporteController->addGaleriaArchivos($request, $caso->id);
 
-                return $this->getCaso($caso->id);
-            });
-            broadcast(new TableroEvent($casoCreado));
+            return $this->getCaso($caso->id);
+        });
+        broadcast(new TableroEvent($casoCreado));
 
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit = new Audits();
-            $audit->user_id = Auth::id();
-            $audit->event = 'created';
-            $audit->auditable_type = Caso::class;
-            $audit->auditable_id = $casoCreado->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
-            $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->estado_caso = $casoCreado->estadodos->nombre;
-            $audit->estado_caso_id = $casoCreado->estado_2;
-            $audit->accion = 'addCaso';
-            $audit->save();
-            // END Auditoria
+        // START Bloque de código que genera un registro de auditoría manualmente
+        $audit = new Audits();
+        $audit->user_id = Auth::id();
+        $audit->event = 'created';
+        $audit->auditable_type = Caso::class;
+        $audit->auditable_id = $casoCreado->id;
+        $audit->user_type = User::class;
+        $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+        $audit->url = $request->fullUrl();
+        // Establecer old_values y new_values
+        $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
+        $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
+        $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+        $audit->estado_caso = $casoCreado->estadodos->nombre;
+        $audit->estado_caso_id = $casoCreado->estado_2;
+        $audit->accion = 'addCaso';
+        $audit->save();
+        // END Auditoria
 
-            // le mando uno porque es la primera vez q se crea el caso
-            $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
-            $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
+        // le mando uno porque es la primera vez q se crea el caso
+        $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+        $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
 
-            $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
+        $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
+        return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
         // } catch (\Throwable $e) {
         //     $log->logError(CasoController::class, 'Error al guardar el caso', $e);
 
@@ -1304,7 +1304,7 @@ class CasoController extends Controller
 
         try {
 
-        $opm = DB::selectOne("SELECT
+            $opm = DB::selectOne("SELECT
               cli.cli_id,
               ent.ent_id,
               (cti.cti_sigla || '-'|| alm.alm_codigo || '-' || pve.pve_numero ||'-' || cpp.cpp_numero) as comprobante,
@@ -1317,93 +1317,92 @@ class CasoController extends Controller
               inner join public.almacen alm on alm.alm_id = pve.alm_id
               where cpp.cpp_id = ? ", [$cppId]);
 
-        if (!$opm) {
-            return null;
-        }
-        //--- Configuracion del destino del caso
-        $configuracion = DB::selectOne("SELECT tcf.* from crm.tipo_caso tc
+            if (!$opm) {
+                return null;
+            }
+            //--- Configuracion del destino del caso
+            $configuracion = DB::selectOne("SELECT tcf.* from crm.tipo_caso tc
         inner join crm.tipo_caso_formulas tcf on tcf.tc_id = tc.id
         where tc.nombre = 'SOLICITUD DE CREDITO APP MOVIL' and tc.estado = true limit 1;");
 
-        if ($configuracion && $opm) {
-            //--- Add miembros administradores del tablero
-            $miembrosAdminTablero = DB::select('SELECT u.id from crm.tablero_user tu
+            if ($configuracion && $opm) {
+                //--- Add miembros administradores del tablero
+                $miembrosAdminTablero = DB::select('SELECT u.id from crm.tablero_user tu
             inner join crm.users u on u.id = tu.user_id
             where tu.tab_id = ? and u.usu_tipo in (2,3);', [$configuracion->tab_id]);
-            $miembros = [];
-            foreach ($miembrosAdminTablero as $miembro) {
-                array_push($miembros, $miembro->id);
-            }
-            // usuario de acuerdo al empleado existe en el tablero
-            $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
+                $miembros = [];
+                foreach ($miembrosAdminTablero as $miembro) {
+                    array_push($miembros, $miembro->id);
+                }
+                // usuario de acuerdo al empleado existe en el tablero
+                $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
               left join crm.tablero_user tu on tu.user_id = us.id
               where emp_id = ? and tu.tab_id = ?", [$opm->emp_id, $configuracion->tab_id]);
 
-            // Fecha actual
-            $fechaActual = Carbon::now();
+                // Fecha actual
+                $fechaActual = Carbon::now();
 
-            // Separar las horas, minutos y segundos
-            list($horas, $minutos, $segundos) = explode(':', $configuracion->tiempo_vencimiento);
+                // Separar las horas, minutos y segundos
+                list($horas, $minutos, $segundos) = explode(':', $configuracion->tiempo_vencimiento);
 
-            // Sumar las horas, minutos y segundos
-            $fechaVencimiento = ($fechaActual->addHours($horas)->addMinutes($minutos)->addSeconds($segundos))->format('Y-m-d H:i:s');
+                // Sumar las horas, minutos y segundos
+                $fechaVencimiento = ($fechaActual->addHours($horas)->addMinutes($minutos)->addSeconds($segundos))->format('Y-m-d H:i:s');
 
-            $objetoJson = (object) [
-                "id" => null,
-                "fas_id" => $configuracion->fase_id,
-                "nombre" => 'Solicitud de credito aplicación movil)',
-                "descripcion" => 'Pedido:' . $opm->comprobante . ', generado desde la aplicacion',
-                "estado" => $configuracion->estado,
-                "orden" => 1,
-                "ent_id" => $opm->ent_id,
-                "user_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
-                "prioridad" => $configuracion->prioridad,
-                "fecha_vencimiento" => $fechaVencimiento,
-                "fase_anterior_id" => $configuracion->fase_id,
-                "user" => null,
-                "entidad" => null,
-                "miembros" => $miembros,
-                "comentarios" => null,
-                "resumen" => null,
-                "bloqueado" => false,
-                "bloqueado_user" => "",
-                "tar_id" => null,
-                "ctt_id" => null,
-                "tareas" => null,
-                "tc_id" => $configuracion->tc_id,
-                "tableroId" => $configuracion->tab_id,
-                "estado_2" => $configuracion->estado_2,
-                "fase_creacion_id" => $configuracion->fase_id,
-                "tablero_creacion_id" => $configuracion->tab_id,
-                "dep_creacion_id" => $configuracion->dep_id,
-                "fase_anterior_id_reasigna" => $configuracion->fase_id,
-                "user_anterior_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
-                "user_creador_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
-                "cpp_id" => $cppId,
-            ];
-            $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
-            $emailCliente = DB::selectOne('select ent_email from entidad where ent_id = ?', [$opm->ent_id]);
-            //$email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
-            if (!$emailCliente) {
-                $t = new EmailController();
-                $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
+                $objetoJson = (object) [
+                    "id" => null,
+                    "fas_id" => $configuracion->fase_id,
+                    "nombre" => 'Solicitud de credito aplicación movil)',
+                    "descripcion" => 'Pedido:' . $opm->comprobante . ', generado desde la aplicacion',
+                    "estado" => $configuracion->estado,
+                    "orden" => 1,
+                    "ent_id" => $opm->ent_id,
+                    "user_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                    "prioridad" => $configuracion->prioridad,
+                    "fecha_vencimiento" => $fechaVencimiento,
+                    "fase_anterior_id" => $configuracion->fase_id,
+                    "user" => null,
+                    "entidad" => null,
+                    "miembros" => $miembros,
+                    "comentarios" => null,
+                    "resumen" => null,
+                    "bloqueado" => false,
+                    "bloqueado_user" => "",
+                    "tar_id" => null,
+                    "ctt_id" => null,
+                    "tareas" => null,
+                    "tc_id" => $configuracion->tc_id,
+                    "tableroId" => $configuracion->tab_id,
+                    "estado_2" => $configuracion->estado_2,
+                    "fase_creacion_id" => $configuracion->fase_id,
+                    "tablero_creacion_id" => $configuracion->tab_id,
+                    "dep_creacion_id" => $configuracion->dep_id,
+                    "fase_anterior_id_reasigna" => $configuracion->fase_id,
+                    "user_anterior_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                    "user_creador_id" => $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id,
+                    "cpp_id" => $cppId,
+                ];
+                $dataEmail = CPedidoProforma::with('dpedidoProforma')->where('cpp_id', $cppId)->first();
+                $emailCliente = DB::selectOne('select ent_email from entidad where ent_id = ?', [$opm->ent_id]);
+                //$email = "sistemas.cuenca.ae@gmail.com"; // $data->email pero como aqui no se va a llamar desde este metodo cuando se llame el metodo hay que porner el email del cliente
+                if (!$emailCliente) {
+                    $t = new EmailController();
+                    $t->send_email("sistemas.cuenca.ae@gmail.com", $dataEmail);
+                } else {
+                    $t = new EmailController();
+                    $t->send_email($emailCliente->ent_email, $dataEmail);
+                }
+
+
+                $requestData = json_decode(json_encode($objetoJson), true);
+                $request = new Request($requestData);
+
+                $log->logInfo(CasoController::class, 'Se creo con exito el caso desde la App');
+
+                return $this->add($request);
             } else {
-                $t = new EmailController();
-                $t->send_email($emailCliente->ent_email, $dataEmail);
+                $log->logError(CasoController::class, 'No se creo el caso, porque falta la configuracion de destino del caso o el OPM');
+                return null;
             }
-
-
-            $requestData = json_decode(json_encode($objetoJson), true);
-            $request = new Request($requestData);
-
-            $log->logInfo(CasoController::class, 'Se creo con exito el caso desde la App');
-
-            return $this->add($request);
-        } else {
-            $log->logError(CasoController::class, 'No se creo el caso, porque falta la configuracion de destino del caso o el OPM');
-            return null;
-        }
-
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al crear caso desde la App', $e);
 
@@ -1454,9 +1453,17 @@ class CasoController extends Controller
 
             if ($caso) {
                 $caso->update($casoData);
+                $tipo = 1;
+                $this->calcularTiemposCaso(
+                    $caso,
+                    $caso->id,
+                    $caso->estado_2,
+                    $caso->fas_id,
+                    $tipo,
+                    $caso->user_id
+                );
                 $data = $this->getCaso($casoId);
                 broadcast(new TableroEvent($data));
-
                 $log->logInfo(CasoController::class, 'Se actualizo con exito el caso #' . $casoId);
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
@@ -1472,10 +1479,11 @@ class CasoController extends Controller
         }
     }
 
-    public function asignarmeCaso($casoId, $userId){
+    public function asignarmeCaso($casoId, $userId)
+    {
         try {
             $dataCaso = Caso::find($casoId);
-            if($dataCaso){
+            if ($dataCaso) {
                 $robot = new RobotCasoController();
                 $robot->addMiembro($userId, $casoId);
                 $dataCaso->user_id = $userId;
@@ -1488,10 +1496,5 @@ class CasoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
-
     }
-
-
-
-
 }

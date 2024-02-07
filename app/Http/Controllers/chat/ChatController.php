@@ -32,9 +32,10 @@ class ChatController extends Controller
         ]]);
     }
 
-    public function usuariosParaChat(){
+    public function usuariosParaChat()
+    {
         try {
-            $data = User::where('estado', true)->where('usu_tipo','<>', 1)->get();
+            $data = User::where('estado', true)->where('usu_tipo', '<>', 1)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
@@ -59,15 +60,13 @@ class ChatController extends Controller
             broadcast(new RefreshChatConverEvent($dataConverPrinc, $user_id));
             broadcast(new EnviarMensajeEvent($dataMensajeCreado, $converId, $tipoConver));
             if ($tipoConver === 'NORMAL') {
-                $dataConverSecun = $this->getConversacionesUser($userRecibeId->recibe);
-                broadcast(new RefreshChatConverEvent($dataConverSecun, $userRecibeId->recibe));
+                $this->getConversacionesUser($userRecibeId->recibe);
             }
             if ($tipoConver === 'GRUPAL') {
                 $miembros = DB::select("SELECT * FROM crm.chat_miembros_grupo WHERE chatgrupo_id = $converId");
                 foreach ($miembros as $key => $value) {
                     $userMiembroId = $value->user_id;
-                    $dataConverSecun = $this->getConversacionesUser($userMiembroId);
-                    broadcast(new RefreshChatConverEvent($dataConverSecun, $userMiembroId));
+                    $this->getConversacionesUser($userMiembroId);
                 }
             }
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', []));
@@ -179,6 +178,61 @@ class ChatController extends Controller
                 nm.created_at
             FROM NumeredMessages nm
             WHERE nm.rn = 1 AND ? = ANY(nm.participantes);", [$userId, $userId, $userId]);
+
+        broadcast(new RefreshChatConverEvent($data, $userId));
         return $data;
+    }
+
+    public function getConversacion($converId, $userId)
+    {
+        $data = DB::selectOne(" SELECT
+                    'NORMAL' as tipo_chat,
+                    'CHAT UNO A UNO' AS nombre_chat,
+    	            ARRAY[cc.user_uno_id, cc.user_dos_id] AS participantes,
+                    m.id as id_mensaje,
+                    m.chatconve_id as id_conversacion,
+                    m.user_id,
+                    (select
+                        CASE
+                         WHEN cc2.user_uno_id = ? THEN u2.name
+                         WHEN cc2.user_dos_id = ? THEN u1.name
+                         ELSE 'Desconocido'
+                        END AS remitente
+                    from crm.chat_conversaciones cc2
+                    inner join crm.users u1 on u1.id = cc2.user_uno_id
+                    inner join crm.users u2 on u2.id = cc2.user_dos_id
+                    where cc2.id = cc.id limit 1) as username,
+                    m.mensaje,
+                    m.created_at
+                FROM crm.chat_mensajes m
+                join crm.chat_conversaciones cc on cc.id = m.chatconve_id
+                join crm.users u on u.id = m.user_id
+                where cc.id = ? limit 1;", [$userId, $userId, $converId]);
+        return $data;
+    }
+
+    public function iniciarChatNormal(Request $request)
+    {
+        try {
+            $result = DB::transaction(function () use ($request) {
+                $userCreadorId = Auth::id(); //user creador;
+                $converData = $request->all();
+                $newConver = ChatConversaciones::create($converData);
+                $userDos = User::find($newConver->user_dos_id);
+                $mensajeSaludo = ChatMensajes::create([
+                    "chatconve_id" => $newConver->id,
+                    "user_id" => $userCreadorId,
+                    "mensaje" => 'Hola '. ($userDos ? $userDos->name : '').'!',
+                ]);
+                //notificacion usuario 1
+                $this->getConversacionesUser($newConver->user_uno_id);
+                //notificacion usuario 2
+                $this->getConversacionesUser($newConver->user_dos_id);
+                return $this->getConversacion($newConver->id,$userCreadorId);
+            });
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $result));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
     }
 }
