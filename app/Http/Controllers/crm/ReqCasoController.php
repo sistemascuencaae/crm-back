@@ -194,14 +194,13 @@ class ReqCasoController extends Controller
             $requerimiento->marcado = true;
             $requerimiento->save();
 
-            // $requerimientosCaso = RequerimientoCaso::where('caso_id', $inputReq->caso_id)
-            //     ->orderBy('id', 'asc')
-            //     ->orderBy('id', 'asc')
-            //     ->get();
+            $requerimientos = RequerimientoCaso::where('caso_id', $requerimiento->caso_id)
+                ->orderBy('id', 'asc')
+                ->get();
 
             $log->logInfo(ReqCasoController::class, 'Se actualizo con exito el requerimiento, con el ID: ' . $inputReq->id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $requerimiento));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $requerimientos));
         } catch (Exception $e) {
             $log->logError(ReqCasoController::class, 'Error al actualizar el requerimiento, con el ID: ' . $inputReq->id, $e);
 
@@ -382,7 +381,7 @@ class ReqCasoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
-            $log->logError(ReqCasoController::class, 'Error al crear la solicitud de credito en el caso: #' . $casoId, $e);
+            $log->logError(ReqCasoController::class, 'Error al crear la solicitud de cro en el caso: #' . $casoId, $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
