@@ -215,6 +215,11 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']);
     Route::get('/usuariosParaChat', [ChatController::class, 'usuariosParaChat']); //
     Route::post('/iniciarChatNormal', [ChatController::class, 'iniciarChatNormal']); //
+
+    // ARCHIVOS E IMAGENES PARA EL CHAT
+
+    Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']); // guardar
+
     // Route::get('/list/{id}', [ChatController::class, 'list']);listConversaciones
     // Route::post('/sendMessage/{uniqd}/{userId}/{userDosId}', [ChatController::class, 'sendMessage']); //
     // Route::get('/listChatsRooms/{userId}', [ChatController::class, 'listChatsRooms']); //
