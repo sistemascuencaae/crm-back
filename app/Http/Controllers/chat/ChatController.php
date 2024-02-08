@@ -34,7 +34,7 @@ class ChatController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => [
-            'listConversaciones', 'listarMensajes'
+            'listConversaciones', 'listarMensajes', 'getImagenesSmg'
         ]]);
     }
 
@@ -61,8 +61,7 @@ class ChatController extends Controller
                 from crm.chat_conversaciones cc where cc.id = ?", [$user_id, $user_id, $converId]);
             $dataMensaje = $request->all();
             $mensajeGuardado = ChatMensajes::create($dataMensaje);
-
-            $dataMensajeCreado = ChatMensajes::with('user')->find($mensajeGuardado->id);
+            $dataMensajeCreado = $this->getMensajesConversacion($mensajeGuardado->id);
 
             $dataConverPrinc = $this->getConversacionesUser($user_id);
             broadcast(new RefreshChatConverEvent($dataConverPrinc, $user_id));
@@ -105,8 +104,6 @@ class ChatController extends Controller
 
     public function getMensajes($converId, $tipoConver, $perPage)
     {
-        $limit = 10 * $perPage;
-
         $mensajes[] = [];
         if ($tipoConver == 'NORMAL') {
             $listaMensajes = ChatConversaciones::with(['mensajesNormal.user' => function ($query) {
@@ -230,13 +227,13 @@ class ChatController extends Controller
                 $mensajeSaludo = ChatMensajes::create([
                     "chatconve_id" => $newConver->id,
                     "user_id" => $userCreadorId,
-                    "mensaje" => 'Hola '. ($userDos ? $userDos->name : '').'!',
+                    "mensaje" => 'Hola ' . ($userDos ? $userDos->name : '') . '!',
                 ]);
                 //notificacion usuario 1
                 $this->getConversacionesUser($newConver->user_uno_id);
                 //notificacion usuario 2
                 $this->getConversacionesUser($newConver->user_dos_id);
-                return $this->getConversacion($newConver->id,$userCreadorId);
+                return $this->getConversacion($newConver->id, $userCreadorId);
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $result));
         } catch (\Throwable $th) {
@@ -247,11 +244,12 @@ class ChatController extends Controller
     public function addGaleriaArchivosChat(Request $request)
     {
         try {
-            DB::transaction(function () use ($request) {
+            $data = DB::transaction(function () use ($request) {
 
                 $archivos = $request->file("archivos");
                 $nombreCarpeta = $request->input("nombreCarpeta");
                 $converId = $request->input("converId");
+                $tipoChat = $request->input("tipoChat");
                 $msjDataJSON = json_decode($request->input("msg"));
 
 
@@ -280,7 +278,7 @@ class ChatController extends Controller
 
 
                     if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif'])) {
-                        $path = Storage::disk('nas')->putFileAs($nombreCarpeta. "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
+                        $path = Storage::disk('nas')->putFileAs($nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
 
                         $nuevaImagen = Galeria::create([
                             "titulo" => 'Imagen Chat - ' . $converId, // poner el numero de chat o algo
@@ -315,31 +313,42 @@ class ChatController extends Controller
 
                         // $archivosGuardados[] = $nuevoArchivo;
                     }
-
                 }
 
+                return (object)[
+                    "mensaje"=>$nuevoMensaje,
+                    "converId" => $converId,
+                    "tipoChat" => $tipoChat
+                ];
+                //echo ('$nuevoMensaje, $converId, $tipoChatvariables: '.$nuevoMensaje . '--' . $converId.'--'. $tipoChat);
             });
+            $mensajeId = $data->mensaje->id;
+            $dataNewMSj= $this->getMensaje($mensajeId);
+            broadcast(new EnviarMensajeEvent($dataNewMSj, $data->converId, $data->tipoChat));
 
             // return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivosGuardados));
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', ''));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
 
-    public function getImagenesSmg()
+    public function getMensaje($msjId)
     {
-        $test = ChatMensajes::with(['archivosImg.img' => function ($query) {
-            $query->select('id','imagen');
-        }])
-            ->where('id',545)
-            ->toArray(); // Elimina este `toArray()`
 
-        echo ('$test: ' . json_encode($test));
+        $data = ChatMensajes::with('user','archivosImg.img')->find($msjId);
+        return $data;
     }
 
 
-
+    public function getImagenesSmg()
+    {
+        $test = ChatMensajes::with(['archivosImg.img' => function ($query) {
+            $query->select('id', 'imagen', 'created_at', 'updated_at');
+        }])
+            ->find(545)
+            ->toArray(); // Elimina este `toArray()`
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $test));
+    }
 }

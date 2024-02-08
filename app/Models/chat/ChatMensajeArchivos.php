@@ -21,11 +21,11 @@ class ChatMensajeArchivos extends Model
 
     public function img()
     {
-        return $this->hasMany(Galeria::class, "id","galeria_id");
+        return $this->belongsTo(Galeria::class, "galeria_id");
     }
     public function archivos()
     {
-        return $this->hasMany(Archivo::class, "id","archivo_id");
+        return $this->belongsTo(Archivo::class, "archivo_id");
     }
 
 
