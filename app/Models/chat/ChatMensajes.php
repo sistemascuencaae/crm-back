@@ -33,4 +33,9 @@ class ChatMensajes extends Model
     {
         return $this->belongsTo(ChatGrupos::class, "chatgrupo_id", "id");
     }
+
+    public function archivosImg()
+    {
+        return $this->hasMany(ChatMensajeArchivos::class, "mensaje_id");
+    }
 }

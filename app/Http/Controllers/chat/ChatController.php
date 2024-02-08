@@ -13,6 +13,7 @@ use App\Models\chat\Chat;
 use App\Models\chat\ChatConversaciones;
 use App\Models\chat\ChatGroup;
 use App\Models\chat\ChatGrupos;
+use App\Models\chat\ChatMensajeArchivos;
 use App\Models\chat\ChatMensajes;
 use App\Models\chat\ChatRoom;
 use App\Models\crm\Archivo;
@@ -60,7 +61,9 @@ class ChatController extends Controller
                 from crm.chat_conversaciones cc where cc.id = ?", [$user_id, $user_id, $converId]);
             $dataMensaje = $request->all();
             $mensajeGuardado = ChatMensajes::create($dataMensaje);
+
             $dataMensajeCreado = ChatMensajes::with('user')->find($mensajeGuardado->id);
+
             $dataConverPrinc = $this->getConversacionesUser($user_id);
             broadcast(new RefreshChatConverEvent($dataConverPrinc, $user_id));
             broadcast(new EnviarMensajeEvent($dataMensajeCreado, $converId, $tipoConver));
@@ -247,6 +250,18 @@ class ChatController extends Controller
             DB::transaction(function () use ($request) {
 
                 $archivos = $request->file("archivos");
+                $nombreCarpeta = $request->input("nombreCarpeta");
+                $converId = $request->input("converId");
+                $msjDataJSON = json_decode($request->input("msg"));
+
+
+
+                $nuevoMensaje = ChatMensajes::create([
+                    "chatconve_id" => $msjDataJSON->chatconve_id,
+                    "chatgrupo_id" => $msjDataJSON->chatgrupo_id,
+                    "user_id" => $msjDataJSON->user_id,
+                    "mensaje" => $msjDataJSON->mensaje,
+                ]);
                 // $archivosGuardados = [];
 
                 foreach ($archivos as $archivoData) {
@@ -265,15 +280,20 @@ class ChatController extends Controller
 
 
                     if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif'])) {
-                        $path = Storage::disk('nas')->putFileAs('nombre-chat' . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
+                        $path = Storage::disk('nas')->putFileAs($nombreCarpeta. "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
 
                         $nuevaImagen = Galeria::create([
-                            "titulo" => 'Imagen Chat - ' . 'nuemro o llave chat', // poner el numero de chat o algo
-                            "descripcion" => 'Imagen Chat - ' . 'nuemro o llave chat', // poner el numero de chat o algo
+                            "titulo" => 'Imagen Chat - ' . $converId, // poner el numero de chat o algo
+                            "descripcion" => $msjDataJSON->mensaje ? $msjDataJSON->mensaje : 'Imagen Chat - ' . $converId, // poner el numero de chat o algo
                             "imagen" => $path,
+                            "tipo_gal_id" => 9, // 9 porque es tipo galeria 'tipo chat'
                             // "caso_id" => $caso_id,
-                            // "tipo_gal_id" => 7, // 7 porque es tipo galeria 'Formulario de Soporte'
                             // "sc_id" => 0,
+                        ]);
+
+                        $nuevaImagenMsg = ChatMensajeArchivos::create([
+                            "mensaje_id" => $nuevoMensaje->id,
+                            "galeria_id" => $nuevaImagen->id
                         ]);
 
                         // $archivosGuardados[] = $nuevaImagen;
@@ -281,11 +301,17 @@ class ChatController extends Controller
                         $path = Storage::disk('nas')->putFileAs('nombre-chat' . "/archivos", $archivoData, $nombreUnico); // crear una carpeta para chat
                         $nuevoArchivo = Archivo::create([
                             "titulo" => $nombreUnico,
-                            "observacion" => 'Archivo Chat - ' . 'nuemro o llave chat', // poner el numero de chat o algo
+                            "observacion" => $msjDataJSON->mensaje ? $msjDataJSON->mensaje : 'Archivo Chat - ' . $converId, // poner el numero de chat o algo
                             "archivo" => $path,
                             // "caso_id" => $caso_id,
                             "tipo" => 'Chat'
                         ]);
+
+                        $nuevArchivoMsg = ChatMensajeArchivos::create([
+                            "mensaje_id" => $nuevoMensaje->id,
+                            "archivo_id" => $nuevoArchivo->id
+                        ]);
+
 
                         // $archivosGuardados[] = $nuevoArchivo;
                     }
@@ -301,5 +327,19 @@ class ChatController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+
+    public function getImagenesSmg()
+    {
+        $test = ChatMensajes::with(['archivosImg.img' => function ($query) {
+            $query->select('id','imagen');
+        }])
+            ->where('id',545)
+            ->toArray(); // Elimina este `toArray()`
+
+        echo ('$test: ' . json_encode($test));
+    }
+
+
 
 }
