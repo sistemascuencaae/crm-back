@@ -106,7 +106,7 @@ class ChatController extends Controller
     {
         $mensajes[] = [];
         if ($tipoConver == 'NORMAL') {
-            $listaMensajes = ChatConversaciones::with(['mensajesNormal.user' => function ($query) {
+            $listaMensajes = ChatConversaciones::with(['mensajesNormal.archivosImg.img','mensajesNormal.user' => function ($query) {
                 $query->select(['id', 'name', 'email']);
             }])->find($converId);
             $data = json_decode($listaMensajes, true);
