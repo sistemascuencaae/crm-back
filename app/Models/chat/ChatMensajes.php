@@ -2,6 +2,7 @@
 
 namespace App\Models\chat;
 
+use App\Models\crm\Archivo;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,4 +44,10 @@ class ChatMensajes extends Model
     {
         return $this->hasMany(ChatMensajeArchivo::class, "mensaje_id");
     }
+
+    public function archivo()
+    {
+        return $this->belongsTo(Archivo::class, "archivo_id");
+    }
+
 }

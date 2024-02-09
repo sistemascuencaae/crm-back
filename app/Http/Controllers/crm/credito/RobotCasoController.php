@@ -17,13 +17,6 @@ use Illuminate\Support\Facades\Request as RequestFacade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Collection;
-use App\Models\crm\ControlTiemposCaso;
-use App\Http\Resources\crm\Funciones;
-use App\Models\crm\RequerimientoCaso;
-use PhpParser\Node\Expr\FuncCall;
-use App\Models\crm\Tablero;
-use Carbon\Carbon;
 
 class RobotCasoController extends Controller
 {
@@ -35,7 +28,6 @@ class RobotCasoController extends Controller
             $estadoFormId = $request->input('estadoFormId');
             $casoId = $request->input('casoId');
             $tableroActualId = $request->input('tableroActualId');
-            $facturaId = $request->input('facturaId');
             $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
             $data = $casoController->getCaso($casoModificado->id);
             broadcast(new ReasignarCasoEvent($data));
@@ -326,17 +318,6 @@ class RobotCasoController extends Controller
             $casoEnProceso->save();
             return $casoEnProceso;
         }
-        //--- usuarios en linea del nuevo tablero----------------------------- NO BORRAR
-        //$usuariosNuevoTablero = DB::select("SELECT * FROM crm.usuarios_casos WHERE tab_id = ?", [$formula->tablero_id]);
-        // $userMenorNumCasos = $this->organizarCasos($usuariosNuevoTablero);
-        // $this->addMiembro($userMenorNumCasos->usu_id, $casoId);
-        // $casoEnProceso->user_id = $userMenorNumCasos->usu_id;
-        // $casoEnProceso->save();
-
-        $userGeneralNuevoTablero = DB::selectOne('SELECT * from crm.tablero_user tu
-        inner join crm.users u on u.id = tu.user_id
-        where u.usu_tipo = 1 and tu.tab_id = ?', [$formula->tablero_id]);
-
 
 
         $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
