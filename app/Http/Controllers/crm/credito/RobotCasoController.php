@@ -17,28 +17,47 @@ use Illuminate\Support\Facades\Request as RequestFacade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Collection;
-use App\Models\crm\ControlTiemposCaso;
-use App\Http\Resources\crm\Funciones;
-use App\Models\crm\RequerimientoCaso;
-use PhpParser\Node\Expr\FuncCall;
-use App\Models\crm\Tablero;
-use Carbon\Carbon;
 
 class RobotCasoController extends Controller
 {
 
-    public function reasignarCaso(Request $request)
+    public function reasignarCaso($estadoFormId, $casoId, $tableroActualId)
     {
         try {
             $casoController = new CasoController();
-            $estadoFormId = $request->input('estadoFormId');
-            $casoId = $request->input('casoId');
-            $tableroActualId = $request->input('tableroActualId');
-            $facturaId = $request->input('facturaId');
+
+            // Formula de ventas
+            $formulaDestino = DB::selectOne("SELECT * from crm.estados_formulas where id = $estadoFormId");
+
+            if ($formulaDestino) {
+
+                $nombreTablero = DB::selectOne("SELECT ta.nombre  from crm.estados_formulas ef
+                inner join crm.tablero ta on ta.id = ef.tablero_id 
+                where ef.id = $estadoFormId");
+
+                if ($nombreTablero) {
+                    $parametro = DB::selectOne("SELECT * from crm.parametro where descripcion = 'Tablero del comite para aprobar creditos'"); // hace referencia al tablero comite
+
+                    if ($nombreTablero->nombre == $parametro->nombre) { // valida que se del tablero 'COMITE'
+
+                        // // Formula destino de comite para que se vaya a ventas
+                        $formDestino = DB::selectOne("select ef.* from crm.fase fa
+                                                        inner join crm.estados_formulas ef on ef.fase_id_actual  = fa.id 
+                                                        where fa.id = $formulaDestino->fase_id");
+
+                        $enviarCorreo = new EmailController();
+                        $enviarCorreo->send_emailComite($formDestino->id, $casoId, $formDestino->tab_id);
+                    }
+
+                }
+
+            }
+
             $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
             $data = $casoController->getCaso($casoModificado->id);
+
             broadcast(new ReasignarCasoEvent($data));
+
             return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al reasignar', $e));

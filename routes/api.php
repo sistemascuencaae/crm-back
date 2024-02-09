@@ -236,7 +236,7 @@ Route::group(["prefix" => "crm/audi"], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
 });
 Route::group(["prefix" => "crm/robot"], function ($router) {
-    Route::post('/reasignarCaso', [RobotCasoController::class, 'reasignarCaso']);
+    Route::get('/reasignarCaso/{estadoFormId}/{casoId}/{tableroActualId}', [RobotCasoController::class, 'reasignarCaso']);
 });
 
 Route::group([], function ($router) {
