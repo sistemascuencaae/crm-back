@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers\crm;
 
+use App\Events\ReasignarCasoEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\credito\RobotCasoController;
+use App\Http\Controllers\openceo\PedidoMovilController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Caso;
 use App\Models\crm\Fase;
 use App\Models\mail\Email;
 use App\Models\mail\SendMail;
 use App\Models\mail\sendMailCambioFase;
+use App\Models\mail\SendMailComite;
 use App\Models\mail\sendMailLinkEnrolamiento;
 use Exception;
 use Illuminate\Support\Facades\Mail;
@@ -252,4 +257,78 @@ class EmailController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function send_emailComite($estadoFormId, $caso_id, $tableroActualId)
+    {
+        $log = new Funciones();
+        try {
+
+            $error = null;
+            $exitoso = null;
+
+            DB::transaction(function () use ($log, $estadoFormId, $caso_id, $tableroActualId, &$error, &$exitoso) {
+
+                $caso = Caso::find($caso_id);
+
+                if ($caso) { // Si existe el caso
+                    if ($caso->cpp_id) {
+
+                        $pedidoMovil = null;
+
+                        // $emails = ['juanjgsj@gmail.com', 'juan.simbana@almespana.com.ec'];
+                        $emails = 'juanjgsj@gmail.com';
+
+                        $pedidoMovilController = new PedidoMovilController();
+                        $pedidoMovil = $pedidoMovilController->getPedidoById($caso->cpp_id);
+                        $pedidoMovil = $pedidoMovil->getData()->data; // obtendo directamente la data y no todo el objeto returnResultado
+
+                        $urlEndPoint = 'http://192.168.1.105:8009/api/crm/robot/reasignarCaso/' . $estadoFormId . '/' . $caso_id . '/' . $tableroActualId; // aqui hay que armar el link de ENdPoint que va a mover y cambiar de estado y dueño al caso
+
+                        // Todos los datos que vamos a enviar en el correo
+                        $object = (object) [
+                            'emails' => $emails,
+                            'asunto' => 'Caso para aprobación de crédito',
+                            'link' => $urlEndPoint,
+                            'data' => $pedidoMovil,
+                            'caso' => $caso,
+                        ];
+
+                        // Enviar el correo a los destinatarios especificados en el array de correos electrónicos
+                        Mail::to($object->emails)->send(new SendMailComite($object));
+
+                        $log->logInfo(EmailController::class, 'Correo electrónico enviado correctamente al comité');
+
+                        $exitoso = 'Correo electrónico enviado correctamente al comité';
+                        return null;
+
+                    } else {
+
+                        $log->logError(EmailController::class, 'No existe un pedido en el caso #' . $caso_id);
+
+                        $error = 'No existe un pedido en el caso #' . $caso_id;
+                        return null;
+                    }
+
+                } else {
+                    $log->logError(EmailController::class, 'No existe el caso #' . $caso_id);
+
+                    $error = 'No existe el caso #' . $caso_id;
+                    return null;
+                }
+
+            });
+
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', $exitoso, ''));
+            }
+
+        } catch (Exception $e) {
+            $log->logError(EmailController::class, 'Error al enviar el correo electrónico al comité', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
