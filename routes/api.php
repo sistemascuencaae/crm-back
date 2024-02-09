@@ -214,19 +214,12 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::get('/listarMensajes/{converId}/{tipoConver}/{numeroPagina}', [ChatController::class, 'listarMensajes']);
     Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']);
     Route::get('/usuariosParaChat', [ChatController::class, 'usuariosParaChat']); //
-    Route::post('/iniciarChatNormal', [ChatController::class, 'iniciarChatNormal']); //
+    Route::post('/iniciarChatNormal', [ChatController::class, 'iniciarChatNormal']);
+    Route::post('/iniciarChatGrupal', [ChatController::class, 'iniciarChatGrupal']); //
     Route::get('/getImagenesSmg', [ChatController::class, 'getImagenesSmg']); //
     Route::get('/getMensaje/{id}', [ChatController::class, 'getMensaje']); //
     // ARCHIVOS E IMAGENES PARA EL CHAT
-
-    Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']); // guardar
-
-    // Route::get('/list/{id}', [ChatController::class, 'list']);listConversaciones
-    // Route::post('/sendMessage/{uniqd}/{userId}/{userDosId}', [ChatController::class, 'sendMessage']); //
-    // Route::get('/listChatsRooms/{userId}', [ChatController::class, 'listChatsRooms']); //
-    // Route::get('/listarMensajes/{uniqd}', [ChatController::class, 'listarMensajes']); //
-    // Route::get('/usuariosChat', [ChatController::class, 'usuariosChat']); //
-    // Route::get('/verificarChat/{userLoginId}/{user_dos_id}', [ChatController::class, 'verificarChat']); //verificarChat
+    Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
 });
 
 

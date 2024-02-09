@@ -38,4 +38,9 @@ class ChatMensajes extends Model
     {
         return $this->hasMany(ChatMensajeArchivos::class, "mensaje_id");
     }
+
+    public function archivosFile()
+    {
+        return $this->hasMany(ChatMensajeArchivo::class, "mensaje_id");
+    }
 }
