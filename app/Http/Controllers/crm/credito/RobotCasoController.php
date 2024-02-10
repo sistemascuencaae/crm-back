@@ -25,7 +25,6 @@ class RobotCasoController extends Controller
     {
         try {
             $casoController = new CasoController();
-
             // Formula de ventas
             $formulaDestino = DB::selectOne("SELECT * from crm.estados_formulas where id = $estadoFormId");
 
@@ -56,7 +55,6 @@ class RobotCasoController extends Controller
                 }
 
             }
-
             $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
             $data = $casoController->getCaso($casoModificado->id);
 
@@ -349,17 +347,6 @@ class RobotCasoController extends Controller
             $casoEnProceso->save();
             return $casoEnProceso;
         }
-        //--- usuarios en linea del nuevo tablero----------------------------- NO BORRAR
-        //$usuariosNuevoTablero = DB::select("SELECT * FROM crm.usuarios_casos WHERE tab_id = ?", [$formula->tablero_id]);
-        // $userMenorNumCasos = $this->organizarCasos($usuariosNuevoTablero);
-        // $this->addMiembro($userMenorNumCasos->usu_id, $casoId);
-        // $casoEnProceso->user_id = $userMenorNumCasos->usu_id;
-        // $casoEnProceso->save();
-
-        $userGeneralNuevoTablero = DB::selectOne('SELECT * from crm.tablero_user tu
-        inner join crm.users u on u.id = tu.user_id
-        where u.usu_tipo = 1 and tu.tab_id = ?', [$formula->tablero_id]);
-
 
 
         $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
