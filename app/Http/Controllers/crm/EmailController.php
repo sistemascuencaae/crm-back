@@ -275,8 +275,8 @@ class EmailController extends Controller
 
                         $pedidoMovil = null;
 
-                        // $emails = ['juanjgsj@gmail.com', 'juan.simbana@almespana.com.ec'];
-                        $emails = 'juanjgsj@gmail.com';
+                        $emails = ['juanjgsj@gmail.com', 'juan.simbana@almespana.com.ec'];
+                        // $emails = 'juanjgsj@gmail.com';
 
                         $pedidoMovilController = new PedidoMovilController();
                         $pedidoMovil = $pedidoMovilController->getPedidoById($caso->cpp_id);
@@ -294,7 +294,9 @@ class EmailController extends Controller
                         ];
 
                         // Enviar el correo a los destinatarios especificados en el array de correos electrónicos
-                        Mail::to($object->emails)->send(new SendMailComite($object));
+                        foreach ($object->emails as $correo) {
+                            Mail::to($correo)->send(new SendMailComite($object));
+                        }
 
                         $log->logInfo(EmailController::class, 'Correo electrónico enviado correctamente al comité');
 

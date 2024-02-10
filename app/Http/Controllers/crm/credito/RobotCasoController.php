@@ -38,15 +38,19 @@ class RobotCasoController extends Controller
                 if ($nombreTablero) {
                     $parametro = DB::selectOne("SELECT * from crm.parametro where descripcion = 'Tablero del comite para aprobar creditos'"); // hace referencia al tablero comite
 
-                    if ($nombreTablero->nombre == $parametro->nombre) { // valida que se del tablero 'COMITE'
+                    if ($nombreTablero->nombre == $parametro->nombre) { // valida que sea el tablero 'COMITE', por la descripcion que pusimos arriba 'Tablero del comite para aprobar creditos'
 
                         // // Formula destino de comite para que se vaya a ventas
                         $formDestino = DB::selectOne("select ef.* from crm.fase fa
                                                         inner join crm.estados_formulas ef on ef.fase_id_actual  = fa.id 
                                                         where fa.id = $formulaDestino->fase_id");
 
-                        $enviarCorreo = new EmailController();
-                        $enviarCorreo->send_emailComite($formDestino->id, $casoId, $formDestino->tab_id);
+                        // validacion si no hay pedido en el caso que no envie el correo
+                        if (Caso::find($casoId)->cpp_id !== null) {
+                            $enviarCorreo = new EmailController();
+                            $enviarCorreo->send_emailComite($formDestino->id, $casoId, $formDestino->tab_id);
+                        } 
+
                     }
 
                 }
