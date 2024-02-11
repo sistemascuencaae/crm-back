@@ -229,7 +229,7 @@ Route::group(["prefix" => "crm/audi"], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
 });
 Route::group(["prefix" => "crm/robot"], function ($router) {
-    Route::get('/reasignarCaso/{estadoFormId}/{casoId}/{tableroActualId}', [RobotCasoController::class, 'reasignarCaso']);
+    Route::get('/reasignarCaso/{estadoFormId}/{casoId}/{tableroActualId}/{banMostrarVistaCreditoAprobado?}', [RobotCasoController::class, 'reasignarCaso']);
 });
 
 Route::group([], function ($router) {
@@ -571,6 +571,7 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
     Route::post('/addEmail', [EmailController::class, 'addEmail']);
     Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
+
 });
 
 

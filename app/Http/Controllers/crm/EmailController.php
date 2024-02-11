@@ -282,7 +282,8 @@ class EmailController extends Controller
                         $pedidoMovil = $pedidoMovilController->getPedidoById($caso->cpp_id);
                         $pedidoMovil = $pedidoMovil->getData()->data; // obtendo directamente la data y no todo el objeto returnResultado
 
-                        $urlEndPoint = 'http://192.168.1.105:8009/api/crm/robot/reasignarCaso/' . $estadoFormId . '/' . $caso_id . '/' . $tableroActualId; // aqui hay que armar el link de ENdPoint que va a mover y cambiar de estado y dueño al caso
+                        // aqui envio la variable banMostrarVistaCreditoAprobado con true o cualquier otro valor, para que se muestre la vista cuando den click en el enlace o link
+                        $urlEndPoint = 'http://192.168.1.105:8009/api/crm/robot/reasignarCaso/' . $estadoFormId . '/' . $caso_id . '/' . $tableroActualId . '/' . $banMostrarVistaCreditoAprobado = true; // aqui hay que armar el link de ENdPoint que va a mover y cambiar de estado y dueño al caso
 
                         // Todos los datos que vamos a enviar en el correo
                         $object = (object) [

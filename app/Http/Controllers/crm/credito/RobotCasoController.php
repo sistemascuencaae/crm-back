@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Auth;
 class RobotCasoController extends Controller
 {
 
-    public function reasignarCaso($estadoFormId, $casoId, $tableroActualId)
+    public function reasignarCaso($estadoFormId, $casoId, $tableroActualId, $banMostrarVistaCreditoAprobado = null)
     {
         try {
             $casoController = new CasoController();
@@ -48,7 +48,7 @@ class RobotCasoController extends Controller
                         if (Caso::find($casoId)->cpp_id !== null) {
                             $enviarCorreo = new EmailController();
                             $enviarCorreo->send_emailComite($formDestino->id, $casoId, $formDestino->tab_id);
-                        } 
+                        }
 
                     }
 
@@ -60,7 +60,13 @@ class RobotCasoController extends Controller
 
             broadcast(new ReasignarCasoEvent($data));
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
+            // si existe la variable banMostrarVistaCreditoAprobado, se muestra la vista de casoAprobado
+            if ($banMostrarVistaCreditoAprobado) {
+                return view('mail.casoAprobado');
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
+            }
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al reasignar', $e));
         }
