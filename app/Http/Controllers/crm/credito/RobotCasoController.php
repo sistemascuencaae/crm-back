@@ -60,9 +60,9 @@ class RobotCasoController extends Controller
 
             broadcast(new ReasignarCasoEvent($data));
 
-            // si existe la variable banMostrarVistaCreditoAprobado, se muestra la vista de casoAprobado
+            // si existe la variable banMostrarVistaCreditoAprobado, se muestra la vista de caso creditoAprobado
             if ($banMostrarVistaCreditoAprobado) {
-                return view('mail.casoAprobado');
+                return view('mail.creditoAprobado');
             } else {
                 return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
             }

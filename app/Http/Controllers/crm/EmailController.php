@@ -273,10 +273,9 @@ class EmailController extends Controller
                 if ($caso) { // Si existe el caso
                     if ($caso->cpp_id) {
 
-                        $pedidoMovil = null;
-
-                        $emails = ['juanjgsj@gmail.com', 'juan.simbana@almespana.com.ec'];
-                        // $emails = 'juanjgsj@gmail.com';
+                        // el campo descripcion contiene los correos del comite
+                        $correosComite = DB::selectOne("SELECT descripcion FROM crm.parametro where nombre = 'CORREOS COMITE';");
+                        $emails = explode(',', $correosComite->descripcion);
 
                         $pedidoMovilController = new PedidoMovilController();
                         $pedidoMovil = $pedidoMovilController->getPedidoById($caso->cpp_id);
