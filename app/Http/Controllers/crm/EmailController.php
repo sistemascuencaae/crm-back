@@ -273,16 +273,17 @@ class EmailController extends Controller
                 if ($caso) { // Si existe el caso
                     if ($caso->cpp_id) {
 
-                        // el campo descripcion contiene los correos del comite
-                        $correosComite = DB::selectOne("SELECT descripcion FROM crm.parametro where nombre = 'CORREOS COMITE';");
-                        $emails = explode(',', $correosComite->descripcion);
+                        // el campo valor contiene los correos del comite
+                        $correosComite = DB::selectOne("SELECT valor FROM crm.parametro where nombre = 'Correos Comite';");
+                        $emails = explode(',', $correosComite->valor);
 
                         $pedidoMovilController = new PedidoMovilController();
                         $pedidoMovil = $pedidoMovilController->getPedidoById($caso->cpp_id);
                         $pedidoMovil = $pedidoMovil->getData()->data; // obtendo directamente la data y no todo el objeto returnResultado
 
+                        $urlEndPointAprobacionCreditoComite = DB::selectOne("SELECT valor FROM crm.parametro where nombre = 'Endpoint aprobacion credito comite';");
                         // aqui envio la variable banMostrarVistaCreditoAprobado con true o cualquier otro valor, para que se muestre la vista cuando den click en el enlace o link
-                        $urlEndPoint = 'http://192.168.1.105:8009/api/crm/robot/reasignarCaso/' . $estadoFormId . '/' . $caso_id . '/' . $tableroActualId . '/' . $banMostrarVistaCreditoAprobado = true; // aqui hay que armar el link de ENdPoint que va a mover y cambiar de estado y dueño al caso
+                        $urlEndPoint = $urlEndPointAprobacionCreditoComite->valor . $estadoFormId . '/' . $caso_id . '/' . $tableroActualId . '/' . $banMostrarVistaCreditoAprobado = true;
 
                         // Todos los datos que vamos a enviar en el correo
                         $object = (object) [
