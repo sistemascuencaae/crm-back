@@ -25,19 +25,21 @@ class RobotCasoController extends Controller
     {
         try {
             $casoController = new CasoController();
+
             // Formula de ventas
             $formulaDestino = DB::selectOne("SELECT * from crm.estados_formulas where id = $estadoFormId");
 
             if ($formulaDestino) {
 
+                // Saco nombre del tablero
                 $nombreTablero = DB::selectOne("SELECT ta.nombre  from crm.estados_formulas ef
                 inner join crm.tablero ta on ta.id = ef.tablero_id 
                 where ef.id = $estadoFormId");
 
                 if ($nombreTablero) {
-                    $parametro = DB::selectOne("SELECT * from crm.parametro where descripcion = 'Tablero del comite para aprobar creditos'"); // hace referencia al tablero comite
+                    $parametro = DB::selectOne("SELECT valor from crm.parametro where nombre = 'Tablero Comite'"); // hace referencia al tablero comite
 
-                    if ($nombreTablero->nombre == $parametro->nombre) { // valida que sea el tablero 'COMITE', por la descripcion que pusimos arriba 'Tablero del comite para aprobar creditos'
+                    if ($nombreTablero->nombre == $parametro->valor) { // valida que sea el tablero 'COMITE', por el nombre del parametro con el nombre 'Tablero Comite'
 
                         // // Formula destino de comite para que se vaya a ventas
                         $formDestino = DB::selectOne("select ef.* from crm.fase fa
