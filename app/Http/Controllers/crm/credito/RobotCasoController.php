@@ -21,31 +21,37 @@ use Illuminate\Support\Facades\Auth;
 class RobotCasoController extends Controller
 {
 
-    public function reasignarCaso($estadoFormId, $casoId, $tableroActualId)
+    public function reasignarCaso($estadoFormId, $casoId, $tableroActualId, $banMostrarVistaCreditoAprobado = null)
     {
         try {
             $casoController = new CasoController();
+
             // Formula de ventas
             $formulaDestino = DB::selectOne("SELECT * from crm.estados_formulas where id = $estadoFormId");
 
             if ($formulaDestino) {
 
+                // Saco nombre del tablero
                 $nombreTablero = DB::selectOne("SELECT ta.nombre  from crm.estados_formulas ef
                 inner join crm.tablero ta on ta.id = ef.tablero_id 
                 where ef.id = $estadoFormId");
 
                 if ($nombreTablero) {
-                    $parametro = DB::selectOne("SELECT * from crm.parametro where descripcion = 'Tablero del comite para aprobar creditos'"); // hace referencia al tablero comite
+                    $parametro = DB::selectOne("SELECT valor from crm.parametro where nombre = 'Tablero Comite'"); // hace referencia al tablero comite
 
-                    if ($nombreTablero->nombre == $parametro->nombre) { // valida que se del tablero 'COMITE'
+                    if ($nombreTablero->nombre == $parametro->valor) { // valida que sea el tablero 'COMITE', por el nombre del parametro con el nombre 'Tablero Comite'
 
                         // // Formula destino de comite para que se vaya a ventas
                         $formDestino = DB::selectOne("select ef.* from crm.fase fa
                                                         inner join crm.estados_formulas ef on ef.fase_id_actual  = fa.id 
                                                         where fa.id = $formulaDestino->fase_id");
 
-                        $enviarCorreo = new EmailController();
-                        $enviarCorreo->send_emailComite($formDestino->id, $casoId, $formDestino->tab_id);
+                        // validacion si no hay pedido en el caso que no envie el correo
+                        if (Caso::find($casoId)->cpp_id !== null) {
+                            $enviarCorreo = new EmailController();
+                            $enviarCorreo->send_emailComite($formDestino->id, $casoId, $formDestino->tab_id);
+                        }
+
                     }
 
                 }
@@ -56,7 +62,13 @@ class RobotCasoController extends Controller
 
             broadcast(new ReasignarCasoEvent($data));
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
+            // si existe la variable banMostrarVistaCreditoAprobado, se muestra la vista de caso creditoAprobado
+            if ($banMostrarVistaCreditoAprobado) {
+                return view('mail.creditoAprobado');
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
+            }
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al reasignar', $e));
         }
