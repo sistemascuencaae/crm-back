@@ -354,7 +354,7 @@ class ChatController extends Controller
                             ]);
                             $contMSg = true;
                         }
-                        $path = Storage::disk('nas')->putFileAs("Chats/".$nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
+                        $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
 
                         $nuevaImagen = Galeria::create([
                             "titulo" => 'Imagen Chat - ' . $converId, // poner el numero de chat o algo
@@ -428,5 +428,16 @@ class ChatController extends Controller
     {
         $data = ChatMensajes::with('user', 'archivosImg.img', 'archivosFile.archivos')->find($msjId);
         return $data;
+    }
+
+    public function listarMensajesNoLeidos()
+    {
+        try {
+            $mensajesNoLeidos = DB::selectOne("SELECT count(mensaje) as cantidad  from crm.chat_mensajes cm
+            where chatconve_id notnull and read_at isnull  order by 1 desc");
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $mensajesNoLeidos));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 }
