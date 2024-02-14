@@ -218,6 +218,8 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::post('/iniciarChatGrupal', [ChatController::class, 'iniciarChatGrupal']); //
     Route::get('/getImagenesSmg', [ChatController::class, 'getImagenesSmg']); //
     Route::get('/getMensaje/{id}', [ChatController::class, 'getMensaje']); //
+    Route::get('/listarMensajesNoLeidos', [ChatController::class, 'listarMensajesNoLeidos']);
+
     // ARCHIVOS E IMAGENES PARA EL CHAT
     Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
 });
