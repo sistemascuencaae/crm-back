@@ -29,4 +29,5 @@ Route::group([
     Route::get('departamentos', [OpenceoController::class, 'departamentos']);
     Route::get('ciudades', [OpenceoController::class, 'ciudades']);
     Route::get('cargos', [OpenceoController::class, 'cargos']);
+    Route::get('v_dmovinv', [OpenceoController::class, 'v_dmovinv']);
 });
