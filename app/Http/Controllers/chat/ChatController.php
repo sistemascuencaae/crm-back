@@ -63,11 +63,11 @@ class ChatController extends Controller
                 from crm.chat_conversaciones cc where cc.id = ?", [$user_id, $user_id, $converId]);
             $dataMensaje = $request->all();
             $mensajeGuardado = ChatMensajes::create($dataMensaje);
-            $dataMensajeCreado = $this->getMensaje($mensajeGuardado->id);
-
+            //$dataMensajeCreado = $this->getMensaje($mensajeGuardado->id);
+            $dataMensajes = $this->getMensajes($converId, $tipoConver, 15);
             $dataConverPrinc = $this->getConversacionesUser($user_id);
             broadcast(new RefreshChatConverEvent($dataConverPrinc, $user_id));
-            broadcast(new EnviarMensajeEvent($dataMensajeCreado, $converId, $tipoConver));
+            broadcast(new EnviarMensajeEvent($dataMensajes, $converId, $tipoConver));
             if ($tipoConver === 'NORMAL') {
                 $this->getConversacionesUser($userRecibeId->recibe);
             }
@@ -89,8 +89,7 @@ class ChatController extends Controller
         try {
 
             if ($tipoConver === 'NORMAL') {
-                $userCreadorId = Auth::id(); //user creador;
-                //$msgUpdate = DB::select("SELECT id from crm.chat_mensajes WHERE chatconve_id=$converId ORDER BY created_at DESC");
+                $userCreadorId = Auth::id();
                 $currentDate = date('Y-m-d H:i:s');
                 DB::update("UPDATE crm.chat_mensajes SET read_at= '$currentDate'
                 WHERE id in (SELECT id from crm.chat_mensajes WHERE chatconve_id=$converId ORDER BY created_at DESC LIMIT 15)
@@ -155,15 +154,16 @@ class ChatController extends Controller
                          ELSE 'Desconocido'
                         END AS remitente
                     from crm.chat_conversaciones cc2
-                    inner join crm.users u1 on u1.id = cc2.user_uno_id
-                    inner join crm.users u2 on u2.id = cc2.user_dos_id
+                    left join crm.users u1 on u1.id = cc2.user_uno_id
+                    left join crm.users u2 on u2.id = cc2.user_dos_id
                     where cc2.id = cc.id limit 1) as username,
                     m.mensaje,
                     m.created_at,
+                    m.read_at,
                     ROW_NUMBER() OVER (PARTITION BY m.chatconve_id ORDER BY m.created_at DESC) AS rn
                 FROM crm.chat_mensajes m
-                join crm.chat_conversaciones cc on cc.id = m.chatconve_id
-                join crm.users u on u.id = m.user_id
+                left join crm.chat_conversaciones cc on cc.id = m.chatconve_id
+                left join crm.users u on u.id = m.user_id
                 WHERE m.chatgrupo_id isnull
                 UNION
                 select
@@ -176,10 +176,11 @@ class ChatController extends Controller
                     cg.nombre_grupo as username,
                     m.mensaje,
                     m.created_at,
+                    m.read_at,
                     ROW_NUMBER() OVER (PARTITION BY m.chatgrupo_id ORDER BY m.created_at DESC) AS rn
                 FROM crm.chat_mensajes m
-                JOIN crm.chat_miembros_grupo cgm ON m.chatgrupo_id = cgm.chatgrupo_id
-                JOIN crm.chat_grupos cg on cg.id = cgm.chatgrupo_id
+                left JOIN crm.chat_miembros_grupo cgm ON m.chatgrupo_id = cgm.chatgrupo_id
+                left JOIN crm.chat_grupos cg on cg.id = cgm.chatgrupo_id
                 WHERE m.chatconve_id isnull
             )
             select
@@ -191,7 +192,8 @@ class ChatController extends Controller
                 nm.user_id,
                 nm.username,
                 nm.mensaje,
-                nm.created_at
+                nm.created_at,
+                nm.read_at
             FROM NumeredMessages nm
             WHERE nm.rn = 1 AND ? = ANY(nm.participantes);", [$userId, $userId, $userId]);
 
@@ -352,7 +354,7 @@ class ChatController extends Controller
                             ]);
                             $contMSg = true;
                         }
-                        $path = Storage::disk('nas')->putFileAs($nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
+                        $path = Storage::disk('nas')->putFileAs("Chats/".$nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
 
                         $nuevaImagen = Galeria::create([
                             "titulo" => 'Imagen Chat - ' . $converId, // poner el numero de chat o algo
@@ -368,7 +370,7 @@ class ChatController extends Controller
                             "galeria_id" => $nuevaImagen->id
                         ]);
                     } else {
-                        $path = Storage::disk('nas')->putFileAs('nombre-chat' . "/archivos", $archivoData, $nombreUnico); // crear una carpeta para chat
+                        $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico); // crear una carpeta para chat
                         $nuevoArchivo = Archivo::create([
                             "titulo" => $nombreUnico,
                             "observacion" => $msjDataJSON->mensaje ? $msjDataJSON->mensaje : 'Archivo Chat - ' . $converId, // poner el numero de chat o algo
