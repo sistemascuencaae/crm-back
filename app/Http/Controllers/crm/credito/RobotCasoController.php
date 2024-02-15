@@ -11,7 +11,6 @@ use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Miembros;
-use App\Models\crm\Fase;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Request as RequestFacade;
@@ -27,32 +26,34 @@ class RobotCasoController extends Controller
         try {
             $casoController = new CasoController();
 
-            // Sacamos la formula por el ID 
+            // Sacamos la formula de la fase actual por el ID 
             $formulaDestino = EstadosFormulas::where('id', $estadoFormId)
                 ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
                 ->first();
 
             if ($formulaDestino) {
 
-                // Saco nombre del tablero_proximo que en este caso seria COMITE
+                // Saco el nombre del tablero_proximo, en este caso seria COMITE
                 $nombreTablero = $formulaDestino->tablero_proximo->nombre;
 
                 if ($nombreTablero) {
 
-                    // saco los parametros COMITE por abreviacion de la tabla parametro 
+                    // Saco los parametros del COMITE por abreviacion en la tabla parametro 
                     $parametro = DB::table('crm.parametro')
                         ->where('abreviacion', 'TC')
                         ->first();
 
-                    // valida que sea el tablero 'COMITE', por el valor del parametro
-                    if ($nombreTablero == $parametro->valor) {
+                    if ($parametro) {
+                        // Valida que sea el tablero 'COMITE', por el valor del parametro (valor = 'COMITE')
+                        if ($nombreTablero == $parametro->valor) {
 
-                        // validacion si no hay pedido en el caso que no envie el correo
-                        if (Caso::find($casoId)->cpp_id !== null) {
-                            $enviarCorreo = new EmailController();
-                            $enviarCorreo->send_emailComite($formulaDestino->tablero_proximo->id, $casoId);
+                            // Validacion si no hay pedido en el caso que no envie el correo
+                            if (Caso::find($casoId)->cpp_id !== null) {
+                                $enviarCorreo = new EmailController();
+                                $enviarCorreo->send_emailComite($formulaDestino->tablero_proximo->id, $casoId);
+                            }
+
                         }
-
                     }
 
                 }
