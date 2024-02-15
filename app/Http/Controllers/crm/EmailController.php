@@ -291,12 +291,17 @@ class EmailController extends Controller
                         $formulasDestino = EstadosFormulas::where('tab_id', $tablero_proximo_id)
                             ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
                             ->get();
+                        // Dividir la cadena en valores individuales usando coma como delimitador
+                        $parametro_respuestas = explode(',', $parametro->respuesta_caso);
+
+                        $aprobar = $parametro_respuestas[0];
+                        $rechazar = $parametro_respuestas[1];
 
                         foreach ($formulasDestino as $formula) {
 
-                            if ($formula->respuesta_caso->nombre == 'APROBAR CREDITO') {
+                            if ($formula->respuesta_caso->nombre == $aprobar) {
                                 $urlEndPointAprobar = $urlEndPointAprobacionCreditoComite->valor . $formula->id . '/' . $caso_id . '/' . $formula->tab_id . '/' . $banMostrarVistaCreditoAprobado = 1;
-                            } else if ($formula->respuesta_caso->nombre == 'RECHAZAR CREDITO') {
+                            } else if ($formula->respuesta_caso->nombre == $rechazar) {
                                 $urlEndPointRechazar = $urlEndPointAprobacionCreditoComite->valor . $formula->id . '/' . $caso_id . '/' . $formula->tab_id . '/' . $banMostrarVistaCreditoAprobado = 2;
                             }
 
