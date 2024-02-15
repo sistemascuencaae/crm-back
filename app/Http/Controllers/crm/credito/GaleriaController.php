@@ -43,7 +43,7 @@ class GaleriaController extends Controller
                 if (env('ServerNas') == true) {
                     $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
                 } else {
-                    $path = Storage::disk('local')->putFileAs('crm/' . $caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
