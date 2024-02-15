@@ -50,6 +50,25 @@ class ChatController extends Controller
         }
     }
 
+    public function usersGrupoChat($converId)
+    {
+        try {
+            $usersGrupo = DB::select("SELECT u.id from crm.chat_grupos cg
+            inner join crm.chat_miembros_grupo cmg  on cmg.chatgrupo_id = cg.id
+            inner join crm.users u on u.id = cmg.user_id
+            where cg.id = $converId");
+            //$usuarios = User::where('estado', true)->where('usu_tipo', '<>', 1)->get();
+            $usuarios = DB::select("SELECT * FROM crm.users where estado = true and usu_tipo <> 1");
+            $data = (object)[
+                "usersGrupo" => $usersGrupo,
+                "usuarios" => $usuarios
+            ];
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+    }
+
     public function enviarMensaje(Request $request, $converId, $tipoConver)
     {
         try {
@@ -452,6 +471,31 @@ class ChatController extends Controller
             inner join crm.chat_conversaciones cc on cc.id = cm.chatconve_id and cc.user_uno_id = $user_id or cc.user_dos_id = $user_id
             where chatconve_id notnull and read_at isnull and cm.user_id <> $user_id order by 1 desc");
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $mensajesNoLeidos));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function actualizarGrupo(Request $request)
+    {
+        try {
+            $data = DB::transaction(function () use ($request) {
+                $converId = $request->input('converId');
+                $listaUsers = $request->input('users');
+                $nombreGrupo = $request->input('nombreGrupo');
+                DB::delete("DELETE FROM crm.chat_miembros_grupo  WHERE chatgrupo_id = $converId;");
+                foreach ($listaUsers as $key => $value) {
+                    DB::insert("INSERT INTO crm.chat_miembros_grupo(user_id, chatgrupo_id)VALUES($value, $converId);");
+                }
+                DB::update("UPDATE crm.chat_grupos set nombre_grupo = ? where id = ?", [$nombreGrupo, $converId]);
+            });
+            $converId = $request->input('converId');
+            $miembros = DB::select("SELECT * FROM crm.chat_miembros_grupo WHERE chatgrupo_id = $converId");
+            foreach ($miembros as $key => $value) {
+                $userMiembroId = $value->user_id;
+                $this->getConversacionesUser($userMiembroId);
+            }
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', []));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
