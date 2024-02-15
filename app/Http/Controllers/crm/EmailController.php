@@ -9,6 +9,7 @@ use App\Http\Controllers\openceo\PedidoMovilController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Caso;
+use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Fase;
 use App\Models\mail\Email;
 use App\Models\mail\SendMail;
@@ -258,7 +259,7 @@ class EmailController extends Controller
         }
     }
 
-    public function send_emailComite($estadoFormId, $caso_id, $tableroActualId)
+    public function send_emailComite($tablero_proximo_id, $caso_id)
     {
         $log = new Funciones();
         try {
@@ -266,43 +267,104 @@ class EmailController extends Controller
             $error = null;
             $exitoso = null;
 
-            DB::transaction(function () use ($log, $estadoFormId, $caso_id, $tableroActualId, &$error, &$exitoso) {
+            DB::transaction(function () use ($log, $tablero_proximo_id, $caso_id, &$error, &$exitoso) {
 
                 $caso = Caso::find($caso_id);
 
                 if ($caso) { // Si existe el caso
                     if ($caso->cpp_id) {
 
-                        // el campo valor contiene los correos del comite
-                        $correosComite = DB::selectOne("SELECT valor FROM crm.parametro where nombre = 'Correos Comite';");
-                        $emails = explode(',', $correosComite->valor);
+                        $parametro = DB::table('crm.parametro')
+                            ->where('abreviacion', 'TC')
+                            ->first();
 
-                        $pedidoMovilController = new PedidoMovilController();
-                        $pedidoMovil = $pedidoMovilController->getPedidoById($caso->cpp_id);
-                        $pedidoMovil = $pedidoMovil->getData()->data; // obtendo directamente la data y no todo el objeto returnResultado
+                        if ($parametro) {
 
-                        $urlEndPointAprobacionCreditoComite = DB::selectOne("SELECT valor FROM crm.parametro where nombre = 'Endpoint aprobacion credito comite';");
-                        // aqui envio la variable banMostrarVistaCreditoAprobado con true o cualquier otro valor, para que se muestre la vista cuando den click en el enlace o link
-                        $urlEndPoint = $urlEndPointAprobacionCreditoComite->valor . $estadoFormId . '/' . $caso_id . '/' . $tableroActualId . '/' . $banMostrarVistaCreditoAprobado = true;
+                            $emails = explode(',', $parametro->correos);
 
-                        // Todos los datos que vamos a enviar en el correo
-                        $object = (object) [
-                            'emails' => $emails,
-                            'asunto' => 'Caso para aprobación de crédito',
-                            'link' => $urlEndPoint,
-                            'data' => $pedidoMovil,
-                            'caso' => $caso,
-                        ];
+                            $pedidoMovilController = new PedidoMovilController();
+                            $pedidoMovil = $pedidoMovilController->getPedidoById($caso->cpp_id);
 
-                        // Enviar el correo a los destinatarios especificados en el array de correos electrónicos
-                        foreach ($object->emails as $correo) {
-                            Mail::to($correo)->send(new SendMailComite($object));
+                            if ($pedidoMovil) {
+
+                                $pedidoMovil = $pedidoMovil->getData()->data; // Obtengo directamente la data y no todo el objeto returnResultado
+
+                                // Obtenemos la ruta del endPoint de aprobar o rechazar el credito
+                                $urlEndPointAprobacionCreditoComite = DB::table('crm.parametro')
+                                    ->where('abreviacion', 'EAC')
+                                    ->first();
+
+                                if ($urlEndPointAprobacionCreditoComite) {
+
+                                    $formulasDestino = EstadosFormulas::where('tab_id', $tablero_proximo_id)
+                                        ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
+                                        ->get();
+
+                                    if ($formulasDestino) {
+
+                                        // Dividir la cadena en valores individuales usando coma como delimitador, se convierte en un array simple
+                                        $parametro_respuestas = explode(',', $parametro->respuesta_caso);
+
+                                        $aprobar = $parametro_respuestas[0];
+                                        $rechazar = $parametro_respuestas[1];
+
+                                        foreach ($formulasDestino as $formula) {
+
+                                            if ($formula->respuesta_caso->nombre == $aprobar) {
+                                                $urlEndPointAprobar = $urlEndPointAprobacionCreditoComite->valor . $formula->id . '/' . $caso_id . '/' . $formula->tab_id . '/' . $banMostrarVistaCreditoAprobado = 1;
+                                            } else if ($formula->respuesta_caso->nombre == $rechazar) {
+                                                $urlEndPointRechazar = $urlEndPointAprobacionCreditoComite->valor . $formula->id . '/' . $caso_id . '/' . $formula->tab_id . '/' . $banMostrarVistaCreditoAprobado = 2;
+                                            }
+
+                                        }
+
+                                        // Todos los datos que vamos a enviar en el correo
+                                        $object = (object) [
+                                            'emails' => $emails,
+                                            'asunto' => 'Caso para aprobación de crédito',
+                                            'linkAprobar' => $urlEndPointAprobar,
+                                            'linkRechazar' => $urlEndPointRechazar,
+                                            'data' => $pedidoMovil,
+                                            'caso' => $caso,
+                                        ];
+
+                                        // Enviar el correo a los destinatarios especificados en el array de correos electrónicos
+                                        foreach ($object->emails as $correo) {
+                                            Mail::to($correo)->send(new SendMailComite($object));
+                                        }
+
+                                        $log->logInfo(EmailController::class, 'Correo electrónico enviado correctamente al comité');
+
+                                        $exitoso = 'Correo electrónico enviado correctamente al comité';
+                                        return null;
+
+                                    } else {
+                                        $log->logError(EmailController::class, 'No existe formulas en el tablero con el id: ' . $tablero_proximo_id);
+
+                                        $error = 'No existe formulas en el tablero con el id: ' . $tablero_proximo_id;
+                                        return null;
+                                    }
+
+                                } else {
+                                    $log->logError(EmailController::class, 'No existe el parametro del endPoint para aprobar o rechazar el credito');
+
+                                    $error = 'No existe el parametro del endPoint para aprobar o rechazar el credito';
+                                    return null;
+                                }
+
+                            } else {
+                                $log->logError(EmailController::class, 'No existe el pedido con el id: ' . $caso->cpp_id);
+
+                                $error = 'No existe el pedido con el id: ' . $caso->cpp_id;
+                                return null;
+                            }
+
+                        } else {
+                            $log->logError(EmailController::class, 'No existe parametros del comite');
+
+                            $error = 'No existe parametros del comite';
+                            return null;
                         }
-
-                        $log->logInfo(EmailController::class, 'Correo electrónico enviado correctamente al comité');
-
-                        $exitoso = 'Correo electrónico enviado correctamente al comité';
-                        return null;
 
                     } else {
 

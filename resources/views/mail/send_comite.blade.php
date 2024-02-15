@@ -138,11 +138,13 @@
 
     <p>Si su respuesta es <b>SI</b>, dar click en el siguiente link:</p>
 
-    <a href="{{ $object->link }}"> Click si su respuesta es SI</a>
+    <a href="{{ $object->linkAprobar }}"> Click si su respuesta es SI</a>
 
     <br />
 
-    <p>Si su respuesta es <b>NO</b>, no hacer nada.</p>
+    <p>Si su respuesta es <b>NO</b>, dar click en el siguiente link:</p>
+
+    <a href="{{ $object->linkRechazar }}"> Click si su respuesta es NO</a>
 
     <h5 class="auto-style1">Has recibido este correo electrónico porque han solicitado un crédito en Almespana Cia.
         Ltda.</h5>

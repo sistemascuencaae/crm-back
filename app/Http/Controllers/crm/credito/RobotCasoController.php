@@ -26,45 +26,50 @@ class RobotCasoController extends Controller
         try {
             $casoController = new CasoController();
 
-            // Formula de ventas
-            $formulaDestino = DB::selectOne("SELECT * from crm.estados_formulas where id = $estadoFormId");
+            // Sacamos la formula de la fase actual por el ID 
+            $formulaDestino = EstadosFormulas::where('id', $estadoFormId)
+                ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
+                ->first();
 
             if ($formulaDestino) {
 
-                // Saco nombre del tablero
-                $nombreTablero = DB::selectOne("SELECT ta.nombre  from crm.estados_formulas ef
-                inner join crm.tablero ta on ta.id = ef.tablero_id 
-                where ef.id = $estadoFormId");
+                // Saco el nombre del tablero_proximo, en este caso seria COMITE
+                $nombreTablero = $formulaDestino->tablero_proximo->nombre;
 
                 if ($nombreTablero) {
-                    $parametro = DB::selectOne("SELECT valor from crm.parametro where nombre = 'Tablero Comite'"); // hace referencia al tablero comite
 
-                    if ($nombreTablero->nombre == $parametro->valor) { // valida que sea el tablero 'COMITE', por el nombre del parametro con el nombre 'Tablero Comite'
+                    // Saco los parametros del COMITE por abreviacion en la tabla parametro 
+                    $parametro = DB::table('crm.parametro')
+                        ->where('abreviacion', 'TC')
+                        ->first();
 
-                        // // Formula destino de comite para que se vaya a ventas
-                        $formDestino = DB::selectOne("select ef.* from crm.fase fa
-                                                        inner join crm.estados_formulas ef on ef.fase_id_actual  = fa.id 
-                                                        where fa.id = $formulaDestino->fase_id");
+                    if ($parametro) {
+                        // Valida que sea el tablero 'COMITE', por el valor del parametro (valor = 'COMITE')
+                        if ($nombreTablero == $parametro->valor) {
 
-                        // validacion si no hay pedido en el caso que no envie el correo
-                        if (Caso::find($casoId)->cpp_id !== null) {
-                            $enviarCorreo = new EmailController();
-                            $enviarCorreo->send_emailComite($formDestino->id, $casoId, $formDestino->tab_id);
+                            // Validacion si no hay pedido en el caso que no envie el correo
+                            if (Caso::find($casoId)->cpp_id !== null) {
+                                $enviarCorreo = new EmailController();
+                                $enviarCorreo->send_emailComite($formulaDestino->tablero_proximo->id, $casoId);
+                            }
+
                         }
-
                     }
 
                 }
 
             }
+
             $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
             $data = $casoController->getCaso($casoModificado->id);
 
             broadcast(new ReasignarCasoEvent($data));
 
             // si existe la variable banMostrarVistaCreditoAprobado, se muestra la vista de caso creditoAprobado
-            if ($banMostrarVistaCreditoAprobado) {
+            if ($banMostrarVistaCreditoAprobado == 1) {
                 return view('mail.creditoAprobado');
+            } else if ($banMostrarVistaCreditoAprobado == 2) {
+                return view('mail.creditoRechazado');
             } else {
                 return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
             }
