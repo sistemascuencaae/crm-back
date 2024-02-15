@@ -9,6 +9,7 @@ use App\Http\Controllers\openceo\PedidoMovilController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Caso;
+use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Fase;
 use App\Models\mail\Email;
 use App\Models\mail\SendMail;
@@ -258,7 +259,7 @@ class EmailController extends Controller
         }
     }
 
-    public function send_emailComite($estadoFormId, $caso_id, $tableroActualId)
+    public function send_emailComite($tablero_proximo_id, $caso_id)
     {
         $log = new Funciones();
         try {
@@ -266,18 +267,18 @@ class EmailController extends Controller
             $error = null;
             $exitoso = null;
 
-            DB::transaction(function () use ($log, $estadoFormId, $caso_id, $tableroActualId, &$error, &$exitoso) {
+            DB::transaction(function () use ($log, $tablero_proximo_id, $caso_id, &$error, &$exitoso) {
 
                 $caso = Caso::find($caso_id);
 
                 if ($caso) { // Si existe el caso
                     if ($caso->cpp_id) {
 
-                        $correosComite = DB::table('crm.parametro')
+                        $parametro = DB::table('crm.parametro')
                             ->where('abreviacion', 'TC')
                             ->first();
 
-                        $emails = explode(',', $correosComite->correos);
+                        $emails = explode(',', $parametro->correos);
 
                         $pedidoMovilController = new PedidoMovilController();
                         $pedidoMovil = $pedidoMovilController->getPedidoById($caso->cpp_id);
@@ -287,14 +288,26 @@ class EmailController extends Controller
                             ->where('abreviacion', 'EAC')
                             ->first();
 
-                        // aqui envio la variable banMostrarVistaCreditoAprobado con true o cualquier otro valor, para que se muestre la vista cuando den click en el enlace o link
-                        $urlEndPoint = $urlEndPointAprobacionCreditoComite->valor . $estadoFormId . '/' . $caso_id . '/' . $tableroActualId . '/' . $banMostrarVistaCreditoAprobado = true;
+                        $formulasDestino = EstadosFormulas::where('tab_id', $tablero_proximo_id)
+                            ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
+                            ->get();
+
+                        foreach ($formulasDestino as $formula) {
+
+                            if ($formula->respuesta_caso->nombre == 'APROBAR CREDITO') {
+                                $urlEndPointAprobar = $urlEndPointAprobacionCreditoComite->valor . $formula->id . '/' . $caso_id . '/' . $formula->tab_id . '/' . $banMostrarVistaCreditoAprobado = 1;
+                            } else if ($formula->respuesta_caso->nombre == 'RECHAZAR CREDITO') {
+                                $urlEndPointRechazar = $urlEndPointAprobacionCreditoComite->valor . $formula->id . '/' . $caso_id . '/' . $formula->tab_id . '/' . $banMostrarVistaCreditoAprobado = 2;
+                            }
+
+                        }
 
                         // Todos los datos que vamos a enviar en el correo
                         $object = (object) [
                             'emails' => $emails,
                             'asunto' => 'Caso para aprobación de crédito',
-                            'link' => $urlEndPoint,
+                            'linkAprobar' => $urlEndPointAprobar,
+                            'linkRechazar' => $urlEndPointRechazar,
                             'data' => $pedidoMovil,
                             'caso' => $caso,
                         ];

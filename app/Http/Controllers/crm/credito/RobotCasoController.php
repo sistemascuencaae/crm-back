@@ -27,7 +27,7 @@ class RobotCasoController extends Controller
         try {
             $casoController = new CasoController();
 
-            // // Sacamos la formula ppr el ID
+            // Sacamos la formula por el ID 
             $formulaDestino = EstadosFormulas::where('id', $estadoFormId)
                 ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
                 ->first();
@@ -47,22 +47,10 @@ class RobotCasoController extends Controller
                     // valida que sea el tablero 'COMITE', por el valor del parametro
                     if ($nombreTablero == $parametro->valor) {
 
-                        $fase_id = $formulaDestino->fase_proxima->id;
-
-                        // Formula destino de la bandeja de entrada del comite para que se vaya a ventas cuando de click en el link del email
-                        // NOTA: Solo debe existir una unica formula en la bandeja de entrada del tablero COMITE
-                        $formDestino = DB::selectOne(
-                            "select ef.* 
-                        from crm.fase fa 
-                        inner join crm.estados_formulas ef 
-                        on ef.fase_id_actual = fa.id 
-                        where fa.id = $fase_id;"
-                        );
-
                         // validacion si no hay pedido en el caso que no envie el correo
                         if (Caso::find($casoId)->cpp_id !== null) {
                             $enviarCorreo = new EmailController();
-                            $enviarCorreo->send_emailComite($formDestino->id, $casoId, $formDestino->tab_id);
+                            $enviarCorreo->send_emailComite($formulaDestino->tablero_proximo->id, $casoId);
                         }
 
                     }
@@ -77,8 +65,10 @@ class RobotCasoController extends Controller
             broadcast(new ReasignarCasoEvent($data));
 
             // si existe la variable banMostrarVistaCreditoAprobado, se muestra la vista de caso creditoAprobado
-            if ($banMostrarVistaCreditoAprobado) {
+            if ($banMostrarVistaCreditoAprobado == 1) {
                 return view('mail.creditoAprobado');
+            } else if ($banMostrarVistaCreditoAprobado == 2) {
+                return view('mail.creditoRechazado');
             } else {
                 return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
             }

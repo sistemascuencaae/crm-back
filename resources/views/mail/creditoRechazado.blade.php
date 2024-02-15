@@ -30,14 +30,14 @@
         }
 
         .titulo {
-            color: green;
+            color: red;
             font-size: 50px;
             line-height: 1;
             text-shadow: 2px 2px 4px rgba(88, 212, 201, 0.2);
         }
 
         .info {
-            color: red;
+            color: green;
             font-size: 25px;
             line-height: 1.2;
             letter-spacing: 0.5px;
@@ -54,7 +54,7 @@
     </div>
 
     <div class="content">
-        <div class="titulo">Crédito APROBADO con éxito</div>
+        <div class="titulo">Crédito RECHAZADO con éxito</div>
         <div class="info">Puede no más cerrar esta ventana.</div>
     </div>
 </body>
