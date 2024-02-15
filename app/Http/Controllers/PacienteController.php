@@ -304,7 +304,12 @@ class PacienteController extends Controller
         $image = $request->file('image');
         if ($image) {
             $image_path = $image->getClientOriginalName();
-            \Storage::disk('nas')->put("hclinico/".$image_path, \File::get($image));
+            //           \Storage::disk('nas')->put("hclinico/".$image_path, \File::get($image));
+            if (env('ServerNas') == true) {
+                \Storage::disk('nas')->put("hclinico/" . $image_path, \File::get($image));
+            } else {
+                \Storage::disk('local')->put("hclinico/" . $image_path, \File::get($image));
+            }
         }
         $data = array(
             'image' => $image,

@@ -65,8 +65,7 @@ class ChatController extends Controller
             $mensajeGuardado = ChatMensajes::create($dataMensaje);
             //$dataMensajeCreado = $this->getMensaje($mensajeGuardado->id);
             $dataMensajes = $this->getMensajes($converId, $tipoConver, 15);
-            $dataConverPrinc = $this->getConversacionesUser($user_id);
-            broadcast(new RefreshChatConverEvent($dataConverPrinc, $user_id));
+            $this->getConversacionesUser($user_id);
             broadcast(new EnviarMensajeEvent($dataMensajes, $converId, $tipoConver));
             if ($tipoConver === 'NORMAL') {
                 $this->getConversacionesUser($userRecibeId->recibe);
@@ -323,17 +322,12 @@ class ChatController extends Controller
             $converId = $request->input("converId");
             $tipoChat = $request->input("tipoChat");
             $data = DB::transaction(function () use ($request) {
-
                 $archivos = $request->file("archivos");
                 $nombreCarpeta = $request->input("nombreCarpeta");
                 $converId = $request->input("converId");
                 $tipoChat = $request->input("tipoChat");
                 $msjDataJSON = json_decode($request->input("msg"));
-
-
-
                 $nuevoMensajeImg = null;
-                // $archivosGuardados = [];
                 $contMSg = false;
                 foreach ($archivos as $archivoData) {
                     // Fecha actual
@@ -354,7 +348,15 @@ class ChatController extends Controller
                             ]);
                             $contMSg = true;
                         }
-                        $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
+
+
+
+                        if (env('ServerNas') == true) {
+                            $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
+                        } else {
+                            $path = Storage::disk('local')->putFileAs("Chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico);
+                        }
+
 
                         $nuevaImagen = Galeria::create([
                             "titulo" => 'Imagen Chat - ' . $converId, // poner el numero de chat o algo
@@ -370,7 +372,15 @@ class ChatController extends Controller
                             "galeria_id" => $nuevaImagen->id
                         ]);
                     } else {
-                        $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico); // crear una carpeta para chat
+
+
+                        if (env('ServerNas') == true) {
+                            $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico); // crear una carpeta para chat
+                        } else {
+                            $path = Storage::disk('local')->putFileAs("Chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico);
+                        }
+
+
                         $nuevoArchivo = Archivo::create([
                             "titulo" => $nombreUnico,
                             "observacion" => $msjDataJSON->mensaje ? $msjDataJSON->mensaje : 'Archivo Chat - ' . $converId, // poner el numero de chat o algo
@@ -387,8 +397,6 @@ class ChatController extends Controller
                         ]);
                     }
                 }
-
-
                 if ($msjDataJSON->mensaje) {
                     $nuevoMensajeImg = ChatMensajes::create([
                         "chatconve_id" => $msjDataJSON->chatconve_id,
@@ -397,26 +405,32 @@ class ChatController extends Controller
                         "mensaje" => $msjDataJSON->mensaje,
                     ]);
                 }
-
-
-
-
-
                 return (object)[
                     "nuevoMensajeImg" => $nuevoMensajeImg,
                     "converId" => $converId,
                     "tipoChat" => $tipoChat
                 ];
             });
-            // if($data->nuevoMensajeImg){
-            //     $mensajeId = $data->nuevoMensajeImg->id;
-            //     $dataNewMSj = $this->getMensaje($mensajeId);
-            //     broadcast(new EnviarMensajeEvent($dataNewMSj, $data->converId, $data->tipoChat));
-            // }else{
             $dataMensajes = $this->getMensajes($converId, $tipoChat, 15);
             broadcast(new EnviarMensajeEvent($dataMensajes, $data->converId, $data->tipoChat));
-            //}
-
+            if ($tipoChat == "NORMAL") {
+                $user_id = Auth::id();
+                $userRecibeId = DB::selectOne("SELECT
+                CASE
+                 WHEN cc.user_uno_id = ? then cc.user_dos_id
+                 WHEN cc.user_dos_id = ? THEN cc.user_uno_id
+                 ELSE 0
+                END AS recibe
+                from crm.chat_conversaciones cc where cc.id = ?", [$user_id, $user_id, $converId]);
+                $this->getConversacionesUser($userRecibeId->recibe);
+            }
+            if ($tipoChat === 'GRUPAL') {
+                $miembros = DB::select("SELECT * FROM crm.chat_miembros_grupo WHERE chatgrupo_id = $converId");
+                foreach ($miembros as $key => $value) {
+                    $userMiembroId = $value->user_id;
+                    $this->getConversacionesUser($userMiembroId);
+                }
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', []));
         } catch (Exception $e) {
@@ -433,8 +447,10 @@ class ChatController extends Controller
     public function listarMensajesNoLeidos()
     {
         try {
-            $mensajesNoLeidos = DB::selectOne("SELECT count(mensaje) as cantidad  from crm.chat_mensajes cm
-            where chatconve_id notnull and read_at isnull  order by 1 desc");
+            $user_id = Auth::id();
+            $mensajesNoLeidos = DB::selectOne("SELECT count(mensaje) as cantidad from crm.chat_mensajes cm
+            inner join crm.chat_conversaciones cc on cc.id = cm.chatconve_id and cc.user_uno_id = $user_id or cc.user_dos_id = $user_id
+            where chatconve_id notnull and read_at isnull and cm.user_id <> $user_id order by 1 desc");
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $mensajesNoLeidos));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
