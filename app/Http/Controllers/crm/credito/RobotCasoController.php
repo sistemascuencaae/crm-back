@@ -11,6 +11,7 @@ use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Miembros;
+use App\Models\crm\Fase;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Request as RequestFacade;
@@ -26,25 +27,37 @@ class RobotCasoController extends Controller
         try {
             $casoController = new CasoController();
 
-            // Formula de ventas
-            $formulaDestino = DB::selectOne("SELECT * from crm.estados_formulas where id = $estadoFormId");
+            // // Sacamos la formula ppr el ID
+            $formulaDestino = EstadosFormulas::where('id', $estadoFormId)
+                ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
+                ->first();
 
             if ($formulaDestino) {
 
-                // Saco nombre del tablero
-                $nombreTablero = DB::selectOne("SELECT ta.nombre  from crm.estados_formulas ef
-                inner join crm.tablero ta on ta.id = ef.tablero_id 
-                where ef.id = $estadoFormId");
+                // Saco nombre del tablero_proximo que en este caso seria COMITE
+                $nombreTablero = $formulaDestino->tablero_proximo->nombre;
 
                 if ($nombreTablero) {
-                    $parametro = DB::selectOne("SELECT valor from crm.parametro where nombre = 'Tablero Comite'"); // hace referencia al tablero comite
 
-                    if ($nombreTablero->nombre == $parametro->valor) { // valida que sea el tablero 'COMITE', por el nombre del parametro con el nombre 'Tablero Comite'
+                    // saco los parametros COMITE por abreviacion de la tabla parametro 
+                    $parametro = DB::table('crm.parametro')
+                        ->where('abreviacion', 'TC')
+                        ->first();
 
-                        // // Formula destino de comite para que se vaya a ventas
-                        $formDestino = DB::selectOne("select ef.* from crm.fase fa
-                                                        inner join crm.estados_formulas ef on ef.fase_id_actual  = fa.id 
-                                                        where fa.id = $formulaDestino->fase_id");
+                    // valida que sea el tablero 'COMITE', por el valor del parametro
+                    if ($nombreTablero == $parametro->valor) {
+
+                        $fase_id = $formulaDestino->fase_proxima->id;
+
+                        // Formula destino de la bandeja de entrada del comite para que se vaya a ventas cuando de click en el link del email
+                        // NOTA: Solo debe existir una unica formula en la bandeja de entrada del tablero COMITE
+                        $formDestino = DB::selectOne(
+                            "select ef.* 
+                        from crm.fase fa 
+                        inner join crm.estados_formulas ef 
+                        on ef.fase_id_actual = fa.id 
+                        where fa.id = $fase_id;"
+                        );
 
                         // validacion si no hay pedido en el caso que no envie el correo
                         if (Caso::find($casoId)->cpp_id !== null) {
@@ -57,6 +70,7 @@ class RobotCasoController extends Controller
                 }
 
             }
+
             $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
             $data = $casoController->getCaso($casoModificado->id);
 

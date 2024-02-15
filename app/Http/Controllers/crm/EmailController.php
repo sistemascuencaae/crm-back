@@ -273,15 +273,20 @@ class EmailController extends Controller
                 if ($caso) { // Si existe el caso
                     if ($caso->cpp_id) {
 
-                        // el campo valor contiene los correos del comite
-                        $correosComite = DB::selectOne("SELECT valor FROM crm.parametro where nombre = 'Correos Comite';");
-                        $emails = explode(',', $correosComite->valor);
+                        $correosComite = DB::table('crm.parametro')
+                            ->where('abreviacion', 'TC')
+                            ->first();
+
+                        $emails = explode(',', $correosComite->correos);
 
                         $pedidoMovilController = new PedidoMovilController();
                         $pedidoMovil = $pedidoMovilController->getPedidoById($caso->cpp_id);
                         $pedidoMovil = $pedidoMovil->getData()->data; // obtendo directamente la data y no todo el objeto returnResultado
 
-                        $urlEndPointAprobacionCreditoComite = DB::selectOne("SELECT valor FROM crm.parametro where nombre = 'Endpoint aprobacion credito comite';");
+                        $urlEndPointAprobacionCreditoComite = DB::table('crm.parametro')
+                            ->where('abreviacion', 'EAC')
+                            ->first();
+
                         // aqui envio la variable banMostrarVistaCreditoAprobado con true o cualquier otro valor, para que se muestre la vista cuando den click en el enlace o link
                         $urlEndPoint = $urlEndPointAprobacionCreditoComite->valor . $estadoFormId . '/' . $caso_id . '/' . $tableroActualId . '/' . $banMostrarVistaCreditoAprobado = true;
 
