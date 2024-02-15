@@ -28,9 +28,13 @@ class SoporteController extends Controller
                     $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName();
                     $extension = $archivoData->getClientOriginalExtension();
 
-
                     if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif'])) {
-                        $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $archivoData, $nombreUnico);
+
+                        if (env('ServerNas') == true) {
+                            $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $archivoData, $nombreUnico);
+                        } else {
+                            $path = Storage::disk('local')->putFileAs($caso_id . "/galerias", $archivoData, $nombreUnico);
+                        }
 
                         $nuevaImagen = Galeria::create([
                             "titulo" => 'Imagen Soporte - ' . $caso_id,
@@ -43,7 +47,13 @@ class SoporteController extends Controller
 
                         // $archivosGuardados[] = $nuevaImagen;
                     } else {
-                        $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico);
+
+                        if (env('ServerNas') == true) {
+                            $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico);
+                        } else {
+                            $path = Storage::disk('local')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico);
+                        }
+
                         $nuevoArchivo = Archivo::create([
                             "titulo" => $nombreUnico,
                             "observacion" => 'Archivo Soporte - ' . $caso_id,
