@@ -42,7 +42,13 @@ class ReqCasoController extends Controller
                     $imagen = $request->file("imagen_file");
                     $titulo = $imagen->getClientOriginalName();
 
-                    $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+
+
+                    if (env('ServerNas') == true) {
+                        $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                    } else {
+                        $path = Storage::disk('local')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                    }
                 }
                 $requerimiento->esimagen = true;
             }
@@ -60,7 +66,7 @@ class ReqCasoController extends Controller
 
                     $galeria->update([
                         "titulo" => $requerimiento->titulo,
-                        "descripcion" => $requerimiento->descripcion,//'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '."\n". $requerimiento->descripcion,//$requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        "descripcion" => $requerimiento->descripcion, //'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '."\n". $requerimiento->descripcion,//$requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         "imagen" => $path,
                         "caso_id" => $inputReq->caso_id,
                         "tipo_gal_id" => 8, // Tipo Requerimiento es el id 8
@@ -85,7 +91,7 @@ class ReqCasoController extends Controller
                 } else {
                     $newGaleria = new Galeria();
                     $newGaleria->titulo = $requerimiento->titulo;
-                    $newGaleria->descripcion = $requerimiento->descripcion;//'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '. "\n". $requerimiento->descripcion;
+                    $newGaleria->descripcion = $requerimiento->descripcion; //'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '. "\n". $requerimiento->descripcion;
                     $newGaleria->imagen = $path;
                     $newGaleria->caso_id = $inputReq->caso_id;
                     $newGaleria->tipo_gal_id = 8;
@@ -119,9 +125,12 @@ class ReqCasoController extends Controller
                     $file = $request->file("archivo_file");
                     $titulo = $file->getClientOriginalName();
 
-                    $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
 
-                    // $path = Storage::putFile("archivos", $request->file("archivo_file"));
+                    if (env('ServerNas') == true) {
+                        $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                    } else {
+                        $path = Storage::disk('local')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo);
+                    }
                 }
                 $requerimiento->esimagen = false;
 
@@ -218,7 +227,7 @@ class ReqCasoController extends Controller
 
             if ($requerimiento) {
                 DB::transaction(function () use ($requerimiento, $request) {
-                    if (($requerimiento->tipo_campo == 'archivo' || $requerimiento->tipo_campo == 'pegar imagen' ) && $requerimiento->galerias_id != null) {
+                    if (($requerimiento->tipo_campo == 'archivo' || $requerimiento->tipo_campo == 'pegar imagen') && $requerimiento->galerias_id != null) {
                         $galeria = Galeria::find($requerimiento->galerias_id);
                         $galeria->update([
                             "descripcion" => $request->input('descripcion'),
@@ -280,7 +289,6 @@ class ReqCasoController extends Controller
         try {
             $reqFase = DB::select('SELECT * FROM crm.requerimientos_predefinidos  where fase_id = ?', [$casoId]);
             $log->logInfo(ReqCasoController::class, 'Se listo correctamente los requerimientos predefinidos');
-
         } catch (\Throwable $e) {
             $log->logError(ReqCasoController::class, 'Error al listar los requerimientos predefinidos', $e);
         }
@@ -307,7 +315,6 @@ class ReqCasoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
-
     }
 
     public function uploadReqArchivo($inputFormData)
@@ -405,5 +412,4 @@ class ReqCasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
         }
     }
-
 }

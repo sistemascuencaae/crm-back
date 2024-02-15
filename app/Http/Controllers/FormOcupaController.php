@@ -178,7 +178,7 @@ class FormOcupaController extends Controller
                         $this->saveImagen($request->input('formParaArchivo')[$i]['name'], $fileSource);
                     }
 
-                    
+
 
 
                     if($arrayParaAcrchivo[$i]['accion'] == 'actualizar'){
@@ -192,7 +192,7 @@ class FormOcupaController extends Controller
 
 
             }
-           
+
         });
         return $this->miResultOK($request->all(), 'Imagenes guardas sin problemas'.$request);
     }
