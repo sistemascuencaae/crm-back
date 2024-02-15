@@ -40,7 +40,11 @@ class GaleriaController extends Controller
                 // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
                 $fecha_actual = str_replace(':', '-', $fechaActual);
 
-                $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                if (env('ServerNas') == true) {
+                    $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                } else {
+                    $path = Storage::disk('local')->putFileAs('crm/' . $caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                }
 
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
             }
