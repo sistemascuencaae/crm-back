@@ -219,7 +219,8 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::get('/getImagenesSmg', [ChatController::class, 'getImagenesSmg']); //
     Route::get('/getMensaje/{id}', [ChatController::class, 'getMensaje']); //
     Route::get('/listarMensajesNoLeidos', [ChatController::class, 'listarMensajesNoLeidos']);
-
+    Route::get('/usersGrupoChat/{converId}', [ChatController::class, 'usersGrupoChat']); //
+    Route::post('/actualizarGrupo', [ChatController::class, 'actualizarGrupo']); //
     // ARCHIVOS E IMAGENES PARA EL CHAT
     Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
 });
