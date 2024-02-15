@@ -155,16 +155,26 @@ class GaleriaController extends Controller
 
             if ($request->hasFile("imagen_file")) {
                 if ($galeria->imagen) {
-                    // Eliminamos la imagen anterior del disco NAS
-                    Storage::disk('nas')->delete($galeria->imagen);
+                    if (env('ServerNas') == true) {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('nas')->delete($galeria->imagen);
+                    } else {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('local')->delete($galeria->imagen);
+                    }
                 }
 
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
                 $titulo = $nuevaImagen->getClientOriginalName();
 
-                // Guardar la nueva imagen en el disco NAS con su nombre original
-                $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                if (env('ServerNas') == true) {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                } else {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('local')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                }
 
                 $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
             }
@@ -215,7 +225,11 @@ class GaleriaController extends Controller
             // $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
             // Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
 
-            Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            if (env('ServerNas') == true) {
+                Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            } else {
+                Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            }
 
             $galeria->delete();
 

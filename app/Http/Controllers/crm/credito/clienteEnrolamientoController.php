@@ -159,7 +159,11 @@ class ClienteEnrolamientoController extends Controller
                     }
                     $fechaOriginal = $datosEnrolamiento['CreationDate'];
                     $fechaFormateada = str_replace([':', ' '], ['_', '_'], $fechaOriginal);
-                    $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
+                    if (env('ServerNas') == true) {
+                        $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
+                    } else {
+                        $ruta = Storage::disk('local')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
+                    }
                     file_put_contents($ruta, $imagenData);
 
                     Galeria::create([
@@ -459,20 +463,36 @@ class ClienteEnrolamientoController extends Controller
                     // Aqui borrar los archivos de la carpeta equifax y tambien de la BD
                     // Paso 1: Obtener los nombres de archivos en la carpeta NAS
                     $folderPath = $datosEnrolamiento['caso_id'] . "/equifax";
-                    $archivosNAS = Storage::disk('nas')->files($folderPath);
+                    if (env('ServerNas') == true) {
+                        $archivosNAS = Storage::disk('nas')->files($folderPath);
+                    } else {
+                        $archivosNAS = Storage::disk('local')->files($folderPath);
+                    }
 
                     // Paso 2: Buscar registros de archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
                     $archivosEnBD = Archivo::whereIn('archivo', $archivosNAS)->get();
 
-                    // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
-                    foreach ($archivosEnBD as $archivo) {
-                        // Eliminar archivos de la carpeta NAS
-                        Storage::disk('nas')->delete($archivo->archivo);
+                    if (env('ServerNas') == true) {
+                        // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
+                        foreach ($archivosEnBD as $archivo) {
+                            // Eliminar archivos de la carpeta NAS
+                            Storage::disk('nas')->delete($archivo->archivo);
 
-                        // Eliminar el registro de la base de datos
-                        $archivo->delete();
+                            // Eliminar el registro de la base de datos
+                            $archivo->delete();
+                        }
+                        // Aqui borrar los archivos de la carpeta equifax y tambien de la BD
+                    } else {
+                        // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
+                        foreach ($archivosEnBD as $archivo) {
+                            // Eliminar archivos de la carpeta NAS
+                            Storage::disk('local')->delete($archivo->archivo);
+
+                            // Eliminar el registro de la base de datos
+                            $archivo->delete();
+                        }
+                        // Aqui borrar los archivos de la carpeta equifax y tambien de la BD
                     }
-                    // Aqui borrar los archivos de la carpeta equifax y tambien de la BD
 
                     // Obtener el valor de datosEnrolamiento
                     $caso_id = $datosEnrolamiento['caso_id'];
@@ -490,7 +510,11 @@ class ClienteEnrolamientoController extends Controller
                         $titulo = $nombreArchivo;
                         $observacion = $nombreArchivo;
 
-                        $ruta = Storage::disk('nas')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
+                        if (env('ServerNas') == true) {
+                            $ruta = Storage::disk('nas')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
+                        } else {
+                            $ruta = Storage::disk('local')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
+                        }
                         file_put_contents($ruta, $archivoData);
 
                         Archivo::create([
@@ -505,20 +529,36 @@ class ClienteEnrolamientoController extends Controller
                     // Aqui borrar los archivos de la carpeta archivos_sin_firma y tambien de la BD
                     // Paso 1: Obtener los nombres de archivos en la carpeta NAS
                     $folderPath = $caso_id . "/archivos_sin_firma";
-                    $archivosNAS = Storage::disk('nas')->files($folderPath);
+                    if (env('ServerNas') == true) {
+                        $archivosNAS = Storage::disk('nas')->files($folderPath);
+                    } else {
+                        $archivosNAS = Storage::disk('local')->files($folderPath);
+                    }
 
                     // Paso 2: Buscar registros de archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
                     $archivosEnBD = Archivo::whereIn('archivo', $archivosNAS)->get();
 
-                    // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
-                    foreach ($archivosEnBD as $archivo) {
-                        // Eliminar archivos de la carpeta NAS
-                        Storage::disk('nas')->delete($archivo->archivo);
+                    if (env('ServerNas') == true) {
+                        // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
+                        foreach ($archivosEnBD as $archivo) {
+                            // Eliminar archivos de la carpeta NAS
+                            Storage::disk('nas')->delete($archivo->archivo);
 
-                        // Eliminar el registro de la base de datos
-                        $archivo->delete();
+                            // Eliminar el registro de la base de datos
+                            $archivo->delete();
+                        }
+                        // Aqui borrar los archivos de la carpeta archivos_sin_firma y tambien de la BD
+                    } else {
+                        // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
+                        foreach ($archivosEnBD as $archivo) {
+                            // Eliminar archivos de la carpeta NAS
+                            Storage::disk('local')->delete($archivo->archivo);
+
+                            // Eliminar el registro de la base de datos
+                            $archivo->delete();
+                        }
+                        // Aqui borrar los archivos de la carpeta archivos_sin_firma y tambien de la BD
                     }
-                    // Aqui borrar los archivos de la carpeta archivos_sin_firma y tambien de la BD
 
                     // return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', ''));
                     $exitoso = 'Se guardo con éxito';

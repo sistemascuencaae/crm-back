@@ -33,7 +33,11 @@ class ArchivoController extends Controller
                 foreach ($archivos as $archivoData) {
                     $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName(); // Obtener el nombre único del archivo
 
-                    $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
+                    if (env('ServerNas') == true) {
+                        $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
+                    } else {
+                        $path = Storage::disk('local')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
+                    }
 
                     $nuevoArchivo = Archivo::create([
                         "titulo" => $nombreUnico,
@@ -106,7 +110,11 @@ class ArchivoController extends Controller
                 $titulo = $file->getClientOriginalName();
 
                 // $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
-                $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                if (env('ServerNas') == true) {
+                    $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                } else {
+                    $path = Storage::disk('local')->putFileAs($caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                }
 
                 $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta del archivo en la que se encuentra
 
@@ -305,8 +313,13 @@ class ArchivoController extends Controller
                 // Almacenar la ruta del archivo antes de intentar eliminarlo
                 $archivoPath = $archivo->archivo;
 
-                // Intentar obtener el contenido del archivo
-                $archivoNas = Storage::disk('nas')->get($archivoPath);
+                if (env('ServerNas') == true) {
+                    // Intentar obtener el contenido del archivo
+                    $archivoNas = Storage::disk('nas')->get($archivoPath);
+                } else {
+                    // Intentar obtener el contenido del archivo
+                    $archivoNas = Storage::disk('local')->get($archivoPath);
+                }
 
                 // Eliminar el archivo de la base de datos
                 $archivo->delete();
@@ -331,8 +344,13 @@ class ArchivoController extends Controller
                 return $archivo; // Retornar el contenido del archivo eliminado
             });
 
-            // Si todo ha ido bien, eliminar definitivamente el archivo
-            Storage::disk('nas')->delete($archivoPath);
+            if (env('ServerNas') == true) {
+                // Si todo ha ido bien, eliminar definitivamente el archivo
+                Storage::disk('nas')->delete($archivoPath);
+            } else {
+                // Si todo ha ido bien, eliminar definitivamente el archivo
+                Storage::disk('local')->delete($archivoPath);
+            }
 
             $log->logInfo(ArchivoController::class, 'Se elimino con exito el archivo con el ID: ' . $id);
 
@@ -343,7 +361,11 @@ class ArchivoController extends Controller
 
             // En caso de error, restaurar el archivo desde la variable temporal
             if (!empty($archivoPath)) {
-                Storage::disk('nas')->put($archivoPath, $data);
+                if (env('ServerNas') == true) {
+                    Storage::disk('nas')->put($archivoPath, $data);
+                } else {
+                    Storage::disk('local')->put($archivoPath, $data);
+                }
             }
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -363,8 +385,13 @@ class ArchivoController extends Controller
             $data = DB::transaction(function () use ($caso_id) {
                 $folderPath = $caso_id . "/archivos_sin_firma"; // Ruta de la carpeta en tu NAS
 
-                // Obtén los nombres de archivos del sistema de archivos (NAS)
-                $archivosNAS = Storage::disk('nas')->files($folderPath);
+                if (env('ServerNas') == true) {
+                    // Obtén los nombres de archivos del sistema de archivos (NAS)
+                    $archivosNAS = Storage::disk('nas')->files($folderPath);
+                } else {
+                    // Obtén los nombres de archivos del sistema de archivos (NAS)
+                    $archivosNAS = Storage::disk('local')->files($folderPath);
+                }
 
                 // Busca archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
                 return Archivo::whereIn('archivo', $archivosNAS)->orderBy('archivo', 'ASC')->get();
@@ -397,14 +424,26 @@ class ArchivoController extends Controller
                     $titulo = $nombreBase;
 
                     $i = 1;
-                    while (Storage::disk('nas')->exists("$path/$titulo")) {
-                        // Si el archivo con el mismo nombre ya existe, ajusta el nombre
-                        $info = pathinfo($nombreBase);
-                        $titulo = $info['filename'] . " ($i)." . $info['extension'];
-                        $i++;
-                    }
 
-                    $path = Storage::disk('nas')->putFileAs($path, $archivoData, $titulo); // Guardar el archivo
+                    if (env('ServerNas') == true) {
+                        while (Storage::disk('nas')->exists("$path/$titulo")) {
+                            // Si el archivo con el mismo nombre ya existe, ajusta el nombre
+                            $info = pathinfo($nombreBase);
+                            $titulo = $info['filename'] . " ($i)." . $info['extension'];
+                            $i++;
+                        }
+
+                        $path = Storage::disk('nas')->putFileAs($path, $archivoData, $titulo); // Guardar el archivo
+                    } else {
+                        while (Storage::disk('local')->exists("$path/$titulo")) {
+                            // Si el archivo con el mismo nombre ya existe, ajusta el nombre
+                            $info = pathinfo($nombreBase);
+                            $titulo = $info['filename'] . " ($i)." . $info['extension'];
+                            $i++;
+                        }
+
+                        $path = Storage::disk('local')->putFileAs($path, $archivoData, $titulo); // Guardar el archivo
+                    }
 
                     $nuevoArchivo = Archivo::create([
                         "titulo" => $titulo,
@@ -447,18 +486,35 @@ class ArchivoController extends Controller
                     $titulo = $nombreBase;
 
                     $i = 1;
-                    while (Storage::disk('nas')->exists("$path/$titulo")) {
-                        // Si el archivo con el mismo nombre ya existe, ajusta el nombre
-                        $info = pathinfo($nombreBase);
-                        $titulo = $info['filename'] . " ($i)." . $info['extension'];
-                        $i++;
-                    }
 
-                    $path = Storage::disk('nas')->putFileAs($path, $file, $titulo);
+                    if (env('ServerNas') == true) {
+                        while (Storage::disk('nas')->exists("$path/$titulo")) {
+                            // Si el archivo con el mismo nombre ya existe, ajusta el nombre
+                            $info = pathinfo($nombreBase);
+                            $titulo = $info['filename'] . " ($i)." . $info['extension'];
+                            $i++;
+                        }
 
-                    // Puedes eliminar el archivo anterior si es necesario
-                    if ($archivo->archivo) {
-                        Storage::disk('nas')->delete($archivo->archivo);
+                        $path = Storage::disk('nas')->putFileAs($path, $file, $titulo);
+
+                        // Puedes eliminar el archivo anterior si es necesario
+                        if ($archivo->archivo) {
+                            Storage::disk('nas')->delete($archivo->archivo);
+                        }
+                    } else {
+                        while (Storage::disk('local')->exists("$path/$titulo")) {
+                            // Si el archivo con el mismo nombre ya existe, ajusta el nombre
+                            $info = pathinfo($nombreBase);
+                            $titulo = $info['filename'] . " ($i)." . $info['extension'];
+                            $i++;
+                        }
+
+                        $path = Storage::disk('local')->putFileAs($path, $file, $titulo);
+
+                        // Puedes eliminar el archivo anterior si es necesario
+                        if ($archivo->archivo) {
+                            Storage::disk('local')->delete($archivo->archivo);
+                        }
                     }
 
                     $archivo->update([
