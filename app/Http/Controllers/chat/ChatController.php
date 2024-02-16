@@ -466,10 +466,17 @@ class ChatController extends Controller
     public function listarMensajesNoLeidos()
     {
         try {
-            $user_id = Auth::id();
-            $mensajesNoLeidos = DB::selectOne("SELECT count(mensaje) as cantidad from crm.chat_mensajes cm
-            inner join crm.chat_conversaciones cc on cc.id = cm.chatconve_id and cc.user_uno_id = $user_id or cc.user_dos_id = $user_id
-            where chatconve_id notnull and read_at isnull and cm.user_id <> $user_id order by 1 desc");
+            $userId = Auth::id();
+            $mensajesNoLeidos = DB::selectOne("SELECT count(ttemp.id) AS cantidad from
+                (SELECT DISTINCT ON (cc.id)
+                    cc.id,
+                    cm.mensaje,
+                    cm.created_at,
+                    cm.read_at
+                FROM crm.chat_conversaciones cc
+                INNER JOIN crm.chat_mensajes cm ON cm.chatconve_id = cc.id and cm.read_at is null
+                WHERE cc.user_uno_id = $userId or cc.user_dos_id = $userId and cm.user_id <> $userId
+                ORDER BY cc.id, cm.created_at desc) ttemp");
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $mensajesNoLeidos));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
