@@ -54,7 +54,7 @@
     </div>
 
     <div class="content">
-        <div class="titulo">Crédito RECHAZADO con éxito</div>
+        <div class="titulo">Crédito RECHAZADO</div>
         <div class="info">Puede no más cerrar esta ventana.</div>
     </div>
 </body>
