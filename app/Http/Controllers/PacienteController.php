@@ -19,43 +19,47 @@ class PacienteController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth:admin', ['except' =>
-        [
-            'list',
-            'all',
-            'getImage',
-            'addImage',
-            'create',
-            'byId',
-            'update',
-            'register',
-            'reporteProylecma'
-        ]]);
+        $this->middleware('auth:admin', [
+            'except' =>
+                [
+                    'list',
+                    'all',
+                    'getImage',
+                    'addImage',
+                    'create',
+                    'byId',
+                    'update',
+                    'register',
+                    'reporteProylecma'
+                ]
+        ]);
     }
 
 
-    public function todos(){
+    public function todos()
+    {
         try {
-            $sql =  "select * from web.formulario_ocupacional";
+            $sql = "select * from web.formulario_ocupacional";
             $datos = DB::select($sql);
             $resp = array(
-                'code'      => 200,
-                'status'    => 'success',
-                'message'   => 'La información se consiguio sin problemas.',
-                'data'  => $datos,
+                'code' => 200,
+                'status' => 'success',
+                'message' => 'La información se consiguio sin problemas.',
+                'data' => $datos,
             );
         } catch (\Exception $e) {
 
             $resp = array(
-                'code'      => 400,
-                'status'    => 'error',
-                'message'   => 'Error: la información no se logro conseguir: ',
-                'error'     =>  $e,
+                'code' => 400,
+                'status' => 'error',
+                'message' => 'Error: la información no se logro conseguir: ',
+                'error' => $e,
             );
         }
         return response()->json($resp);
     }
-    public function allFO(){
+    public function allFO()
+    {
         try {
             $data = Paciente::with('formOcupacional')->get();
             return $this->getOk($data);
@@ -63,7 +67,8 @@ class PacienteController extends Controller
             return $this->getErrCustom($e->getMessage(), 'Error: la información no se logro conseguir: ');
         }
     }
-    public function byIdFO($id){
+    public function byIdFO($id)
+    {
         try {
             $data = array(
                 'paciente' => Paciente::with('formOcupacional.dAntecedentesTrabajo')->find($id)
@@ -77,7 +82,8 @@ class PacienteController extends Controller
             return $this->getErrCustom($id, $e->getMessage());
         }
     }
-    public function register(Request $request){
+    public function register(Request $request)
+    {
         $inPaciente = $request->input('paciente');
         $inFormOcupacional = $request->input('paciente.form_ocupacional');
         $inDAntecedentesTrabajo = $request->input('paciente.form_ocupacional.d_antecedentes_trabajo');
@@ -137,7 +143,8 @@ class PacienteController extends Controller
             return $this->insertErrCustom($validation->messages(), 'Datos inválidos: El nombre y apellido son requeridos');
         }
     }
-    public function updateFO(Request $request){
+    public function updateFO(Request $request)
+    {
         $pacId = $request->input('paciente.pac_id');
         $inPaciente = $request->input('paciente');
         $inFormOcupacional = $request->input('paciente.form_ocupacional');
@@ -179,8 +186,9 @@ class PacienteController extends Controller
             return $this->insertErrCustom($validation->messages(), 'Datos inválidos: El nombre y apellido son requeridos');
         }
     }
-    public function all(){
-        try{
+    public function all()
+    {
+        try {
             //$sql =  "select pac.*, ciu.ciu_nombre as ciudad_nombre from hclinico.paciente pac, public.ciudad ciu where pac.ciudad_id = ciu.ciu_id order by pac.pac_primer_apellido";
             $sql = "SELECT DISTINCT pac.*, alm.alm_nombre, ciu.ciu_nombre
             FROM hclinico.paciente pac
@@ -193,10 +201,11 @@ class PacienteController extends Controller
 
             return $this->getOk($data);
         } catch (\Exception $e) {
-            return $this->getErrCustom($e->getMessage(),'Error: la información no se logro conseguir: ');
+            return $this->getErrCustom($e->getMessage(), 'Error: la información no se logro conseguir: ');
         }
     }
-    public function list(){
+    public function list()
+    {
         try {
             $data = Paciente::where('pac_estado', true)->get();
             return $this->getOk($data);
@@ -204,16 +213,18 @@ class PacienteController extends Controller
             return $this->getErrCustom($e->getMessage(), 'Errorrr: la información no se logro conseguir: ');
         }
     }
-    public function byId($id){
-        try{
+    public function byId($id)
+    {
+        try {
             $data = Paciente::find($id);
             return $this->getOk($data);
         } catch (\Exception $e) {
-            return $this->getErrCustom($e->getMessage(),'Error: la información no se logro conseguir: ');
+            return $this->getErrCustom($e->getMessage(), 'Error: la información no se logro conseguir: ');
         }
 
     }
-    public function create(Request $request) {
+    public function create(Request $request)
+    {
         $input = $request->all();
         $validation = Validator::make(
             $request->all(),
@@ -232,20 +243,28 @@ class PacienteController extends Controller
                 $data = new Paciente($input);
                 $data->save();
 
-                if ($data) {return $this->insertOk($data);} else {return $this->insertErr($data);}
+                if ($data) {
+                    return $this->insertOk($data);
+                } else {
+                    return $this->insertErr($data);
+                }
 
-            } catch (\Exception $e) {return $this->insertErrCustom($input, $e->getMessage());}
+            } catch (\Exception $e) {
+                return $this->insertErrCustom($input, $e->getMessage());
+            }
 
         } else {
             return $this->insertErrCustom($validation->messages(), 'Datos inválidos: El nombre y apellido son requeridos');
         }
     }
-    public function update(Request $request){
+    public function update(Request $request)
+    {
 
         $input = $request->all();
         $pacId = $request->input('pac_id');
 
-        $validation = Validator::make($request->all(),
+        $validation = Validator::make(
+            $request->all(),
             [
                 'pac_identificacion' => 'required',
                 'pac_primer_apellido' => 'required',
@@ -256,37 +275,45 @@ class PacienteController extends Controller
             ]
         );
 
-        if (!$validation->fails()){
+        if (!$validation->fails()) {
             try {
                 unset($input['pac_id']);
                 unset($input['accion']);
                 unset($input['created_at']);
                 $data = Paciente::where('pac_id', $pacId)->update($input);
 
-                if($data){return $this->updateOk($data);}else{return $this->updateErr($data);}
+                if ($data) {
+                    return $this->updateOk($data);
+                } else {
+                    return $this->updateErr($data);
+                }
 
-            } catch (\Exception $e) {return $this->updateErrCustom($validation->messages(), $e->getMessage());}
+            } catch (\Exception $e) {
+                return $this->updateErrCustom($validation->messages(), $e->getMessage());
+            }
 
-        }else{
+        } else {
             return $this->updateErrCustom($validation->messages(), 'Datos inválidos');
         }
     }
-    public function delete(Request $request, $id){
+    public function delete(Request $request, $id)
+    {
 
         try {
-            $data = Paciente::where('pac_id',$id)->first();
+            $data = Paciente::where('pac_id', $id)->first();
 
-            if (!empty($data)){
+            if (!empty($data)) {
                 $data->delete();
                 return $this->deleteOk($data);
-            }else{
+            } else {
                 return $this->deleteErrCustom($data, 'No existe el registro.');
             }
-        }catch(\Exception $e) {
+        } catch (\Exception $e) {
             return $this->deleteErrCustom($data, $e->getMessage());
         }
     }
-    public function getImage($filename){
+    public function getImage($filename)
+    {
         $isset = \Storage::disk('images')->exists($filename);
         if ($isset) {
             $file = \Storage::disk('images')->get($filename);
@@ -300,12 +327,18 @@ class PacienteController extends Controller
             return response()->json($data, $data['code']);
         }
     }
-    public function addImage(Request $request){
+    public function addImage(Request $request)
+    {
         $image = $request->file('image');
         if ($image) {
             $image_path = $image->getClientOriginalName();
             //           \Storage::disk('nas')->put("hclinico/".$image_path, \File::get($image));
-            if (env('ServerNas') == true) {
+
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
+            if ($parametro->nas == true) {
                 \Storage::disk('nas')->put("hclinico/" . $image_path, \File::get($image));
             } else {
                 \Storage::disk('local')->put("hclinico/" . $image_path, \File::get($image));
