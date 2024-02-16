@@ -35,6 +35,10 @@ class ReqCasoController extends Controller
         try {
             $path = '';
 
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
             if ($tipoArchivo == 'imagen_file') {
                 if ($request->hasFile("imagen_file")) {
                     // $path = Storage::putFile("galerias", $request->file("imagen_file"));
@@ -42,9 +46,7 @@ class ReqCasoController extends Controller
                     $imagen = $request->file("imagen_file");
                     $titulo = $imagen->getClientOriginalName();
 
-
-
-                    if (env('ServerNas') == true) {
+                    if ($parametro->nas == true) {
                         $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
                     } else {
                         $path = Storage::disk('local')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
@@ -126,7 +128,7 @@ class ReqCasoController extends Controller
                     $titulo = $file->getClientOriginalName();
 
 
-                    if (env('ServerNas') == true) {
+                    if ($parametro->nas == true) {
                         $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
                     } else {
                         $path = Storage::disk('local')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo);

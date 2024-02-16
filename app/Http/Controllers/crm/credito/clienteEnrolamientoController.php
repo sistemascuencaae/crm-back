@@ -138,6 +138,10 @@ class ClienteEnrolamientoController extends Controller
 
                 //END CODIGO EN CASO DE QUERER ACTUALIZAR UN CLIENTE ENROLAMIENTO
 
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
                 if (!isset($datosEnrolamiento['Images']) || empty($datosEnrolamiento['Images'])) {
                     $data = (object) [
                         "error" => 'El objeto datosEnrolamiento no contiene imágenes'
@@ -159,7 +163,7 @@ class ClienteEnrolamientoController extends Controller
                     }
                     $fechaOriginal = $datosEnrolamiento['CreationDate'];
                     $fechaFormateada = str_replace([':', ' '], ['_', '_'], $fechaOriginal);
-                    if (env('ServerNas') == true) {
+                    if ($parametro->nas == true) {
                         $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
                     } else {
                         $ruta = Storage::disk('local')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
@@ -441,6 +445,10 @@ class ClienteEnrolamientoController extends Controller
             $exitoso = null;
             DB::transaction(function () use ($request, &$error, &$exitoso) {
 
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
                 // Verificar si el objeto datosEnrolamiento se ha proporcionado
                 if (!$request->has('datosEnrolamiento')) {
                     // return response()->json(RespuestaApi::returnResultado('error', 'No se proporcionó el objeto datosEnrolamiento', ''));
@@ -452,7 +460,6 @@ class ClienteEnrolamientoController extends Controller
                 $datosEnrolamientoJson = $request->input('datosEnrolamiento');
                 $datosEnrolamiento = json_decode($datosEnrolamientoJson, true); // Decodificar en un array asociativo
 
-
                 // Verificar si el objeto contiene el campo "SignedDocuments"
                 if (!isset($datosEnrolamiento['SignedDocuments']) || empty($datosEnrolamiento['SignedDocuments'])) {
                     // return response()->json(RespuestaApi::returnResultado('error', 'No hay archivos para firmar', ''));
@@ -463,7 +470,7 @@ class ClienteEnrolamientoController extends Controller
                     // Aqui borrar los archivos de la carpeta equifax y tambien de la BD
                     // Paso 1: Obtener los nombres de archivos en la carpeta NAS
                     $folderPath = $datosEnrolamiento['caso_id'] . "/equifax";
-                    if (env('ServerNas') == true) {
+                    if ($parametro->nas == true) {
                         $archivosNAS = Storage::disk('nas')->files($folderPath);
                     } else {
                         $archivosNAS = Storage::disk('local')->files($folderPath);
@@ -472,7 +479,7 @@ class ClienteEnrolamientoController extends Controller
                     // Paso 2: Buscar registros de archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
                     $archivosEnBD = Archivo::whereIn('archivo', $archivosNAS)->get();
 
-                    if (env('ServerNas') == true) {
+                    if ($parametro->nas == true) {
                         // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
                         foreach ($archivosEnBD as $archivo) {
                             // Eliminar archivos de la carpeta NAS
@@ -510,7 +517,7 @@ class ClienteEnrolamientoController extends Controller
                         $titulo = $nombreArchivo;
                         $observacion = $nombreArchivo;
 
-                        if (env('ServerNas') == true) {
+                        if ($parametro->nas == true) {
                             $ruta = Storage::disk('nas')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
                         } else {
                             $ruta = Storage::disk('local')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
@@ -529,7 +536,7 @@ class ClienteEnrolamientoController extends Controller
                     // Aqui borrar los archivos de la carpeta archivos_sin_firma y tambien de la BD
                     // Paso 1: Obtener los nombres de archivos en la carpeta NAS
                     $folderPath = $caso_id . "/archivos_sin_firma";
-                    if (env('ServerNas') == true) {
+                    if ($parametro->nas == true) {
                         $archivosNAS = Storage::disk('nas')->files($folderPath);
                     } else {
                         $archivosNAS = Storage::disk('local')->files($folderPath);
@@ -538,7 +545,7 @@ class ClienteEnrolamientoController extends Controller
                     // Paso 2: Buscar registros de archivos en la base de datos que coincidan con los nombres de archivos en la carpeta NAS
                     $archivosEnBD = Archivo::whereIn('archivo', $archivosNAS)->get();
 
-                    if (env('ServerNas') == true) {
+                    if ($parametro->nas == true) {
                         // Pasos 3 y 4: Eliminar archivos de la carpeta NAS y registros de la base de datos
                         foreach ($archivosEnBD as $archivo) {
                             // Eliminar archivos de la carpeta NAS

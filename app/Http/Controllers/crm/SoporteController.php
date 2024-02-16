@@ -24,13 +24,17 @@ class SoporteController extends Controller
                 $archivos = $request->file("archivos");
                 // $archivosGuardados = [];
 
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
                 foreach ($archivos as $archivoData) {
                     $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName();
                     $extension = $archivoData->getClientOriginalExtension();
 
                     if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif'])) {
 
-                        if (env('ServerNas') == true) {
+                        if ($parametro->nas == true) {
                             $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $archivoData, $nombreUnico);
                         } else {
                             $path = Storage::disk('local')->putFileAs($caso_id . "/galerias", $archivoData, $nombreUnico);
@@ -48,7 +52,7 @@ class SoporteController extends Controller
                         // $archivosGuardados[] = $nuevaImagen;
                     } else {
 
-                        if (env('ServerNas') == true) {
+                        if ($parametro->nas == true) {
                             $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico);
                         } else {
                             $path = Storage::disk('local')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico);

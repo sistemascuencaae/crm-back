@@ -35,9 +35,13 @@ class ChatController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' => [
-            'listConversaciones', 'listarMensajes', 'getImagenesSmg'
-        ]]);
+        $this->middleware('auth:api', [
+            'except' => [
+                'listConversaciones',
+                'listarMensajes',
+                'getImagenesSmg'
+            ]
+        ]);
     }
 
     public function usuariosParaChat()
@@ -59,7 +63,7 @@ class ChatController extends Controller
             where cg.id = $converId");
             //$usuarios = User::where('estado', true)->where('usu_tipo', '<>', 1)->get();
             $usuarios = DB::select("SELECT * FROM crm.users where estado = true and usu_tipo <> 1");
-            $data = (object)[
+            $data = (object) [
                 "usersGrupo" => $usersGrupo,
                 "usuarios" => $usuarios
             ];
@@ -134,16 +138,24 @@ class ChatController extends Controller
     {
         $mensajes[] = [];
         if ($tipoConver == 'NORMAL') {
-            $listaMensajes = ChatConversaciones::with(['mensajesNormal.archivosImg.img', 'mensajesNormal.archivo', 'mensajesNormal.user' => function ($query) {
-                $query->select(['id', 'name', 'email']);
-            }])->find($converId);
+            $listaMensajes = ChatConversaciones::with([
+                'mensajesNormal.archivosImg.img',
+                'mensajesNormal.archivo',
+                'mensajesNormal.user' => function ($query) {
+                    $query->select(['id', 'name', 'email']);
+                }
+            ])->find($converId);
             $data = json_decode($listaMensajes, true);
             $mensajes = collect($data['mensajes_normal'])->sortByDesc('created_at')->values()->all();
         }
         if ($tipoConver == 'GRUPAL') {
-            $listaMensajes = ChatGrupos::with(['mensajesGrupal.archivosImg.img', 'mensajesGrupal.archivo', 'mensajesGrupal.user' => function ($query) {
-                $query->select(['id', 'name', 'email']);
-            }])->find($converId);
+            $listaMensajes = ChatGrupos::with([
+                'mensajesGrupal.archivosImg.img',
+                'mensajesGrupal.archivo',
+                'mensajesGrupal.user' => function ($query) {
+                    $query->select(['id', 'name', 'email']);
+                }
+            ])->find($converId);
             $data = json_decode($listaMensajes, true);
             $mensajes = collect($data['mensajes_grupal'])->sortByDesc('created_at')->values()->all();
         }
@@ -348,6 +360,11 @@ class ChatController extends Controller
                 $msjDataJSON = json_decode($request->input("msg"));
                 $nuevoMensajeImg = null;
                 $contMSg = false;
+
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
                 foreach ($archivos as $archivoData) {
                     // Fecha actual
                     $fechaActual = Carbon::now();
@@ -368,9 +385,7 @@ class ChatController extends Controller
                             $contMSg = true;
                         }
 
-
-
-                        if (env('ServerNas') == true) {
+                        if ($parametro->nas == true) {
                             $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
                         } else {
                             $path = Storage::disk('local')->putFileAs("Chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico);
@@ -392,8 +407,7 @@ class ChatController extends Controller
                         ]);
                     } else {
 
-
-                        if (env('ServerNas') == true) {
+                        if ($parametro->nas == true) {
                             $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico); // crear una carpeta para chat
                         } else {
                             $path = Storage::disk('local')->putFileAs("Chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico);
@@ -424,7 +438,7 @@ class ChatController extends Controller
                         "mensaje" => $msjDataJSON->mensaje,
                     ]);
                 }
-                return (object)[
+                return (object) [
                     "nuevoMensajeImg" => $nuevoMensajeImg,
                     "converId" => $converId,
                     "tipoChat" => $tipoChat

@@ -30,10 +30,14 @@ class ArchivoController extends Controller
                 $archivos = $request->file("archivos"); // Acceder a los archivos utilizando la clave "archivos"
                 $archivosGuardados = [];
 
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
                 foreach ($archivos as $archivoData) {
                     $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName(); // Obtener el nombre único del archivo
 
-                    if (env('ServerNas') == true) {
+                    if ($parametro->nas == true) {
                         $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
                     } else {
                         $path = Storage::disk('local')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
@@ -110,7 +114,11 @@ class ArchivoController extends Controller
                 $titulo = $file->getClientOriginalName();
 
                 // $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
-                if (env('ServerNas') == true) {
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
+                if ($parametro->nas == true) {
                     $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
                 } else {
                     $path = Storage::disk('local')->putFileAs($caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
@@ -303,8 +311,14 @@ class ArchivoController extends Controller
     {
         $archivoPath = ''; // Inicializar la variable
         $log = new Funciones();
+
+        $parametro = DB::table('crm.parametro')
+            ->where('abreviacion', 'NAS')
+            ->first();
+
         try {
-            $data = DB::transaction(function () use ($request, $id, &$archivoPath) {
+
+            $data = DB::transaction(function () use ($request, $id, &$archivoPath, $parametro) {
                 $archivo = Archivo::findOrFail($id);
 
                 // Obtener el old_values (valor antiguo)
@@ -313,7 +327,8 @@ class ArchivoController extends Controller
                 // Almacenar la ruta del archivo antes de intentar eliminarlo
                 $archivoPath = $archivo->archivo;
 
-                if (env('ServerNas') == true) {
+
+                if ($parametro->nas == true) {
                     // Intentar obtener el contenido del archivo
                     $archivoNas = Storage::disk('nas')->get($archivoPath);
                 } else {
@@ -344,7 +359,7 @@ class ArchivoController extends Controller
                 return $archivo; // Retornar el contenido del archivo eliminado
             });
 
-            if (env('ServerNas') == true) {
+            if ($parametro->nas == true) {
                 // Si todo ha ido bien, eliminar definitivamente el archivo
                 Storage::disk('nas')->delete($archivoPath);
             } else {
@@ -361,7 +376,7 @@ class ArchivoController extends Controller
 
             // En caso de error, restaurar el archivo desde la variable temporal
             if (!empty($archivoPath)) {
-                if (env('ServerNas') == true) {
+                if ($parametro->nas == true) {
                     Storage::disk('nas')->put($archivoPath, $data);
                 } else {
                     Storage::disk('local')->put($archivoPath, $data);
@@ -385,7 +400,11 @@ class ArchivoController extends Controller
             $data = DB::transaction(function () use ($caso_id) {
                 $folderPath = $caso_id . "/archivos_sin_firma"; // Ruta de la carpeta en tu NAS
 
-                if (env('ServerNas') == true) {
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
+                if ($parametro->nas == true) {
                     // Obtén los nombres de archivos del sistema de archivos (NAS)
                     $archivosNAS = Storage::disk('nas')->files($folderPath);
                 } else {
@@ -416,6 +435,10 @@ class ArchivoController extends Controller
                 $archivos = $request->file("archivos"); // Acceder a los archivos utilizando la clave "archivos"
                 $archivosGuardados = [];
 
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
                 foreach ($archivos as $archivoData) {
                     $nombreBase = $caso_id . '-' . $archivoData->getClientOriginalName(); // Nombre base del archivo
 
@@ -425,7 +448,7 @@ class ArchivoController extends Controller
 
                     $i = 1;
 
-                    if (env('ServerNas') == true) {
+                    if ($parametro->nas == true) {
                         while (Storage::disk('nas')->exists("$path/$titulo")) {
                             // Si el archivo con el mismo nombre ya existe, ajusta el nombre
                             $info = pathinfo($nombreBase);
@@ -487,7 +510,11 @@ class ArchivoController extends Controller
 
                     $i = 1;
 
-                    if (env('ServerNas') == true) {
+                    $parametro = DB::table('crm.parametro')
+                        ->where('abreviacion', 'NAS')
+                        ->first();
+
+                    if ($parametro->nas == true) {
                         while (Storage::disk('nas')->exists("$path/$titulo")) {
                             // Si el archivo con el mismo nombre ya existe, ajusta el nombre
                             $info = pathinfo($nombreBase);
