@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\chat\ChatController as ChatController;
+use App\Http\Controllers\chat\ChatArchivosController;
+use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
@@ -223,6 +224,8 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::post('/actualizarGrupo', [ChatController::class, 'actualizarGrupo']); //
     // ARCHIVOS E IMAGENES PARA EL CHAT
     Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
+    Route::get('/listarArchivosConver/{converId}', [ChatArchivosController::class, 'listarArchivosConver']);
+    Route::get('/listarGaleriaConver/{converId}', [ChatArchivosController::class, 'listarGaleriaConver']);
 });
 
 
