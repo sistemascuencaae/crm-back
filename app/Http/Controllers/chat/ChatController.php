@@ -374,7 +374,7 @@ class ChatController extends Controller
                     $fecha_actual = str_replace(':', '-', $fechaActual);
                     $nombreUnico = $fecha_actual . '-' . $archivoData->getClientOriginalName();
                     $extension = $archivoData->getClientOriginalExtension();
-                    if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif'])) {
+                    if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'mov', 'MOV'])) {
                         if ($contMSg === false) {
                             $nuevoMensajeImg = ChatMensajes::create([
                                 "chatconve_id" => $msjDataJSON->chatconve_id,
