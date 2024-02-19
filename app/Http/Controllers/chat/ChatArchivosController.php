@@ -19,7 +19,7 @@ class ChatArchivosController extends Controller
     //     ]);
     // }
 
-    public function listarArchivosConver($converId){
+    public function listarGaleriaConver($converId){
         try {
             $data = DB::select("SELECT ga.* from crm.chat_mensajes cm
             inner join crm.chat_mensaje_archivos cma on cma.mensaje_id = cm.id
@@ -31,7 +31,7 @@ class ChatArchivosController extends Controller
         }
 
     }
-    public function listarGaleriaConver($converId)
+    public function listarArchivosConver($converId)
     {
         try {
             $data = DB::select("SELECT ar.* from crm.chat_mensajes cm
