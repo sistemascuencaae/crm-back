@@ -12,6 +12,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
@@ -40,7 +41,11 @@ class GaleriaController extends Controller
                 // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
                 $fecha_actual = str_replace(':', '-', $fechaActual);
 
-                if (env('ServerNas') == true) {
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
+                if ($parametro->nas == true) {
                     $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
                 } else {
                     $path = Storage::disk('local')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
@@ -153,18 +158,32 @@ class GaleriaController extends Controller
             $valorAntiguo = $galeria;
             $audit->old_values = json_encode($valorAntiguo);
 
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
             if ($request->hasFile("imagen_file")) {
                 if ($galeria->imagen) {
-                    // Eliminamos la imagen anterior del disco NAS
-                    Storage::disk('nas')->delete($galeria->imagen);
+                    if ($parametro->nas == true) {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('nas')->delete($galeria->imagen);
+                    } else {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('local')->delete($galeria->imagen);
+                    }
                 }
 
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
                 $titulo = $nuevaImagen->getClientOriginalName();
 
-                // Guardar la nueva imagen en el disco NAS con su nombre original
-                $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                if ($parametro->nas == true) {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                } else {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('local')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                }
 
                 $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
             }
@@ -215,7 +234,15 @@ class GaleriaController extends Controller
             // $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
             // Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
 
-            Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
+            if ($parametro->nas == true) {
+                Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            } else {
+                Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            }
 
             $galeria->delete();
 
