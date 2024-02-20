@@ -486,11 +486,12 @@ class ChatController extends Controller
                     cc.id,
                     cm.mensaje,
                     cm.created_at,
-                    cm.read_at
+                    cm.read_at,
+                    cm.user_id
                 FROM crm.chat_conversaciones cc
                 INNER JOIN crm.chat_mensajes cm ON cm.chatconve_id = cc.id and cm.read_at is null
-                WHERE cc.user_uno_id = $userId or cc.user_dos_id = $userId and cm.user_id <> $userId
-                ORDER BY cc.id, cm.created_at desc) ttemp");
+                WHERE cc.user_uno_id = $userId or cc.user_dos_id = $userId
+                ORDER BY cc.id, cm.created_at desc) ttemp where ttemp.user_id <> $userId");
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $mensajesNoLeidos));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
