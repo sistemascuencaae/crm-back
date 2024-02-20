@@ -25,7 +25,8 @@ class Fase extends Model
         "orden",
         "color_id",
         "fase_tipo",
-        "cnd_mover_id"
+        "cnd_mover_id",
+        "aprobar_credito"
     ];
 
     public function Caso()
