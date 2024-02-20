@@ -88,6 +88,7 @@ class FaseController extends Controller
                     "orden" => $request->input('orden'),
                     "generar_caso" => $request->input('generar_caso'),
                     "color_id" => $request->input('color_id'),
+                    "aprobar_credito" => $request->input('aprobar_credito'),
                 ]);
 
                 $condicion = CondicionesFaseMover::find($request->input('condicionId'));
