@@ -88,7 +88,10 @@ class RobotCasoController extends Controller
     {
         $emailController = new EmailController();
         $casoEnProceso = Caso::find($casoId);
-        $formula = EstadosFormulas::find($estadoFormId);
+        $formula = EstadosFormulas::where('id', $estadoFormId)
+            ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
+            ->first();
+
         if (!$casoEnProceso) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
         }
@@ -98,14 +101,35 @@ class RobotCasoController extends Controller
         //--- APROBAR CREDITO
         if ($casoEnProceso->cpp_id) {
             //--- Verificar si esta fase es de aprobacion de credito
-            $faseNueva = Fase::find($formula->fase_id);
-            if ($faseNueva) {
-                if ($faseNueva->aprobar_credito == true) {
-                    DB::update("UPDATE public.cpedido_proforma set ecr_id=(select ecr_id from public.estado_credito where ecr_codigo='APR')
-                    where cpp_id = ?", [$casoEnProceso->cpp_id]);
-                }
+            // $faseNueva = Fase::find($formula->fase_id);
+            // if ($faseNueva) {
+
+            //     if ($faseNueva->aprobar_credito == true) {
+            //         DB::update("UPDATE public.cpedido_proforma set ecr_id=(select ecr_id from public.estado_credito where ecr_codigo='APR')
+            //         where cpp_id = ?", [$casoEnProceso->cpp_id]);
+            //     }
+            // }
+
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'TC')
+                ->first();
+
+            // Dividir la cadena en valores individuales usando coma como delimitador, se convierte en un array simple
+            $parametro_respuestas = explode(',', $parametro->respuesta_caso);
+
+            $aprobar = $parametro_respuestas[0];
+            $rechazar = $parametro_respuestas[1];
+
+            if ($formula->respuesta_caso->nombre == $aprobar) {
+                DB::update("UPDATE public.cpedido_proforma set ecr_id=(select ecr_id from public.estado_credito where ecr_codigo='APR')
+                            where cpp_id = ?", [$casoEnProceso->cpp_id]);
+            } else if ($formula->respuesta_caso->nombre == $rechazar) {
+                DB::update("UPDATE public.cpedido_proforma set ecr_id=(select ecr_id from public.estado_credito where ecr_codigo='REA')
+                            where cpp_id = ?", [$casoEnProceso->cpp_id]);
             }
+
         }
+
         //--- datos anteriores
         $userAnteriorId = $casoEnProceso->user_id;
         $faseAnteriorId = $casoEnProceso->fas_id;
