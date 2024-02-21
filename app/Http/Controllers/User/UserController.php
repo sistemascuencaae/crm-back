@@ -12,6 +12,17 @@ use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
+
+    // public function __construct()
+    // {
+    // $this->middleware('auth:api', [
+    //     'except' =>
+    //         [
+    //             'allUsers'
+    //         ]
+    // ]);
+    // }
+
     public function listAnalistas($tableroId)
     {
         //$data = User::with('UsuarioDynamo')->where('usu_tipo_analista', 1)->get();
