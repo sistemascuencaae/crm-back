@@ -9,6 +9,7 @@ use App\Http\Controllers\FormularioController;
 use App\Http\Controllers\GaleriaController;
 use App\Http\Controllers\FormAptiMedicaController;
 use App\Http\Controllers\FormConsumoDrogasController;
+use App\Http\Controllers\hclinico\FormGaleriaController;
 use App\Http\Controllers\hclinico\PacienteDosController;
 use App\Http\Controllers\PruebasApi;
 use App\Http\Controllers\ReporteFormularios;
@@ -69,6 +70,10 @@ Route::group([
     Route::get('allActive', [FormOcupaController::class, 'allActive']);
     Route::get('todasImagenes/{formulario_id}', [FormOcupaController::class, 'todasImagenes']);
 
+    // Nueva version de imagenes
+    Route::get('imagenesFormulario/{formId}', [FormGaleriaController::class, 'imagenesFormulario']);
+    Route::post('addGaleriaForm/{formId}', [FormGaleriaController::class, 'addGaleriaForm']);
+    Route::post('editGaleriaForm/{formId}', [FormGaleriaController::class, 'editGaleriaForm']);//
 });
 
 Route::group([
