@@ -70,6 +70,9 @@ use App\Http\Controllers\crm\series\InventarioFechaSeriesController;
 use App\Http\Controllers\crm\series\InformeInventarioSeriesController;
 use App\Http\Controllers\crm\series\ComparativoSeriesController;
 use App\Http\Controllers\crm\garantias\VentasProductosGexController;
+use App\Http\Controllers\crm\garantias\RelacionAlamcenVendedorGexController;
+use App\Http\Controllers\crm\garantias\MetasController;
+use App\Http\Controllers\crm\garantias\MetasRecalcController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
@@ -693,6 +696,30 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listadoVendedoresVentas', [VentasProductosGexController::class, 'vendedores']);
     Route::get('/VentasProductosGex/{tipoProd}/{producto}/{sucursal}/{formaPago}/{vendedor}/{fecIni}/{fecFin}', [VentasProductosGexController::class, 'VentasProductosGex']);
     Route::get('/VentasMotosGex/{tipoProd}/{producto}/{sucursal}/{formaPago}/{vendedor}/{fecIni}/{fecFin}', [VentasProductosGexController::class, 'VentasMotosGex']);
+
+    //Relacion Almacen Vendedor Gex
+    Route::get('/listadoRelaAlmaVen', [RelacionAlamcenVendedorGexController::class, 'listado']);
+    Route::get('/listadoAlmacenesRelaV', [RelacionAlamcenVendedorGexController::class, 'almacenes']);
+    Route::get('/listadoVendedoresRela', [RelacionAlamcenVendedorGexController::class, 'vendedores']);
+    Route::post('/grabaRelaAlmVen', [RelacionAlamcenVendedorGexController::class, 'grabaRelaAlmVen']);
+    Route::get('/byRelaAlmVen/{almacen}/{vendedor}', [RelacionAlamcenVendedorGexController::class, 'byRelaAlmVen']);
+    Route::get('/eliminaRelaAlmVen/{almacen}/{vendedor}', [RelacionAlamcenVendedorGexController::class, 'eliminaRelaAlmVen']);
+
+    //Metas Gex
+    Route::get('/listadoMeta', [MetasController::class, 'listado']);
+    Route::get('/listadoAlmacenesMeta', [MetasController::class, 'almacenes']);
+    Route::get('/listadoVendedoresMeta/{almacen}', [MetasController::class, 'vendedores']);
+    Route::post('/grabaMeta', [MetasController::class, 'grabaMeta']);
+    Route::get('/byMeta/{meta}/{almacen}', [MetasController::class, 'byMeta']);
+    Route::get('/eliminaMeta/{meta}/{almacen}', [MetasController::class, 'eliminaMeta']);
+
+    //Metas Gex
+    Route::get('/listadoMetaRecal', [MetasRecalcController::class, 'listado']);
+    Route::get('/listadoAlmacenesMetaRecal', [MetasRecalcController::class, 'almacenes']);
+    Route::get('/cargaInfoRecal/{almacen}/{mes}/{anio}', [MetasRecalcController::class, 'tomaInformacion']);
+    /*Route::post('/grabaMeta', [MetasController::class, 'grabaMeta']);
+    Route::get('/byMeta/{meta}/{almacen}', [MetasController::class, 'byMeta']);
+    Route::get('/eliminaMeta/{meta}/{almacen}', [MetasController::class, 'eliminaMeta']);*/
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);

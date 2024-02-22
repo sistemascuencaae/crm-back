@@ -64,7 +64,7 @@ class VentasTotalesGexController extends Controller
                                                                                 from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
                                                 (e.emp_id = " . $vendedor . " or 0 = " . $vendedor . ") and
-                                                c.cfa_fecha between '" . $fecIni . "' and '" . $fecFin . "'
+                                                cast(c.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.prod_gex = true
                                 group by a.alm_id, a.alm_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos
                                 union all
@@ -86,7 +86,7 @@ class VentasTotalesGexController extends Controller
                                                                                 from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
                                                 (e.emp_id = " . $vendedor . " or 0 = " . $vendedor . ") and
-                                                c.cnc_fecha between '" . $fecIni . "' and '" . $fecFin . "'
+                                                cast(c.cnc_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.id_dfactura_gex is not null
                                 group by a.alm_id, a.alm_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos) as tabla
                                 group by alm_id, alm_nombre, emp_id, vendedor
@@ -116,7 +116,7 @@ class VentasTotalesGexController extends Controller
                                 where (a.alm_id = " . $almacen . " or exists (select 1
                                                                                 from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
-                                                c.cfa_fecha between '" . $fecIni . "' and '" . $fecFin . "'
+                                                cast(c.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.prod_gex = true
                                 group by a.alm_id, a.alm_nombre
                                 union all
@@ -134,7 +134,7 @@ class VentasTotalesGexController extends Controller
                                 where (a.alm_id = " . $almacen . " or exists (select 1
                                                                                 from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
-                                                c.cnc_fecha between '" . $fecIni . "' and '" . $fecFin . "'
+                                                cast(c.cnc_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.id_dfactura_gex is not null
                                 group by a.alm_id, a.alm_nombre) as tabla
                                 group by alm_id, alm_nombre

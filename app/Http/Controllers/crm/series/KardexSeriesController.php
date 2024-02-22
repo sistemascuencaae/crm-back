@@ -44,7 +44,7 @@ class KardexSeriesController extends Controller
                             from gex.cinventario c join gex.dinventario d on c.numero = d.numero 
                                                 join producto p on d.pro_id  = p.pro_id
                                                 join bodega b on c.bod_id = b.bod_id
-                            where c.estado = 'P' and c.fecha between '" . $fecIni . "' and '" . $fecFin . "'
+                            where c.estado = 'P' and cast(c.fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                     and (b.bod_id = " . $bodega . " or " . $bodega . " = 0)
                                     and (p.pro_id = " . $producto . " or " . $producto . " = 0)
                                     and (d.tipo = '" . $tipo . "' or '" . $tipo . "' = 'T')
@@ -69,7 +69,7 @@ class KardexSeriesController extends Controller
                                                 left outer join puntoventa p3 on c3.pve_id = p3.pve_id 
                                                 left outer join ctipocom c4 on c2.cti_id = c4.cti_id 
                                                 left outer join ctipocom c5 on c3.cti_id = c5.cti_id
-                            where (c.cmo_id is not null or c.cfa_id is not null) and c.estado = 'A' and c.fecha between '" . $fecIni . "' and '" . $fecFin . "'
+                            where (c.cmo_id is not null or c.cfa_id is not null) and c.estado = 'A' and cast(c.fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                     and (b.bod_id = " . $bodega . " or " . $bodega . " = 0)
                                     and (p.pro_id = " . $producto . " or " . $producto . " = 0)
                                     and (d.tipo = '" . $tipo . "' or '" . $tipo . "' = 'T')
@@ -94,7 +94,7 @@ class KardexSeriesController extends Controller
                                                 left outer join puntoventa p3 on c3.pve_id = p3.pve_id 
                                                 left outer join ctipocom c4 on c2.cti_id = c4.cti_id 
                                                 left outer join ctipocom c5 on c3.cti_id = c5.cti_id
-                            where c.estado = 'A' and c.fecha between '" . $fecIni . "' and '" . $fecFin . "'
+                            where c.estado = 'A' and cast(c.fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                     and (b.bod_id = " . $bodega . " or " . $bodega . " = 0)
                                     and (p.pro_id = " . $producto . " or " . $producto . " = 0)
                                     and (d.tipo = '" . $tipo . "' or '" . $tipo . "' = 'T')
@@ -118,7 +118,7 @@ class KardexSeriesController extends Controller
                                     from gex.cinventario c join gex.dinventario d on c.numero = d.numero 
                                                         join producto p on d.pro_id  = p.pro_id
                                                         join bodega b on c.bod_id = b.bod_id
-                                    where c.estado = 'P' and c.fecha < '" . $fecIni . "'
+                                    where c.estado = 'P' and cast(c.fecha as date) < '" . $fecIni . "'
                                             and (b.bod_id = " . $bodega . " or " . $bodega . " = 0)
                                             and (p.pro_id = " . $producto . " or " . $producto . " = 0)
                                             and (d.tipo = '" . $tipo . "' or '" . $tipo . "' = 'T')
@@ -132,7 +132,7 @@ class KardexSeriesController extends Controller
                                     from gex.cpreingreso c join gex.dpreingreso d on c.numero = d.numero 
                                                         join producto p on d.pro_id  = p.pro_id
                                                         join bodega b on c.bod_id = b.bod_id
-                                    where (c.cmo_id is not null or c.cfa_id is not null) and c.estado = 'A' and c.fecha < '" . $fecIni . "'
+                                    where (c.cmo_id is not null or c.cfa_id is not null) and c.estado = 'A' and cast(c.fecha as date) < '" . $fecIni . "'
                                             and (b.bod_id = " . $bodega . " or " . $bodega . " = 0)
                                             and (p.pro_id = " . $producto . " or " . $producto . " = 0)
                                             and (d.tipo = '" . $tipo . "' or '" . $tipo . "' = 'T')
@@ -146,7 +146,7 @@ class KardexSeriesController extends Controller
                                     from gex.cdespacho c join gex.ddespacho d on c.numero = d.numero 
                                                         join producto p on d.pro_id  = p.pro_id
                                                         join bodega b on c.bod_id = b.bod_id
-                                    where c.estado = 'A' and c.fecha < '" . $fecIni . "'
+                                    where c.estado = 'A' and cast(c.fecha as date) < '" . $fecIni . "'
                                             and (b.bod_id = " . $bodega . " or " . $bodega . " = 0)
                                             and (p.pro_id = " . $producto . " or " . $producto . " = 0)
                                             and (d.tipo = '" . $tipo . "' or '" . $tipo . "' = 'T')

@@ -39,7 +39,7 @@ class InventarioFechaSeriesController extends Controller
                                 from gex.cinventario c join gex.dinventario d on c.numero = d.numero 
                                                                         join producto p on d.pro_id  = p.pro_id
                                                                         join bodega b on c.bod_id = b.bod_id
-                                where d.procesado = 'S' and c.fecha <= '" . $fecCorte . "'
+                                where d.procesado = 'S' and cast(c.fecha as date) <= '" . $fecCorte . "'
                                                 and (b.bod_id = " . $bodega . " or 0 = " . $bodega . ")
                                                 and (p.pro_id = " . $producto . " or 0 = " . $producto . ")
                                 union all
@@ -49,7 +49,7 @@ class InventarioFechaSeriesController extends Controller
                                 from gex.cpreingreso c join gex.dpreingreso d on c.numero = d.numero 
                                                                         join producto p on d.pro_id  = p.pro_id
                                                                         join bodega b on c.bod_id = b.bod_id
-                                where (c.cmo_id is not null or c.cfa_id is not null) and c.estado = 'A' and c.fecha <= '" . $fecCorte . "'
+                                where (c.cmo_id is not null or c.cfa_id is not null) and c.estado = 'A' and cast(c.fecha as date) <= '" . $fecCorte . "'
                                                 and (b.bod_id = " . $bodega . " or 0 = " . $bodega . ")
                                                 and (p.pro_id = " . $producto . " or 0 = " . $producto . ")
                                 union all
@@ -59,7 +59,7 @@ class InventarioFechaSeriesController extends Controller
                                 from gex.cdespacho c join gex.ddespacho d on c.numero = d.numero 
                                                                         join producto p on d.pro_id  = p.pro_id
                                                                         join bodega b on c.bod_id = b.bod_id
-                                where c.estado = 'A' and c.fecha <= '" . $fecCorte . "'
+                                where c.estado = 'A' and cast(c.fecha as date) <= '" . $fecCorte . "'
                                                 and (b.bod_id = " . $bodega . " or 0 = " . $bodega . ")
                                                 and (p.pro_id = " . $producto . " or 0 = " . $producto . ")) as tabla
                                 group by bod_nombre, producto
