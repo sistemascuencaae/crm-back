@@ -717,9 +717,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listadoMetaRecal', [MetasRecalcController::class, 'listado']);
     Route::get('/listadoAlmacenesMetaRecal', [MetasRecalcController::class, 'almacenes']);
     Route::get('/cargaInfoRecal/{almacen}/{mes}/{anio}', [MetasRecalcController::class, 'tomaInformacion']);
-    /*Route::post('/grabaMeta', [MetasController::class, 'grabaMeta']);
-    Route::get('/byMeta/{meta}/{almacen}', [MetasController::class, 'byMeta']);
-    Route::get('/eliminaMeta/{meta}/{almacen}', [MetasController::class, 'eliminaMeta']);*/
+    Route::post('/grabaMetaRecal', [MetasRecalcController::class, 'grabaMetaRecal']);
+    Route::get('/byMetaRecal/{metaRecal}/{almacen}', [MetasRecalcController::class, 'byMetaRecal']);
+    Route::get('/eliminaMetaRecal/{metaRecal}/{almacen}', [MetasRecalcController::class, 'eliminaMetaRecal']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
