@@ -456,12 +456,15 @@ class ChatController extends Controller
                 END AS recibe
                 from crm.chat_conversaciones cc where cc.id = ?", [$user_id, $user_id, $converId]);
                 $this->getConversacionesUser($userRecibeId->recibe);
+                $this->getConversacionesUser($user_id);
             }
             if ($tipoChat === 'GRUPAL') {
+                $user_id = Auth::id();
                 $miembros = DB::select("SELECT * FROM crm.chat_miembros_grupo WHERE chatgrupo_id = $converId");
                 foreach ($miembros as $key => $value) {
                     $userMiembroId = $value->user_id;
                     $this->getConversacionesUser($userMiembroId);
+                    $this->getConversacionesUser($user_id);
                 }
             }
 
