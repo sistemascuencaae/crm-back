@@ -65,13 +65,18 @@ class MetasRecalcController extends Controller
     public function byMetaRecal($metaRecal, $almacen)
     {
         $data = MetasRecalc::get()->where('metare_id', $metaRecal)->where('alm_id', $almacen)->first();
+        $data['config'] = $data = DB::select("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor, rav.tipo_empleado
+                                              from empleado e join entidad en on e.ent_id = en.ent_id
+                                                              join gex.rel_almacen_vendedor rav on e.emp_id = rav.emp_id 
+                                              where rav.alm_id = " . $almacen . " and rav.tipo_empleado <> 'J'
+                                              order by vendedor");
         $data['vendedores'] = MetasDetRecalc::get()->where('metare_id', $metaRecal)->where('alm_id', $almacen);
         $data['almacen'] = DB::selectone("select alm_id, alm_nombre from almacen a where a.alm_id = " . $almacen);
 
         $ultimo = MetasRecalc::where('alm_id', $almacen)->where('mes', $data['mes'])->where('anio', $data['anio'])->max('metare_id');
 
         if ($ultimo) {
-            $data['anterior'] = MetasRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen)->first();
+            $data['anteriorRecal'] = MetasRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen)->first();
             $data->anterior['vendedores'] = MetasDetRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen);
             $data->anterior['almacen'] = DB::selectone("select alm_id, alm_nombre from almacen a where a.alm_id = " . $almacen);
         } else {
