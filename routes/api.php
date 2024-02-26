@@ -224,8 +224,8 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::post('/actualizarGrupo', [ChatController::class, 'actualizarGrupo']); //
     // ARCHIVOS E IMAGENES PARA EL CHAT
     Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
-    Route::get('/listarArchivosConver/{converId}', [ChatArchivosController::class, 'listarArchivosConver']);
-    Route::get('/listarGaleriaConver/{converId}', [ChatArchivosController::class, 'listarGaleriaConver']);
+    Route::get('/listarArchivosConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarArchivosConver']);
+    Route::get('/listarGaleriaConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarGaleriaConver']);
 });
 
 
@@ -293,7 +293,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // GALERIA
 
     Route::post('/addGaleria/{caso_id}', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
-    Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
+    Route::get('/listGaleriaByCasoId/{id}/{tabId}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
     Route::post('/editGaleria/{id}', [GaleriaController::class, 'editGaleria']); // Edita la imagen
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
     Route::get('/listGaleriaBySolicitudCreditoId/{id}', [GaleriaController::class, 'listGaleriaBySolicitudCreditoId']); // Listar las imagenes
