@@ -130,12 +130,22 @@ class GaleriaController extends Controller
 
     // }
 
-    public function listGaleriaByCasoId($caso_id)
+    public function listGaleriaByCasoId($caso_id, $tabId)
     {
         $log = new Funciones();
         try {
             // Recupera las galerías relacionadas con el caso_id desde la base de datos
-            $galerias = Galeria::where('caso_id', $caso_id)->get();
+            //$galerias = Galeria::where('caso_id', $caso_id)->get();
+
+            $galerias = DB::select("SELECT * from (
+            select ga.* from crm.galerias ga
+            where ga.tipo_gal_id <> 8
+            union
+            select ga2.* from crm.galerias ga2
+            inner join crm.requerimientos_caso rc2 on rc2.galerias_id = ga2.id
+            where rc2.acc_publico = true or (rc2.acc_publico = false and rc2.tab_id = $tabId)
+            ) temp where temp.caso_id = $caso_id");
+
 
             $log->logInfo(GaleriaController::class, 'Se listo con exito las imagenes del caso #' . $caso_id);
 
