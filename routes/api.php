@@ -224,8 +224,8 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::post('/actualizarGrupo', [ChatController::class, 'actualizarGrupo']); //
     // ARCHIVOS E IMAGENES PARA EL CHAT
     Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
-    Route::get('/listarArchivosConver/{converId}', [ChatArchivosController::class, 'listarArchivosConver']);
-    Route::get('/listarGaleriaConver/{converId}', [ChatArchivosController::class, 'listarGaleriaConver']);
+    Route::get('/listarArchivosConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarArchivosConver']);
+    Route::get('/listarGaleriaConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarGaleriaConver']);
 });
 
 
