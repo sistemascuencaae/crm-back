@@ -27,6 +27,7 @@ class ReferenciasCliente extends Model
         "email",
         "direccion",
         "estado",
+        "observacion"
     ];
 
     public function setCreatedAtAttribute($value)
