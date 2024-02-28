@@ -87,6 +87,7 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode($galeria);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'editGaleriaReq';
+                    $audit->caso_id = $galeria->caso_id;
                     $audit->save();
                     // END Auditoria
 
@@ -115,6 +116,7 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode([]);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'addGaleriaReq';
+                    $audit->caso_id = $galeria->caso_id;
                     $audit->save();
                     // END Auditoria
 
@@ -165,6 +167,7 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode($archivo);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'editArchivoReq';
+                    $audit->caso_id = $archivo->caso_id;
                     $audit->save();
                     // END Auditoria
 
@@ -192,6 +195,7 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode([]);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'addArchivoReq';
+                    $audit->caso_id = $newArchivo->caso_id;
                     $audit->save();
                     // END Auditoria
                 }
@@ -258,6 +262,7 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode($requerimiento);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'editRequerimiento';
+                    $audit->caso_id = $requerimiento->caso_id;
                     $audit->save();
                     // END Auditoria
 
@@ -383,6 +388,7 @@ class ReqCasoController extends Controller
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             // $audit->accion = 'addSolicitudCreditoReqCaso';
             $audit->accion = 'addSolicitudCredito';
+            $audit->caso_id = $solicitudCredito->caso_id;
             $audit->save();
             //END Auditoria
 

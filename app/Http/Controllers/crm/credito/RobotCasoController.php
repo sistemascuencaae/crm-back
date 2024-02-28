@@ -172,6 +172,7 @@ class RobotCasoController extends Controller
         $audit->accion = 'cambioEstado';
         // Establecer old_values y new_values
         $audit->new_values = json_encode($casoEnProceso); // json_encode para convertir en string ese array
+        $audit->caso_id = $casoAudit->id;
         $audit->save();
         // END Auditoria
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */

@@ -60,6 +60,7 @@ class solicitudCreditoController extends Controller
             $audit->new_values = json_encode($solicitudCredito);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'editSolicitudCredito';
+            $audit->caso_id = $solicitudCredito->caso_id;
             $audit->save();
             // END Auditoria
 
