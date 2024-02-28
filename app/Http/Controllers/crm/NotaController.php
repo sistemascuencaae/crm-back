@@ -42,6 +42,7 @@ class NotaController extends Controller
                 $audit->new_values = json_encode([]);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'addNota';
+                $audit->caso_id = $nota->caso_id;
                 $audit->save();
                 // END Auditoria
 
@@ -135,6 +136,7 @@ class NotaController extends Controller
                 $audit->new_values = json_encode($nota);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'editNota';
+                $audit->caso_id = $nota->caso_id;
                 $audit->save();
                 // END Auditoria
 
@@ -187,6 +189,7 @@ class NotaController extends Controller
                 $audit->new_values = json_encode([]);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'deleteNota';
+                $audit->caso_id = $nota->caso_id;
                 $audit->save();
                 // END Auditoria
 

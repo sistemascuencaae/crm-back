@@ -70,6 +70,7 @@ class GaleriaController extends Controller
             $audit->new_values = json_encode([]);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'addGaleria';
+            $audit->caso_id = $galeria->caso_id;
             $audit->save();
             // END Auditoria
 
@@ -220,6 +221,7 @@ class GaleriaController extends Controller
             $audit->new_values = json_encode($galeria);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'editGaleria';
+            $audit->caso_id = $galeria->caso_id;
             $audit->save();
             // END Auditoria
 
@@ -270,6 +272,7 @@ class GaleriaController extends Controller
             $audit->new_values = json_encode([]);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'deleteGaleria';
+            $audit->caso_id = $galeria->caso_id;
             $audit->save();
             // END Auditoria
 
