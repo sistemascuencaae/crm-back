@@ -67,6 +67,7 @@ class ArchivoController extends Controller
                     $audit->new_values = json_encode([]);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'addArchivo';
+                    $audit->caso_id = $nuevoArchivo->caso_id;
                     $audit->save();
                     // END Auditoria
                 }
@@ -148,6 +149,7 @@ class ArchivoController extends Controller
                 $audit->new_values = json_encode([]);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'addArchivo';
+                $audit->caso_id = $archivo->caso_id;
                 $audit->save();
                 // END Auditoria
 
@@ -279,6 +281,7 @@ class ArchivoController extends Controller
                 $audit->new_values = json_encode(['observacion' => $archivo->observacion]); // json_encode para convertir en string ese array
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'editArchivo';
+                $audit->caso_id = $archivo->caso_id;
                 $audit->save();
                 // END Auditoria
 
@@ -353,6 +356,7 @@ class ArchivoController extends Controller
                 $audit->new_values = json_encode([]);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'deleteArchivo';
+                $audit->caso_id = $archivo->caso_id;
                 $audit->save();
                 // END Auditoria
 

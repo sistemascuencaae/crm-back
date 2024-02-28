@@ -81,6 +81,7 @@ class SoporteController extends Controller
                     $audit->new_values = json_encode([]);
                     $audit->user_agent = $request->header('User-Agent');
                     $audit->accion = (isset($nuevaImagen)) ? 'addGaleria' : 'addArchivo';
+                    $audit->caso_id = (isset($nuevaImagen)) ? $nuevaImagen->caso_id : $nuevoArchivo->caso_id;
                     $audit->save();
                 }
 

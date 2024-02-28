@@ -131,6 +131,7 @@ class CasoController extends Controller
         $audit->estado_caso = $casoCreado->estadodos->nombre;
         $audit->estado_caso_id = $casoCreado->estado_2;
         $audit->accion = 'addCaso';
+        $audit->caso_id = $casoCreado->id;
         $audit->save();
         // END Auditoria
 
@@ -264,6 +265,7 @@ class CasoController extends Controller
             $audit->accion = 'editFase';
             // Establecer old_values y new_values
             $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
+            $audit->caso_id = $caso->id;
             $audit->save();
             // END Auditoria
             $emailController = new EmailController();
@@ -431,6 +433,7 @@ class CasoController extends Controller
                 $audit->new_values = json_encode(['prioridad' => $caso->prioridad]); // json_encode para convertir en string ese array
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'editPrioridad';
+                $audit->caso_id = $caso->id;
                 $audit->save();
                 // END Auditoria
 
@@ -485,6 +488,7 @@ class CasoController extends Controller
                 $audit->new_values = json_encode($casoAuditNewValue); // json_encode para convertir en string ese array
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'editTipoCaso';
+                $audit->caso_id = $caso->id;
                 $audit->save();
                 // END Auditoria
             });
@@ -529,6 +533,7 @@ class CasoController extends Controller
                 $audit->new_values = json_encode(['descripcion' => $caso->descripcion]); // json_encode para convertir en string ese array
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'editDescripcion';
+                $audit->caso_id = $caso->id;
                 $audit->save();
                 // END Auditoria
             });
@@ -632,6 +637,7 @@ class CasoController extends Controller
                 $audit->url = $request->fullUrl();
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'reasignarCaso';
+                $audit->caso_id = $casoEnProceso->id;
 
                 return $noti;
             });
