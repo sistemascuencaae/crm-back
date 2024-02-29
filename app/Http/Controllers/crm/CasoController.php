@@ -927,6 +927,7 @@ class CasoController extends Controller
                 $reqCaso->valor_lista = $reqFase[$i]->valor_lista;
                 $reqCaso->orden = $reqFase[$i]->orden;
                 $reqCaso->acc_publico = $reqFase[$i]->acc_publico;
+                $reqCaso->desc_requerida = $reqFase[$i]->desc_requerida;
 
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(',', $reqCaso->valor_lista);

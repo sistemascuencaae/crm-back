@@ -27,6 +27,11 @@ class ReqCasoController extends Controller
 
         $reqCaso = $request->input('reqCaso');
         $inputReq = json_decode($reqCaso);
+
+
+
+
+
         $tipoArchivo = $request->input('tipoArchivo');
         $requerimiento = RequerimientoCaso::where('id', $inputReq->id)->first();
         if (!$requerimiento) {
@@ -51,13 +56,14 @@ class ReqCasoController extends Controller
                     } else {
                         $path = Storage::disk('local')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
                     }
+
                 }
                 $requerimiento->esimagen = true;
             }
-
             if ($tipoArchivo == 'imagen_file') {
 
                 $galeria = Galeria::find($requerimiento->galerias_id);
+
 
                 if ($galeria) {
 
@@ -74,6 +80,8 @@ class ReqCasoController extends Controller
                         "tipo_gal_id" => 8, // Tipo Requerimiento es el id 8
                         "sc_id" => 0,
                     ]);
+
+
 
                     // START Bloque de código que genera un registro de auditoría manualmente
                     $audit->user_id = Auth::id();
@@ -92,6 +100,7 @@ class ReqCasoController extends Controller
                     // END Auditoria
 
                 } else {
+
                     $newGaleria = new Galeria();
                     $newGaleria->titulo = $requerimiento->titulo;
                     $newGaleria->descripcion = $requerimiento->descripcion; //'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '. "\n". $requerimiento->descripcion;
@@ -116,7 +125,7 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode([]);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'addGaleriaReq';
-                    $audit->caso_id = $galeria->caso_id;
+                    $audit->caso_id = $newGaleria->caso_id;
                     $audit->save();
                     // END Auditoria
 
@@ -200,6 +209,7 @@ class ReqCasoController extends Controller
                     // END Auditoria
                 }
             }
+
             if ($inputReq->valor_int) {
                 $requerimiento->valor_int = $inputReq->valor_int;
             }
@@ -267,7 +277,7 @@ class ReqCasoController extends Controller
                     // END Auditoria
 
 
-                    //echo ('$requerimiento: '.json_encode($requerimiento));
+
                 });
 
                 $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))
