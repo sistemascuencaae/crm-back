@@ -12,7 +12,9 @@ use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class GaleriaController extends Controller
 {
@@ -24,12 +26,30 @@ class GaleriaController extends Controller
     public function addGaleria(Request $request, $caso_id)
     {
         $log = new Funciones();
+
         try {
             if ($request->hasFile("imagen_file")) {
                 $imagen = $request->file("imagen_file");
                 $titulo = $imagen->getClientOriginalName();
 
-                $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $titulo);
+                // Fecha actual
+                $fechaActual = Carbon::now();
+
+                // Formatear la fecha en formato deseado
+                // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+
+                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
+                if ($parametro->nas == true) {
+                    $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                } else {
+                    $path = Storage::disk('local')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                }
 
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
             }
@@ -50,6 +70,7 @@ class GaleriaController extends Controller
             $audit->new_values = json_encode([]);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'addGaleria';
+            $audit->caso_id = $galeria->caso_id;
             $audit->save();
             // END Auditoria
 
@@ -110,12 +131,22 @@ class GaleriaController extends Controller
 
     // }
 
-    public function listGaleriaByCasoId($caso_id)
+    public function listGaleriaByCasoId($caso_id, $tabId)
     {
         $log = new Funciones();
         try {
             // Recupera las galerías relacionadas con el caso_id desde la base de datos
-            $galerias = Galeria::where('caso_id', $caso_id)->get();
+            //$galerias = Galeria::where('caso_id', $caso_id)->get();
+
+            $galerias = DB::select("SELECT * from (
+            select ga.* from crm.galerias ga
+            where ga.tipo_gal_id <> 8
+            union
+            select ga2.* from crm.galerias ga2
+            inner join crm.requerimientos_caso rc2 on rc2.galerias_id = ga2.id
+            where rc2.acc_publico = true or (rc2.acc_publico = false and rc2.tab_id = $tabId)
+            ) temp where temp.caso_id = $caso_id");
+
 
             $log->logInfo(GaleriaController::class, 'Se listo con exito las imagenes del caso #' . $caso_id);
 
@@ -138,18 +169,32 @@ class GaleriaController extends Controller
             $valorAntiguo = $galeria;
             $audit->old_values = json_encode($valorAntiguo);
 
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
             if ($request->hasFile("imagen_file")) {
                 if ($galeria->imagen) {
-                    // Eliminamos la imagen anterior del disco NAS
-                    Storage::disk('nas')->delete($galeria->imagen);
+                    if ($parametro->nas == true) {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('nas')->delete($galeria->imagen);
+                    } else {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('local')->delete($galeria->imagen);
+                    }
                 }
 
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
                 $titulo = $nuevaImagen->getClientOriginalName();
 
-                // Guardar la nueva imagen en el disco NAS con su nombre original
-                $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                if ($parametro->nas == true) {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                } else {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('local')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                }
 
                 $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
             }
@@ -158,7 +203,7 @@ class GaleriaController extends Controller
 
             // si la imagen es de un requerimiento actualizar el requerimiento
             $reqCaso = RequerimientoCaso::where('galerias_id', $galeria->id)->first();
-            if($reqCaso){
+            if ($reqCaso) {
                 $reqCaso->descripcion = $galeria->descripcion;
                 $reqCaso->valor_varchar = $galeria->imagen;
                 $reqCaso->save();
@@ -176,6 +221,7 @@ class GaleriaController extends Controller
             $audit->new_values = json_encode($galeria);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'editGaleria';
+            $audit->caso_id = $galeria->caso_id;
             $audit->save();
             // END Auditoria
 
@@ -200,7 +246,15 @@ class GaleriaController extends Controller
             // $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
             // Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
 
-            Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
+            if ($parametro->nas == true) {
+                Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            } else {
+                Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            }
 
             $galeria->delete();
 
@@ -218,6 +272,7 @@ class GaleriaController extends Controller
             $audit->new_values = json_encode([]);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'deleteGaleria';
+            $audit->caso_id = $galeria->caso_id;
             $audit->save();
             // END Auditoria
 

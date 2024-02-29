@@ -27,6 +27,11 @@ class ReqCasoController extends Controller
 
         $reqCaso = $request->input('reqCaso');
         $inputReq = json_decode($reqCaso);
+
+
+
+
+
         $tipoArchivo = $request->input('tipoArchivo');
         $requerimiento = RequerimientoCaso::where('id', $inputReq->id)->first();
         if (!$requerimiento) {
@@ -35,6 +40,10 @@ class ReqCasoController extends Controller
         try {
             $path = '';
 
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
             if ($tipoArchivo == 'imagen_file') {
                 if ($request->hasFile("imagen_file")) {
                     // $path = Storage::putFile("galerias", $request->file("imagen_file"));
@@ -42,14 +51,19 @@ class ReqCasoController extends Controller
                     $imagen = $request->file("imagen_file");
                     $titulo = $imagen->getClientOriginalName();
 
-                    $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                    if ($parametro->nas == true) {
+                        $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                    } else {
+                        $path = Storage::disk('local')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                    }
+
                 }
                 $requerimiento->esimagen = true;
             }
-
             if ($tipoArchivo == 'imagen_file') {
 
                 $galeria = Galeria::find($requerimiento->galerias_id);
+
 
                 if ($galeria) {
 
@@ -60,12 +74,14 @@ class ReqCasoController extends Controller
 
                     $galeria->update([
                         "titulo" => $requerimiento->titulo,
-                        "descripcion" => $requerimiento->descripcion,//'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '."\n". $requerimiento->descripcion,//$requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
+                        "descripcion" => $requerimiento->descripcion, //'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '."\n". $requerimiento->descripcion,//$requerimiento->descripcion ? $requerimiento->descripcion : 'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id,
                         "imagen" => $path,
                         "caso_id" => $inputReq->caso_id,
                         "tipo_gal_id" => 8, // Tipo Requerimiento es el id 8
                         "sc_id" => 0,
                     ]);
+
+
 
                     // START Bloque de código que genera un registro de auditoría manualmente
                     $audit->user_id = Auth::id();
@@ -79,13 +95,15 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode($galeria);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'editGaleriaReq';
+                    $audit->caso_id = $galeria->caso_id;
                     $audit->save();
                     // END Auditoria
 
                 } else {
+
                     $newGaleria = new Galeria();
                     $newGaleria->titulo = $requerimiento->titulo;
-                    $newGaleria->descripcion = $requerimiento->descripcion;//'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '. "\n". $requerimiento->descripcion;
+                    $newGaleria->descripcion = $requerimiento->descripcion; //'Requerimiento numero: ' . $requerimiento->id . ', caso numero: ' . $requerimiento->caso_id.': '. "\n". $requerimiento->descripcion;
                     $newGaleria->imagen = $path;
                     $newGaleria->caso_id = $inputReq->caso_id;
                     $newGaleria->tipo_gal_id = 8;
@@ -107,6 +125,7 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode([]);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'addGaleriaReq';
+                    $audit->caso_id = $newGaleria->caso_id;
                     $audit->save();
                     // END Auditoria
 
@@ -119,9 +138,12 @@ class ReqCasoController extends Controller
                     $file = $request->file("archivo_file");
                     $titulo = $file->getClientOriginalName();
 
-                    $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
 
-                    // $path = Storage::putFile("archivos", $request->file("archivo_file"));
+                    if ($parametro->nas == true) {
+                        $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                    } else {
+                        $path = Storage::disk('local')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo);
+                    }
                 }
                 $requerimiento->esimagen = false;
 
@@ -154,6 +176,7 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode($archivo);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'editArchivoReq';
+                    $audit->caso_id = $archivo->caso_id;
                     $audit->save();
                     // END Auditoria
 
@@ -181,10 +204,12 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode([]);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'addArchivoReq';
+                    $audit->caso_id = $newArchivo->caso_id;
                     $audit->save();
                     // END Auditoria
                 }
             }
+
             if ($inputReq->valor_int) {
                 $requerimiento->valor_int = $inputReq->valor_int;
             }
@@ -194,14 +219,13 @@ class ReqCasoController extends Controller
             $requerimiento->marcado = true;
             $requerimiento->save();
 
-            // $requerimientosCaso = RequerimientoCaso::where('caso_id', $inputReq->caso_id)
-            //     ->orderBy('id', 'asc')
-            //     ->orderBy('id', 'asc')
-            //     ->get();
+            $requerimientos = RequerimientoCaso::where('id', $requerimiento->id)
+                ->orderBy('id', 'asc')
+                ->first();
 
             $log->logInfo(ReqCasoController::class, 'Se actualizo con exito el requerimiento, con el ID: ' . $inputReq->id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $requerimiento));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $requerimientos));
         } catch (Exception $e) {
             $log->logError(ReqCasoController::class, 'Error al actualizar el requerimiento, con el ID: ' . $inputReq->id, $e);
 
@@ -219,7 +243,7 @@ class ReqCasoController extends Controller
 
             if ($requerimiento) {
                 DB::transaction(function () use ($requerimiento, $request) {
-                    if (($requerimiento->tipo_campo == 'archivo' || $requerimiento->tipo_campo == 'pegar imagen' ) && $requerimiento->galerias_id != null) {
+                    if (($requerimiento->tipo_campo == 'archivo' || $requerimiento->tipo_campo == 'pegar imagen') && $requerimiento->galerias_id != null) {
                         $galeria = Galeria::find($requerimiento->galerias_id);
                         $galeria->update([
                             "descripcion" => $request->input('descripcion'),
@@ -248,11 +272,12 @@ class ReqCasoController extends Controller
                     $audit->new_values = json_encode($requerimiento);
                     $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                     $audit->accion = 'editRequerimiento';
+                    $audit->caso_id = $requerimiento->caso_id;
                     $audit->save();
                     // END Auditoria
 
 
-                    //echo ('$requerimiento: '.json_encode($requerimiento));
+
                 });
 
                 $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))
@@ -281,7 +306,6 @@ class ReqCasoController extends Controller
         try {
             $reqFase = DB::select('SELECT * FROM crm.requerimientos_predefinidos  where fase_id = ?', [$casoId]);
             $log->logInfo(ReqCasoController::class, 'Se listo correctamente los requerimientos predefinidos');
-
         } catch (\Throwable $e) {
             $log->logError(ReqCasoController::class, 'Error al listar los requerimientos predefinidos', $e);
         }
@@ -308,7 +332,6 @@ class ReqCasoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
-
     }
 
     public function uploadReqArchivo($inputFormData)
@@ -375,6 +398,7 @@ class ReqCasoController extends Controller
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             // $audit->accion = 'addSolicitudCreditoReqCaso';
             $audit->accion = 'addSolicitudCredito';
+            $audit->caso_id = $solicitudCredito->caso_id;
             $audit->save();
             //END Auditoria
 
@@ -382,7 +406,7 @@ class ReqCasoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
-            $log->logError(ReqCasoController::class, 'Error al crear la solicitud de credito en el caso: #' . $casoId, $e);
+            $log->logError(ReqCasoController::class, 'Error al crear la solicitud de cro en el caso: #' . $casoId, $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -406,5 +430,4 @@ class ReqCasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
         }
     }
-
 }

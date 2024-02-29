@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\chat\ChatController as ChatController;
+use App\Http\Controllers\chat\ChatArchivosController;
+use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
@@ -75,6 +76,7 @@ use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\ParametrosController;
+use App\Http\Controllers\WebSocketController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -92,7 +94,9 @@ use Illuminate\Support\Facades\Route;
 //     return $request->user();
 // });
 
+
 Route::group(['middleware' => 'api'], function ($router) {
+    Route::get('/websocket/active-channels-count', [WebSocketController::class, 'getActiveChannelsCount']);
 
     Route::post('/register', [JWTController::class, 'register']);
     Route::post('/login', [JWTController::class, 'login']);
@@ -207,11 +211,21 @@ Route::group(["prefix" => "crm"], function ($router) {
 
 /************************  CHAT   ****************** */
 Route::group(["prefix" => "chat"], function ($router) {
-    Route::get('/list/{id}', [ChatController::class, 'list']);
-    Route::post('/sendMessage/{uniqd}/{userId}/{userDosId}', [ChatController::class, 'sendMessage']); //
-    Route::get('/listChatsRooms/{userId}', [ChatController::class, 'listChatsRooms']); //
-    Route::get('/listarMensajes/{uniqd}', [ChatController::class, 'listarMensajes']); //
-    Route::get('/usuariosChat', [ChatController::class, 'usuariosChat']); //
+    Route::get('/listConversaciones/{userId}', [ChatController::class, 'listConversaciones']);
+    Route::get('/listarMensajes/{converId}/{tipoConver}/{numeroPagina}', [ChatController::class, 'listarMensajes']);
+    Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']);
+    Route::get('/usuariosParaChat', [ChatController::class, 'usuariosParaChat']); //
+    Route::post('/iniciarChatNormal', [ChatController::class, 'iniciarChatNormal']);
+    Route::post('/iniciarChatGrupal', [ChatController::class, 'iniciarChatGrupal']); //
+    Route::get('/getImagenesSmg', [ChatController::class, 'getImagenesSmg']); //
+    Route::get('/getMensaje/{id}', [ChatController::class, 'getMensaje']); //
+    Route::get('/listarMensajesNoLeidos', [ChatController::class, 'listarMensajesNoLeidos']);
+    Route::get('/usersGrupoChat/{converId}', [ChatController::class, 'usersGrupoChat']); //
+    Route::post('/actualizarGrupo', [ChatController::class, 'actualizarGrupo']); //
+    // ARCHIVOS E IMAGENES PARA EL CHAT
+    Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
+    Route::get('/listarArchivosConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarArchivosConver']);
+    Route::get('/listarGaleriaConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarGaleriaConver']);
 });
 
 
@@ -221,7 +235,7 @@ Route::group(["prefix" => "crm/audi"], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
 });
 Route::group(["prefix" => "crm/robot"], function ($router) {
-    Route::post('/reasignarCaso', [RobotCasoController::class, 'reasignarCaso']);
+    Route::get('/reasignarCaso/{estadoFormId}/{casoId}/{tableroActualId}/{banMostrarVistaCreditoAprobado?}', [RobotCasoController::class, 'reasignarCaso']);
 });
 
 Route::group([], function ($router) {
@@ -279,7 +293,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // GALERIA
 
     Route::post('/addGaleria/{caso_id}', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
-    Route::get('/listGaleriaByCasoId/{id}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
+    Route::get('/listGaleriaByCasoId/{id}/{tabId}', [GaleriaController::class, 'listGaleriaByCasoId']); // Listar las imagenes
     Route::post('/editGaleria/{id}', [GaleriaController::class, 'editGaleria']); // Edita la imagen
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
     Route::get('/listGaleriaBySolicitudCreditoId/{id}', [GaleriaController::class, 'listGaleriaBySolicitudCreditoId']); // Listar las imagenes
@@ -544,6 +558,7 @@ Route::group(["prefix" => "credito"], function ($router) {
 
     Route::post('/addReferenciasCliente', [ReferenciasClienteController::class, 'addReferenciasCliente']); // Guardar
     Route::post('/editReferenciasCliente/{id}', [ReferenciasClienteController::class, 'editReferenciasCliente']); // Editar
+    Route::post('/editReferenciaObservacion/{id}', [ReferenciasClienteController::class, 'editReferenciaObservacion']); // Editar
     Route::delete('/deleteReferenciasCliente/{id}', [ReferenciasClienteController::class, 'deleteReferenciasCliente']); // Eliminar
     Route::get('/listReferenciasByClienteId/{cli_id}', [ReferenciasClienteController::class, 'listReferenciasByClienteId']); // lista
 
@@ -563,6 +578,7 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
     Route::post('/addEmail', [EmailController::class, 'addEmail']);
     Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
+
 });
 
 

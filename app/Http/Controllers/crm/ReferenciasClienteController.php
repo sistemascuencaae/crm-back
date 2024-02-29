@@ -141,6 +141,28 @@ class ReferenciasClienteController extends Controller
         }
     }
 
+    public function editReferenciaObservacion(Request $request, $referencia_id)
+    {
+        $log = new Funciones();
+        try {
+            $referencia = ReferenciasCliente::findOrFail($referencia_id);
+
+            DB::transaction(function () use ($referencia, $request) {
+                $referencia->update([
+                    "observacion" => $request->observacion
+                ]);
+            });
+
+            $log->logInfo(CasoController::class, 'Se actualizo con exito la observación de la referencia con el ID: ' . $referencia_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $referencia));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar la observación de la referencia con el ID: ' . $referencia_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
     // public function editReferenciasCliente(Request $request, $id)
     // {
     //     try {
