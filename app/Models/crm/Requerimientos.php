@@ -23,6 +23,7 @@ class Requerimientos extends Model
         "requerido",
         "orden",
         "acc_publico",
+        "desc_requerida"
     ];
 
     public function setCreatedAtAttribute($value)
