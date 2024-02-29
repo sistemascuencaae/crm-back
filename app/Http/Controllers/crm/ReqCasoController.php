@@ -219,9 +219,9 @@ class ReqCasoController extends Controller
             $requerimiento->marcado = true;
             $requerimiento->save();
 
-            $requerimientos = RequerimientoCaso::where('caso_id', $requerimiento->caso_id)
+            $requerimientos = RequerimientoCaso::where('id', $requerimiento->id)
                 ->orderBy('id', 'asc')
-                ->get();
+                ->first();
 
             $log->logInfo(ReqCasoController::class, 'Se actualizo con exito el requerimiento, con el ID: ' . $inputReq->id);
 
