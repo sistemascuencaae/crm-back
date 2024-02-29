@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\CTipoActividad;
+use App\Models\crm\DTipoActividad;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -157,7 +158,7 @@ class CActividadController extends Controller
         try {
             $data = DB::transaction(function () use ($request, $id) {
 
-                $actividad = CTipoActividad::findOrFail($id);
+                $actividad = CTipoActividad::find($id);
 
                 // // Obtener el old_values (valor antiguo)
                 // $audit = new Audits();
@@ -211,14 +212,22 @@ class CActividadController extends Controller
     {
         $log = new Funciones();
         try {
-            $actividad = CTipoActividad::findOrFail($id);
+            $actividad = CTipoActividad::find($id);
 
-            // // Obtener el old_values (valor antiguo)
+            // Verificar si existe una relación en la tabla dtipo_actividad // existe relacion
+            $existeRelacionConCtipoActividad = DTipoActividad::where('cta_id', $id)->exists();
+            if ($existeRelacionConCtipoActividad) {
+                // Si existe una relación, retornar un mensaje de error
+                return response()->json(RespuestaApi::returnResultado('error', 'No se puede eliminar el tipo de actividad porque ya esta asignada a una actividad', ''));
+            }
+
+            // Obtener el old_values (valor antiguo)
             // $valorAntiguo = $actividad;
 
+            // Si no existe una relación en la tabla dtipo_actividad, eliminar la actividad
             $actividad->delete();
 
-            // // START Bloque de código que genera un registro de auditoría manualmente
+            // START Bloque de código que genera un registro de auditoría manualmente
             // $audit = new Audits();
             // $audit->user_id = Auth::id();
             // $audit->event = 'deleted';
@@ -227,21 +236,23 @@ class CActividadController extends Controller
             // $audit->user_type = User::class;
             // $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
             // $audit->url = $request->fullUrl();
-            // // Establecer old_values y new_values
+            // Establecer old_values y new_values
             // $audit->old_values = json_encode($valorAntiguo);
             // $audit->new_values = json_encode([]);
             // $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             // $audit->accion = 'deleteCTipoActividad';
             // $audit->save();
-            // // END Auditoria
+            // END Auditoria
 
-            $log->logInfo(CActividadController::class, 'Se elimino con exito el tipo de actividad, con el ID: ' . $id);
+            $log->logInfo(CActividadController::class, 'Se eliminó con éxito el tipo de actividad con el ID: ' . $id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $actividad));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $actividad));
+
         } catch (Exception $e) {
-            $log->logError(CActividadController::class, 'Error al eliminar el tipo de actividad, con el ID: ' . $id, $e);
+            $log->logError(CActividadController::class, 'Error al eliminar el tipo de actividad con el ID: ' . $id, $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
 }
