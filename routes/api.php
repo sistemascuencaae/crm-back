@@ -213,7 +213,9 @@ Route::group(["prefix" => "crm"], function ($router) {
 Route::group(["prefix" => "chat"], function ($router) {
     Route::get('/listConversaciones/{userId}', [ChatController::class, 'listConversaciones']);
     Route::get('/listarMensajes/{converId}/{tipoConver}/{numeroPagina}', [ChatController::class, 'listarMensajes']);
-    Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']);
+    Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']); //
+    Route::delete('/eliminarMensaje/{mensajeId}/{converId}/{tipoConver}', [ChatController::class, 'eliminarMensaje']); //
+    Route::put('/actualizarMensaje/{converId}/{tipoConver}/{accion}', [ChatController::class, 'actualizarMensaje']);//
     Route::get('/usuariosParaChat', [ChatController::class, 'usuariosParaChat']); //
     Route::post('/iniciarChatNormal', [ChatController::class, 'iniciarChatNormal']);
     Route::post('/iniciarChatGrupal', [ChatController::class, 'iniciarChatGrupal']); //
