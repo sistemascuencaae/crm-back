@@ -18,7 +18,7 @@ class Galeria extends Model
 
     protected $table = 'crm.galerias';
 
-    protected $fillable = ["titulo", "descripcion", "imagen", "caso_id", "tipo_gal_id", "sc_id", "equifax", "enrolamiento_id"];
+    protected $fillable = ["titulo", "descripcion", "imagen", "caso_id", "tipo_gal_id", "sc_id", "equifax", "enrolamiento_id", "tab_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -40,4 +40,10 @@ class Galeria extends Model
     {
         return $this->belongsTo(TipoGaleria::class, "tipo_gal_id");
     }
+
+    public function fondoTablero()
+    {
+        return $this->belongsTo(Tablero::class, "tab_id");
+    }
+
 }

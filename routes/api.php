@@ -300,6 +300,13 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'allTipoGaleria']); // Listar los tipos de imagenes
 
+    // FONDO TABLERO
+
+    Route::get('/listFondoTablero/{tab_id}', [GaleriaController::class, 'listFondoTablero']); // Listar las imagenes
+    Route::post('/addFondoTablero/{tab_id}', [GaleriaController::class, 'addFondoTablero']); // Guardar la imagen
+    Route::post('/editFondoTablero/{id}', [GaleriaController::class, 'editFondoTablero']); // Edita la imagen
+    Route::delete('/deleteFondoTablero/{id}', [GaleriaController::class, 'deleteFondoTablero']); // Elimina la imagen
+
     // ARCHIVO
 
     Route::post('/addArchivo/{caso_id}', [ArchivoController::class, 'addArchivo']); // Guardar

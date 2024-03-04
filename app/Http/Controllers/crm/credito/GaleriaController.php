@@ -162,7 +162,7 @@ class GaleriaController extends Controller
     {
         $log = new Funciones();
         try {
-            $galeria = Galeria::findOrFail($id);
+            $galeria = Galeria::find($id);
 
             // Obtener el old_values (valor antiguo)
             $audit = new Audits();
@@ -188,12 +188,21 @@ class GaleriaController extends Controller
                 $nuevaImagen = $request->file("imagen_file");
                 $titulo = $nuevaImagen->getClientOriginalName();
 
+                // Fecha actual
+                $fechaActual = Carbon::now();
+
+                // Formatear la fecha en formato deseado
+                // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+
+                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                $fecha_actual = str_replace(':', '-', $fechaActual);
+
                 if ($parametro->nas == true) {
                     // Guardar la nueva imagen en el disco NAS con su nombre original
-                    $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
                 } else {
                     // Guardar la nueva imagen en el disco NAS con su nombre original
-                    $path = Storage::disk('local')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
@@ -297,6 +306,159 @@ class GaleriaController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $ultimaFoto));
         } catch (Exception $e) {
             $log->logError(GaleriaController::class, 'Error al listar la ultima imagen de la solicitud de credito, con el ID: ' . $sc_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
+    // FONDO DEL TABLERO
+
+    public function listFondoTablero($tab_id)
+    {
+        $log = new Funciones();
+        try {
+
+            $galerias = Galeria::where('tab_id', $tab_id)->first();
+
+            $log->logInfo(GaleriaController::class, 'Se listo con exito el fondo del tablero con el ID ' . $tab_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $galerias));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al listar el fondo del tablero con el ID ' . $tab_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function addFondoTablero(Request $request, $tab_id)
+    {
+        $log = new Funciones();
+
+        try {
+            if ($request->hasFile("imagen_file")) {
+                $imagen = $request->file("imagen_file");
+                $titulo = $imagen->getClientOriginalName();
+
+                // Fecha actual
+                $fechaActual = Carbon::now();
+
+                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
+                if ($parametro->nas == true) {
+                    $path = Storage::disk('nas')->putFileAs("fondo_tablero/" . $tab_id, $imagen, $tab_id . '-' . $fecha_actual . '-' . $titulo);
+                } else {
+                    $path = Storage::disk('local')->putFileAs("fondo_tablero/" . $tab_id, $imagen, $tab_id . '-' . $fecha_actual . '-' . $titulo);
+                }
+
+                $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
+            }
+
+            $galeria = Galeria::create($request->all());
+
+            $log->logInfo(GaleriaController::class, 'Se guardo con exito el fondo del tablero con el ID ' . $tab_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al guardar el fondo del tablero con el ID ' . $tab_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function editFondoTablero(Request $request, $id)
+    {
+        $log = new Funciones();
+        try {
+            $galeria = Galeria::find($id);
+
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
+            if ($request->hasFile("imagen_file")) {
+                if ($galeria->imagen) {
+                    if ($parametro->nas == true) {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('nas')->delete($galeria->imagen);
+                    } else {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('local')->delete($galeria->imagen);
+                    }
+                }
+
+                // Obtener el nuevo archivo de imagen y su nombre original
+                $nuevaImagen = $request->file("imagen_file");
+                $titulo = $nuevaImagen->getClientOriginalName();
+
+                // Fecha actual
+                $fechaActual = Carbon::now();
+
+                // Formatear la fecha en formato deseado
+                // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+
+                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                if ($parametro->nas == true) {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('nas')->putFileAs("fondo_tablero/" . $galeria->tab_id, $nuevaImagen, $galeria->tab_id . '-' . $fecha_actual . '-' . $titulo);
+                } else {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('local')->putFileAs("fondo_tablero/" . $galeria->tab_id, $nuevaImagen, $galeria->tab_id . '-' . $fecha_actual . '-' . $titulo);
+                }
+
+                $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
+            }
+
+            $galeria->update($request->all());
+
+            // si la imagen es de un requerimiento actualizar el requerimiento
+            $reqCaso = RequerimientoCaso::where('galerias_id', $galeria->id)->first();
+            if ($reqCaso) {
+                $reqCaso->descripcion = $galeria->descripcion;
+                $reqCaso->valor_varchar = $galeria->imagen;
+                $reqCaso->save();
+            }
+
+            $log->logInfo(GaleriaController::class, 'Se actualizo con exito el fondo del tablero, con el ID de la imagen ' . $id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al actualizar el fondo del tablero, con el ID de la imagen ' . $id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function deleteFondoTablero(Request $request, $id)
+    {
+        $log = new Funciones();
+        try {
+            $galeria = Galeria::find($id);
+
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
+            if ($parametro->nas == true) {
+                Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta nas
+            } else {
+                Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            }
+
+            $galeria->delete();
+
+            $log->logInfo(GaleriaController::class, 'Se elimino con exito el fondo del tablero, con el ID de la imagen ' . $id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $galeria));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al eliminar el fondo del tablero, con el ID de la imagen ' . $id, $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
