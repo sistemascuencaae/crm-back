@@ -93,7 +93,7 @@ class VentasProductosGexController extends Controller
                                             join empleado e on c.vnd_id = e.emp_id
                                             join entidad en on e.ent_id = en.ent_id
                                             left outer join gex.producto_config pc on p.pro_id = pc.pro_id
-                            where c.cfa_fecha between '" . $fecIni . "' and '" . $fecFin . "'
+                            where cast(c.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                     and (tp.tpr_id = " . $tipoProd . " or 0 = " . $tipoProd . ")
                                     and (p.pro_id = " . $producto . " or 0 = " . $producto . ")
                                     and ((case when pc.tipo_servicio = 'M' then pv.pve_id else a.alm_id end) = " . $sucursal . " or 0 = " . $sucursal . ")
@@ -134,7 +134,7 @@ class VentasProductosGexController extends Controller
                                             join empleado e on c.vnd_id = e.emp_id
                                             join entidad en on e.ent_id = en.ent_id
                                             left outer join gex.producto_config pc on p.pro_id = pc.pro_id
-                            where c.cfa_fecha between '" . $fecIni . "' and '" . $fecFin . "'
+                            where cast(c.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                     and (tp.tpr_id = " . $tipoProd . " or 0 = " . $tipoProd . ")
                                     and tp.tpr_nombre like 'MOTO %'
                                     and (p.pro_id = " . $producto . " or 0 = " . $producto . ")
