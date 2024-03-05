@@ -18,7 +18,7 @@ class Tablero extends Model
 
     protected $table = 'crm.tablero';
 
-    protected $fillable = ["nombre", "descripcion", "estado", "dep_id"];
+    protected $fillable = ["nombre", "descripcion", "estado", "dep_id", "gal_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -46,5 +46,9 @@ class Tablero extends Model
         return $this->hasMany(Estados::class, "tab_id");
     }
 
+    public function fondoTablero()
+    {
+        return $this->belongsTo(Galeria::class, "gal_id");
+    }
 
 }

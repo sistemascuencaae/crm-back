@@ -21,7 +21,7 @@ class RelacionUsuariosAlmacenGex extends Model implements Auditable
     public $timestamps = false;
 
     protected $fillable = [
-        "usu_id".
+        "usu_id",
         "alm_id",
         "usuario_crea",
         "fecha_crea",

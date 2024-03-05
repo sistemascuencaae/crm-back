@@ -71,6 +71,9 @@ use App\Http\Controllers\crm\series\InventarioFechaSeriesController;
 use App\Http\Controllers\crm\series\InformeInventarioSeriesController;
 use App\Http\Controllers\crm\series\ComparativoSeriesController;
 use App\Http\Controllers\crm\garantias\VentasProductosGexController;
+use App\Http\Controllers\crm\garantias\RelacionAlamcenVendedorGexController;
+use App\Http\Controllers\crm\garantias\MetasController;
+use App\Http\Controllers\crm\garantias\MetasRecalcController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
@@ -213,7 +216,9 @@ Route::group(["prefix" => "crm"], function ($router) {
 Route::group(["prefix" => "chat"], function ($router) {
     Route::get('/listConversaciones/{userId}', [ChatController::class, 'listConversaciones']);
     Route::get('/listarMensajes/{converId}/{tipoConver}/{numeroPagina}', [ChatController::class, 'listarMensajes']);
-    Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']);
+    Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']); //
+    Route::delete('/eliminarMensaje/{mensajeId}/{converId}/{tipoConver}', [ChatController::class, 'eliminarMensaje']); //
+    Route::put('/actualizarMensaje/{converId}/{tipoConver}/{accion}', [ChatController::class, 'actualizarMensaje']);//
     Route::get('/usuariosParaChat', [ChatController::class, 'usuariosParaChat']); //
     Route::post('/iniciarChatNormal', [ChatController::class, 'iniciarChatNormal']);
     Route::post('/iniciarChatGrupal', [ChatController::class, 'iniciarChatGrupal']); //
@@ -299,6 +304,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listGaleriaBySolicitudCreditoId/{id}', [GaleriaController::class, 'listGaleriaBySolicitudCreditoId']); // Listar las imagenes
 
     Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'allTipoGaleria']); // Listar los tipos de imagenes
+
+    // FONDO TABLERO
+
+    Route::get('/listFondoTablero/{tab_id}', [GaleriaController::class, 'listFondoTablero']); // Listar las imagenes
+    Route::post('/addFondoTablero/{tab_id}', [GaleriaController::class, 'addFondoTablero']); // Guardar la imagen
+    Route::post('/editFondoTablero/{id}', [GaleriaController::class, 'editFondoTablero']); // Edita la imagen
+    Route::delete('/deleteFondoTablero/{id}', [GaleriaController::class, 'deleteFondoTablero']); // Elimina la imagen
 
     // ARCHIVO
 
@@ -559,6 +571,7 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::post('/addReferenciasCliente', [ReferenciasClienteController::class, 'addReferenciasCliente']); // Guardar
     Route::post('/editReferenciasCliente/{id}', [ReferenciasClienteController::class, 'editReferenciasCliente']); // Editar
     Route::post('/editReferenciaObservacion/{id}', [ReferenciasClienteController::class, 'editReferenciaObservacion']); // Editar
+    Route::post('/editReferenciaValida/{id}', [ReferenciasClienteController::class, 'editReferenciaValida']); // Editar
     Route::delete('/deleteReferenciasCliente/{id}', [ReferenciasClienteController::class, 'deleteReferenciasCliente']); // Eliminar
     Route::get('/listReferenciasByClienteId/{cli_id}', [ReferenciasClienteController::class, 'listReferenciasByClienteId']); // lista
 
@@ -725,6 +738,30 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listadoVendedoresVentas', [VentasProductosGexController::class, 'vendedores']);
     Route::get('/VentasProductosGex/{tipoProd}/{producto}/{sucursal}/{formaPago}/{vendedor}/{fecIni}/{fecFin}', [VentasProductosGexController::class, 'VentasProductosGex']);
     Route::get('/VentasMotosGex/{tipoProd}/{producto}/{sucursal}/{formaPago}/{vendedor}/{fecIni}/{fecFin}', [VentasProductosGexController::class, 'VentasMotosGex']);
+
+    //Relacion Almacen Vendedor Gex
+    Route::get('/listadoRelaAlmaVen', [RelacionAlamcenVendedorGexController::class, 'listado']);
+    Route::get('/listadoAlmacenesRelaV', [RelacionAlamcenVendedorGexController::class, 'almacenes']);
+    Route::get('/listadoVendedoresRela', [RelacionAlamcenVendedorGexController::class, 'vendedores']);
+    Route::post('/grabaRelaAlmVen', [RelacionAlamcenVendedorGexController::class, 'grabaRelaAlmVen']);
+    Route::get('/byRelaAlmVen/{almacen}/{vendedor}', [RelacionAlamcenVendedorGexController::class, 'byRelaAlmVen']);
+    Route::get('/eliminaRelaAlmVen/{almacen}/{vendedor}', [RelacionAlamcenVendedorGexController::class, 'eliminaRelaAlmVen']);
+
+    //Metas Gex
+    Route::get('/listadoMeta', [MetasController::class, 'listado']);
+    Route::get('/listadoAlmacenesMeta', [MetasController::class, 'almacenes']);
+    Route::get('/listadoVendedoresMeta/{almacen}', [MetasController::class, 'vendedores']);
+    Route::post('/grabaMeta', [MetasController::class, 'grabaMeta']);
+    Route::get('/byMeta/{meta}/{almacen}', [MetasController::class, 'byMeta']);
+    Route::get('/eliminaMeta/{meta}/{almacen}', [MetasController::class, 'eliminaMeta']);
+
+    //Metas Gex
+    Route::get('/listadoMetaRecal', [MetasRecalcController::class, 'listado']);
+    Route::get('/listadoAlmacenesMetaRecal', [MetasRecalcController::class, 'almacenes']);
+    Route::get('/cargaInfoRecal/{almacen}/{mes}/{anio}', [MetasRecalcController::class, 'tomaInformacion']);
+    Route::post('/grabaMetaRecal', [MetasRecalcController::class, 'grabaMetaRecal']);
+    Route::get('/byMetaRecal/{metaRecal}/{almacen}', [MetasRecalcController::class, 'byMetaRecal']);
+    Route::get('/eliminaMetaRecal/{metaRecal}/{almacen}', [MetasRecalcController::class, 'eliminaMetaRecal']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);

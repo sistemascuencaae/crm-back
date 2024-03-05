@@ -6,10 +6,13 @@ use App\Models\crm\Archivo;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ChatMensajes extends Model
 {
     use HasFactory;
+    use SoftDeletes;
+    public $timestamps = true;
     protected $table = 'crm.chat_mensajes';
 
     protected $fillable = [
@@ -48,6 +51,16 @@ class ChatMensajes extends Model
     public function archivo()
     {
         return $this->belongsTo(Archivo::class, "archivo_id");
+    }
+
+
+
+    public function delete()
+    {
+        $this->timestamps = false; // Deshabilitar marcas de tiempo
+        $deleted = parent::delete(); // Eliminar el registro
+        $this->timestamps = true; // Volver a habilitar marcas de tiempo
+        return $deleted;
     }
 
 }

@@ -106,6 +106,64 @@ class ChatController extends Controller
         }
     }
 
+    public function actualizarMensaje(Request $request, $converId, $tipoConver, $accion)
+    {
+        //try {
+            $user_id = Auth::id();
+            $userRecibeId = $this->userRecibeMensaje($user_id, $converId);
+                $dataMensaje = $request->all();
+            $mensajeActu = ChatMensajes::find($dataMensaje['id']);
+
+            //actualizar ultimo mensaje enviado
+            if($accion === 'ULTIMO'){
+                $mensajeActu->update([
+                    "mensaje" => $mensajeActu->mensaje . "\n" . $dataMensaje['mensaje'],
+                    "read_at" => null
+                ]);
+            }
+            //actualizar mensaje especifico
+            if($accion === 'ESPECIFICO') {
+                $mensajeActu->update([
+                    "mensaje" => $dataMensaje['mensaje'],
+                    "read_at" => null,
+                    "updated_at" => $mensajeActu->updated_at
+                ]);
+            }
+
+
+            $dataMensajes = $this->getMensajes($converId, $tipoConver, 15);
+            $this->getConversacionesUser($user_id);
+            broadcast(new EnviarMensajeEvent($dataMensajes, $converId, $tipoConver));
+            if ($tipoConver === 'NORMAL') {
+                $this->getConversacionesUser($userRecibeId->recibe);
+            }
+            if ($tipoConver === 'GRUPAL') {
+                $miembros = DB::select("SELECT * FROM crm.chat_miembros_grupo WHERE chatgrupo_id = $converId");
+                foreach ($miembros as $key => $value) {
+                    $userMiembroId = $value->user_id;
+                    $this->getConversacionesUser($userMiembroId);
+                }
+            }
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', []));
+        // } catch (\Throwable $th) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al enviar mensaje.', $th));
+        // }
+    }
+
+    public function userRecibeMensaje($user_id, $converId)
+    {
+        $data = DB::selectOne("SELECT
+                CASE
+                 WHEN cc.user_uno_id = ? then cc.user_dos_id
+                 WHEN cc.user_dos_id = ? THEN cc.user_uno_id
+                 ELSE 0
+                END AS recibe
+                from crm.chat_conversaciones cc where cc.id = ?", [$user_id, $user_id, $converId]);
+
+        return $data;
+    }
+
+
     public function listarMensajes($converId, $tipoConver, $perPage)
     {
         try {
@@ -114,7 +172,7 @@ class ChatController extends Controller
                 $userCreadorId = Auth::id();
                 $currentDate = date('Y-m-d H:i:s');
                 DB::update("UPDATE crm.chat_mensajes SET read_at= '$currentDate'
-                WHERE id in (SELECT id from crm.chat_mensajes WHERE chatconve_id=$converId ORDER BY created_at DESC LIMIT 15)
+                WHERE id in (SELECT id from crm.chat_mensajes WHERE chatconve_id=$converId ORDER BY updated_at DESC LIMIT 15)
                  and user_id <> $userCreadorId;");
             }
             $data = $this->getMensajes($converId, $tipoConver, $perPage);
@@ -139,25 +197,33 @@ class ChatController extends Controller
         $mensajes[] = [];
         if ($tipoConver == 'NORMAL') {
             $listaMensajes = ChatConversaciones::with([
-                'mensajesNormal.archivosImg.img',
-                'mensajesNormal.archivo',
-                'mensajesNormal.user' => function ($query) {
-                    $query->select(['id', 'name', 'email']);
+                'mensajesNormal' => function ($query) {
+                    $query->withTrashed()->with([
+                        'archivosImg.img',
+                        'archivo',
+                        'user' => function ($query) {
+                            $query->select(['id', 'name', 'email']);
+                        }
+                    ]);
                 }
             ])->find($converId);
             $data = json_decode($listaMensajes, true);
-            $mensajes = collect($data['mensajes_normal'])->sortByDesc('created_at')->values()->all();
+            $mensajes = collect($data['mensajes_normal'])->sortByDesc('updated_at')->values()->all();
         }
         if ($tipoConver == 'GRUPAL') {
             $listaMensajes = ChatGrupos::with([
-                'mensajesGrupal.archivosImg.img',
-                'mensajesGrupal.archivo',
-                'mensajesGrupal.user' => function ($query) {
-                    $query->select(['id', 'name', 'email']);
+                'mensajesGrupal' => function ($query) {
+                    $query->withTrashed()->with([
+                        'archivosImg.img',
+                        'archivo',
+                        'user' => function ($query) {
+                            $query->select(['id', 'name', 'email']);
+                        }
+                    ]);
                 }
             ])->find($converId);
             $data = json_decode($listaMensajes, true);
-            $mensajes = collect($data['mensajes_grupal'])->sortByDesc('created_at')->values()->all();
+            $mensajes = collect($data['mensajes_grupal'])->sortByDesc('updated_at')->values()->all();
         }
         // Aplicar paginación
         $currentPage = Paginator::resolveCurrentPage('page');
@@ -188,9 +254,10 @@ class ChatController extends Controller
                     left join crm.users u2 on u2.id = cc2.user_dos_id
                     where cc2.id = cc.id limit 1) as username,
                     m.mensaje,
-                    m.created_at,
+                    m.updated_at,
                     m.read_at,
-                    ROW_NUMBER() OVER (PARTITION BY m.chatconve_id ORDER BY m.created_at DESC) AS rn
+                    m.deleted_at,
+                    ROW_NUMBER() OVER (PARTITION BY m.chatconve_id ORDER BY m.updated_at DESC) AS rn
                 FROM crm.chat_mensajes m
                 left join crm.chat_conversaciones cc on cc.id = m.chatconve_id
                 left join crm.users u on u.id = m.user_id
@@ -205,9 +272,10 @@ class ChatController extends Controller
                     m.user_id,
                     cg.nombre_grupo as username,
                     m.mensaje,
-                    m.created_at,
+                    m.updated_at,
                     m.read_at,
-                    ROW_NUMBER() OVER (PARTITION BY m.chatgrupo_id ORDER BY m.created_at DESC) AS rn
+                    m.deleted_at,
+                    ROW_NUMBER() OVER (PARTITION BY m.chatgrupo_id ORDER BY m.updated_at DESC) AS rn
                 FROM crm.chat_mensajes m
                 left JOIN crm.chat_miembros_grupo cgm ON m.chatgrupo_id = cgm.chatgrupo_id
                 left JOIN crm.chat_grupos cg on cg.id = cgm.chatgrupo_id
@@ -222,8 +290,9 @@ class ChatController extends Controller
                 nm.user_id,
                 nm.username,
                 nm.mensaje,
-                nm.created_at,
-                nm.read_at
+                nm.updated_at,
+                nm.read_at,
+                nm.deleted_at
             FROM NumeredMessages nm
             WHERE nm.rn = 1 AND ? = ANY(nm.participantes);", [$userId, $userId, $userId]);
 
@@ -251,7 +320,7 @@ class ChatController extends Controller
                     inner join crm.users u2 on u2.id = cc2.user_dos_id
                     where cc2.id = cc.id limit 1) as username,
                     m.mensaje,
-                    m.created_at
+                    m.updated_at
                 FROM crm.chat_mensajes m
                 join crm.chat_conversaciones cc on cc.id = m.chatconve_id
                 join crm.users u on u.id = m.user_id
@@ -271,7 +340,7 @@ class ChatController extends Controller
              m.user_id,
              cg.nombre_grupo AS username,
              m.mensaje,
-             m.created_at
+             m.updated_at
          FROM
              crm.chat_mensajes m
          JOIN
@@ -488,13 +557,13 @@ class ChatController extends Controller
                 (SELECT DISTINCT ON (cc.id)
                     cc.id,
                     cm.mensaje,
-                    cm.created_at,
+                    cm.updated_at,
                     cm.read_at,
                     cm.user_id
                 FROM crm.chat_conversaciones cc
                 INNER JOIN crm.chat_mensajes cm ON cm.chatconve_id = cc.id and cm.read_at is null
                 WHERE cc.user_uno_id = $userId or cc.user_dos_id = $userId
-                ORDER BY cc.id, cm.created_at desc) ttemp where ttemp.user_id <> $userId");
+                ORDER BY cc.id, cm.updated_at desc) ttemp where ttemp.user_id <> $userId");
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $mensajesNoLeidos));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -519,6 +588,35 @@ class ChatController extends Controller
             foreach ($miembros as $key => $value) {
                 $userMiembroId = $value->user_id;
                 $this->getConversacionesUser($userMiembroId);
+            }
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', []));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function eliminarMensaje($mensajeId, $converId, $tipoConver)
+    {
+        try {
+            $mensaje = ChatMensajes::find($mensajeId);
+            if ($mensaje) {
+                $mensaje->delete();
+                $user_id = Auth::id();
+                $dataMensajes = $this->getMensajes($converId, $tipoConver, 15);
+                $this->getConversacionesUser($user_id);
+                broadcast(new EnviarMensajeEvent($dataMensajes, $converId, $tipoConver));
+                $userRecibeId = $this->userRecibeMensaje($user_id, $converId);
+                if ($tipoConver === 'NORMAL') {
+                    $this->getConversacionesUser($userRecibeId->recibe);
+                }
+                if ($tipoConver === 'GRUPAL') {
+                    $miembros = DB::select("SELECT * FROM crm.chat_miembros_grupo WHERE chatgrupo_id = $converId");
+                    foreach ($miembros as $key => $value) {
+                        $userMiembroId = $value->user_id;
+                        $this->getConversacionesUser($userMiembroId);
+                    }
+                }
+                return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', []));
             }
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', []));
         } catch (Exception $e) {

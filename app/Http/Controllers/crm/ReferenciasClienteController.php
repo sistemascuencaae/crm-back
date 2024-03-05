@@ -101,7 +101,7 @@ class ReferenciasClienteController extends Controller
         try {
             DB::beginTransaction();
 
-            $ref = ReferenciasCliente::findOrFail($id);
+            $ref = ReferenciasCliente::find($id);
             $ref->update($request->all());
 
             // Obtén los IDs de los teléfonos existentes en la base de datos
@@ -117,7 +117,7 @@ class ReferenciasClienteController extends Controller
             foreach ($request->telefonos as $telefonoData) {
                 if (isset($telefonoData['id'])) {
                     // Actualiza los teléfonos existentes
-                    $telefono = TelefonosReferencias::findOrFail($telefonoData['id']);
+                    $telefono = TelefonosReferencias::find($telefonoData['id']);
                     $telefono->update(['numero_telefono' => $telefonoData['numero_telefono'], 'tipo_telefono' => $telefonoData['tipo_telefono']]);
                 } else {
                     // Agrega nuevos teléfonos
@@ -145,11 +145,33 @@ class ReferenciasClienteController extends Controller
     {
         $log = new Funciones();
         try {
-            $referencia = ReferenciasCliente::findOrFail($referencia_id);
+            $referencia = ReferenciasCliente::find($referencia_id);
 
             DB::transaction(function () use ($referencia, $request) {
                 $referencia->update([
                     "observacion" => $request->observacion
+                ]);
+            });
+
+            $log->logInfo(CasoController::class, 'Se actualizo con exito la observación de la referencia con el ID: ' . $referencia_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $referencia));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar la observación de la referencia con el ID: ' . $referencia_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function editReferenciaValida(Request $request, $referencia_id)
+    {
+        $log = new Funciones();
+        try {
+            $referencia = ReferenciasCliente::find($referencia_id);
+
+            DB::transaction(function () use ($referencia, $request) {
+                $referencia->update([
+                    "valido" => $request->valido
                 ]);
             });
 
@@ -198,7 +220,7 @@ class ReferenciasClienteController extends Controller
         try {
             DB::beginTransaction();
 
-            $respuesta = ReferenciasCliente::findOrFail($id);
+            $respuesta = ReferenciasCliente::find($id);
 
             // Elimina los teléfonos asociados a la referencia antes de eliminar la referencia
             $respuesta->telefonos()->delete();
