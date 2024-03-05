@@ -48,15 +48,20 @@ class MetasRecalcController extends Controller
             $data = MetasRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen)->first();
             $data['vendedores'] = MetasDetRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen);
             $data['almacen'] = DB::selectone("select alm_id, alm_nombre from almacen a where a.alm_id = " . $almacen);
+
+            foreach ($data['vendedores'] as $m) {
+                $vendedor = DB::selectone("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor from empleado e join entidad en on e.ent_id = en.ent_id where e.emp_id = " . $m['emp_id']);
+                $m['vendedor'] = $vendedor->vendedor;
+            }
         } else {
             $data = Metas::get()->where('alm_id', $almacen)->first();
-            $data['vendedores'] = MetasDet::get()->where('alm_id', $almacen);
+            $data['vendeconfig'] = MetasDet::get()->where('alm_id', $almacen);
             $data['almacen'] = DB::selectone("select alm_id, alm_nombre from almacen a where a.alm_id = " . $almacen);
-        }
 
-        foreach ($data['vendedores'] as $m) {
-            $vendedor = DB::selectone("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor from empleado e join entidad en on e.ent_id = en.ent_id where e.emp_id = " . $m['emp_id']);
-            $m['vendedor'] = $vendedor->vendedor;
+            foreach ($data['vendeconfig'] as $m) {
+                $vendedor = DB::selectone("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor from empleado e join entidad en on e.ent_id = en.ent_id where e.emp_id = " . $m['emp_id']);
+                $m['vendedor'] = $vendedor->vendedor;
+            }
         }
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
