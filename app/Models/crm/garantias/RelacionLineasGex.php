@@ -21,7 +21,7 @@ class RelacionLineasGex extends Model implements Auditable
     public $timestamps = false;
 
     protected $fillable = [
-        "tpr_id".
+        "tpr_id",
         "config_id",
         "usuario_crea",
         "fecha_crea",

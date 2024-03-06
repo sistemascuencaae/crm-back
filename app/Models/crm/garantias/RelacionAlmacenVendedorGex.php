@@ -8,24 +8,22 @@ use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 use Illuminate\Support\Facades\DB;
 
-class RubrosReservas extends Model implements Auditable
+class RelacionAlmacenVendedorGex extends Model implements Auditable
 {
     use AuditableTrait;
 
     use HasFactory;
 
-    protected $table = 'gex.rubro_reserva';
+    protected $table = 'gex.rel_almacen_vendedor';
 
-    protected $primaryKey = 'rr_id';
+    protected $primaryKey = 'alm_id, emp_id';
 
     public $timestamps = false;
 
     protected $fillable = [
-        "rr_id",
-        "descripcion",
-        "porc_calculo",
-        "capital_sn",
-        "estado",
+        "alm_id",
+        "emp_id",
+        "tipo_empleado",
         "usuario_crea",
         "fecha_crea",
         "usuario_modifica",
