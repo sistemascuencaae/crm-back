@@ -10,6 +10,7 @@ use App\Http\Controllers\GaleriaController;
 use App\Http\Controllers\FormAptiMedicaController;
 use App\Http\Controllers\FormConsumoDrogasController;
 use App\Http\Controllers\hclinico\FormGaleriaController;
+use App\Http\Controllers\hclinico\FormPeriodico;
 use App\Http\Controllers\hclinico\PacienteDosController;
 use App\Http\Controllers\PruebasApi;
 use App\Http\Controllers\ReporteFormularios;
@@ -97,6 +98,13 @@ Route::group([
     Route::get('all', [FormularioController::class, 'all']);
     Route::get('byId/{id}', [FormularioController::class, 'byId']);
 });
+
+Route::group([
+    'prefix' => 'form-periodico',
+], function () {
+    Route::get('store/{identificacion}/{pacId}', [FormPeriodico::class, 'store']);
+});
+
 
 
 Route::group([
