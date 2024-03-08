@@ -105,7 +105,10 @@ Route::group([
     Route::get('store/{identificacion}/{pacId}', [FormPeriodicoController::class, 'store']);
     Route::post('add', [FormPeriodicoController::class, 'add']);
     Route::put('edit/{id}', [FormPeriodicoController::class, 'edit']);
-    Route::get('getFormulario/{numeroForm}', [FormPeriodicoController::class, 'getFormulario']);//
+    Route::get('getFormulario/{numeroForm}', [FormPeriodicoController::class, 'getFormulario']);
+    Route::get('imagenesFormulario/{formId}', [FormPeriodicoController::class, 'imagenesFormulario']);
+    Route::post('addGaleriaForm/{formId}', [FormPeriodicoController::class, 'addGaleriaForm']);
+    Route::put('editGaleriaForm/{formId}', [FormPeriodicoController::class, 'editGaleriaForm']);//
 });
 
 
