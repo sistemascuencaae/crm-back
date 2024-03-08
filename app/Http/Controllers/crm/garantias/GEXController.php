@@ -31,8 +31,8 @@ class GEXController extends Controller
         $data = array();
 
         $relacion = RelacionLineasGex::get()->where('tpr_id', $tpr_id);
-        
-        if ($relacion == null) {
+
+        if (count($relacion) == 0) {
             return response('No hay GEX relacionado para el tipo de producto seleccionado...',400);
         }
         

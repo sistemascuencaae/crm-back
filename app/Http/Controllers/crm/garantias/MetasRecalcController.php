@@ -48,20 +48,15 @@ class MetasRecalcController extends Controller
             $data = MetasRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen)->first();
             $data['vendedores'] = MetasDetRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen);
             $data['almacen'] = DB::selectone("select alm_id, alm_nombre from almacen a where a.alm_id = " . $almacen);
-
-            foreach ($data['vendedores'] as $m) {
-                $vendedor = DB::selectone("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor from empleado e join entidad en on e.ent_id = en.ent_id where e.emp_id = " . $m['emp_id']);
-                $m['vendedor'] = $vendedor->vendedor;
-            }
         } else {
             $data = Metas::get()->where('alm_id', $almacen)->first();
-            $data['vendeconfig'] = MetasDet::get()->where('alm_id', $almacen);
+            $data['vendedores'] = MetasDet::get()->where('alm_id', $almacen);
             $data['almacen'] = DB::selectone("select alm_id, alm_nombre from almacen a where a.alm_id = " . $almacen);
+        }
 
-            foreach ($data['vendeconfig'] as $m) {
-                $vendedor = DB::selectone("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor from empleado e join entidad en on e.ent_id = en.ent_id where e.emp_id = " . $m['emp_id']);
-                $m['vendedor'] = $vendedor->vendedor;
-            }
+        foreach ($data['vendedores'] as $m) {
+            $vendedor = DB::selectone("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor from empleado e join entidad en on e.ent_id = en.ent_id where e.emp_id = " . $m['emp_id']);
+            $m['vendedor'] = $vendedor->vendedor;
         }
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -70,7 +65,7 @@ class MetasRecalcController extends Controller
     public function byMetaRecal($metaRecal, $almacen)
     {
         $data = MetasRecalc::get()->where('metare_id', $metaRecal)->where('alm_id', $almacen)->first();
-        $data['config'] = $data = DB::select("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor, rav.tipo_empleado
+        $data['config'] = DB::select("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor, rav.tipo_empleado
                                               from empleado e join entidad en on e.ent_id = en.ent_id
                                                               join gex.rel_almacen_vendedor rav on e.emp_id = rav.emp_id 
                                               where rav.alm_id = " . $almacen . " and rav.tipo_empleado <> 'J'
@@ -78,10 +73,10 @@ class MetasRecalcController extends Controller
         $data['vendedores'] = MetasDetRecalc::get()->where('metare_id', $metaRecal)->where('alm_id', $almacen);
         $data['almacen'] = DB::selectone("select alm_id, alm_nombre from almacen a where a.alm_id = " . $almacen);
 
-        $ultimo = MetasRecalc::where('alm_id', $almacen)->where('mes', $data['mes'])->where('anio', $data['anio'])->max('metare_id');
-
+        
+        $ultimo = MetasRecalc::where('alm_id', $almacen)->where('mes', $data['mes'])->where('anio', $data['anio'])->whereraw("metare_id <> " . $data['metare_id'])->max('metare_id');
         if ($ultimo) {
-            $data['anteriorRecal'] = MetasRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen)->first();
+            $data['anterior'] = MetasRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen)->first();
             $data->anterior['vendedores'] = MetasDetRecalc::get()->where('metare_id', $ultimo)->where('alm_id', $almacen);
             $data->anterior['almacen'] = DB::selectone("select alm_id, alm_nombre from almacen a where a.alm_id = " . $almacen);
         } else {
@@ -124,7 +119,7 @@ class MetasRecalcController extends Controller
                 $fecha_modifica = null;
     
                 if ($request->input('metare_id') == null) {
-                    $metare_id = MetasRecalc::where('alm_id', $alm_id)->max('meta_id') + 1;
+                    $metare_id = MetasRecalc::where('alm_id', $alm_id)->max('metare_id') + 1;
                     $fecha_crea = date("Y-m-d h:i:s");
                 } else {
                     $metare_id = $request->input('metare_id');
@@ -137,11 +132,11 @@ class MetasRecalcController extends Controller
     
                 DB::table('gex.cmeta_recal')->updateOrInsert(
                     [
-                        'metare_id' => $meta_id,
+                        'metare_id' => $metare_id,
                         'alm_id' => $alm_id,
                     ],                        
                     [
-                        'metare_id' => $meta_id,
+                        'metare_id' => $metare_id,
                         'alm_id' => $alm_id,
                         'mes' => $mes,
                         'anio' => $anio,
