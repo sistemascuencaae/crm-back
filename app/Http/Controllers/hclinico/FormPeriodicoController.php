@@ -4,16 +4,17 @@ namespace App\Http\Controllers\hclinico;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\hclinico\FormPeriodico;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class FormPeriodico extends Controller
+class FormPeriodicoController extends Controller
 {
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => [
-            'byIdentificacion', 'edit'
+            'byIdentificacion', 'edit', 'add'
         ]]);
     }
 
@@ -23,6 +24,8 @@ class FormPeriodico extends Controller
 
             $paciente = Paciente::where('pac_identificacion', $identificacion)->first();
             $ocupacional = DB::selectOne("SELECT
+                a_empresa,
+                a_actividad_puesto_trabajo,
                 c_anteceden_clinicos_quirur,
                 c_cons_otra_droga,
                 c_tiempo_cons_otras,
@@ -52,7 +55,9 @@ class FormPeriodico extends Controller
                 c_tiem_medicacion_habitual2,
                 c_medicacion_habitual3,
                 c_tiem_medicacion_habitual3,
-                d_calificado_sri_acci
+                c_tiem_abst_otras,
+                c_tiem_abst_otras2,
+                d_calificado_sri_acci,
                 d_especificar_acci,
                 d_fecha_acci,
                 d_acci_trabajo_dec,
@@ -203,7 +208,88 @@ class FormPeriodico extends Controller
                 f_psicosocial_otro_desc2,
                 f_puestotrabajo2,
                 f_actividad2,
-                f_medidas_preventivas2
+                f_medidas_preventivas2,
+                i_piel_anexos,
+                i_org_sentidos,
+                i_respiratorio,
+                i_cardio_vascular,
+                i_digestivo,
+                i_genito_urinario,
+                i_musculo_esqueletico,
+                i_endocrino,
+                i_hemolinfatico,
+                i_nervioso,
+                i_descripcion,
+                j_precion_arterial,
+                j_temperatura,
+                j_frecuencia_cardiaca,
+                j_saturacion_oxigeno,
+                j_frecuencia_respiratoria,
+                j_peso,
+                j_talla,
+                j_indice_masa_corporal,
+                j_perimetro_abdominal,
+                k_cicatrices,
+                k_tatuajes,
+                k_piel_faneras,
+                k_parpados,
+                k_conjuntivas,
+                k_pupilas,
+                k_cornea,
+                k_motilidad,
+                k_auditivo_externo,
+                k_pabellon,
+                k_timpanos,
+                k_labios,
+                k_lengua,
+                k_faringe,
+                k_amigdalas,
+                k_dentadura,
+                k_tabique,
+                k_cornetes,
+                k_mucosas,
+                k_senos_paranasales,
+                k_tiroides,
+                k_movilidad,
+                k_mamas,
+                k_corazon,
+                k_pulmones,
+                k_parrilla_costal,
+                k_visceras,
+                k_parde_abdominal,
+                k_flexibilidad,
+                k_desviacion,
+                k_dolor,
+                k_pelvis,
+                k_genitales,
+                k_vascular,
+                k_mie_superiores,
+                k_mie_inferiores,
+                k_fuerza,
+                k_sensibilidad,
+                k_marcha,
+                k_reflejos,
+                k_observaciones,
+                m_diagnositico,
+                m_cie,
+                m_pre,
+                m_def,
+                m_diagnositico2,
+                m_cie2,
+                m_pre2,
+                m_def2,
+                m_diagnositico3,
+                m_cie3,
+                m_pre3,
+                m_def3,
+                n_apto,
+                n_apto_observacion,
+                n_apto_limitaciones,
+                n_no_apto,
+                n_observacion,
+                n_limitacion,
+                o_recome_tratamiento,
+                j_descripcion
                 from hclinico.formulario_ocupacional fo where fo.pac_id = $pacId");
 
             $data = (object)[
@@ -211,6 +297,71 @@ class FormPeriodico extends Controller
                 "ocupacional" => $ocupacional,
             ];
 
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th->getMessage()));
+        }
+    }
+
+    public function add(Request $request){
+        try {
+
+            $dataForm = $request->all();
+
+
+            $formCreado = FormPeriodico::create($dataForm);
+
+            $formActua = FormPeriodico::find($formCreado->fo_per_id);
+            if($formActua){
+                $formActua->update([
+                    "a_num_historia_clinica" => $formCreado->pac_id,
+                    "a_num_archivo" => $formCreado->fo_per_id
+                ]);
+            }
+
+            $data = DB::selectOne("SELECT * FROM hclinico.form_periodico fp
+                    inner join hclinico.paciente pac on pac.pac_id = fp.pac_id
+                    where fp.fo_per_id = $formCreado->fo_per_id");
+
+
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th->getMessage()));
+        }
+    }
+
+    public function edit(Request $request, $id)
+    {
+        try {
+
+            $dataForm = $request->all();
+
+            $formActua = FormPeriodico::find($id);
+            if ($formActua) {
+                $formActua->update($dataForm);
+            }
+
+            $data = DB::selectOne("SELECT * FROM hclinico.form_periodico fp
+                    inner join hclinico.paciente pac on pac.pac_id = fp.pac_id
+                    where fp.fo_per_id = $id");
+
+
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th->getMessage()));
+        }
+    }
+    public function getFormulario($numeroForm){
+
+        try {
+
+
+            $data = DB::selectOne("SELECT * FROM hclinico.form_periodico fp
+                    inner join hclinico.paciente pac on pac.pac_id = fp.pac_id
+                    where fp.fo_per_id = $numeroForm");
 
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
