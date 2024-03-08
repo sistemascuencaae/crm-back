@@ -102,7 +102,7 @@ Route::group([
 Route::group([
     'prefix' => 'form-periodico',
 ], function () {
-    Route::get('store/{identificacion}/{pacId}', [FormPeriodicoController::class, 'store']);
+    Route::get('store/{pacId}', [FormPeriodicoController::class, 'store']);
     Route::post('add', [FormPeriodicoController::class, 'add']);
     Route::put('edit/{id}', [FormPeriodicoController::class, 'edit']);
     Route::get('getFormulario/{numeroForm}', [FormPeriodicoController::class, 'getFormulario']);
