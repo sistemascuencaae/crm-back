@@ -107,8 +107,8 @@ Route::group([
     Route::put('edit/{id}', [FormPeriodicoController::class, 'edit']);
     Route::get('getFormulario/{numeroForm}', [FormPeriodicoController::class, 'getFormulario']);
     Route::get('imagenesFormulario/{formId}', [FormPeriodicoController::class, 'imagenesFormulario']);
-    Route::post('addGaleriaForm/{formId}', [FormPeriodicoController::class, 'addGaleriaForm']);
-    Route::put('editGaleriaForm/{formId}', [FormPeriodicoController::class, 'editGaleriaForm']);//
+    Route::post('addGaleriaFormPer/{formId}', [FormPeriodicoController::class, 'addGaleriaForm']);
+    Route::post('editGaleriaFormPer/{formId}', [FormPeriodicoController::class, 'editGaleriaForm']);//
 });
 
 
