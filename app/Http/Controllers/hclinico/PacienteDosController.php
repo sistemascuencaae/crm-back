@@ -4,6 +4,7 @@ namespace App\Http\Controllers\hclinico;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\FormOcupacional;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
 
@@ -19,9 +20,9 @@ class PacienteDosController extends Controller
     public function byIdentificacion($identificacion, $pacId)
     {
         try {
-            if($identificacion === '0'){
+            if ($identificacion === '0') {
                 $results = Paciente::find($pacId);
-            }else{
+            } else {
 
                 $results = Paciente::where('pac_identificacion', $identificacion)->first();
             }
@@ -42,6 +43,20 @@ class PacienteDosController extends Controller
             $paciente = Paciente::find($id);
             if ($paciente) {
                 $paciente->update($dataPaciente);
+
+                $formOcupacional = FormOcupacional::where('pac_id', $id)->first();
+                if ($formOcupacional) {
+                    if ($request->input('a_empresa')) {
+                        $formOcupacional->update([
+                            'a_empresa' => $request->input('a_empresa'),
+                        ]);
+                    }
+                    if ($request->input('a_actividad_puesto_trabajo')) {
+                        $formOcupacional->update([
+                            'a_actividad_puesto_trabajo' => $request->input('a_actividad_puesto_trabajo'),
+                        ]);
+                    }
+                }
                 return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $paciente));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Error al editar.', $id));
