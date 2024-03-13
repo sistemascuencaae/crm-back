@@ -10,6 +10,7 @@ use App\Http\Controllers\GaleriaController;
 use App\Http\Controllers\FormAptiMedicaController;
 use App\Http\Controllers\FormConsumoDrogasController;
 use App\Http\Controllers\hclinico\FormGaleriaController;
+use App\Http\Controllers\hclinico\FormPeriodicoController;
 use App\Http\Controllers\hclinico\PacienteDosController;
 use App\Http\Controllers\PruebasApi;
 use App\Http\Controllers\ReporteFormularios;
@@ -97,6 +98,19 @@ Route::group([
     Route::get('all', [FormularioController::class, 'all']);
     Route::get('byId/{id}', [FormularioController::class, 'byId']);
 });
+
+Route::group([
+    'prefix' => 'form-periodico',
+], function () {
+    Route::get('store/{pacId}', [FormPeriodicoController::class, 'store']);
+    Route::post('add', [FormPeriodicoController::class, 'add']);
+    Route::put('edit/{id}', [FormPeriodicoController::class, 'edit']);
+    Route::get('getFormulario/{numeroForm}', [FormPeriodicoController::class, 'getFormulario']);
+    Route::get('imagenesFormulario/{formId}', [FormPeriodicoController::class, 'imagenesFormulario']);
+    Route::post('addGaleriaFormPer/{formId}', [FormPeriodicoController::class, 'addGaleriaForm']);
+    Route::post('editGaleriaFormPer/{formId}', [FormPeriodicoController::class, 'editGaleriaForm']);//
+});
+
 
 
 Route::group([
