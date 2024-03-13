@@ -257,7 +257,9 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::get('/listAll', [FormController::class, 'listAll']); //
     Route::get('/listAnonimos', [FormController::class, 'listAnonimos']);
     Route::get('/impresion/{formId}/{userId}', [FormController::class, 'impresion']); //impresion
-    Route::put('/edit/{id}', [FormController::class, 'edit']);
+    Route::put('/edit/{id}', [FormController::class, 'edit']); //
+    Route::post('/addFormulario', [FormController::class, 'addFormulario']); //
+    Route::get('listFormByIdTablero/{tab_id}', [FormController::class, 'listFormByIdTablero']); //
 });
 Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::get('/store', [CampoController::class, 'store']);
@@ -438,6 +440,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('listByIdTipoCasoActivo/{tc_id}', [TipoCasoController::class, 'listByIdTipoCasoActivo']); // listar
     Route::post('/editTipoCaso/{id}', [TipoCasoController::class, 'editTipoCaso']); // Edita la actividad
     Route::delete('/deleteTipoCaso/{id}', [TipoCasoController::class, 'deleteTipoCaso']); // Eliminar
+
+
 
     // TAREAS INDIVIDUALES
 
