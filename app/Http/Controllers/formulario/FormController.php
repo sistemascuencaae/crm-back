@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\formulario;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\Formulario\FormSeccion;
 use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormUserCompletoView;
 use App\Models\Formulario\Parametro;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +49,40 @@ class FormController extends Controller
         }
     }
 
+
+    public function addFormulario(Request $request)
+    {
+
+        $tableroId = $request->input('tabId');
+        $tipoForm = $request->input('tipoFormulario');
+
+
+        $depar = DB::selectOne("SELECT * from crm.tablero where id = $tableroId");
+
+        try {
+
+            $formId = DB::table('crm.formulario')->insertGetId([
+                'nombre' => $request->input('nombre'),
+                'descripcion' => $request->input('descripcion'),
+                'estado' => $request->input('estado'),
+                'dep_id' => $depar->dep_id,
+                'tab_id' => $tableroId,
+                'tipo' => 'FORMULARIO SOPORTE',
+            ]);
+
+            $formulario = DB::selectOne("SELECT * FROM crm.formulario WHERE id = $formId");
+
+            // $idFormTiCam = DB::table('crm.formulario_tipo_caso')->insertGetId([
+            //     'form_id' => $id,
+            //     'tc_id' =>
+            //     'tab_id' =>
+            // ]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $formulario));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+    }
 
     public function storeB($formId, $pacId)
     {
@@ -121,8 +157,6 @@ class FormController extends Controller
     public function listAll()
     {
         try {
-            //$data = Formulario::with('campo.tipo', 'campo.campoLikerts.formCampoLikert')->get();
-            // $data = Formulario::with('campo.tipo', 'campo.likert')->withTrashed()->get();
             $data = Formulario::withTrashed()
                 ->with(['campo' => function ($query) {
                     $query->withTrashed()->with('tipo', 'likert', 'parametro.parametroHijos');
@@ -134,30 +168,6 @@ class FormController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         }
     }
-
-    // public function byId($id)
-    // {
-    //     try {
-    //         $userId = Auth::id();
-    //         $data = Formulario::with([
-    //             'campo.tipo',
-    //             'campo.likert',
-    //             'campo.parametro.parametroHijos',
-    //             'campo.valor' => function ($query) use ($userId) {
-    //                 $query->where('user_id', $userId);
-    //             },
-    //             //->orderBy('orden', 'asc') colocar esto para ordenar los campos
-    //         ])
-    //             ->find($id);
-    //         if ($data) {
-    //             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
-    //         } else {
-    //             return response()->json(RespuestaApi::returnResultado('error', 'El id no existe', $id));
-    //         }
-    //     } catch (\Throwable $th) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
-    //     }
-    // }
 
     public function edit(Request $request, $id)
     {
@@ -196,12 +206,12 @@ class FormController extends Controller
             fv.valor_boolean,
             fv.valor_json,
             fv.valor_array
-from
-crm.form_campo fc
-left join crm.form_campo_valor fcv on fcv.campo_id = fc.id
-left join crm.form_valor fv on fv.id = fcv.valor_id
-left join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
-where fc.form_id = ? and fv.pac_id = ? or fv.pac_id isnull order by 1 asc", [$formId, $pacId]);
+            from
+            crm.form_campo fc
+            left join crm.form_campo_valor fcv on fcv.campo_id = fc.id
+            left join crm.form_valor fv on fv.id = fcv.valor_id
+            left join crm.form_tipo_campo ftc on ftc.id = fc.tipo_campo_id
+            where fc.form_id = ? and fv.pac_id = ? or fv.pac_id isnull order by 1 asc", [$formId, $pacId]);
         return $data;
     }
 
@@ -215,40 +225,19 @@ where fc.form_id = ? and fv.pac_id = ? or fv.pac_id isnull order by 1 asc", [$fo
             ->first();
         return $data;
     }
+    public function listFormByIdTablero($tab_id)
+    {
+        $log = new Funciones();
+
+        try {
+            $formularios = DB::select("SELECT * FROM crm.formulario fo where fo.tab_id = $tab_id");
+
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $formularios));
+        } catch (Exception $e) {
+          //  $log->logError(CTareaController::class, 'Error al listar las tareas del tablero, con el ID: ' . $tab_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }
-
-
-
-    // public function listByDepar($id)
-    // {
-    //     try {
-    //         $data = Formulario::with([
-    //             'campo' => function ($query) {
-    //                 $query->select('crm.form_campo.id', 'nombre', 'descripcion', 'titulo', 'requerido', 'marcado', 'updated_at', 'form_id');
-    //             },
-    //             'campo.valor' => function ($query) {
-    //                 $query->select('form_valor.id', 'valor_texto', 'tipo', 'campo_id', 'valor_id');
-    //             }
-    //         ])->select('id', 'nombre', 'descripcion', 'updated_at', 'estado', 'dep_id')
-    //             ->where('dep_id', $id)
-    //             ->get();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
-    //     } catch (\Throwable $th) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
-    //     }
-    // }
-
-
-    //     public function listByDepar($id, $userId)
-    // {
-    //     try {
-    //         $data = Formulario::with(['campo.tipo', 'campo.valor' => function ($query) use ($userId) {
-    //             $query->where('crm.form_valor.user_id', $userId)->get(); // Limitar a un solo resultado
-    //         }])->where('dep_id', $id)->get();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
-    //     } catch (\Throwable $th) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
-    //     }
-    // }
