@@ -34,14 +34,15 @@ class FormPeriodicoController extends Controller
                     'a_num_archivo',
                     'a_actividad_puesto_trabajo',
                     'c_anteceden_clinicos_quirur',
-                    'd_calificado_sri_acci',
-                    'd_especificar_acci',
-                    'd_fecha_acci',
-                    'd_acci_trabajo_dec',
-                    'd_calificado_sri_ep',
-                    'd_especificar_ep',
-                    'd_fecha_ep',
-                    'd_enfe_profesi_dec',
+                    'e_desc_cardiovascular',
+                    'e_desc_metabolica',
+                    'e_desc_neurologica',
+                    'e_desc_oncologica',
+                    'e_desc_infecciosa',
+                    'e_desc_hereditaria_congenita',
+                    'e_desc_discapacidades',
+                    'e_desc_otra',
+                    'e_descripcion'
                 )
                 ->where('pac_id', $pacId)
                 ->first();
