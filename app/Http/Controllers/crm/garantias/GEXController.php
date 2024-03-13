@@ -53,7 +53,7 @@ class GEXController extends Controller
             //$dato->config_id = $rel['config_id'];
             $dato->meses_gex = $prodGex->meses_garantia;
             //$dato->km_factor = $prodGex->km_factor ? $prodGex->km_factor : 0;
-            $dato->valor_gex = round(($precio * $dato->porc_gex) / 100,0);
+            $dato->valor_gex = round(($precio * $dato->porc_gex) / 100,2);
             //$dato->km_garantia = $producto ? $producto->km_garantia : 0;
 
             $rubros = RubrosReservas::orderby('capital_sn','asc')->get()->where('estado', 'A');
