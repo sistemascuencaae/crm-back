@@ -60,9 +60,9 @@ class FormGaleriaController extends Controller
                 ->first();
 
                 if ($parametro->nas == true) {
-                    $path = Storage::disk('nas')->putFileAs('FormularioOcupacional '.$formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs('formularios/formulario_ocupacional/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 } else {
-                    $path = Storage::disk('local')->putFileAs('FormularioOcupacional '. $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs('formularios/formulario_ocupacional/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
@@ -106,9 +106,9 @@ class FormGaleriaController extends Controller
                 ->first();
 
                 if ($parametro->nas == true) {
-                    $path = Storage::disk('nas')->putFileAs($formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs('formularios/formulario_ocupacional/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 } else {
-                    $path = Storage::disk('local')->putFileAs($formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs('formularios/formulario_ocupacional/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
