@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\formulario\CampoController;
+use App\Http\Controllers\formulario\FormController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\TipoCaso;
+use App\Models\Formulario\FormSeccion;
 use App\Models\Formulario\Formulario;
+use App\Models\Formulario\Parametro;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -172,4 +176,64 @@ class TipoCasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+
+    public function getByTipoCasIdFormu1($tcId)
+    {
+        $log = new Funciones();
+
+        try {
+            $formulario = DB::selectOne("SELECT * from crm.formulario_tipo_caso where tc_id = $tcId");
+
+            //$log->logInfo(CTareaController::class, 'Se listo con exito los formularios del tablero, con el ID: ' . $tcId);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $formulario));
+        } catch (Exception $e) {
+            // $log->logError(
+            //     CTareaController::class,
+            //     'Error al listar las formulario del tablero, con el ID: ' . $tcId,
+            //     $e
+            // );
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function getByTipoCasIdFormu($formId, $casoId)
+    {
+        try {
+            $parametros = Parametro::with('parametroHijos')->get();
+            $formulario = Formulario::with([
+                'campo.tipo',
+                'campo.likert',
+                'campo.parametro.parametroHijos',
+                'campo.valor' => function ($query) use ($casoId) {
+                    $query->where('pac_id', $casoId);
+                },
+            ])->find($formId);
+            $secciones = FormSeccion::where('form_id', $formId)
+            ->where('estado', true)
+                ->orderBy('orden', 'asc')
+                ->get();
+
+            //$campoController = new CampoController();
+
+            //$totalesSecciones = $campoController->getTotalesSecciones($formId, $pacId);
+            ///$totalGlobalForm = $campoController->getTotalGlobalForm($formId, $pacId);
+            //$camposImprimir = $this->camposImprimir($formId, $pacId);
+            $data = (object) [
+                "secciones" => $secciones,
+                "parametros" => $parametros,
+                "formulario" => $formulario,
+                "totalGlobalForm" => [],
+                "totalesSecciones" => [],
+                "camposImprimir" => []
+            ];
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+    }
+
+
 }

@@ -439,7 +439,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('listTipoCasoByIdCasoId/{caso_id}', [TipoCasoController::class, 'listTipoCasoByIdCasoId']); // listar
     Route::get('listByIdTipoCasoActivo/{tc_id}', [TipoCasoController::class, 'listByIdTipoCasoActivo']); // listar
     Route::post('/editTipoCaso/{id}', [TipoCasoController::class, 'editTipoCaso']); // Edita la actividad
-    Route::delete('/deleteTipoCaso/{id}', [TipoCasoController::class, 'deleteTipoCaso']); // Eliminar
+    Route::delete('/deleteTipoCaso/{id}', [TipoCasoController::class, 'deleteTipoCaso']); // getByTipoCasIdFormu
+    Route::get('/getByTipoCasIdFormu/{tcId}', [TipoCasoController::class, 'getByTipoCasIdFormu']); //
 
 
 
