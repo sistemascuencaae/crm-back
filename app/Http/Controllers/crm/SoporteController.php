@@ -35,9 +35,9 @@ class SoporteController extends Controller
                     if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif'])) {
 
                         if ($parametro->nas == true) {
-                            $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $archivoData, $nombreUnico);
+                            $path = Storage::disk('nas')->putFileAs("casos/" . $caso_id . "/galerias", $archivoData, $nombreUnico);
                         } else {
-                            $path = Storage::disk('local')->putFileAs($caso_id . "/galerias", $archivoData, $nombreUnico);
+                            $path = Storage::disk('local')->putFileAs("casos/" . $caso_id . "/galerias", $archivoData, $nombreUnico);
                         }
 
                         $nuevaImagen = Galeria::create([
@@ -53,9 +53,9 @@ class SoporteController extends Controller
                     } else {
 
                         if ($parametro->nas == true) {
-                            $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico);
+                            $path = Storage::disk('nas')->putFileAs("casos/" . $caso_id . "/archivos", $archivoData, $nombreUnico);
                         } else {
-                            $path = Storage::disk('local')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico);
+                            $path = Storage::disk('local')->putFileAs("casos/" . $caso_id . "/archivos", $archivoData, $nombreUnico);
                         }
 
                         $nuevoArchivo = Archivo::create([
