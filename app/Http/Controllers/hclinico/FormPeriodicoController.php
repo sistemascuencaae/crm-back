@@ -28,7 +28,23 @@ class FormPeriodicoController extends Controller
     {
         try {
             $paciente = Paciente::where('pac_id', $pacId)->first();
-            $ocupacional = FormOcupacional::where('pac_id',$pacId)->first();
+            $ocupacional = FormOcupacional::select(
+                    'a_empresa',
+                    'a_num_historia_clinica',
+                    'a_num_archivo',
+                    'a_actividad_puesto_trabajo',
+                    'c_anteceden_clinicos_quirur',
+                    'd_calificado_sri_acci',
+                    'd_especificar_acci',
+                    'd_fecha_acci',
+                    'd_acci_trabajo_dec',
+                    'd_calificado_sri_ep',
+                    'd_especificar_ep',
+                    'd_fecha_ep',
+                    'd_enfe_profesi_dec',
+                )
+                ->where('pac_id', $pacId)
+                ->first();
             $data = (object)[
                 "paciente" => $paciente,
                 "ocupacional" => $ocupacional,
@@ -132,9 +148,9 @@ class FormPeriodicoController extends Controller
                     ->first();
 
                 if ($parametro->nas == true) {
-                    $path = Storage::disk('nas')->putFileAs('FormularioPeriodico'.$formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs('formularios/formulario_periodico/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 } else {
-                    $path = Storage::disk('local')->putFileAs('FormularioPeriodico' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs('formularios/formulario_periodico/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]);
@@ -167,9 +183,9 @@ class FormPeriodicoController extends Controller
                     ->first();
 
                 if ($parametro->nas == true) {
-                    $path = Storage::disk('nas')->putFileAs('FormularioPeriodico'.$formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs('formularios/formulario_periodico/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 } else {
-                    $path = Storage::disk('local')->putFileAs('FormularioPeriodico'.$formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs('formularios/formulario_periodico/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]);

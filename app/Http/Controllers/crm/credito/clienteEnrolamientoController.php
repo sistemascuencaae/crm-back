@@ -164,9 +164,9 @@ class ClienteEnrolamientoController extends Controller
                     $fechaOriginal = $datosEnrolamiento['CreationDate'];
                     $fechaFormateada = str_replace([':', ' '], ['_', '_'], $fechaOriginal);
                     if ($parametro->nas == true) {
-                        $ruta = Storage::disk('nas')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
+                        $ruta = Storage::disk('nas')->put("casos/" . $caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
                     } else {
-                        $ruta = Storage::disk('local')->put($caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
+                        $ruta = Storage::disk('local')->put("casos/" . $caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre, $imagenData);
                     }
                     file_put_contents($ruta, $imagenData);
 
@@ -518,9 +518,9 @@ class ClienteEnrolamientoController extends Controller
                         $observacion = $nombreArchivo;
 
                         if ($parametro->nas == true) {
-                            $ruta = Storage::disk('nas')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
+                            $ruta = Storage::disk('nas')->put("casos/" . $caso_id . '/equifax/' . $nombreArchivo, $archivoData);
                         } else {
-                            $ruta = Storage::disk('local')->put($caso_id . '/equifax/' . $nombreArchivo, $archivoData);
+                            $ruta = Storage::disk('local')->put("casos/" . $caso_id . '/equifax/' . $nombreArchivo, $archivoData);
                         }
                         file_put_contents($ruta, $archivoData);
 
