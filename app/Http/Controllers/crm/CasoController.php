@@ -51,6 +51,12 @@ class CasoController extends Controller
 
     public function add(Request $request)
     {
+
+
+
+
+
+
         $log = new Funciones();
 
         $casoInput = $request->all();
@@ -65,13 +71,15 @@ class CasoController extends Controller
             $miembros = $miembros2;
         }
 
+
+
+
+
         //try {
         $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
-
-            $userLoginId = 1; //auth('api')->user()->id;
             $caso = new Caso($casoInput);
-            //$caso->estado_2 = 1;
             $caso->save();
+
             //buscar las tareas predefinidas
             //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
             $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
@@ -113,6 +121,17 @@ class CasoController extends Controller
 
             return $this->getCaso($caso->id);
         });
+
+
+
+
+
+         $dataFormSopo = $request->input('valoresFormulario');
+        if ($dataFormSopo) {
+            $this->formularioSoporte($request, $casoCreado['id']);
+        }
+
+
         broadcast(new TableroEvent($casoCreado));
 
         // START Bloque de código que genera un registro de auditoría manualmente
@@ -141,13 +160,27 @@ class CasoController extends Controller
 
         $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
 
-        return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
+        //return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
         // } catch (\Throwable $e) {
         //     $log->logError(CasoController::class, 'Error al guardar el caso', $e);
 
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
         // }
     }
+
+
+
+    public function formularioSoporte($request, $casoId){
+        $valoresFormulario = json_decode($request->input('valoresFormulario'), true);
+
+        // Recorrer el array y hacer lo que necesites con los datos
+        foreach ($valoresFormulario as $valor) {
+           $valor['caso_id'] = $casoId;
+            echo ('$valor: '.json_encode($valor));
+
+        }
+    }
+
 
     // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
     public function listHistoricoEstadoCaso($caso_id)
