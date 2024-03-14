@@ -199,19 +199,20 @@ class TipoCasoController extends Controller
         }
     }
 
-    public function getByTipoCasIdFormu($formId, $casoId)
+    public function getByTipoCasIdFormu($tcId)
     {
-        try {
+        //try {
             $parametros = Parametro::with('parametroHijos')->get();
+            $form = DB::selectOne("SELECT * from crm.formulario_tipo_caso where tc_id = $tcId");
             $formulario = Formulario::with([
                 'campo.tipo',
                 'campo.likert',
                 'campo.parametro.parametroHijos',
-                'campo.valor' => function ($query) use ($casoId) {
-                    $query->where('pac_id', $casoId);
-                },
-            ])->find($formId);
-            $secciones = FormSeccion::where('form_id', $formId)
+                'campo.valor' => function ($query) use ($tcId) {
+                $query->where('pac_id', 0);
+            },
+            ])->find($form->form_id);
+            $secciones = FormSeccion::where('form_id', $form->form_id)
             ->where('estado', true)
                 ->orderBy('orden', 'asc')
                 ->get();
@@ -230,9 +231,9 @@ class TipoCasoController extends Controller
                 "camposImprimir" => []
             ];
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
-        }
+        // } catch (\Throwable $th) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        // }
     }
 
 
