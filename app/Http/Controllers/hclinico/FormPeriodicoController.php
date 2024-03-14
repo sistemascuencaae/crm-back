@@ -200,4 +200,51 @@ class FormPeriodicoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function editPaciente(Request $request, $id, $formId)
+    {
+        try {
+            $dataPaciente = $request->all();
+            $paciente = Paciente::find($id);
+            if ($paciente) {
+                $paciente->update($dataPaciente);
+
+                $formOcupacional = FormOcupacional::where('pac_id', $id)->first();
+                if ($formOcupacional) {
+                    if ($request->input('a_empresa')) {
+                        $formOcupacional->update([
+                            'a_empresa' => $request->input('a_empresa'),
+                        ]);
+                    }
+                    if ($request->input('a_actividad_puesto_trabajo')) {
+                        $formOcupacional->update([
+                            'a_actividad_puesto_trabajo' => $request->input('a_actividad_puesto_trabajo'),
+                        ]);
+                    }
+                }
+                $formPerio = FormPeriodico::where('fo_per_id', $formId)->first();
+                if ($formPerio) {
+                    if ($request->input('a_empresa')) {
+                        $formPerio->update([
+                            'a_empresa' => $request->input('a_empresa'),
+                        ]);
+                    }
+                    if ($request->input('a_actividad_puesto_trabajo')) {
+                        $formPerio->update([
+                            'a_actividad_puesto_trabajo' => $request->input('a_actividad_puesto_trabajo'),
+                        ]);
+                    }
+                }
+
+                $data = DB::selectOne("SELECT * FROM hclinico.form_periodico fp
+                    inner join hclinico.paciente pac on pac.pac_id = fp.pac_id
+                    where fp.fo_per_id = $formId");
+                return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error al editar.', $id));
+            }
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
+        }
+    }
 }
