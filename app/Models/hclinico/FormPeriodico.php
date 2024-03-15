@@ -396,6 +396,7 @@ class FormPeriodico extends Model
             "c_cantidad_cons_otras2",
             "c_ex_cons_otras2",
             "c_tiem_abst_otras2",
+            "incidentes"
     ];
 
 
