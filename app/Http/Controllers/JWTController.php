@@ -143,6 +143,10 @@ class JWTController extends Controller
             $alm_nombre = $alm[0]->alm_nombre;
         }
 
+        // tablero_usuario
+        $tablero_usuario = DB::select('SELECT * FROM crm.tablero_user tu 
+        WHERE tu.user_id = ?', [auth('api')->user()->id]);
+
         // echo (json_encode($alm_nombre[0]->alm_nombre));
         return response()->json([
             'access_token' => $token,
@@ -159,6 +163,7 @@ class JWTController extends Controller
                 "dep_id" => auth('api')->user()->dep_id,
                 "profile_id" => auth('api')->user()->profile_id,
                 "alm_nombre" => $alm_nombre,
+                "tablero_usuario" => $tablero_usuario,
             ]
         ]);
 
