@@ -52,9 +52,9 @@ class ReqCasoController extends Controller
                     $titulo = $imagen->getClientOriginalName();
 
                     if ($parametro->nas == true) {
-                        $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
                     } else {
-                        $path = Storage::disk('local')->putFileAs($inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
                     }
 
                 }
@@ -140,9 +140,9 @@ class ReqCasoController extends Controller
 
 
                     if ($parametro->nas == true) {
-                        $path = Storage::disk('nas')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
                     } else {
-                        $path = Storage::disk('local')->putFileAs($inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo);
                     }
                 }
                 $requerimiento->esimagen = false;

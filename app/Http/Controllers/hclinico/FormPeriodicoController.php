@@ -149,9 +149,9 @@ class FormPeriodicoController extends Controller
                     ->first();
 
                 if ($parametro->nas == true) {
-                    $path = Storage::disk('nas')->putFileAs('FormularioPeriodico'.$formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs('formularios/formulario_periodico/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 } else {
-                    $path = Storage::disk('local')->putFileAs('FormularioPeriodico' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs('formularios/formulario_periodico/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]);
@@ -184,9 +184,9 @@ class FormPeriodicoController extends Controller
                     ->first();
 
                 if ($parametro->nas == true) {
-                    $path = Storage::disk('nas')->putFileAs('FormularioPeriodico'.$formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs('formularios/formulario_periodico/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 } else {
-                    $path = Storage::disk('local')->putFileAs('FormularioPeriodico'.$formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs('formularios/formulario_periodico/' . $formId . "/galerias", $imagen, $formId . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]);

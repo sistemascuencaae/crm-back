@@ -38,9 +38,9 @@ class ArchivoController extends Controller
                     $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName(); // Obtener el nombre único del archivo
 
                     if ($parametro->nas == true) {
-                        $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
                     } else {
-                        $path = Storage::disk('local')->putFileAs($caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
+                        $path = Storage::disk('local')->putFileAs("casos/" . $caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
                     }
 
                     $nuevoArchivo = Archivo::create([
@@ -120,9 +120,9 @@ class ArchivoController extends Controller
                     ->first();
 
                 if ($parametro->nas == true) {
-                    $path = Storage::disk('nas')->putFileAs($caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                    $path = Storage::disk('nas')->putFileAs("casos/" . $caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
                 } else {
-                    $path = Storage::disk('local')->putFileAs($caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                    $path = Storage::disk('local')->putFileAs("casos/" . $caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
                 }
 
                 $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta del archivo en la que se encuentra

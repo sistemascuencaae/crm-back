@@ -455,9 +455,9 @@ class ChatController extends Controller
                         }
 
                         if ($parametro->nas == true) {
-                            $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
+                            $path = Storage::disk('nas')->putFileAs("chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico); // crear una carpeta para chat
                         } else {
-                            $path = Storage::disk('local')->putFileAs("Chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico);
+                            $path = Storage::disk('local')->putFileAs("chats/" . $nombreCarpeta . "/galerias", $archivoData, $nombreUnico);
                         }
 
 
@@ -477,9 +477,9 @@ class ChatController extends Controller
                     } else {
 
                         if ($parametro->nas == true) {
-                            $path = Storage::disk('nas')->putFileAs("Chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico); // crear una carpeta para chat
+                            $path = Storage::disk('nas')->putFileAs("chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico); // crear una carpeta para chat
                         } else {
-                            $path = Storage::disk('local')->putFileAs("Chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico);
+                            $path = Storage::disk('local')->putFileAs("chats/" . $nombreCarpeta . "/archivos", $archivoData, $nombreUnico);
                         }
 
 

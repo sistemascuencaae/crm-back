@@ -146,7 +146,7 @@ class TableroController extends Controller
             $t = DB::transaction(function () use ($tab) {
                 $tablero = Tablero::create($tab);
                 for ($i = 0; $i < sizeof($tab['usuarios']); $i++) {
-                    DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id']]);
+                    DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id, permisos) values (?, ?, ?)', [$tab['usuarios'][$i]['id'], $tablero['id'], $tab['usuarios'][$i]['permisos']]);
                 }
 
                 $condicion = CondicionesFaseMover::create([
@@ -248,14 +248,22 @@ class TableroController extends Controller
 
                 $usuGeneral = DB::select("SELECT * FROM crm.users WHERE name = 'USUARIO GENERAL {$tablero->nombre} {$tablero->id}'");
 
-                DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$usuGeneral[0]->id, $tablero->id]);
+                DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id, permisos) values (?, ?, ?)', [$usuGeneral[0]->id, $tablero->id, true]);
 
                 return $tablero;
             });
 
             $log->logInfo(TableroController::class, 'Se guardo con exito el tablero con el ID: ' . $t->id);
 
-            $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $t->id)->first();
+            // $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $t->id)->first();
+
+            // Obtener el tablero con los usuarios y sus permisos
+            $dataRe = Tablero::with([
+                'tableroUsuario.usuario' => function ($query) {
+                    $query->leftJoin('crm.tablero_user', 'users.id', '=', 'tablero_user.user_id');
+                },
+                'tableroUsuario.usuario.departamento'
+            ])->where('id', $t->id)->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $dataRe));
         } catch (Exception $e) {
@@ -292,9 +300,23 @@ class TableroController extends Controller
 
                 // Agrega usuarios según la información proporcionada
                 for ($i = 0; $i < sizeof($usuarios); $i++) {
+
+                    DB::update(
+                        "UPDATE crm.tablero_user SET user_id = ?, tab_id = ?, permisos = ?
+                    WHERE tab_id = ? AND user_id = ?",
+                        [
+                            $usuarios[$i]['id'],
+                            $id,
+                            $usuarios[$i]['permisos'],
+                            $id,
+                            $usuarios[$i]['id']
+                        ]
+                    );
+
+
                     $tabl = TableroUsuario::where('tab_id', $id)->where('user_id', $usuarios[$i])->first();
                     if (!$tabl) {
-                        DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id) values (?, ?)', [$usuarios[$i]['id'], $id]);
+                        DB::insert('INSERT INTO crm.tablero_user (user_id, tab_id, permisos) values (?, ?, ?)', [$usuarios[$i]['id'], $id, $usuarios[$i]['permisos']]);
                     }
                 }
 
@@ -303,7 +325,15 @@ class TableroController extends Controller
 
             $log->logInfo(TableroController::class, 'Se actualizo con exito el tablero con el ID: ' . $id);
 
-            $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $tab['id'])->first();
+            // $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $tab['id'])->first();
+
+            // Obtener el tablero con los usuarios y sus permisos
+            $dataRe = Tablero::with([
+                'tableroUsuario.usuario' => function ($query) {
+                    $query->leftJoin('crm.tablero_user', 'users.id', '=', 'tablero_user.user_id');
+                },
+                'tableroUsuario.usuario.departamento'
+            ])->where('id', $tab['id'])->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $dataRe));
         } catch (Exception $e) {

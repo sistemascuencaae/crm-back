@@ -16,6 +16,7 @@ class TableroUsuario extends Model
     protected $fillable = [
         "user_id",
         "tab_id",
+        "permisos"
     ];
     public function usuario()
     {

@@ -46,9 +46,9 @@ class GaleriaController extends Controller
                     ->first();
 
                 if ($parametro->nas == true) {
-                    $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs("casos/" . $caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
                 } else {
-                    $path = Storage::disk('local')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs("casos/" . $caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
@@ -145,7 +145,7 @@ class GaleriaController extends Controller
             select ga2.* from crm.galerias ga2
             inner join crm.requerimientos_caso rc2 on rc2.galerias_id = ga2.id
             where rc2.acc_publico = true or (rc2.acc_publico = false and rc2.tab_id = $tabId)
-            ) temp where temp.caso_id = $caso_id");
+            ) temp where temp.caso_id = $caso_id ORDER BY temp.id DESC");
 
 
             $log->logInfo(GaleriaController::class, 'Se listo con exito las imagenes del caso #' . $caso_id);
@@ -199,10 +199,10 @@ class GaleriaController extends Controller
 
                 if ($parametro->nas == true) {
                     // Guardar la nueva imagen en el disco NAS con su nombre original
-                    $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs("casos/" . $galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
                 } else {
                     // Guardar la nueva imagen en el disco NAS con su nombre original
-                    $path = Storage::disk('local')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs("casos/" . $galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
@@ -351,9 +351,9 @@ class GaleriaController extends Controller
                     ->first();
 
                 if ($parametro->nas == true) {
-                    $path = Storage::disk('nas')->putFileAs("fondo_tablero/" . $tab_id, $imagen, $tab_id . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs("tableros/fondo_pantalla/" . $tab_id, $imagen, $tab_id . '-' . $fecha_actual . '-' . $titulo);
                 } else {
-                    $path = Storage::disk('local')->putFileAs("fondo_tablero/" . $tab_id, $imagen, $tab_id . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs("tableros/fondo_pantalla/" . $tab_id, $imagen, $tab_id . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
@@ -407,10 +407,10 @@ class GaleriaController extends Controller
 
                 if ($parametro->nas == true) {
                     // Guardar la nueva imagen en el disco NAS con su nombre original
-                    $path = Storage::disk('nas')->putFileAs("fondo_tablero/" . $galeria->tab_id, $nuevaImagen, $galeria->tab_id . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('nas')->putFileAs("tableros/fondo_pantalla/" . $galeria->tab_id, $nuevaImagen, $galeria->tab_id . '-' . $fecha_actual . '-' . $titulo);
                 } else {
                     // Guardar la nueva imagen en el disco NAS con su nombre original
-                    $path = Storage::disk('local')->putFileAs("fondo_tablero/" . $galeria->tab_id, $nuevaImagen, $galeria->tab_id . '-' . $fecha_actual . '-' . $titulo);
+                    $path = Storage::disk('local')->putFileAs("tableros/fondo_pantalla/" . $galeria->tab_id, $nuevaImagen, $galeria->tab_id . '-' . $fecha_actual . '-' . $titulo);
                 }
 
                 $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
