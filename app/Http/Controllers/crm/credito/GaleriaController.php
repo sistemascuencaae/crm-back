@@ -145,7 +145,7 @@ class GaleriaController extends Controller
             select ga2.* from crm.galerias ga2
             inner join crm.requerimientos_caso rc2 on rc2.galerias_id = ga2.id
             where rc2.acc_publico = true or (rc2.acc_publico = false and rc2.tab_id = $tabId)
-            ) temp where temp.caso_id = $caso_id");
+            ) temp where temp.caso_id = $caso_id ORDER BY temp.id DESC");
 
 
             $log->logInfo(GaleriaController::class, 'Se listo con exito las imagenes del caso #' . $caso_id);
