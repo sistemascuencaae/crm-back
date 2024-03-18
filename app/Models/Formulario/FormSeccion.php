@@ -20,4 +20,8 @@ class FormSeccion extends Model
     ];
     protected $hidden = ['created_at', 'updated_at'];
 
+    public function formulario()
+    {
+        return $this->belongsTo(Formulario::class, 'form_id', 'id');
+    }
 }

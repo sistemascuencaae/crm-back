@@ -23,10 +23,18 @@ class FormCampoValor extends Model
     {
         return $this->belongsTo(FormCampoLikert::class, "id", "fcl_id");
     }
-    public function campo()
+    // public function campo()
+    // {
+    //     return $this->belongsTo(FormCampo::class, "id", "campo_id");
+    // }
+
+    public function valor()
     {
-        return $this->belongsTo(FormCampo::class, "id", "campo_id");
+        return $this->belongsTo(FormValor::class, 'valor_id', 'id');
     }
 
-
+    public function campo()
+    {
+        return $this->belongsTo(FormCampo::class, 'campo_id', 'id');
+    }
 }
