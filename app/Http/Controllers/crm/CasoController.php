@@ -26,6 +26,8 @@ use App\Models\crm\TelefonosCliente;
 use App\Models\crm\TelefonosReferencias;
 use App\Models\crm\TipoCaso;
 use App\Models\crm\Fase;
+use App\Models\Formulario\FormCampoValor;
+use App\Models\Formulario\FormValor;
 use App\Models\openceo\CPedidoProforma;
 use App\Models\User;
 use Carbon\Carbon;
@@ -44,6 +46,7 @@ class CasoController extends Controller
             [
                 //'add',
                 //'addCasoOPMICreativa'
+                'getCasoFormulario'
 
             ]
         ]);
@@ -176,7 +179,17 @@ class CasoController extends Controller
         // Recorrer el array y hacer lo que necesites con los datos
         foreach ($valoresFormulario as $valor) {
            $valor['caso_id'] = $casoId;
-            echo ('$valor: '.json_encode($valor));
+
+
+            $valorCreado = FormValor::create($valor);
+
+            FormCampoValor::create([
+                "valor_id" => $valorCreado->id,
+                "campo_id" => $valor['campo_id'],
+            ]);
+
+
+
 
         }
     }
@@ -1536,5 +1549,10 @@ class CasoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
+    }
+
+    public function getCasoFormulario(){
+        $casos = Caso::with('formValores.campoValores.campo.formSeccion.formulario')->get();
+        return response($casos);
     }
 }
