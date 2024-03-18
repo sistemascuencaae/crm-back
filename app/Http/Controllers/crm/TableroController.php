@@ -415,4 +415,22 @@ class TableroController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    public function permisoTableroUsuario($tab_id, $user_id)
+    {
+        $log = new Funciones();
+        try {
+            $tablero = TableroUsuario::where('tab_id', $tab_id)->where('user_id', $user_id)->first();
+
+            $log->logInfo(TableroController::class, 'Se listo con exito el permiso del usuario ID: ' . $user_id . ' y del tablero con ID: ' . $tab_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tablero));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar el permiso del usuario ID: ' . $user_id . ' y del tablero con ID: ' . $tab_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+
+    }
+
 }
