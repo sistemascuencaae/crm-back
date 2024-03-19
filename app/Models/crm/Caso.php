@@ -49,7 +49,8 @@ class Caso extends Model
         "fase_anterior_id_reasigna",
         "acc_publico",
         "cliente_id",
-        "cpp_id"
+        "cpp_id",
+        "form_id"
     ];
 
     public function userCreador()
@@ -64,7 +65,7 @@ class Caso extends Model
 
     public function tipocaso()
     {
-        return $this->belongsTo(TipoCaso::class, "user_id", "id");
+        return $this->belongsTo(TipoCaso::class, "tc_id", "id");
     }
     // public function entidad()
     // {

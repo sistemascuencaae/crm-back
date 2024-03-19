@@ -78,7 +78,7 @@ class CasoController extends Controller
 
 
 
-        //try {
+        try {
         $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
             $caso = new Caso($casoInput);
             $caso->save();
@@ -129,7 +129,7 @@ class CasoController extends Controller
 
 
 
-         $dataFormSopo = $request->input('valoresFormulario');
+        $dataFormSopo = $request->input('valoresFormulario');
         if ($dataFormSopo) {
             $this->formularioSoporte($request, $casoCreado['id']);
         }
@@ -163,33 +163,27 @@ class CasoController extends Controller
 
         $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
 
-        //return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
-        // } catch (\Throwable $e) {
-        //     $log->logError(CasoController::class, 'Error al guardar el caso', $e);
+        return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
+        } catch (\Throwable $e) {
+            $log->logError(CasoController::class, 'Error al guardar el caso', $e);
 
-        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
-        // }
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
+        }
     }
 
 
 
-    public function formularioSoporte($request, $casoId){
+    public function formularioSoporte($request, $casoId)
+    {
         $valoresFormulario = json_decode($request->input('valoresFormulario'), true);
-
-        // Recorrer el array y hacer lo que necesites con los datos
+        $descriCaso = '';
         foreach ($valoresFormulario as $valor) {
-           $valor['caso_id'] = $casoId;
-
-
+            $valor['caso_id'] = $casoId;
             $valorCreado = FormValor::create($valor);
-
             FormCampoValor::create([
                 "valor_id" => $valorCreado->id,
                 "campo_id" => $valor['campo_id'],
             ]);
-
-
-
 
         }
     }
@@ -832,7 +826,8 @@ class CasoController extends Controller
                 },
                 'tablero',
                 'fase.tablero',
-                'estadodos'
+                'estadodos',
+                'tipocaso'
 
             ])->where('id', $casoId)->first();
         } catch (Exception $e) {
@@ -1551,7 +1546,8 @@ class CasoController extends Controller
         }
     }
 
-    public function getCasoFormulario(){
+    public function getCasoFormulario()
+    {
         $casos = Caso::with('formValores.campoValores.campo.formSeccion.formulario')->get();
         return response($casos);
     }

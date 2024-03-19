@@ -265,7 +265,7 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::put('/edit/{id}', [FormController::class, 'edit']); //
     Route::post('/addFormulario', [FormController::class, 'addFormulario']); //
     Route::get('listFormByIdTablero/{tab_id}', [FormController::class, 'listFormByIdTablero']); //
-    Route::get('/storeCasoForm/{formId}/{casoId}', [FormController::class, 'storeCasoForm']);
+    Route::get('/storeCasoForm/{casoId}', [FormController::class, 'storeCasoForm']);
 });
 Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::get('/store', [CampoController::class, 'store']);
