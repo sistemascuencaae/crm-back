@@ -241,9 +241,16 @@ class FormController extends Controller
         }
     }
 
-    public function storeCasoForm($formId, $casoId)
+    public function storeCasoForm($casoId)
     {
         try {
+            $formCaso = DB::selectOne("SELECT fo.id from crm.caso ca
+                inner join crm.form_valor fv on fv.caso_id = ca.id
+                inner join crm.form_campo_valor fcv on fcv.valor_id = fv.id
+                inner join crm.form_campo fc on fc.id = fcv.campo_id
+                left join crm.formulario_seccion fsc on fsc.id = fc.form_secc_id
+                left join crm.formulario fo on fo.id = fsc.form_id
+                where ca.id = ? limit 1",[$casoId]);
             $parametros = Parametro::with('parametroHijos')->get();
             $formulario = Formulario::with([
                 'campo.tipo',
@@ -252,8 +259,8 @@ class FormController extends Controller
                 'campo.valor' => function ($query) use ($casoId) {
                     $query->where('caso_id', $casoId);
                 },
-            ])->find($formId);
-            $secciones = FormSeccion::where('form_id', $formId)
+            ])->find($formCaso->id);
+            $secciones = FormSeccion::where('form_id', $formCaso->id)
                 ->where('estado', true)
                 ->orderBy('orden', 'asc')
                 ->get();

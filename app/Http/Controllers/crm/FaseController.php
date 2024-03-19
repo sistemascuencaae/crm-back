@@ -208,7 +208,8 @@ class FaseController extends Controller
                 $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
             },
             'condicionFaseMover',
-            'caso.estadodos'
+            'caso.estadodos',
+            'caso.tipocaso'
         ])->where('tab_id', $tabId)
             ->orderBy('orden', 'asc')
             ->get();
