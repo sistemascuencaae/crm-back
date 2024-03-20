@@ -256,7 +256,7 @@ class DActividadController extends Controller
                 //     END AS descripcion_pos_descripcion")
 
                 //     ->orderBy('id', 'DESC')
-                //     ->get();
+                //     ->get(); 
 
                 $data = DTipoActividad::where('caso_id', $dta->caso_id)
                     ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
