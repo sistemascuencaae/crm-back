@@ -19,5 +19,10 @@ class FormularioTipoCaso extends Model
         'tab_id'
     ];
     protected $hidden = ['created_at', 'deleted_at'];
-    
+
+    public function formulario()
+    {
+        return $this->belongsTo(Formulario::class,  'form_id');
+    }
+
 }
