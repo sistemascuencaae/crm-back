@@ -51,14 +51,14 @@ class BitacoraController extends Controller
 
 
             $bitacora = DB::select("SELECT adi.*, 
-                                            ur.name, 
+                                            ur.name || ' ' || ur.surname AS name, 
                                             gal.titulo, 
                                             fas.nombre AS fase_actual_nombre, 
                                             tab.nombre AS tablero_actual_nombre, 
                                             fas1.nombre AS fase_anterior_nombre, 
                                             tab1.nombre AS tablero_anterior_nombre,
-                                            u1.name AS usuario_actual, 
-                                            u2.name AS usuario_anterior
+                                            u1.name || ' ' || u1.surname AS usuario_actual, 
+                                            u2.name || ' ' || u2.surname AS usuario_anterior
 
                                     FROM crm.audits adi
 
