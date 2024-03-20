@@ -10,6 +10,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\crm\TipoCaso;
 use App\Models\Formulario\FormSeccion;
 use App\Models\Formulario\Formulario;
+use App\Models\Formulario\FormularioTipoCaso;
 use App\Models\Formulario\Parametro;
 use Exception;
 use Illuminate\Http\Request;
@@ -64,7 +65,13 @@ class TipoCasoController extends Controller
     public function listTipoCasoByIdTablero($tab_id)
     {
         try {
-            $resultado = TipoCaso::where('tab_id', $tab_id)->with('cTipoTarea.dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $resultado = TipoCaso::where('tab_id', $tab_id)
+                ->with(
+                    'cTipoTarea.dTipoTarea',
+                    'formTipoCaso.formulario'
+                )
+                ->orderBy('estado', 'DESC')
+                ->orderBy('id', 'DESC')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $resultado));
         } catch (Exception $e) {
@@ -126,11 +133,42 @@ class TipoCasoController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'La Tarea ya esta asignada o un Tipo Caso', ''));
             }
 
+
             $tipoCaso->update($request->all());
 
+            $form_id = $request->input('form_id');
+
+            if ($form_id) {
+
+                $formtipocaso = FormularioTipoCaso::where('tc_id', $tipoCaso->id)->first();
+
+
+                if ($formtipocaso) {
+                    $formtipocaso->update([
+                        'form_id' => $form_id,
+                    ]);
+                    //echo 'actualizado';
+                    // echo ('$form_id: '.json_encode($form_id));
+                    // echo ('$tipoCaso->id: '.json_encode($tipoCaso->id));
+
+                    // echo ('$formtipocaso: ' . json_encode($formtipocaso));
+                } else {
+                    $formtipocasoId = DB::table('crm.formulario_tipo_caso')->insert([
+                        'form_id' => $form_id,
+                        'tc_id' => $tipoCaso->id,
+                        'tab_id' => $request->input('tab_id'),
+                    ]);
+                }
+            }
+
+
             $resultado = TipoCaso::where('id', $tipoCaso->id)
-                ->with('cTipoTarea.dTipoTarea')
+                ->with('cTipoTarea.dTipoTarea', 'formTipoCaso.formulario')
                 ->first();
+
+
+
+
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $resultado));
         } catch (Exception $e) {
@@ -202,39 +240,37 @@ class TipoCasoController extends Controller
     public function getByTipoCasIdFormu($tcId)
     {
         //try {
-            $parametros = Parametro::with('parametroHijos')->get();
-            $form = DB::selectOne("SELECT * from crm.formulario_tipo_caso where tc_id = $tcId");
-            $formulario = Formulario::with([
-                'campo.tipo',
-                'campo.likert',
-                'campo.parametro.parametroHijos',
-                'campo.valor' => function ($query) use ($tcId) {
+        $parametros = Parametro::with('parametroHijos')->get();
+        $form = DB::selectOne("SELECT * from crm.formulario_tipo_caso where tc_id = $tcId");
+        $formulario = Formulario::with([
+            'campo.tipo',
+            'campo.likert',
+            'campo.parametro.parametroHijos',
+            'campo.valor' => function ($query) use ($tcId) {
                 $query->where('pac_id', 0);
             },
-            ])->find($form->form_id);
-            $secciones = FormSeccion::where('form_id', $form->form_id)
+        ])->find($form->form_id);
+        $secciones = FormSeccion::where('form_id', $form->form_id)
             ->where('estado', true)
-                ->orderBy('orden', 'asc')
-                ->get();
+            ->orderBy('orden', 'asc')
+            ->get();
 
-            //$campoController = new CampoController();
+        //$campoController = new CampoController();
 
-            //$totalesSecciones = $campoController->getTotalesSecciones($formId, $pacId);
-            ///$totalGlobalForm = $campoController->getTotalGlobalForm($formId, $pacId);
-            //$camposImprimir = $this->camposImprimir($formId, $pacId);
-            $data = (object) [
-                "secciones" => $secciones,
-                "parametros" => $parametros,
-                "formulario" => $formulario,
-                "totalGlobalForm" => [],
-                "totalesSecciones" => [],
-                "camposImprimir" => []
-            ];
-            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        //$totalesSecciones = $campoController->getTotalesSecciones($formId, $pacId);
+        ///$totalGlobalForm = $campoController->getTotalGlobalForm($formId, $pacId);
+        //$camposImprimir = $this->camposImprimir($formId, $pacId);
+        $data = (object) [
+            "secciones" => $secciones,
+            "parametros" => $parametros,
+            "formulario" => $formulario,
+            "totalGlobalForm" => [],
+            "totalesSecciones" => [],
+            "camposImprimir" => []
+        ];
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         // } catch (\Throwable $th) {
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
         // }
     }
-
-
 }
