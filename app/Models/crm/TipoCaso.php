@@ -3,6 +3,8 @@
 namespace App\Models\crm;
 
 // use App\Models\crm\TipoCaso;
+
+use App\Models\Formulario\FormularioTipoCaso;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -41,5 +43,10 @@ class TipoCaso extends Model
     public function cTipoTarea()
     {
         return $this->belongsTo(CTipoTarea::class, 'ctt_id');
+    }
+
+    public function formTipoCaso()
+    {
+        return $this->belongsTo(FormularioTipoCaso::class, 'id', 'tc_id');
     }
 }

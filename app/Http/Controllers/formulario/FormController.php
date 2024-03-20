@@ -53,21 +53,34 @@ class FormController extends Controller
     public function addFormulario(Request $request)
     {
 
+        $data = $request->all();
+
+
+        echo ('$data: '.json_encode($data));
+
+
+
+        return;
+
         $tableroId = $request->input('tabId');
         $tipoForm = $request->input('tipoFormulario');
 
 
-        $depar = DB::selectOne("SELECT * from crm.tablero where id = $tableroId");
+
 
         try {
+            $depar = null;
+            if ($tableroId) {
+                $depar = DB::selectOne("SELECT * from crm.tablero where id = $tableroId");
+            }
 
             $formId = DB::table('crm.formulario')->insertGetId([
                 'nombre' => $request->input('nombre'),
                 'descripcion' => $request->input('descripcion'),
                 'estado' => $request->input('estado'),
-                'dep_id' => $depar->dep_id,
-                'tab_id' => $tableroId,
-                'tipo' => 'FORMULARIO SOPORTE',
+                'dep_id' => $depar ? $depar->dep_id : null,
+                'tab_id' => $tableroId ? $tableroId : null,
+                'tipo' => $tipoForm,
             ]);
 
             $formulario = DB::selectOne("SELECT * FROM crm.formulario WHERE id = $formId");
@@ -235,7 +248,7 @@ class FormController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $formularios));
         } catch (Exception $e) {
-          //  $log->logError(CTareaController::class, 'Error al listar las tareas del tablero, con el ID: ' . $tab_id, $e);
+            //  $log->logError(CTareaController::class, 'Error al listar las tareas del tablero, con el ID: ' . $tab_id, $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -250,7 +263,7 @@ class FormController extends Controller
                 inner join crm.form_campo fc on fc.id = fcv.campo_id
                 left join crm.formulario_seccion fsc on fsc.id = fc.form_secc_id
                 left join crm.formulario fo on fo.id = fsc.form_id
-                where ca.id = ? limit 1",[$casoId]);
+                where ca.id = ? limit 1", [$casoId]);
             $parametros = Parametro::with('parametroHijos')->get();
             $formulario = Formulario::with([
                 'campo.tipo',
