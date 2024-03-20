@@ -241,14 +241,25 @@ class DActividadController extends Controller
                 //     ->get();
 
                 // Obtener la lista actualizada de actividades después de agregar una nueva
-                $data = DTipoActividad::where(function ($query) use ($request) {
-                    $query->where('user_id', $request->input('user_id'))
-                        ->orWhere('acc_publico', true);
-                })
-                    ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
-                    ->where('caso_id', $dta->caso_id)
-                    // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+                // $data = DTipoActividad::where(function ($query) use ($request) {
+                //     $query->where('user_id', $request->input('user_id'))
+                //         ->orWhere('acc_publico', true);
+                // })
+                //     ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                //     ->where('caso_id', $dta->caso_id)
+                //     // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
 
+                //     ->selectRaw("*, 
+                //     CASE 
+                //         WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                //         ELSE descripcion 
+                //     END AS descripcion_pos_descripcion")
+
+                //     ->orderBy('id', 'DESC')
+                //     ->get();
+
+                $data = DTipoActividad::where('caso_id', $dta->caso_id)
+                    ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
                     ->selectRaw("*, 
                     CASE 
                         WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
