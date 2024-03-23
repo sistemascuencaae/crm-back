@@ -43,22 +43,17 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-            [
-                //'add',
-                //'addCasoOPMICreativa'
-                'getCasoFormulario'
+                [
+                    'add',
+                    //'addCasoOPMICreativa'
+                    'getCasoFormulario'
 
-            ]
+                ]
         ]);
     }
 
     public function add(Request $request)
     {
-
-
-
-
-
 
         $log = new Funciones();
 
@@ -74,104 +69,95 @@ class CasoController extends Controller
             $miembros = $miembros2;
         }
 
-
-
-
-
         try {
-        $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
-            $caso = new Caso($casoInput);
-            $caso->save();
+            $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
+                $caso = new Caso($casoInput);
+                $caso->save();
 
-            //buscar las tareas predefinidas
-            //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
-            $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
+                //buscar las tareas predefinidas
+                //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
+                $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
                 inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
                 inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
                 where tc.id = ?', [$caso->tc_id]);
-            //insertar en la tabla tareas
-            foreach ($arrayDtipoTareas as $dtt) {
-                $tarea = new Tareas();
-                $tarea->nombre = $dtt->nombre;
-                $tarea->requerido = $dtt->requerido;
-                $tarea->estado = $dtt->estado;
-                $tarea->ctt_id = $caso->ctt_id;
-                $tarea->tab_id = $dtt->tab_id;
-                $tarea->marcado = false;
-                $caso->tareas()->save($tarea);
+                //insertar en la tabla tareas
+                foreach ($arrayDtipoTareas as $dtt) {
+                    $tarea = new Tareas();
+                    $tarea->nombre = $dtt->nombre;
+                    $tarea->requerido = $dtt->requerido;
+                    $tarea->estado = $dtt->estado;
+                    $tarea->ctt_id = $caso->ctt_id;
+                    $tarea->tab_id = $dtt->tab_id;
+                    $tarea->marcado = false;
+                    $caso->tareas()->save($tarea);
+                }
+                // $newGrupo = new ChatGroups();
+                // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
+                // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
+                //$newGrupo->save();
+                $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
+                //--------------------
+                $caso->estado_2 = $estadoInicial->id;
+                $caso->nombre = 'CASO # ' . $caso->id;
+                //$caso->user_creador_id = $userLoginId;
+                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+                $caso->save();
+                for ($i = 0; $i < sizeof($miembros); $i++) {
+                    $miembro = new Miembros();
+                    $miembro->user_id = $miembros[$i];
+                    //$miembro->chat_group_id = $newGrupo->id;
+                    $caso->miembros()->save($miembro);
+                }
+                $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
+
+                $soporteController = new SoporteController();
+                $soporteController->addGaleriaArchivos($request, $caso->id);
+
+                return $this->getCaso($caso->id);
+            });
+
+
+            $dataFormSopo = $request->input('valoresFormulario');
+            if ($dataFormSopo) {
+                $this->formularioSoporte($request, $casoCreado['id']);
             }
-            // $newGrupo = new ChatGroups();
-            // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
-            // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
-            //$newGrupo->save();
-            $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
-            //--------------------
-            $caso->estado_2 = $estadoInicial->id;
-            $caso->nombre = 'CASO # ' . $caso->id;
-            //$caso->user_creador_id = $userLoginId;
-            $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
-            $caso->save();
-            for ($i = 0; $i < sizeof($miembros); $i++) {
-                $miembro = new Miembros();
-                $miembro->user_id = $miembros[$i];
-                //$miembro->chat_group_id = $newGrupo->id;
-                $caso->miembros()->save($miembro);
-            }
-            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
-
-            $soporteController = new SoporteController();
-            $soporteController->addGaleriaArchivos($request, $caso->id);
-
-            return $this->getCaso($caso->id);
-        });
 
 
+            broadcast(new TableroEvent($casoCreado));
 
+            // START Bloque de código que genera un registro de auditoría manualmente
+            $audit = new Audits();
+            $audit->user_id = Auth::id();
+            $audit->event = 'created';
+            $audit->auditable_type = Caso::class;
+            $audit->auditable_id = $casoCreado->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+            $audit->url = $request->fullUrl();
+            // Establecer old_values y new_values
+            $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
+            $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
+            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+            $audit->estado_caso = $casoCreado->estadodos->nombre;
+            $audit->estado_caso_id = $casoCreado->estado_2;
+            $audit->accion = 'addCaso';
+            $audit->caso_id = $casoCreado->id;
+            $audit->save();
+            // END Auditoria
 
+            // le mando uno porque es la primera vez q se crea el caso
+            $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+            $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
 
-        $dataFormSopo = $request->input('valoresFormulario');
-        if ($dataFormSopo) {
-            $this->formularioSoporte($request, $casoCreado['id']);
-        }
+            $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
 
-
-        broadcast(new TableroEvent($casoCreado));
-
-        // START Bloque de código que genera un registro de auditoría manualmente
-        $audit = new Audits();
-        $audit->user_id = Auth::id();
-        $audit->event = 'created';
-        $audit->auditable_type = Caso::class;
-        $audit->auditable_id = $casoCreado->id;
-        $audit->user_type = User::class;
-        $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-        $audit->url = $request->fullUrl();
-        // Establecer old_values y new_values
-        $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
-        $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
-        $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-        $audit->estado_caso = $casoCreado->estadodos->nombre;
-        $audit->estado_caso_id = $casoCreado->estado_2;
-        $audit->accion = 'addCaso';
-        $audit->caso_id = $casoCreado->id;
-        $audit->save();
-        // END Auditoria
-
-        // le mando uno porque es la primera vez q se crea el caso
-        $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
-        $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
-
-        $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
-
-        return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
         } catch (\Throwable $e) {
             $log->logError(CasoController::class, 'Error al guardar el caso', $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
         }
     }
-
-
 
     public function formularioSoporte($request, $casoId)
     {
@@ -187,7 +173,6 @@ class CasoController extends Controller
 
         }
     }
-
 
     // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
     public function listHistoricoEstadoCaso($caso_id)
@@ -1111,30 +1096,42 @@ class CasoController extends Controller
                 $nuevoCliente->save();
 
                 if ($telefonosCliDynamo != null) {
-                    $telefonoCliente = new TelefonosCliente();
-                    $telefonoCliente->cli_id = $nuevoCliente->id;
-                    $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_1_trabajo_sc;
-                    $telefonoCliente->tipo_telefono = "No Definido";
-                    $telefonoCliente->save();
-                    $telefonoCliente = new TelefonosCliente();
-                    $telefonoCliente->cli_id = $nuevoCliente->id;
-                    $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_2;
-                    $telefonoCliente->tipo_telefono = "No Definido";
-                    $telefonoCliente->save();
-                    $telefonoCliente = new TelefonosCliente();
-                    $telefonoCliente->cli_id = $nuevoCliente->id;
-                    $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_domicilio_sc;
-                    $telefonoCliente->tipo_telefono = "No Definido";
-                    $telefonoCliente->save();
-                    $telefonosAdicionales = $telefonosCliDynamo->telefonos_adicionales;
-                    $telefonosAdicionalesArray = explode(',', $telefonosAdicionales);
-                    foreach ($telefonosAdicionalesArray as $telefono) {
+                    if ($telefonosCliDynamo->tel_1_trabajo_sc) {
                         $telefonoCliente = new TelefonosCliente();
                         $telefonoCliente->cli_id = $nuevoCliente->id;
-                        $telefonoCliente->numero_telefono = $telefono;
+                        $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_1_trabajo_sc;
                         $telefonoCliente->tipo_telefono = "No Definido";
                         $telefonoCliente->save();
                     }
+
+                    if ($telefonosCliDynamo->tel_2) {
+                        $telefonoCliente = new TelefonosCliente();
+                        $telefonoCliente->cli_id = $nuevoCliente->id;
+                        $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_2;
+                        $telefonoCliente->tipo_telefono = "No Definido";
+                        $telefonoCliente->save();
+                    }
+
+                    if ($telefonosCliDynamo->tel_domicilio_sc) {
+                        $telefonoCliente = new TelefonosCliente();
+                        $telefonoCliente->cli_id = $nuevoCliente->id;
+                        $telefonoCliente->numero_telefono = $telefonosCliDynamo->tel_domicilio_sc;
+                        $telefonoCliente->tipo_telefono = "No Definido";
+                        $telefonoCliente->save();
+                    }
+
+                    if ($telefonosCliDynamo->telefonos_adicionales) {
+                        $telefonosAdicionales = $telefonosCliDynamo->telefonos_adicionales;
+                        $telefonosAdicionalesArray = explode(',', $telefonosAdicionales);
+                        foreach ($telefonosAdicionalesArray as $telefono) {
+                            $telefonoCliente = new TelefonosCliente();
+                            $telefonoCliente->cli_id = $nuevoCliente->id;
+                            $telefonoCliente->numero_telefono = $telefono;
+                            $telefonoCliente->tipo_telefono = "No Definido";
+                            $telefonoCliente->save();
+                        }
+                    }
+
                 }
 
                 $clienteReferencias = DB::select("SELECT
