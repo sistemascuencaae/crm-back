@@ -2,6 +2,7 @@
 
 namespace App\Models\Formulario;
 
+use App\Models\crm\Caso;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -15,6 +16,7 @@ class FormValor extends Model
     protected $fillable = [
         'user_id',
         'pac_id',
+        'caso_id',
         'valor_texto',
         'valor_date',
         'valor_array',
@@ -24,4 +26,13 @@ class FormValor extends Model
         'valor_entero',
     ];
     protected $hidden = ['created_at', 'updated_at', 'deleted_at'];
+    public function caso()
+    {
+        return $this->belongsTo(Caso::class, 'caso_id', 'id');
+    }
+
+    public function campoValores()
+    {
+        return $this->hasMany(FormCampoValor::class, 'valor_id', 'id');
+    }
 }

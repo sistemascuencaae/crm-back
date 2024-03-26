@@ -20,7 +20,7 @@ class FormController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => [
-            'list', 'listByDepar', 'formUser', 'listAll', 'storeA', 'storeB', 'formUser', 'getTotalesSecciones', 'impresion', 'listAnonimos'
+            'list', 'listByDepar', 'formUser', 'listAll', 'storeA', 'storeB', 'formUser', 'getTotalesSecciones', 'impresion', 'listAnonimos', 'storeCasoForm'
         ]]);
     }
 
@@ -53,21 +53,34 @@ class FormController extends Controller
     public function addFormulario(Request $request)
     {
 
+        $data = $request->all();
+
+
+        echo ('$data: '.json_encode($data));
+
+
+
+        return;
+
         $tableroId = $request->input('tabId');
         $tipoForm = $request->input('tipoFormulario');
 
 
-        $depar = DB::selectOne("SELECT * from crm.tablero where id = $tableroId");
+
 
         try {
+            $depar = null;
+            if ($tableroId) {
+                $depar = DB::selectOne("SELECT * from crm.tablero where id = $tableroId");
+            }
 
             $formId = DB::table('crm.formulario')->insertGetId([
                 'nombre' => $request->input('nombre'),
                 'descripcion' => $request->input('descripcion'),
                 'estado' => $request->input('estado'),
-                'dep_id' => $depar->dep_id,
-                'tab_id' => $tableroId,
-                'tipo' => 'FORMULARIO SOPORTE',
+                'dep_id' => $depar ? $depar->dep_id : null,
+                'tab_id' => $tableroId ? $tableroId : null,
+                'tipo' => $tipoForm,
             ]);
 
             $formulario = DB::selectOne("SELECT * FROM crm.formulario WHERE id = $formId");
@@ -235,9 +248,49 @@ class FormController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $formularios));
         } catch (Exception $e) {
-          //  $log->logError(CTareaController::class, 'Error al listar las tareas del tablero, con el ID: ' . $tab_id, $e);
+            //  $log->logError(CTareaController::class, 'Error al listar las tareas del tablero, con el ID: ' . $tab_id, $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function storeCasoForm($casoId)
+    {
+        try {
+            $formCaso = DB::selectOne("SELECT fo.id from crm.caso ca
+                inner join crm.form_valor fv on fv.caso_id = ca.id
+                inner join crm.form_campo_valor fcv on fcv.valor_id = fv.id
+                inner join crm.form_campo fc on fc.id = fcv.campo_id
+                left join crm.formulario_seccion fsc on fsc.id = fc.form_secc_id
+                left join crm.formulario fo on fo.id = fsc.form_id
+                where ca.id = ? limit 1", [$casoId]);
+            $parametros = Parametro::with('parametroHijos')->get();
+            $formulario = Formulario::with([
+                'campo.tipo',
+                'campo.likert',
+                'campo.parametro.parametroHijos',
+                'campo.valor' => function ($query) use ($casoId) {
+                    $query->where('caso_id', $casoId);
+                },
+            ])->find($formCaso->id);
+            $secciones = FormSeccion::where('form_id', $formCaso->id)
+                ->where('estado', true)
+                ->orderBy('orden', 'asc')
+                ->get();
+
+            //$campoController = new CampoController();
+
+            //$totalesSecciones = $campoController->getTotalesSecciones($formId, $pacId);
+            //$totalGlobalForm = $campoController->getTotalGlobalForm($formId, $pacId);
+            //$camposImprimir = $this->camposImprimir($formId, $pacId);
+            $data = (object) [
+                "secciones" => $secciones,
+                "parametros" => $parametros,
+                "formulario" => $formulario
+            ];
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
         }
     }
 }

@@ -7,6 +7,7 @@ use App\Models\crm\Fase;
 use App\Models\User;
 use App\Models\crm\Entidad;
 use App\Models\crm\AVResumenCaso;
+use App\Models\Formulario\FormValor;
 use App\Models\views\ProductoClienteView;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -48,7 +49,8 @@ class Caso extends Model
         "fase_anterior_id_reasigna",
         "acc_publico",
         "cliente_id",
-        "cpp_id"
+        "cpp_id",
+        "form_id"
     ];
 
     public function userCreador()
@@ -63,7 +65,7 @@ class Caso extends Model
 
     public function tipocaso()
     {
-        return $this->belongsTo(TipoCaso::class, "user_id", "id");
+        return $this->belongsTo(TipoCaso::class, "tc_id", "id");
     }
     // public function entidad()
     // {
@@ -158,5 +160,10 @@ class Caso extends Model
     public function productos_cliente()
     {
         return $this->hasMany(ProductoClienteView::class, "ent_id", "ent_id");
+    }
+
+    public function formValores()
+    {
+        return $this->hasMany(FormValor::class, 'caso_id', 'id');
     }
 }

@@ -48,4 +48,9 @@ class FormCampo extends Model
     {
         return $this->belongsTo(Parametro::class, 'par_id', 'id');
     }
+
+    public function formSeccion()
+    {
+        return $this->belongsTo(FormSeccion::class, 'form_secc_id', 'id');
+    }
 }
