@@ -47,7 +47,6 @@ class ContratosController extends Controller
                                             join ctipocom t on c.cti_id = t.cti_id
                                             join dfactura d on c.cfa_id = d.cfa_id
                             where p.alm_id = " . $almacen . " and exists (select 1 from gex.cdespacho c1 where c1.cfa_id = c.cfa_id)
-                                    and not exists (select 1 from gex.producto_config pc where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G')
                                     and not exists (select 1 from gex.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
                             group by c.cfa_id, t.cti_sigla,p.alm_id, p.pve_numero,  c.cfa_numero
                             order by numero");

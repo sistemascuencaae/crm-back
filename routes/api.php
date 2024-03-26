@@ -74,6 +74,7 @@ use App\Http\Controllers\crm\garantias\RelacionAlamcenVendedorGexController;
 use App\Http\Controllers\crm\garantias\MetasController;
 use App\Http\Controllers\crm\garantias\MetasRecalcController;
 use App\Http\Controllers\crm\garantias\ProcMetasController;
+use App\Http\Controllers\crm\garantias\ComisionesController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
@@ -729,6 +730,12 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/grabaProcMeta', [ProcMetasController::class, 'grabaProcMeta']);
     Route::get('/byProcMeta/{cumpli}/{almacen}', [ProcMetasController::class, 'byProcMeta']);
     Route::get('/eliminaProcMeta/{cumpli}/{almacen}', [ProcMetasController::class, 'eliminaProcMeta']);
+
+    //Comisiones
+    Route::get('/listadoComisiones', [ComisionesController::class, 'listado']);
+    Route::get('/byComision/{comi}', [ComisionesController::class, 'byComision']);
+    Route::post('/grabaComi', [ComisionesController::class, 'grabaComi']);
+    Route::get('/eliminaComision/{comi}', [ComisionesController::class, 'eliminaComision']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
