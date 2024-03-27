@@ -114,55 +114,121 @@ class TutorialController extends Controller
         }
     }
 
-    public function editGaleriaTutorial(Request $request, $id)
+    public function editTutorial(Request $request, $id)
     {
         try {
-            $galeria = Galeria::find($id);
+            // Fecha actual
+            $fechaActual = Carbon::now();
+
+            // Formatear la fecha en formato deseado
+// $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+
+            // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+            $fecha_actual = str_replace(':', '-', $fechaActual);
 
             $parametro = DB::table('crm.parametro')
                 ->where('abreviacion', 'NAS')
                 ->first();
 
-            if ($request->hasFile("imagen_file")) {
-                if ($galeria->imagen) {
-                    if ($parametro->nas == true) {
-                        // Eliminamos la imagen anterior del disco NAS
-                        Storage::disk('nas')->delete($galeria->imagen);
-                    } else {
-                        // Eliminamos la imagen anterior del disco NAS
-                        Storage::disk('local')->delete($galeria->imagen);
+            DB::transaction(function () use ($request, $id, $parametro, $fecha_actual) {
+
+                $galeria = Galeria::find($id);
+
+                if ($galeria) {
+
+                    if ($request->hasFile("imagen_file")) {
+                        if ($galeria->imagen) {
+                            if ($parametro->nas == true) {
+                                // Eliminamos la imagen anterior del disco NAS
+                                Storage::disk('nas')->delete($galeria->imagen);
+                            } else {
+                                // Eliminamos la imagen anterior del disco NAS
+                                Storage::disk('local')->delete($galeria->imagen);
+                            }
+                        }
+
+                        // Obtener el nuevo archivo de imagen y su nombre original
+                        $nuevaImagen = $request->file("imagen_file");
+                        $titulo = $nuevaImagen->getClientOriginalName();
+
+                        // $path = Storage::disk('nas')->putFileAs("tutoriales/galerias", $nuevaImagen, $fecha_actual . '-' . $titulo);
+                        if ($parametro->nas == true) {
+                            // Guardar la nueva imagen en el disco NAS con su nombre original
+                            $path = Storage::disk('nas')->putFileAs("tutoriales/galerias", $nuevaImagen, $fecha_actual . '-' . $titulo);
+                        } else {
+                            // Guardar la nueva imagen en el disco NAS con su nombre original
+                            $path = Storage::disk('local')->putFileAs("tutoriales/galerias", $nuevaImagen, $fecha_actual . '-' . $titulo);
+                        }
+
+                        $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
                     }
-                }
 
-                // Obtener el nuevo archivo de imagen y su nombre original
-                $nuevaImagen = $request->file("imagen_file");
-                $titulo = $nuevaImagen->getClientOriginalName();
+                    $galeria->update($request->all());
 
-                // Fecha actual
-                $fechaActual = Carbon::now();
-
-                // Formatear la fecha en formato deseado
-                // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
-
-                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
-                $fecha_actual = str_replace(':', '-', $fechaActual);
-
-                if ($parametro->nas == true) {
-                    // Guardar la nueva imagen en el disco NAS con su nombre original
-                    // $path = Storage::disk('nas')->putFileAs("casos/" . $galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
-                    $path = Storage::disk('nas')->putFileAs("tutoriales/galerias", $nuevaImagen, $fecha_actual . '-' . $titulo);
                 } else {
-                    // Guardar la nueva imagen en el disco NAS con su nombre original
-                    // $path = Storage::disk('local')->putFileAs("casos/" . $galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
-                    $path = Storage::disk('local')->putFileAs("tutoriales/galerias", $nuevaImagen, $fecha_actual . '-' . $titulo);
+
+                    $archivo = Archivo::find($id);
+
+                    if ($request->hasFile("archivo")) {
+                        $file = $request->file("archivo");
+                        $originalTitulo = $file->getClientOriginalName();
+                        $nombreBase = $originalTitulo;
+
+                        $path = "tutoriales/archivos";
+
+                        $titulo = $nombreBase;
+
+                        $i = 1;
+
+                        if ($parametro->nas == true) {
+                            while (Storage::disk('nas')->exists("$path/$titulo")) {
+                                // Si el archivo con el mismo nombre ya existe, ajusta el nombre
+                                $info = pathinfo($nombreBase);
+                                $titulo = $info['filename'] . " ($i)." . $info['extension'];
+                                $i++;
+                            }
+
+                            $path = Storage::disk('nas')->putFileAs($path, $file, $titulo);
+
+                            // Puedes eliminar el archivo anterior si es necesario
+                            if ($archivo->archivo) {
+                                Storage::disk('nas')->delete($archivo->archivo);
+                            }
+                        } else {
+                            while (Storage::disk('local')->exists("$path/$titulo")) {
+                                // Si el archivo con el mismo nombre ya existe, ajusta el nombre
+                                $info = pathinfo($nombreBase);
+                                $titulo = $info['filename'] . " ($i)." . $info['extension'];
+                                $i++;
+                            }
+
+                            $path = Storage::disk('local')->putFileAs($path, $file, $titulo);
+
+                            // Puedes eliminar el archivo anterior si es necesario
+                            if ($archivo->archivo) {
+                                Storage::disk('local')->delete($archivo->archivo);
+                            }
+                        }
+
+                        $archivo->update([
+                            "titulo" => 'Tutorial - ' . $titulo,
+                            "observacion" => 'Tutorial - ' . $request->input("observacion"),
+                            "archivo" => $path,
+                        ]);
+
+                    }
+
+
                 }
 
-                $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
-            }
+            });
 
-            $galeria->update($request->all());
+            $tutorialesGaleria = Galeria::where('tipo_gal_id', 11)->get();
+            $tutorialesArchivo = Archivo::where('tipo', 'Tutorial')->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
+            $tutoriales = $tutorialesGaleria->merge($tutorialesArchivo);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $tutoriales));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -194,7 +260,6 @@ class TutorialController extends Controller
 
                     $archivo = Archivo::find($id);
 
-
                     if ($parametro->nas == true) {
                         // Si todo ha ido bien, eliminar definitivamente el archivo
                         Storage::disk('nas')->delete($archivo->archivo);
@@ -212,7 +277,6 @@ class TutorialController extends Controller
 
             $tutorialesGaleria = Galeria::where('tipo_gal_id', 11)->get();
             $tutorialesArchivo = Archivo::where('tipo', 'Tutorial')->get();
-            // return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivosGuardados));
 
             $tutoriales = $tutorialesGaleria->merge($tutorialesArchivo);
 

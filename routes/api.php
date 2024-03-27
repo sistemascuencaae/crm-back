@@ -554,7 +554,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::get('/listTutoriales', [TutorialController::class, 'listTutoriales']); // Lista los tutoriales
     Route::post('/addTutorial', [TutorialController::class, 'addTutorial']);
-    Route::post('/editGaleriaTutorial/{id}', [TutorialController::class, 'editGaleriaTutorial']);
+    Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
     Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
 
 });
