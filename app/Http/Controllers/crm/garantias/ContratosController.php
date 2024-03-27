@@ -42,13 +42,15 @@ class ContratosController extends Controller
 
     public function facturas($almacen)
     {
-        $data = DB::select("select c.cfa_id, concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
+        $data = DB::select("select c.cfa_id, concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
                             from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                            join almacen a on p.alm_id = a.alm_id
                                             join ctipocom t on c.cti_id = t.cti_id
                                             join dfactura d on c.cfa_id = d.cfa_id
                             where p.alm_id = " . $almacen . " and exists (select 1 from gex.cdespacho c1 where c1.cfa_id = c.cfa_id)
+                                    and exists (select 1 from cgex g where g.id_dfactura = d.dfac_id)
                                     and not exists (select 1 from gex.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
-                            group by c.cfa_id, t.cti_sigla,p.alm_id, p.pve_numero,  c.cfa_numero
+                            group by c.cfa_id, t.cti_sigla,a.alm_codigo, p.pve_numero,  c.cfa_numero
                             order by numero");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -84,7 +86,7 @@ class ContratosController extends Controller
                                     pr.pro_id,
                                     concat(trim(tp.tpr_nombre), ' / ', pr.pro_nombre) as producto,
                                     c.cfa_id,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as factura,
+                                    concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as factura,
                                     c.cfa_fecha as fecha_compra,
                                     m.mar_nombre as marca,
                                     c2.numero as num_despacho,
@@ -92,7 +94,7 @@ class ContratosController extends Controller
                                     12 as garantia_marca,
                                     concat(ve.dir_calle_principal, ' ', ve.dir_numeracion, ' ', ve.dir_calle_secundaria, ' / ', trim(vu.ubi_nombre), ' - ', trim(vu.ubi2_nombre)) as ubicacion,
                                     c.cfa_id as cfa_id_gex,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as factura_gex,
+                                    concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as factura_gex,
                                     cg.num_meses as meses_gex,
                                     c.cfa_fecha as fecha_desde,
                                     c.cfa_fecha + cg.num_meses * interval'1 month'  as fecha_hasta,
@@ -113,10 +115,9 @@ class ContratosController extends Controller
                                             join gex.cdespacho c2 on c2.cfa_id = c.cfa_id
                                             join gex.ddespacho d2 on c2.numero = d2.numero and d2.pro_id = pr.pro_id
                                             join cgex cg on cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex
-                            where c.cfa_id = " . $factura . " and not exists (select 1 from gex.producto_config pc where pc.tipo_servicio = 'G' and pc.pro_id = pr.pro_id)
-                                    and not exists (select 1 from gex.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
+                            where c.cfa_id = " . $factura . " and not exists (select 1 from gex.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
                             group by p.alm_id, a.alm_nombre, e.ent_nombres, e.ent_apellidos, ve.ent_tipo_identificacion, ve.ent_identificacion, ve.dir_calle_principal, ve.dir_numeracion,
-                                        ve.dir_calle_secundaria, vu.ubi_nombre, vu.ubi2_nombre, e.ent_email, pr.pro_id, tp.tpr_nombre, pr.pro_nombre, c.cfa_id, t.cti_sigla, p.alm_id, p.pve_numero,
+                                        ve.dir_calle_secundaria, vu.ubi_nombre, vu.ubi2_nombre, e.ent_email, pr.pro_id, tp.tpr_nombre, pr.pro_nombre, c.cfa_id, t.cti_sigla, a.alm_codigo, p.pve_numero,
                                         c.cfa_numero, c.cfa_fecha, m.mar_nombre, c2.numero, cg.num_meses, c.cfa_fecha, a.ubi_id, e.ent_telefono_principal, e.ent_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
