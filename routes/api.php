@@ -46,6 +46,7 @@ use App\Http\Controllers\crm\RespuestasCasoController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
+use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
@@ -311,11 +312,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
     Route::get('/listGaleriaBySolicitudCreditoId/{id}', [GaleriaController::class, 'listGaleriaBySolicitudCreditoId']); // Listar las imagenes
 
-    Route::get('/listTutoriales', [GaleriaController::class, 'listTutoriales']); // Lista los tutoriales
-    Route::post('/addGaleriaTutorial', [GaleriaController::class, 'addGaleriaTutorial']);
-    Route::post('/editGaleriaTutorial/{id}', [GaleriaController::class, 'editGaleriaTutorial']);
-    Route::delete('/deleteGaleriaTutorial/{id}', [GaleriaController::class, 'deleteGaleriaTutorial']);
-
     Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'allTipoGaleria']); // Listar los tipos de imagenes
 
     // FONDO TABLERO
@@ -553,6 +549,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTipoCasoFormulas', [TipoCasoFormulasController::class, 'addTipoCasoFormulas']); // guardar
     Route::post('/editTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
     Route::delete('/deleteTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
+
+    // TUTORIALES
+
+    Route::get('/listTutoriales', [TutorialController::class, 'listTutoriales']); // Lista los tutoriales
+    Route::post('/addGaleriaTutorial', [TutorialController::class, 'addGaleriaTutorial']);
+    Route::post('/editGaleriaTutorial/{id}', [TutorialController::class, 'editGaleriaTutorial']);
+    Route::delete('/deleteGaleriaTutorial/{id}', [TutorialController::class, 'deleteGaleriaTutorial']);
 
 });
 
