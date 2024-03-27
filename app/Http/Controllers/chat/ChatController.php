@@ -294,7 +294,7 @@ class ChatController extends Controller
                 nm.read_at,
                 nm.deleted_at
             FROM NumeredMessages nm
-            WHERE nm.rn = 1 AND ? = ANY(nm.participantes);", [$userId, $userId, $userId]);
+            WHERE nm.rn = 1 AND ? = ANY(nm.participantes) order by nm.updated_at desc;", [$userId, $userId, $userId]);
 
         broadcast(new RefreshChatConverEvent($data, $userId));
         return $data;
