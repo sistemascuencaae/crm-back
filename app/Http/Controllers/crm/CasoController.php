@@ -54,7 +54,6 @@ class CasoController extends Controller
 
     public function add(Request $request)
     {
-
         $log = new Funciones();
 
         $casoInput = $request->all();
@@ -68,12 +67,10 @@ class CasoController extends Controller
         } else {
             $miembros = $miembros2;
         }
-
         try {
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
                 $caso = new Caso($casoInput);
                 $caso->save();
-
                 //buscar las tareas predefinidas
                 //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
                 $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
@@ -115,16 +112,10 @@ class CasoController extends Controller
 
                 return $this->getCaso($caso->id);
             });
-
-
             $dataFormSopo = $request->input('valoresFormulario');
             if ($dataFormSopo) {
                 $this->formularioSoporte($request, $casoCreado['id']);
             }
-
-
-            broadcast(new TableroEvent($casoCreado));
-
             // START Bloque de código que genera un registro de auditoría manualmente
             $audit = new Audits();
             $audit->user_id = Auth::id();
@@ -144,13 +135,11 @@ class CasoController extends Controller
             $audit->caso_id = $casoCreado->id;
             $audit->save();
             // END Auditoria
-
             // le mando uno porque es la primera vez q se crea el caso
             $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+            broadcast(new TableroEvent($casoCreado));
             $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
-
             $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
-
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
         } catch (\Throwable $e) {
             $log->logError(CasoController::class, 'Error al guardar el caso', $e);
@@ -170,7 +159,6 @@ class CasoController extends Controller
                 "valor_id" => $valorCreado->id,
                 "campo_id" => $valor['campo_id'],
             ]);
-
         }
     }
 

@@ -81,16 +81,18 @@ class PreIngresoController extends Controller
             if ($data['cfa_id'] == null) {
                 $data['doc_rela'] = null;
             } else {
-                $rela = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
+                $rela = DB::select("select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
                                         from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                                        join almacen a on p.alm_id = a.alm_id
                                                         join ctipocom t on c.cti_id = t.cti_id
                                         where c.cfa_id = " . $data['cfa_id'])[0];
             
                 $data['doc_rela'] = $rela->numero;
             }
         } else {
-            $rela = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
+            $rela = DB::select("select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
                                         from cmovinv c join puntoventa p on c.pve_id = p.pve_id
+                                                    join almacen a on p.alm_id = a.alm_id
                                                     join ctipocom t on c.cti_id = t.cti_id
                                         where c.cmo_id = " . $data['cmo_id'])[0];
             
@@ -117,11 +119,13 @@ class PreIngresoController extends Controller
                                         (case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end) as estado,
                                         min(d.linea) as linea,
                                         (case when c.cmo_id is null then 'Nota/Crédito: ' else 'Ingreso: ' end) as etiquetaDR,
-                                        (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
+                                        (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
                                                                         from cfactura c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                            join almacen a on p.alm_id = a.alm_id
                                                                                             join ctipocom t on c1.cti_id = t.cti_id
-                                                                        where c1.cfa_id = c.cfa_id) else (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cmo_numero)
+                                                                        where c1.cfa_id = c.cfa_id) else (select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c1.cmo_numero)
                                                                                                             from cmovinv c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                                                            join almacen a on p.alm_id = a.alm_id
                                                                                                                             join ctipocom t on c1.cti_id = t.cti_id
                                                                                                             where c1.cmo_id = c.cmo_id) end) as doc_rela
                                 from gex.cpreingreso c join gex.dpreingreso d on c.numero = d.numero
@@ -307,7 +311,7 @@ class PreIngresoController extends Controller
 
     public function cargaIngresos() {
         $data = DB::select("select c.cmo_id,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
+                                    concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
                                     TO_CHAR(c.cmo_fecha::date, 'dd/mm/yyyy') as fecha,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     'INV' as op,
@@ -316,6 +320,7 @@ class PreIngresoController extends Controller
                                             from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
                                             where c2.cmo_id = c.cmo_id),0) as relacionado
                             from cmovinv c join puntoventa p on c.pve_id = p.pve_id
+                                        join almacen a on p.alm_id = a.alm_id
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join cliente l on c.cli_id = l.cli_id
                                         join entidad e on l.ent_id = e.ent_id
@@ -325,7 +330,7 @@ class PreIngresoController extends Controller
                                                                                                                         where c2.cmo_id = c.cmo_id),0)
                             union
                             select c.cfa_id,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
+                                    concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
                                     TO_CHAR(c.cfa_fecha::date, 'dd/mm/yyyy') as fecha,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     'VTA' as op,
@@ -334,6 +339,7 @@ class PreIngresoController extends Controller
                                             from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
                                             where c2.cfa_id = c.cfa_id),0) as relacionado
                             from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                        join almacen a on p.alm_id = a.alm_id
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join cliente l on c.cli_id = l.cli_id
                                         join entidad e on l.ent_id = e.ent_id
@@ -382,7 +388,7 @@ class PreIngresoController extends Controller
     }
 
     public function cargaRelaciones() {
-        $data = DB::select("select c.numero, (case when ci.cmo_numero is null then concat(t1.cti_sigla,' - ', p1.alm_id, ' - ', p1.pve_numero, ' - ',  cf.cfa_numero) else concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  ci.cmo_numero) end) as relacionado,
+        $data = DB::select("select c.numero, (case when ci.cmo_numero is null then concat(t1.cti_sigla,' - ', a1.alm_codigo, ' - ', p1.pve_numero, ' - ',  cf.cfa_numero) else concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  ci.cmo_numero) end) as relacionado,
                                     TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
                                     c.guia_remision, b.bod_nombre,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
@@ -394,7 +400,9 @@ class PreIngresoController extends Controller
                                                 left outer join cmovinv ci on c.cmo_id = ci.cmo_id
                                                 left outer join cfactura cf on c.cfa_id = cf.cfa_id
                                                 left outer join puntoventa p on ci.pve_id = p.pve_id
+                                                left outer join almacen a on p.alm_id = a.alm_id
                                                 left outer join puntoventa p1 on cf.pve_id = p1.pve_id
+                                                left outer join almacen a1 on p1.alm_id = a1.alm_id
                                                 left outer join ctipocom t on ci.cti_id = t.cti_id
                                                 left outer join ctipocom t1 on cf.cti_id = t1.cti_id
                             where (c.cmo_id is not null or c.cfa_id is not null) and c.estado = 'A'");
