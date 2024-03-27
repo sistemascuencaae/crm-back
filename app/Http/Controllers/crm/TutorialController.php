@@ -39,6 +39,8 @@ class TutorialController extends Controller
         }
     }
 
+    // IMAGENES
+
     public function addGaleriaTutorial(Request $request)
     {
         try {
@@ -179,25 +181,47 @@ class TutorialController extends Controller
         }
     }
 
-    public function deleteGaleriaTutorial(Request $request, $id)
+    public function deleteTutorial(Request $request, $id)
     {
         try {
-            $galeria = Galeria::findOrFail($id);
-
-            // $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
-            // Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
 
             $parametro = DB::table('crm.parametro')
                 ->where('abreviacion', 'NAS')
                 ->first();
 
-            if ($parametro->nas == true) {
-                Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
-            } else {
-                Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
-            }
+            DB::transaction(function () use ($id, $parametro) {
 
-            $galeria->delete();
+                $galeria = Galeria::find($id);
+
+                if ($galeria) {
+
+                    if ($parametro->nas == true) {
+                        Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+                    } else {
+                        Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+                    }
+
+                    $galeria->delete();
+
+                } else {
+
+                    $archivo = Archivo::find($id);
+
+
+                    if ($parametro->nas == true) {
+                        // Si todo ha ido bien, eliminar definitivamente el archivo
+                        Storage::disk('nas')->delete($archivo->archivo);
+                    } else {
+                        // Si todo ha ido bien, eliminar definitivamente el archivo
+                        Storage::disk('local')->delete($archivo->archivo);
+                    }
+
+                    // Eliminar el archivo de la base de datos
+                    $archivo->delete();
+
+                }
+
+            });
 
             $tutorialesGaleria = Galeria::where('tipo_gal_id', 11)->get();
             $tutorialesArchivo = Archivo::where('tipo', 'Tutorial')->get();
