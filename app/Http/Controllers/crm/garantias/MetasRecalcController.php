@@ -26,7 +26,8 @@ class MetasRecalcController extends Controller
                                                     when 4 then 'ABRIL' when 5 then 'MAYO' when 6 then 'JUNIO'
                                                     when 7 then 'JULIO' when 8 then 'AGOSTO' when 9 then 'SEPTIEMBRE'
                                                     when 10 then 'OCTUBRE' when 11 then 'NOVIEMBRE' when 12 then 'DICIEMBRE'end),'-',m.anio)as periodo,
-                                    m.monto_meta, m.porc_meta_gex, m.monto_meta_gex
+                                    m.monto_meta, m.porc_meta_gex, m.monto_meta_gex,
+                                    (case when (select 1 from gex.cproc_metas cm where cm.alm_id = m.alm_id and cm.mes = m.mes and cm.anio = m.anio) = 1 then true else false end) as elimina
                             from gex.cmeta_recal m join almacen a on m.alm_id = a.alm_id
                             order by a.alm_nombre");
 
@@ -42,6 +43,12 @@ class MetasRecalcController extends Controller
     
     public function tomaInformacion($almacen,$mes,$anio)
     {
+        $existe = DB::selectone("select count(*) from gex.cproc_metas where alm_id = " . $almacen . "and mes = " . $mes . " and anio = " . $anio);
+
+        if ($existe->count > 0) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No puede ingresar un recalculo de un periodo ya procesado.', []));
+        }
+
         $ultimo = MetasRecalc::where('alm_id', $almacen)->where('mes', $mes)->where('anio', $anio)->max('metare_id');
 
         if ($ultimo) {

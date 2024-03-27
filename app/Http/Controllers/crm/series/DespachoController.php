@@ -20,7 +20,7 @@ class DespachoController extends Controller
     public function listado($bodega)
     {
         $data = DB::select("select c.cmo_id,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
+                                    concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
                                     TO_CHAR(c.cmo_fecha::date, 'dd/mm/yyyy') as fecha,
                                     concat(b.bod_nombre,' / ',b1.bod_nombre) as proveedor,
                                     'INV' as op,
@@ -30,6 +30,7 @@ class DespachoController extends Controller
                                     (select cast(sum(d.dmo_cantidad) as integer) from dmovinv d where d.cmo_id = c.cmo_id) as cantidad,
                                     coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cmo_id = c.cmo_id),0) as despachado
                             from cmovinv c join puntoventa p on c.pve_id = p.pve_id
+                                        join almacen a on p.alm_id = a.alm_id
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join bodega b on c.bod_id = b.bod_id
                                         join bodega b1 on c.bod_id_fin = b1.bod_id
@@ -44,7 +45,7 @@ class DespachoController extends Controller
                                                                                                                         where c2.cmo_id = c.cmo_id) end))
                             union
                             select c.cfa_id,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
+                                    concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
                                     TO_CHAR(c.cfa_fecha::date, 'dd/mm/yyyy') as fecha,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
                                     'VTA' as op,
@@ -57,6 +58,7 @@ class DespachoController extends Controller
                                             and not exists (select 1 from gex.producto_config pc where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G')) as cantidad,
                                     coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cfa_id = c.cfa_id),0) as despachado
                             from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                        join almacen a on p.alm_id = a.alm_id
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join cliente l on c.cli_id = l.cli_id
                                         join entidad e on l.ent_id = e.ent_id
@@ -85,8 +87,9 @@ class DespachoController extends Controller
                                                                     where c1.cfa_id = c.cfa_id) else (select b1.bod_nombre
                                                                                                         from cmovinv c1 join bodega b1 on c1.bod_id_fin = b1.bod_id
                                                                                                         where c1.cmo_id = c.cmo_id) end) as nombre,
-                                    (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
+                                    (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
                                                                     from cfactura c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                        join almacen a on p.alm_id = a.alm_id
                                                                                         join ctipocom t on c1.cti_id = t.cti_id
                                                                     where c1.cfa_id = c.cfa_id) else (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cmo_numero)
                                                                                                         from cmovinv c1 join puntoventa p on c1.pve_id = p.pve_id
@@ -163,8 +166,9 @@ class DespachoController extends Controller
         $data['bodega'] = DB::selectOne("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $data['bod_id']);
         
         if ($data['cmo_id'] == null) {
-            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
+            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
                                 from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                                join almacen a on p.alm_id = a.alm_id
                                                 join ctipocom t on c.cti_id = t.cti_id
                                 where c.cfa_id = " . $data['cfa_id']);
         
@@ -176,8 +180,9 @@ class DespachoController extends Controller
                                                             join entidad e on l.ent_id = e.ent_id
                                             where c1.cfa_id = " . $data['cfa_id']);
         } else {
-            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
+            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
                                         from cmovinv c join puntoventa p on c.pve_id = p.pve_id
+                                                    join almacen a on p.alm_id = a.alm_id
                                                     join ctipocom t on c.cti_id = t.cti_id
                                         where c.cmo_id = " . $data['cmo_id']);
             
@@ -320,8 +325,9 @@ class DespachoController extends Controller
                                                                                                         from cmovinv c1 join bodega b1 on c1.bod_id_fin = b1.bod_id
                                                                                                         where c1.cmo_id = c.cmo_id) end) as nombre,
                                     (case when c.cmo_id is null then 'Factura: ' else 'Traspaso: ' end) as etiquetaDR,
-                                    (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
+                                    (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
                                                                     from cfactura c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                        join almacen a on p.alm_id = a.alm_id
                                                                                         join ctipocom t on c1.cti_id = t.cti_id
                                                                     where c1.cfa_id = c.cfa_id) else (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cmo_numero)
                                                                                                         from cmovinv c1 join puntoventa p on c1.pve_id = p.pve_id
