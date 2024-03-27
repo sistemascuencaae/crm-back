@@ -55,13 +55,6 @@ class FormController extends Controller
 
         $data = $request->all();
 
-
-        echo ('$data: '.json_encode($data));
-
-
-
-        return;
-
         $tableroId = $request->input('tabId');
         $tipoForm = $request->input('tipoFormulario');
 
