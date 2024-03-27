@@ -311,6 +311,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
     Route::get('/listGaleriaBySolicitudCreditoId/{id}', [GaleriaController::class, 'listGaleriaBySolicitudCreditoId']); // Listar las imagenes
 
+    Route::get('/listTutoriales', [GaleriaController::class, 'listTutoriales']); // Lista los tutoriales
+    Route::post('/addGaleriaTutorial', [GaleriaController::class, 'addGaleriaTutorial']);
+    Route::post('/editGaleriaTutorial/{id}', [GaleriaController::class, 'editGaleriaTutorial']);
+    Route::delete('/deleteGaleriaTutorial/{id}', [GaleriaController::class, 'deleteGaleriaTutorial']);
+
     Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'allTipoGaleria']); // Listar los tipos de imagenes
 
     // FONDO TABLERO
