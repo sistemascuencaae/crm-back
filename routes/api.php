@@ -74,6 +74,8 @@ use App\Http\Controllers\crm\garantias\VentasProductosGexController;
 use App\Http\Controllers\crm\garantias\RelacionAlamcenVendedorGexController;
 use App\Http\Controllers\crm\garantias\MetasController;
 use App\Http\Controllers\crm\garantias\MetasRecalcController;
+use App\Http\Controllers\crm\garantias\ProcMetasController;
+use App\Http\Controllers\crm\garantias\ComisionesController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
@@ -768,13 +770,27 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byMeta/{meta}/{almacen}', [MetasController::class, 'byMeta']);
     Route::get('/eliminaMeta/{meta}/{almacen}', [MetasController::class, 'eliminaMeta']);
 
-    //Metas Gex
+    //Recalculos Metas Gex
     Route::get('/listadoMetaRecal', [MetasRecalcController::class, 'listado']);
     Route::get('/listadoAlmacenesMetaRecal', [MetasRecalcController::class, 'almacenes']);
     Route::get('/cargaInfoRecal/{almacen}/{mes}/{anio}', [MetasRecalcController::class, 'tomaInformacion']);
     Route::post('/grabaMetaRecal', [MetasRecalcController::class, 'grabaMetaRecal']);
     Route::get('/byMetaRecal/{metaRecal}/{almacen}', [MetasRecalcController::class, 'byMetaRecal']);
     Route::get('/eliminaMetaRecal/{metaRecal}/{almacen}', [MetasRecalcController::class, 'eliminaMetaRecal']);
+
+    //Proceso de Metas
+    Route::get('/listadoProcMeta', [ProcMetasController::class, 'listado']);
+    Route::get('/listadoAlmacenesProcMeta', [ProcMetasController::class, 'almacenes']);
+    Route::get('/procesaMetas/{almacen}/{mes}/{anio}', [ProcMetasController::class, 'procesaMetas']);
+    Route::post('/grabaProcMeta', [ProcMetasController::class, 'grabaProcMeta']);
+    Route::get('/byProcMeta/{cumpli}/{almacen}', [ProcMetasController::class, 'byProcMeta']);
+    Route::get('/eliminaProcMeta/{cumpli}/{almacen}', [ProcMetasController::class, 'eliminaProcMeta']);
+
+    //Comisiones
+    Route::get('/listadoComisiones', [ComisionesController::class, 'listado']);
+    Route::get('/byComision/{comi}', [ComisionesController::class, 'byComision']);
+    Route::post('/grabaComi', [ComisionesController::class, 'grabaComi']);
+    Route::get('/eliminaComision/{comi}', [ComisionesController::class, 'eliminaComision']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
