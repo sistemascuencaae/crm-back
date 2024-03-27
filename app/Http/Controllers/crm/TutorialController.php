@@ -34,8 +34,6 @@ class TutorialController extends Controller
         }
     }
 
-    // IMAGENES
-
     public function addTutorial(Request $request)
     {
         try {
