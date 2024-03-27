@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\Galeria;
