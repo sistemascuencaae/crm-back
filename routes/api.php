@@ -553,7 +553,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // TUTORIALES
 
     Route::get('/listTutoriales', [TutorialController::class, 'listTutoriales']); // Lista los tutoriales
-    Route::post('/addGaleriaTutorial', [TutorialController::class, 'addGaleriaTutorial']);
+    Route::post('/addTutorial', [TutorialController::class, 'addTutorial']);
     Route::post('/editGaleriaTutorial/{id}', [TutorialController::class, 'editGaleriaTutorial']);
     Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
 

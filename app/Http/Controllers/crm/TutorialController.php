@@ -41,7 +41,7 @@ class TutorialController extends Controller
 
     // IMAGENES
 
-    public function addGaleriaTutorial(Request $request)
+    public function addTutorial(Request $request)
     {
         try {
             DB::transaction(function () use ($request) {
