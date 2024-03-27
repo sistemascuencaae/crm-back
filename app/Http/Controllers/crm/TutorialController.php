@@ -22,19 +22,14 @@ class TutorialController extends Controller
 
     public function listTutoriales()
     {
-        $log = new Funciones();
         try {
             $tutorialesGaleria = Galeria::where('tipo_gal_id', 11)->get();
             $tutorialesArchivo = Archivo::where('tipo', 'Tutorial')->get();
 
             $tutoriales = $tutorialesGaleria->merge($tutorialesArchivo);
 
-            $log->logInfo(TutorialController::class, 'Se listo con exito los tutoriales');
-
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tutoriales));
         } catch (Exception $e) {
-            $log->logError(TutorialController::class, 'Error al listar los tutoriales', $e);
-
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -124,7 +119,6 @@ class TutorialController extends Controller
 
     public function editGaleriaTutorial(Request $request, $id)
     {
-        $log = new Funciones();
         try {
             $galeria = Galeria::find($id);
 
@@ -171,12 +165,8 @@ class TutorialController extends Controller
 
             $galeria->update($request->all());
 
-            $log->logInfo(TutorialController::class, 'Se actualizo con exito la imagen, con el ID: ' . $id);
-
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
         } catch (Exception $e) {
-            $log->logError(TutorialController::class, 'Error al actualizar la imagen, con el ID: ' . $id, $e);
-
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
