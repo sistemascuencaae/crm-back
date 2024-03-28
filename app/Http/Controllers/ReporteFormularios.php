@@ -12,12 +12,13 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 class ReporteFormularios extends Controller
 {
-	
+
     public function documentFAM($pac_id)
     {
 		$storageIMG = storage_path('app/images');
         $p = Paciente::find($pac_id);
-        $fo = FormOcupacional::where('pac_id', $p->pac_id)->first();
+        $fo = FormOcupacional::where('pac_id', $p->pac_id)
+        ->where('fo_id', $foId)->first();
         $fam = FormAptitudMedica::where('pac_id', $p->pac_id)->first();
         $vs = new VariosService();
         $funcionR = new FuncionesReporte();
@@ -156,7 +157,7 @@ class ReporteFormularios extends Controller
 			<td class="titulo">APTITUD MEDICA</td>
 		</tr>
 	</table>
-	
+
 
 
 
@@ -329,10 +330,11 @@ class ReporteFormularios extends Controller
         return Storage::disk('public')->download($documentFileName, 'Request', $header); //
     }
 
-    public function documentFO($pac_id){
+    public function documentFO($pac_id,$foId){
 		$storageIMG = storage_path('app/images');
         $p = Paciente::find($pac_id);
-        $fo = FormOcupacional::where('pac_id', $p->pac_id)->first();
+        $fo = FormOcupacional::where('pac_id', $p->pac_id)
+            ->where('fo_id', $foId)->first();
         $vs = new VariosService();
 		$horaModificacion =  date("h:j:s", strtotime($fo->updated_at));
 		$fechaUpdate = strtotime($fo->updated_at);
@@ -577,13 +579,13 @@ class ReporteFormularios extends Controller
         $m_def2 = $vs->arraySize2($fo->m_def2);
         $m_pre3 = $vs->arraySize2($fo->m_pre3);
         $m_def3 = $vs->arraySize2($fo->m_def3);
-        
+
         $nAptoTrabajo =  $vs->nAptitudMedica($fo->n_apto);
-        
-        
-        
-        
-        
+
+
+
+
+
 
 
         //echo(json_encode($bevaluacion));
@@ -620,7 +622,7 @@ class ReporteFormularios extends Controller
         $document->WriteHTML('
 		<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 		<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-		
+
 		<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 		<title>ReporteFAM</title>
@@ -703,7 +705,7 @@ class ReporteFormularios extends Controller
 		</style>
 		<meta name="description" content="REPORTE FORMULARIO APTITUD MEDICA" />
 		</head>
-		
+
 		<body>
 		<div>
 		<div class="ImagenHeader" style="width: 1650px">
@@ -776,7 +778,7 @@ class ReporteFormularios extends Controller
 				<td colspan="5" class="headerVerdeCentrado">ORIENTACIÓN SEXUAL</td>
 				<td colspan="5" class="headerVerdeCentrado">IDENTIDAD DE GÉNERO</td>
 				<td colspan="4" class="HeaderVerde">DISCAPACIDAD</td>
-				<td rowspan="2" style="width: 4px" class="HeaderVerde">FECHA DE INGRESO 
+				<td rowspan="2" style="width: 4px" class="HeaderVerde">FECHA DE INGRESO
 				AL TRABAJO</td>
 				<td rowspan="2" class="HeaderVerde">PUESTO DE TRABAJO</td>
 				<td rowspan="2" class="HeaderVerde">ÁREA DE TRABAJO</td>
@@ -951,7 +953,7 @@ class ReporteFormularios extends Controller
 				<td class="seccionBlanca" rowspan="2" colspan="3">'.$fo->c_tipo_metodo_pla_familiar.'</td>
 				<td class="seccionBlanca" rowspan="2">'.$fo->c_hijos_vivos.'</td>
 				<td class="seccionBlanca" rowspan="2">'.$fo->c_hijos_muertos.'</td>
-		
+
 			</tr>
 			<tr class="seccionBlanca">
 				<td class="seccionBlanca">ECO PROSTATICO</td>
@@ -979,7 +981,7 @@ class ReporteFormularios extends Controller
 				<td style="height: 23px" class="HeaderCeleste">SI</td>
 				<td style="height: 23px" class="HeaderCeleste">NO</td>
 				<td style="height: 23px" class="HeaderCeleste">&nbsp;¿CUÁL?</td>
-				<td style="height: 23px" colspan="3" class="HeaderCeleste">TIEMPO / 
+				<td style="height: 23px" colspan="3" class="HeaderCeleste">TIEMPO /
 				CANTIDAD</td>
 			</tr>
 			<tr class="seccionBlanca">
@@ -1033,9 +1035,9 @@ class ReporteFormularios extends Controller
 				<td style="height: 23px" colspan="3" class="seccionBlanca">'.$fo->c_tiem_medicacion_habitual3.'</td>
 			</tr>
 			</table>
-		
+
 		</div>
-		
+
 		<table style="width: 100%" class="bordesTabla">
 			<tr>
 				<td colspan="11" class="headerMorado">D. ANTECEDENTES DE TRABAJO</td>
@@ -1144,7 +1146,7 @@ class ReporteFormularios extends Controller
 				<td colspan="11" class="HeaderVerde">ENFERMEDADES PROFESIONALES </td>
 			</tr>
 			<tr>
-				<td class="seccionBlanca" colspan="3">&nbsp;FUE CALIFICADA POR EL INSTITUTO DE 
+				<td class="seccionBlanca" colspan="3">&nbsp;FUE CALIFICADA POR EL INSTITUTO DE
 				SEGURIDAD SOCIAL CORRESPONDIENTE: </td>
 				<td>&nbsp;</td>
 				<td class="seccionBlanca">SI</td>
@@ -1204,7 +1206,7 @@ class ReporteFormularios extends Controller
 
 
 
-				
+
 				<table style="width: 100%" class="bordesTabla">
 					<tr>
 						<td class="headerMorado" colspan="28">F. FACTORES DE RIESGOS DEL
@@ -1321,8 +1323,8 @@ class ReporteFormularios extends Controller
 						<td class="seccionBlanca">'.$fo->f_mecanico_otro_desc2.'</td>
 					</tr>
 				</table>
-		
-		
+
+
 				<table style="width: 100%" class="bordesTabla">
 					<tr>
 						<td class="HeaderVerde">&nbsp;</td>
@@ -1403,10 +1405,10 @@ class ReporteFormularios extends Controller
 					<td style="width: 5px" class="seccionBlanca">'.$ftrabaj2[0].'</td>
 					<td class="seccionBlanca">'.$fo->f_ergonomico_otro_desc2.'</td>
 					</tr>
-	
+
 				</table>
-		
-		
+
+
 				<table style="width: 100%" class="bordesTabla">
 					<tr>
 						<td class="HeaderVerde">&nbsp;</td>
@@ -1477,8 +1479,8 @@ class ReporteFormularios extends Controller
 						<td style="width: 105px" class="seccionBlanca">'.$fo->f_psicosocial_otro_desc2.'</td>
 					</tr>
 				</table>
-		
-		
+
+
 		<table style="width: 100%" class="bordesTabla">
 			<tr>
 				<td class="headerMorado" >G. ACTIVIDADES EXTRA LABORALES </td>
@@ -1497,7 +1499,7 @@ class ReporteFormularios extends Controller
 		</table>
 		<table style="width: 100%" class="bordesTabla">
 			<tr>
-				<td colspan="10" class="headerMorado">I. REVISIÓN ACTUAL DE ÓRGANOS Y 
+				<td colspan="10" class="headerMorado">I. REVISIÓN ACTUAL DE ÓRGANOS Y
 				SISTEMAS</td>
 			</tr>
 			<tr>
@@ -1530,7 +1532,7 @@ class ReporteFormularios extends Controller
 		</table>
 		<table style="width: 100%" class="bordesTabla">
 			<tr>
-				<td colspan="9" class="headerMorado">J. CONSTANTES VITALES Y 
+				<td colspan="9" class="headerMorado">J. CONSTANTES VITALES Y
 				ANTROPOMETRÍA </td>
 			</tr>
 			<tr>
@@ -1682,11 +1684,11 @@ class ReporteFormularios extends Controller
 				<td colspan="15" style="height: 23px" class="seccionBlanca">'.$fo->k_observaciones.'</td>
 			</tr>
 		</table>
-		
+
 		<table style="width: 100%" class="bordesTabla">
 			<tr>
-				<td colspan="3" class="headerMorado">L. RESULTADOS DE EXÁMENES GENERALES 
-				Y ESPECÍFICOS DE ACUERDO AL RIESGO Y PUESTO DE TRABAJO (IMAGEN, 
+				<td colspan="3" class="headerMorado">L. RESULTADOS DE EXÁMENES GENERALES
+				Y ESPECÍFICOS DE ACUERDO AL RIESGO Y PUESTO DE TRABAJO (IMAGEN,
 				LABORATORIO Y OTROS)</td>
 			</tr>
 			<tr>
@@ -1779,9 +1781,9 @@ class ReporteFormularios extends Controller
 				<td class="seccionBlanca">'.$fo->o_recome_tratamiento.'</td>
 			</tr>
 		</table>
-		
-		<p class="seccionBlanca">CERTIFICO QUE LO ANTERIORMENTE EXPRESADO EN RELACIÓN A 
-		MI ESTADO DE SALUD ES VERDAD. SE ME HA INFORMADO LAS MEDIDAS PREVENTIVAS A TOMAR 
+
+		<p class="seccionBlanca">CERTIFICO QUE LO ANTERIORMENTE EXPRESADO EN RELACIÓN A
+		MI ESTADO DE SALUD ES VERDAD. SE ME HA INFORMADO LAS MEDIDAS PREVENTIVAS A TOMAR
 		PARA DISMINUIR O MITIGAR LOS RIESGOS RELACIONADOS CON MI ACTIVIDAD LABORAL.</p>
 		<table style="width: 100%" class="bordesTabla">
 			<tr>
@@ -1805,12 +1807,12 @@ class ReporteFormularios extends Controller
 				<td class="seccionBlanca">&nbsp;</td>
 			</tr>
 		</table>
-		
-		
+
+
 		</body>
-		
+
 		</html>
-		
+
 
         ');
 
