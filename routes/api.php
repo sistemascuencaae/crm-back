@@ -46,6 +46,7 @@ use App\Http\Controllers\crm\RespuestasCasoController;
 use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
+use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
@@ -550,6 +551,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTipoCasoFormulas', [TipoCasoFormulasController::class, 'addTipoCasoFormulas']); // guardar
     Route::post('/editTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
     Route::delete('/deleteTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
+
+    // TUTORIALES
+
+    Route::get('/listTutoriales', [TutorialController::class, 'listTutoriales']); // Lista los tutoriales
+    Route::post('/addTutorial', [TutorialController::class, 'addTutorial']);
+    Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
+    Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
 
 });
 
