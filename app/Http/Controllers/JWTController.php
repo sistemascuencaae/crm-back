@@ -76,8 +76,8 @@ class JWTController extends Controller
         if (!$user || !$user->estado) {
             // El usuario no está activo
             return response()->json(['error' => 'El usuario NO esta activo'], 403);
-            // Cuando un usuario intenta acceder a tu aplicación y está marcado como inactivo, 
-            // es común devolver un código de estado HTTP 403 - Forbidden. 
+            // Cuando un usuario intenta acceder a tu aplicación y está marcado como inactivo,
+            // es común devolver un código de estado HTTP 403 - Forbidden.
             // El código de estado 403 indica que el servidor comprende la solicitud, pero se niega a autorizarla.
         }
 
@@ -139,6 +139,13 @@ class JWTController extends Controller
 
         $alm_nombre = '';
 
+
+        $accesos = DB::select("SELECT u.id as user_id, me.name from crm.users u
+        inner join crm.profiles p on p.id = u.profile_id
+        inner join crm.access acc on acc.profile_id = p.id
+        inner join crm.menu me on me.id = acc.menu_id
+        where u.id = ?;",[auth('api')->user()->id]);
+
         if (sizeof($alm) > 0) {
             $alm_nombre = $alm[0]->alm_nombre;
         }
@@ -148,6 +155,7 @@ class JWTController extends Controller
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL() * 60 * 60 * 24 * 2000000,
+            'accesos' => $accesos,
             'user' => [
                 "id" => auth('api')->user()->id,
                 "name" => auth('api')->user()->name,
