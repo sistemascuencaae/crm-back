@@ -90,7 +90,6 @@ class FormOcupaController extends Controller
         if (!$validation->fails()) {
             try {
                 $resultDBtransaction = DB::transaction(function () use ($fo_id, $inFormOcupacional) {
-
                     unset($inFormOcupacional['fo_id']);
                     unset($inFormOcupacional['doc_id']);
                     unset($inFormOcupacional['pac_id']);
