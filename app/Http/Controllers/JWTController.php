@@ -142,13 +142,19 @@ class JWTController extends Controller
 
         $accesos = DB::select("SELECT u.id as user_id, me.name from crm.users u
         inner join crm.profiles p on p.id = u.profile_id
-        inner join crm.access acc on acc.profile_id = p.id
+        inner join crm.access acc on acc.profile_id = p.id and acc.ejecutar = 1
         inner join crm.menu me on me.id = acc.menu_id
         where u.id = ?;",[auth('api')->user()->id]);
 
         if (sizeof($alm) > 0) {
             $alm_nombre = $alm[0]->alm_nombre;
         }
+
+        $usuario = User::findOrFail(auth('api')->user()->id);
+
+        $usuario->update([
+            "en_linea" => true,
+        ]);
 
         // echo (json_encode($alm_nombre[0]->alm_nombre));
         return response()->json([
