@@ -43,6 +43,7 @@ class ReporteFormularios extends Controller
 				$funcionR->famChecbox($fam->b_retiro),
 			);
 			$seccionC = $funcionR->famRadioButton($fam->c_aptitud_medica_lavoral);
+
 			$seccionD1sino = $funcionR->famChecboxSINO($fam->d_evalu_retiro, $fam->d_condi_reltra_si);
 
 			$seccionD = array(
@@ -236,7 +237,7 @@ class ReporteFormularios extends Controller
         </table>
         <table style="width: 100%" class="bordesTabla">
         	<tr>
-        		<td colspan="8" class="headerMorado">B. DATOS GENERALES</td>
+        		<td colspan="8" class="headerMorado">C. APTITUD MÉDICA LABORAL</td>
         	</tr>
         	<tr>
         		<td colspan="8" class="seccionBlanca">Después de la valoración médica
@@ -253,7 +254,7 @@ class ReporteFormularios extends Controller
         		<td class="seccionBlanca">' . $seccionC[3] . '</td>
         	</tr>
         	<tr>
-        		<td colspan="8" class="seccionBlanca">&nbsp;</td>
+        		<td colspan="8" class="seccionBlanca">' . $fam->c_observaciones . '</td>
         	</tr>
         </table>
 
