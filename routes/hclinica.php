@@ -132,7 +132,7 @@ Route::group([
 Route::group([
     'prefix' => 'documentos',
 ], function(){
-    Route::get('/reporteFAM/{id}', [ReporteFormularios::class, 'documentFAM']);
+    Route::get('/reporteFAM/{id}/{foId}', [ReporteFormularios::class, 'documentFAM']);
     Route::get('/reporteFO/{id}/{foId}', [ReporteFormularios::class, 'documentFO']);
 });
 
