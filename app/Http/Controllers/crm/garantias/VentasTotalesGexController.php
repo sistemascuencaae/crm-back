@@ -42,24 +42,27 @@ class VentasTotalesGexController extends Controller
     public function VentasTotalesGex($almacen, $usuario, $vendedor, $fecIni, $fecFin)
     {
         $data = DB::select("select alm_id, alm_nombre, emp_id, vendedor,
-                                        sum(venta_bruta) as vta_bruto, sum(iva) as iva, sum(venta_neta) as vta_neta,
-                                        sum(devolucion_bruta) as dev_bruta, sum(iva_devolucion) as iva_dev, sum(devolucion_neta) as dev_neta,
-                                        sum(venta_bruta - devolucion_bruta) as total_bruto, sum(iva - iva_devolucion) as total_iva, sum(venta_neta - devolucion_neta) as total_neto
-                                from(
+                                    sum(venta_bruta) as vta_bruto, sum(iva) as iva, sum(intereses) as intereses, sum(venta_neta) as vta_neta,
+                                    sum(devolucion_bruta) as dev_bruta, sum(iva_devolucion) as iva_dev, sum(interes_devolucion) as interes_dev, sum(devolucion_neta) as dev_neta,
+                                    sum(venta_bruta - devolucion_bruta) as total_bruto, sum(iva - iva_devolucion) as total_iva, sum(intereses - interes_devolucion) as total_interes, sum(venta_neta - devolucion_neta) as total_neto
+                            from(
                                 select a.alm_id, a.alm_nombre,
                                                 e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor,
-                                                sum(d.dfac_valortotal) as venta_bruta,
-                                                round(sum((d.dfac_valortotal * i.imp_porcentaje) / 100),2) as iva,
-                                                sum(d.dfac_valortotal + round((d.dfac_valortotal * i.imp_porcentaje) / 100,2)) as venta_neta,
+                                                sum(v.dfac_costoprecio) as venta_bruta,
+                                                sum(round(v.dfac_iva,2)) as iva,
+                                                sum(round(v.intereses,2)) as intereses,
+                                                sum(v.dfac_costoprecio + round(v.dfac_iva,2) + round(v.intereses,2)) as venta_neta,
                                                 1.11 - 1.11 as devolucion_bruta,
                                                 1.11 - 1.11 as iva_devolucion,
+                                                1.11 - 1.11 as interes_devolucion,
                                                 1.11 - 1.11 as devolucion_neta
                                 from cfactura c join dfactura d on c.cfa_id = d.cfa_id
-                                                                join puntoventa p on c.pve_id = p.pve_id
-                                                                join almacen a on p.alm_id = a.alm_id
-                                                                join empleado e on c.vnd_id = e.emp_id
-                                                                join entidad en on e.ent_id = en.ent_id
-                                                                join impuesto i on c.imp_id = i.imp_id
+                                                join v_dfacturacompleto_almespa v on d.cfa_id = v.cfa_id and d.dfac_id = v.dfac_id
+                                                join puntoventa p on c.pve_id = p.pve_id
+                                                join almacen a on p.alm_id = a.alm_id
+                                                join empleado e on c.vnd_id = e.emp_id
+                                                join entidad en on e.ent_id = en.ent_id
+                                                join impuesto i on c.imp_id = i.imp_id
                                 where (a.alm_id = " . $almacen . " or exists (select 1
                                                                                 from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
@@ -73,15 +76,18 @@ class VentasTotalesGexController extends Controller
                                                 0,
                                                 0,
                                                 0,
-                                                sum(d.dnc_valortotal),
-                                                round(sum((d.dnc_valortotal * i.imp_porcentaje) / 100),2),
-                                                sum(d.dnc_valortotal + round((d.dnc_valortotal * i.imp_porcentaje) / 100,2))
+                                                0,
+                                                sum(v.dfac_costoprecio),
+                                                sum(round(v.dfac_iva,2)),
+                                                sum(round(v.intereses,2)),
+                                                sum(v.dfac_costoprecio + round(v.dfac_iva,2) + round(v.intereses,2))
                                 from cnotacre c join dnotacre d on c.cnc_id = d.cnc_id
-                                                                join puntoventa p on c.pve_id = p.pve_id
-                                                                join almacen a on p.alm_id = a.alm_id
-                                                                join empleado e on c.emp_id = e.emp_id
-                                                                join entidad en on e.ent_id = en.ent_id
-                                                                join impuesto i on c.imp_id = i.imp_id
+                                                join v_dfacturacompleto_almespa v on d.cnc_id = v.cfa_id and d.dnc_id = v.dfac_id
+                                                join puntoventa p on c.pve_id = p.pve_id
+                                                join almacen a on p.alm_id = a.alm_id
+                                                join empleado e on c.emp_id = e.emp_id
+                                                join entidad en on e.ent_id = en.ent_id
+                                                join impuesto i on c.imp_id = i.imp_id
                                 where (a.alm_id = " . $almacen . " or exists (select 1
                                                                                 from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
@@ -89,8 +95,8 @@ class VentasTotalesGexController extends Controller
                                                 cast(c.cnc_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.id_dfactura_gex is not null
                                 group by a.alm_id, a.alm_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos) as tabla
-                                group by alm_id, alm_nombre, emp_id, vendedor
-                                order by alm_nombre, vendedor");
+                            group by alm_id, alm_nombre, emp_id, vendedor
+                            order by alm_nombre, vendedor");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
@@ -98,25 +104,27 @@ class VentasTotalesGexController extends Controller
     public function VentasTotalesGexAlmacen($almacen, $usuario, $fecIni, $fecFin)
     {
         $data = DB::select("select alm_id, alm_nombre,
-                                        sum(venta_bruta) as vta_bruto, sum(iva) as iva, sum(venta_neta) as vta_neta,
-                                        sum(devolucion_bruta) as dev_bruta, sum(iva_devolucion) as iva_dev, sum(devolucion_neta) as dev_neta,
-                                        sum(venta_bruta - devolucion_bruta) as total_bruto, sum(iva - iva_devolucion) as total_iva, sum(venta_neta - devolucion_neta) as total_neto
-                                from(
+                                    sum(venta_bruta) as vta_bruto, sum(iva) as iva, sum(intereses) as intereses, sum(venta_neta) as vta_neta,
+                                    sum(devolucion_bruta) as dev_bruta, sum(iva_devolucion) as iva_dev, sum(interes_devolucion) as interes_dev, sum(devolucion_neta) as dev_neta,
+                                    sum(venta_bruta - devolucion_bruta) as total_bruto, sum(iva - iva_devolucion) as total_iva, sum(intereses - interes_devolucion) as total_interes, sum(venta_neta - devolucion_neta) as total_neto
+                            from(
                                 select a.alm_id, a.alm_nombre,
-                                                sum(d.dfac_valortotal) as venta_bruta,
-                                                round(sum((d.dfac_valortotal * i.imp_porcentaje) / 100),2) as iva,
-                                                sum(d.dfac_valortotal + round((d.dfac_valortotal * i.imp_porcentaje) / 100,2)) as venta_neta,
+                                                sum(v.dfac_costoprecio) as venta_bruta,
+                                                sum(round(v.dfac_iva,2)) as iva,
+                                                sum(round(v.intereses,2)) as intereses,
+                                                sum(v.dfac_costoprecio + round(v.dfac_iva,2) + round(v.intereses,2)) as venta_neta,
                                                 1.11 - 1.11 as devolucion_bruta,
                                                 1.11 - 1.11 as iva_devolucion,
+                                                1.11 - 1.11 as interes_devolucion,
                                                 1.11 - 1.11 as devolucion_neta
                                 from cfactura c join dfactura d on c.cfa_id = d.cfa_id
-                                                                join puntoventa p on c.pve_id = p.pve_id
-                                                                join almacen a on p.alm_id = a.alm_id
-                                                                join impuesto i on c.imp_id = i.imp_id
+                                                join v_dfacturacompleto_almespa v on d.cfa_id = v.cfa_id and d.dfac_id = v.dfac_id
+                                                join puntoventa p on c.pve_id = p.pve_id
+                                                join almacen a on p.alm_id = a.alm_id
                                 where (a.alm_id = " . $almacen . " or exists (select 1
                                                                                 from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
-                                                cast(c.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
+                                                cast(v.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.prod_gex = true
                                 group by a.alm_id, a.alm_nombre
                                 union all
@@ -124,21 +132,23 @@ class VentasTotalesGexController extends Controller
                                                 0,
                                                 0,
                                                 0,
-                                                sum(d.dnc_valortotal),
-                                                round(sum((d.dnc_valortotal * i.imp_porcentaje) / 100),2),
-                                                sum(d.dnc_valortotal + round((d.dnc_valortotal * i.imp_porcentaje) / 100,2))
+                                                0,
+                                                sum(v.dfac_costoprecio),
+                                                sum(round(v.dfac_iva,2)),
+                                                sum(round(v.intereses,2)),
+                                                sum(v.dfac_costoprecio + round(v.dfac_iva,2) + round(v.intereses,2))
                                 from cnotacre c join dnotacre d on c.cnc_id = d.cnc_id
-                                                                join puntoventa p on c.pve_id = p.pve_id
-                                                                join almacen a on p.alm_id = a.alm_id
-                                                                join impuesto i on c.imp_id = i.imp_id
+												join v_dfacturacompleto_almespa v on d.cnc_id = v.cfa_id and d.dnc_id = v.dfac_id
+                                                join puntoventa p on c.pve_id = p.pve_id
+                                                join almacen a on p.alm_id = a.alm_id
                                 where (a.alm_id = " . $almacen . " or exists (select 1
                                                                                 from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
                                                 cast(c.cnc_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.id_dfactura_gex is not null
                                 group by a.alm_id, a.alm_nombre) as tabla
-                                group by alm_id, alm_nombre
-                                order by alm_nombre");
+                            group by alm_id, alm_nombre
+                            order by alm_nombre");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
