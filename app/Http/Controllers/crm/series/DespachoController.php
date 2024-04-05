@@ -21,7 +21,7 @@ class DespachoController extends Controller
     {
         $data = DB::select("select c.cmo_id,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
-                                    TO_CHAR(c.cmo_fecha::date, 'dd/mm/yyyy') as fecha,
+                                    c.cmo_fecha as fecha,
                                     concat(b.bod_nombre,' / ',b1.bod_nombre) as proveedor,
                                     'INV' as op,
                                     c.cmo_id as indice,
@@ -46,7 +46,7 @@ class DespachoController extends Controller
                             union
                             select c.cfa_id,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
-                                    TO_CHAR(c.cfa_fecha::date, 'dd/mm/yyyy') as fecha,
+                                    c.cfa_fecha as fecha,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
                                     'VTA' as op,
                                     c.cfa_id as indice,
@@ -78,7 +78,7 @@ class DespachoController extends Controller
     
     public function listadoDespachos()
     {
-        $data = DB::select("select c.numero, TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
+        $data = DB::select("select c.numero, c.fecha as fecha,
                                     bo.bod_nombre as bodega_origen,
                                     b.bod_nombre as bodega,
                                     (case when c.cmo_id is null then (select concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end))

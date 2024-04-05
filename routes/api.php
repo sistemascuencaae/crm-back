@@ -75,6 +75,7 @@ use App\Http\Controllers\crm\garantias\MetasController;
 use App\Http\Controllers\crm\garantias\MetasRecalcController;
 use App\Http\Controllers\crm\garantias\ProcMetasController;
 use App\Http\Controllers\crm\garantias\ComisionesController;
+use App\Http\Controllers\crm\garantias\ProcComiController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
@@ -736,6 +737,15 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byComision/{comi}', [ComisionesController::class, 'byComision']);
     Route::post('/grabaComi', [ComisionesController::class, 'grabaComi']);
     Route::get('/eliminaComision/{comi}', [ComisionesController::class, 'eliminaComision']);
+
+    //Proceso de Comisiones
+    Route::get('/listadoProcComi', [ProcComiController::class, 'listado']);
+    Route::get('/listadoAlmacenesProcComi', [ProcComiController::class, 'almacenes']);
+    Route::get('/listadoCumplimientos/{almacen}', [ProcComiController::class, 'cumplimientos']);
+    Route::get('/procesaComisiones/{cumplimiento}/{almacen}', [ProcComiController::class, 'procesaComisiones']);
+    Route::post('/grabaProcComi', [ProcComiController::class, 'grabaProcComi']);
+    Route::get('/byProcComi/{comi}/{cumpli}/{almacen}', [ProcComiController::class, 'byProcComi']);
+    Route::get('/eliminaProcComi/{comi}/{cumpli}/{almacen}', [ProcComiController::class, 'eliminaProcComi']);
 
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
