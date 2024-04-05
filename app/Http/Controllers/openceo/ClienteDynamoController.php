@@ -42,8 +42,9 @@ class ClienteDynamoController extends Controller
             $entidad = DB::selectOne("SELECT 
             *
             FROM public.entidad e 
-            left join public.cliente c on c.ent_id = e.ent_id 
-            WHERE e.ent_identificacion = ?", [$request->input('identificacion')]);
+            -- LEFT JOIN public.cliente c ON c.ent_id = e.ent_id 
+            WHERE e.ent_identificacion LIKE ?", ['%' . $request->input('identificacion') . '%']);
+
 
             if (!$entidad) {
 
