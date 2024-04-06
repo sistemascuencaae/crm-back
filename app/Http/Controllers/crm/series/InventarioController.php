@@ -20,7 +20,7 @@ class InventarioController extends Controller
     public function listado()
     {
         $data = DB::select("select c.numero,
-                                    TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
+                                    c.fecha as fecha,
                                     b.bod_nombre as bodega,
                                     (case c.estado when 'A' then 'PENDIENTE' when 'D' then 'DESACTIVO' when 'P' then 'PROCESADO' end) as estado,
                                     c.responsable,
