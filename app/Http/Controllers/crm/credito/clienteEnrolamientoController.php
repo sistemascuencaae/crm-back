@@ -174,7 +174,7 @@ class ClienteEnrolamientoController extends Controller
                         'caso_id' => $caso_id,
                         'titulo' => $titulo,
                         'descripcion' => $descripcion,
-                        'imagen' => $caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre,
+                        'imagen' => 'casos/' . $caso_id . '/galerias/' . $fechaFormateada . ' - ' . $nombre,
                         'tipo_gal_id' => 1,
                         'equifax' => true,
                         'enrolamiento_id' => $datosEnrolamiento['Uid']
