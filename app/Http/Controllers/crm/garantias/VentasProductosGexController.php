@@ -71,22 +71,22 @@ class VentasProductosGexController extends Controller
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', pv.pve_numero, ' - ',  c.cfa_numero) as num_factura,
                                     tp.tpr_nombre as tipo_producto,
                                     concat(p.pro_codigo, ' - ', p.pro_nombre) as producto,
-                                    d.dfac_valortotal as venta,
-                                    coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex),0) as gex,
-                                    d.dfac_valortotal + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex),0) as subtotal,
+                                    v.dfac_costoprecio as venta,
+                                    coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id),0) * (case when v.dfac_costoprecio < 0 then -1 else 1 end) as gex,
+                                    v.dfac_costoprecio + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id),0) * (case when v.dfac_costoprecio < 0 then -1 else 1 end) as subtotal,
                                     v.dfac_dsc1y2 as descuentos,
                                     v.dfac_iva as impuesto,
-                                    d.dfac_valortotal + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex),0) - v.dfac_dsc1y2 + v.dfac_iva as venta_neta,
+                                    v.dfac_costoprecio + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id),0) * (case when v.dfac_costoprecio < 0 then -1 else 1 end) - v.dfac_dsc1y2 + v.dfac_iva as venta_neta,
                                     v.intereses as interes,
-                                    d.dfac_valortotal + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex),0) - v.dfac_dsc1y2 + v.dfac_iva + v.intereses as total,
+                                    v.dfac_costoprecio + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id),0) * (case when v.dfac_costoprecio < 0 then -1 else 1 end) - v.dfac_dsc1y2 + v.dfac_iva + v.intereses as total,
                                     po.pol_nombre as forma_pago,
                                     concat(ftp.factpa_plazo, ' ', ftp.factpa_tiempo) as plazo
                             from cfactura c join dfactura d on c.cfa_id = d.cfa_id
                                             join v_dfacturacompleto_almespa v on d.cfa_id = v.cfa_id and d.dfac_id = v.dfac_id
-                                            join fac_tipo_pago ftp on c.cfa_id = ftp.cfa_id
+                                            left outer join fac_tipo_pago ftp on c.cfa_id = ftp.cfa_id
                                             join producto p on d.pro_id = p.pro_id and pro_inventario = true
                                             join tipo_producto tp on p.tpr_id = tp.tpr_id
-                                            join politica po on c.pol_id = po.pol_id
+                                            left outer join politica po on c.pol_id = po.pol_id
                                             join puntoventa pv on c.pve_id = pv.pve_id
                                             join ctipocom t on c.cti_id = t.cti_id
                                             join almacen a on pv.alm_id = a.alm_id
@@ -113,22 +113,22 @@ class VentasProductosGexController extends Controller
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', pv.pve_numero, ' - ',  c.cfa_numero) as num_factura,
                                     tp.tpr_nombre as tipo_producto,
                                     concat(p.pro_codigo, ' - ', p.pro_nombre) as producto,
-                                    d.dfac_valortotal as venta,
-                                    coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex),0) as gex,
-                                    d.dfac_valortotal + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex),0) as subtotal,
+                                    v.dfac_costoprecio as venta,
+                                    coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id),0) * (case when v.dfac_costoprecio < 0 then -1 else 1 end) as gex,
+                                    v.dfac_costoprecio + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id),0) * (case when v.dfac_costoprecio < 0 then -1 else 1 end) as subtotal,
                                     v.dfac_dsc1y2 as descuentos,
                                     v.dfac_iva as impuesto,
-                                    d.dfac_valortotal + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex),0) - v.dfac_dsc1y2 + v.dfac_iva as venta_neta,
+                                    v.dfac_costoprecio + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id),0) * (case when v.dfac_costoprecio < 0 then -1 else 1 end) - v.dfac_dsc1y2 + v.dfac_iva as venta_neta,
                                     v.intereses as interes,
-                                    d.dfac_valortotal + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex),0) - v.dfac_dsc1y2 + v.dfac_iva + v.intereses as total,
+                                    v.dfac_costoprecio + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id),0) * (case when v.dfac_costoprecio < 0 then -1 else 1 end) - v.dfac_dsc1y2 + v.dfac_iva + v.intereses as total,
                                     po.pol_nombre as forma_pago,
                                     concat(ftp.factpa_plazo, ' ', ftp.factpa_tiempo) as plazo
                             from cfactura c join dfactura d on c.cfa_id = d.cfa_id
                                             join v_dfacturacompleto_almespa v on d.cfa_id = v.cfa_id and d.dfac_id = v.dfac_id
-                                            join fac_tipo_pago ftp on c.cfa_id = ftp.cfa_id
+                                            left outer join fac_tipo_pago ftp on c.cfa_id = ftp.cfa_id
                                             join producto p on d.pro_id = p.pro_id and pro_inventario = true
                                             join tipo_producto tp on p.tpr_id = tp.tpr_id
-                                            join politica po on c.pol_id = po.pol_id
+                                            left outer join politica po on c.pol_id = po.pol_id
                                             join puntoventa pv on c.pve_id = pv.pve_id
                                             join ctipocom t on c.cti_id = t.cti_id
                                             join almacen a on pv.alm_id = a.alm_id

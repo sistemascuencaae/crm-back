@@ -94,6 +94,31 @@ class VentasTotalesGexController extends Controller
                                                 (e.emp_id = " . $vendedor . " or 0 = " . $vendedor . ") and
                                                 cast(c.cnc_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.id_dfactura_gex is not null
+                                group by a.alm_id, a.alm_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos
+                                union all
+                                select a.alm_id, a.alm_nombre,
+                                                e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor,
+                                                0,
+                                                0,
+                                                0,
+                                                0,
+                                                sum(cg.valor_gex),
+                                                sum(round((cg.valor_gex * (select imp_porcentaje from impuesto where imp_id = c.imp_id)) / 100,2)),
+                                                0,
+                                                sum(cg.valor_gex + round((cg.valor_gex * (select imp_porcentaje from impuesto where imp_id = c.imp_id)) / 100,2))
+                                from cfactura c join dfactura d on c.cfa_id = d.cfa_id
+                                                join v_dfacturacompleto_almespa v on d.cfa_id = v.cfa_id and d.dfac_id = v.dfac_id
+                                                join puntoventa p on c.pve_id = p.pve_id
+                                                join almacen a on p.alm_id = a.alm_id
+                                                join empleado e on c.vnd_id = e.emp_id
+                                                join entidad en on e.ent_id = en.ent_id
+                                                join cgex cg on d.dfac_id = cg.id_dfactura
+                                where (a.alm_id = " . $almacen . " or exists (select 1
+                                                                                from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
+                                                                                where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
+                                                (e.emp_id = " . $vendedor . " or 0 = " . $vendedor . ") and
+                                                cast(v.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
+                                                and c.cfa_transacc = 2
                                 group by a.alm_id, a.alm_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos) as tabla
                             group by alm_id, alm_nombre, emp_id, vendedor
                             order by alm_nombre, vendedor");
@@ -146,6 +171,27 @@ class VentasTotalesGexController extends Controller
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
                                                 cast(c.cnc_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.id_dfactura_gex is not null
+                                group by a.alm_id, a.alm_nombre
+                                union all
+                                select a.alm_id, a.alm_nombre,
+                                                0,
+                                                0,
+                                                0,
+                                                0,
+                                                sum(cg.valor_gex),
+                                                sum(round((cg.valor_gex * (select imp_porcentaje from impuesto where imp_id = c.imp_id)) / 100,2)),
+                                                0,
+                                                sum(cg.valor_gex + round((cg.valor_gex * (select imp_porcentaje from impuesto where imp_id = c.imp_id)) / 100,2))
+                                from cfactura c join dfactura d on c.cfa_id = d.cfa_id
+                                                join v_dfacturacompleto_almespa v on d.cfa_id = v.cfa_id and d.dfac_id = v.dfac_id
+                                                join puntoventa p on c.pve_id = p.pve_id
+                                                join almacen a on p.alm_id = a.alm_id
+                                                join cgex cg on d.dfac_id = cg.id_dfactura
+                                where (a.alm_id = " . $almacen . " or exists (select 1
+                                                                                from gex.rel_usuario_almacenes rua join crm.users u on rua.usu_id = u.usu_id
+                                                                                where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
+                                                cast(v.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
+                                                and c.cfa_transacc = 2
                                 group by a.alm_id, a.alm_nombre) as tabla
                             group by alm_id, alm_nombre
                             order by alm_nombre");
