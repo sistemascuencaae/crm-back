@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\comercializacion\ComercializacionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OpenceoController;
@@ -30,4 +31,6 @@ Route::group([
     Route::get('ciudades', [OpenceoController::class, 'ciudades']);
     Route::get('cargos', [OpenceoController::class, 'cargos']);
     Route::get('v_dmovinv', [OpenceoController::class, 'v_dmovinv']);
+    Route::get('/storeVentas', [ComercializacionController::class, 'storeVentas']);
+    Route::post('/ventasAlmacen', [ComercializacionController::class, 'ventasAlmacen']);
 });
