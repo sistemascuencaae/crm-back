@@ -25,7 +25,7 @@ class ContratosController extends Controller
                                     cg.factura_gex,
                                     concat(cg.identificacion, ' - ', cg.nom_cliente) as cliente,
                                     cg.producto,
-                                    TO_CHAR(cg.fecha::date, 'dd/mm/yyyy') as fecha,
+                                    cg.fecha as fecha,
                                     cg.alm_id
                             from gex.contrato_gex cg
                             order by cg.nom_almacen, cg.numero");

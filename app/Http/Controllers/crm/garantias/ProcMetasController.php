@@ -89,8 +89,8 @@ class ProcMetasController extends Controller
                                 (select a.alm_id,
                                         e.emp_id,
                                         concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor,
-                                        sum((case when pc.tipo_servicio = 'G' or pc.tipo_servicio = 'N' then 0 else d.dfac_valortotal + v.intereses end)) as venta,
-                                        sum((case when pc.tipo_servicio = 'G' or pc.tipo_servicio = 'N' then d.dfac_valortotal + v.intereses else 0 end)) as venta_gex
+                                        sum((case when pc.tipo_servicio = 'G' or pc.tipo_servicio = 'N' then 0 else v.dfac_costoprecio + v.intereses end)) as venta,
+                                        sum((case when pc.tipo_servicio = 'G' or pc.tipo_servicio = 'N' then v.dfac_costoprecio + v.intereses else 0 end)) as venta_gex
                                 from cfactura c join dfactura d on c.cfa_id = d.cfa_id
                                                 join v_dfacturacompleto_almespa v on d.cfa_id = v.cfa_id and d.dfac_id = v.dfac_id
                                                 join producto p on d.pro_id = p.pro_id
@@ -117,8 +117,8 @@ class ProcMetasController extends Controller
                                     'J'
                             from
                                 (select a.alm_id,
-                                        sum((case when pc.tipo_servicio = 'G' or pc.tipo_servicio = 'N' then 0 else d.dfac_valortotal + v.intereses end)) as venta,
-                                        sum((case when pc.tipo_servicio = 'G' or pc.tipo_servicio = 'N' then d.dfac_valortotal + v.intereses else 0 end)) as venta_gex
+                                        sum((case when pc.tipo_servicio = 'G' or pc.tipo_servicio = 'N' then 0 else v.dfac_costoprecio + v.intereses end)) as venta,
+                                        sum((case when pc.tipo_servicio = 'G' or pc.tipo_servicio = 'N' then v.dfac_costoprecio + v.intereses else 0 end)) as venta_gex
                                 from cfactura c join dfactura d on c.cfa_id = d.cfa_id
                                                 join v_dfacturacompleto_almespa v on d.cfa_id = v.cfa_id and d.dfac_id = v.dfac_id
                                                 join producto p on d.pro_id = p.pro_id

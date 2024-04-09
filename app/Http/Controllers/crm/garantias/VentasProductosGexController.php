@@ -99,6 +99,7 @@ class VentasProductosGexController extends Controller
                                     and ((case when pc.tipo_servicio = 'M' then pv.pve_id else a.alm_id end) = " . $sucursal . " or 0 = " . $sucursal . ")
                                     and (po.pol_id = " . $formaPago . " or 0 = " . $formaPago . ")
                                     and (e.emp_id= " . $vendedor . " or 0 = " . $vendedor . ")
+                                    and exists (select 1 from gex.rel_linea_gex rlg where rlg.tpr_id = tp.tpr_id)
                             order by c.cfa_fecha, sucursal, vendedor, num_factura");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -141,6 +142,7 @@ class VentasProductosGexController extends Controller
                                     and ((case when pc.tipo_servicio = 'M' then pv.pve_id else a.alm_id end) = " . $sucursal . " or 0 = " . $sucursal . ")
                                     and (po.pol_id = " . $formaPago . " or 0 = " . $formaPago . ")
                                     and (e.emp_id= " . $vendedor . " or 0 = " . $vendedor . ")
+                                    and exists (select 1 from gex.rel_linea_gex rlg where rlg.tpr_id = tp.tpr_id)
                             order by c.cfa_fecha, sucursal, vendedor, num_factura");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));

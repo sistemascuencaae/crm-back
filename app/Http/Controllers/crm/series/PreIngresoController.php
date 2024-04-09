@@ -19,7 +19,7 @@ class PreIngresoController extends Controller
     
     public function listado()
     {
-        $data = DB::select("select c.numero, TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha, guia_remision,
+        $data = DB::select("select c.numero, c.fecha as fecha, guia_remision,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c2.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end as estado,
                                     (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.dpreingreso d2 where d2.numero = c.numero) as preingresado,
@@ -312,7 +312,7 @@ class PreIngresoController extends Controller
     public function cargaIngresos() {
         $data = DB::select("select c.cmo_id,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
-                                    TO_CHAR(c.cmo_fecha::date, 'dd/mm/yyyy') as fecha,
+                                    c.cmo_fecha as fecha,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     'INV' as op,
                                     (select cast(sum(d.dmo_cantidad) as integer) from dmovinv d where d.cmo_id = c.cmo_id) as cantidad,
@@ -331,7 +331,7 @@ class PreIngresoController extends Controller
                             union
                             select c.cfa_id,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
-                                    TO_CHAR(c.cfa_fecha::date, 'dd/mm/yyyy') as fecha,
+                                    c.cfa_fecha as fecha,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     'VTA' as op,
                                     (select cast(sum(d.dfac_cantidad) as integer) from dfactura d where d.cfa_id = c.cfa_id) as cantidad,
@@ -389,7 +389,7 @@ class PreIngresoController extends Controller
 
     public function cargaRelaciones() {
         $data = DB::select("select c.numero, (case when ci.cmo_numero is null then concat(t1.cti_sigla,' - ', a1.alm_codigo, ' - ', p1.pve_numero, ' - ',  cf.cfa_numero) else concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  ci.cmo_numero) end) as relacionado,
-                                    TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
+                                    c.fecha as fecha,
                                     c.guia_remision, b.bod_nombre,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     (select cast(sum((case d.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.dpreingreso d where d.numero = c.numero) as mov,
