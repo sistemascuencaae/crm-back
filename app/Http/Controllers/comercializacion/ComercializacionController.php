@@ -35,9 +35,6 @@ class ComercializacionController extends Controller
     public function ventasAlmacen(Request $request)
     {
 
-
-
-
         // Recupera el array enviado desde Angular
         $empleados = $request->input('empleados');
         $agencia = $request->input('agencia');
