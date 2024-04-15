@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
+use App\Http\Controllers\comercializacion\ComercializacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
@@ -103,7 +104,7 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::group(['middleware' => 'api'], function ($router) {
-    Route::get('/websocket/active-channels-count', [WebSocketController::class, 'getActiveChannelsCount']);
+    //Route::get('/websocket/active-channels-count', [WebSocketController::class, 'getActiveChannelsCount']);
 
     Route::post('/register', [JWTController::class, 'register']);
     Route::post('/login', [JWTController::class, 'login']);
@@ -135,7 +136,7 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 
 
 
-//----------------------- RUTAS FELIPE ----------------------------------------------
+
 //----------------------- RUTAS FELIPE ----------------------------------------------
 //----------------------- RUTAS FELIPE ----------------------------------------------
 Route::group(["prefix" => "crm"], function ($router) {
@@ -172,7 +173,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
-    Route::put('/actualizarCaso/{casoId}', [CasoController::class, 'actualizarCaso']); //
+    Route::put('/actualizarCaso/{casoId}/{tabId}', [CasoController::class, 'actualizarCaso']); //
     Route::put('/asignarmeCaso/{casoId}/{userId}', [CasoController::class, 'asignarmeCaso']); //
 
 

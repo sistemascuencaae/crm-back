@@ -99,12 +99,18 @@ class CasoController extends Controller
                 //$caso->user_creador_id = $userLoginId;
                 $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
                 $caso->save();
+
+
+
                 for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
                     $miembro->user_id = $miembros[$i];
                     //$miembro->chat_group_id = $newGrupo->id;
                     $caso->miembros()->save($miembro);
                 }
+
+
+
                 $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
 
                 $soporteController = new SoporteController();
@@ -1359,19 +1365,30 @@ class CasoController extends Controller
         where tc.nombre = 'SOLICITUD DE CREDITO APP MOVIL' and tc.estado = true limit 1;");
 
             if ($configuracion && $opm) {
+
+
+
+
+
                 //--- Add miembros administradores del tablero
                 $miembrosAdminTablero = DB::select('SELECT u.id from crm.tablero_user tu
-            inner join crm.users u on u.id = tu.user_id
-            where tu.tab_id = ? and u.usu_tipo in (2,3);', [$configuracion->tab_id]);
+                inner join crm.users u on u.id = tu.user_id
+                where tu.tab_id = ? and u.usu_tipo in (2,3);', [$configuracion->tab_id]);
                 $miembros = [];
                 foreach ($miembrosAdminTablero as $miembro) {
                     array_push($miembros, $miembro->id);
                 }
+
+
+
+
+
                 // usuario de acuerdo al empleado existe en el tablero
                 $usuarioCreador = DB::selectOne("SELECT us.id as user_id, tu.tab_id  FROM crm.users us
-              left join crm.tablero_user tu on tu.user_id = us.id
-              where emp_id = ? and tu.tab_id = ?", [$opm->emp_id, $configuracion->tab_id]);
-
+                left join crm.tablero_user tu on tu.user_id = us.id
+                where emp_id = ? and tu.tab_id = ?", [$opm->emp_id, $configuracion->tab_id]);
+                //se agrega el usuario
+                array_push($miembros, $usuarioCreador ? $usuarioCreador->user_id : $configuracion->user_id);
                 // Fecha actual
                 $fechaActual = Carbon::now();
 
@@ -1469,7 +1486,7 @@ class CasoController extends Controller
         }
     }
 
-    public function actualizarCaso(Request $request, $casoId)
+    public function actualizarCaso(Request $request, $casoId, $tabId)
     {
         $log = new Funciones();
 
@@ -1496,6 +1513,8 @@ class CasoController extends Controller
                     $caso->user_id
                 );
                 $data = $this->getCaso($casoId);
+                $robot = new RobotCasoController();
+                $robot->addMiembro($data->user_id, $casoId, $tabId);
                 broadcast(new TableroEvent($data));
                 $log->logInfo(CasoController::class, 'Se actualizo con exito el caso #' . $casoId);
 
@@ -1512,24 +1531,24 @@ class CasoController extends Controller
         }
     }
 
-    public function asignarmeCaso($casoId, $userId)
-    {
-        try {
-            $dataCaso = Caso::find($casoId);
-            if ($dataCaso) {
-                $robot = new RobotCasoController();
-                $robot->addMiembro($userId, $casoId);
-                $dataCaso->user_id = $userId;
-                $dataCaso->save();
-                $caso = $this->getCaso($casoId);
-                broadcast(new TableroEvent($caso));
-                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $caso));
-            }
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-        }
-    }
+    // public function asignarmeCaso($casoId, $userId)
+    // {
+    //     try {
+    //         $dataCaso = Caso::find($casoId);
+    //         if ($dataCaso) {
+    //             $robot = new RobotCasoController();
+    //             $robot->addMiembro($userId, $casoId);
+    //             $dataCaso->user_id = $userId;
+    //             $dataCaso->save();
+    //             $caso = $this->getCaso($casoId);
+    //             broadcast(new TableroEvent($caso));
+    //             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $caso));
+    //         }
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+    //     }
+    // }
 
     public function getCasoFormulario()
     {
