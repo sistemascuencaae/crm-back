@@ -1486,7 +1486,7 @@ class CasoController extends Controller
         }
     }
 
-    public function actualizarCaso(Request $request, $casoId)
+    public function actualizarCaso(Request $request, $casoId, $tabId)
     {
         $log = new Funciones();
 
@@ -1513,6 +1513,8 @@ class CasoController extends Controller
                     $caso->user_id
                 );
                 $data = $this->getCaso($casoId);
+                $robot = new RobotCasoController();
+                $robot->addMiembro($data->user_id, $casoId, $tabId);
                 broadcast(new TableroEvent($data));
                 $log->logInfo(CasoController::class, 'Se actualizo con exito el caso #' . $casoId);
 
@@ -1529,24 +1531,24 @@ class CasoController extends Controller
         }
     }
 
-    public function asignarmeCaso($casoId, $userId)
-    {
-        try {
-            $dataCaso = Caso::find($casoId);
-            if ($dataCaso) {
-                $robot = new RobotCasoController();
-                $robot->addMiembro($userId, $casoId);
-                $dataCaso->user_id = $userId;
-                $dataCaso->save();
-                $caso = $this->getCaso($casoId);
-                broadcast(new TableroEvent($caso));
-                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $caso));
-            }
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-        }
-    }
+    // public function asignarmeCaso($casoId, $userId)
+    // {
+    //     try {
+    //         $dataCaso = Caso::find($casoId);
+    //         if ($dataCaso) {
+    //             $robot = new RobotCasoController();
+    //             $robot->addMiembro($userId, $casoId);
+    //             $dataCaso->user_id = $userId;
+    //             $dataCaso->save();
+    //             $caso = $this->getCaso($casoId);
+    //             broadcast(new TableroEvent($caso));
+    //             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $caso));
+    //         }
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe'));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+    //     }
+    // }
 
     public function getCasoFormulario()
     {

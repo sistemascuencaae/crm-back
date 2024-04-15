@@ -73,14 +73,12 @@ class RobotCasoController extends Controller
                 } else if ($banMostrarVistaCreditoAprobado == 2) {
                     return view('mail.creditoRechazado');
                 } else {
-                    return $data;//response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
+                    return $data; //response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $data));
                 }
             });
             return response()->json(RespuestaApi::returnResultado('success', 'Reasignado con exito', $result));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al reasignar', $e));
-
         }
     }
 
@@ -91,6 +89,8 @@ class RobotCasoController extends Controller
         $formula = EstadosFormulas::where('id', $estadoFormId)
             ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
             ->first();
+
+
 
         if (!$casoEnProceso) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
@@ -127,7 +127,6 @@ class RobotCasoController extends Controller
                 DB::update("UPDATE public.cpedido_proforma set ecr_id=(select ecr_id from public.estado_credito where ecr_codigo='REA')
                             where cpp_id = ?", [$casoEnProceso->cpp_id]);
             }
-
         }
 
         //--- datos anteriores
@@ -189,6 +188,7 @@ class RobotCasoController extends Controller
                 if ($user_id) {
                     $casoEnProceso->user_id = $user_id;
                     $casoEnProceso->save();
+                    $this->addMiembro($user_id, $casoEnProceso->id, $formula->tablero_id);
                     $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
                     $this->calcularTiemposCaso($casoEnProceso);
                     return $casoEnProceso;
@@ -223,6 +223,7 @@ class RobotCasoController extends Controller
         if ($controlTiemposCaso) {
             $casoEnProceso->user_id = $controlTiemposCaso->user_id;
             $casoEnProceso->save();
+            $this->addMiembro($casoEnProceso->user_id, $casoEnProceso->id, $formula->tablero_id);
             $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
             $this->calcularTiemposCaso($casoEnProceso);
             return $casoEnProceso;
@@ -233,6 +234,7 @@ class RobotCasoController extends Controller
         where u.usu_tipo = 1 and tu.tab_id = ? limit 1', [$formula->tablero_id]);
         $casoEnProceso->user_id = $userGeneralNuevoTablero->id;
         $casoEnProceso->save();
+        $this->addMiembro($casoEnProceso->user_id, $casoEnProceso->id, $formula->tablero_id);
         $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
         $this->calcularTiemposCaso($casoEnProceso);
         return $casoEnProceso;
@@ -271,8 +273,9 @@ class RobotCasoController extends Controller
         return $userMenorNumCasos;
     }
 
-    public function addMiembro($userId, $casoId)
+    public function addMiembro($userId, $casoId, $nuevoTabId)
     {
+
         $userGeneral = DB::selectOne('SELECT * from crm.users WHERE id = ? and usu_tipo = 1', [$userId]);
         if (!$userGeneral) {
             $userExiste = DB::selectOne("SELECT * from crm.miembros m where m.user_id = ? and m.caso_id = ?", [$userId, $casoId]);
@@ -281,6 +284,20 @@ class RobotCasoController extends Controller
                 $miembro->user_id = $userId;
                 $miembro->caso_id = $casoId;
                 $miembro->save();
+            }
+        }
+        $miembrosAdminTablero = DB::select('SELECT u.id from crm.tablero_user tu
+                inner join crm.users u on u.id = tu.user_id
+                where tu.tab_id = ? and u.usu_tipo in (2,3);', [$nuevoTabId]);
+        $idsMiembros = DB::selectOne("SELECT array_to_string(array_agg(m.user_id), ','::text) AS ids from crm.miembros m
+        where caso_id = ? ",[$casoId]);
+        $idsArray = explode(",", $idsMiembros->ids); // Convertir la cadena a un array
+        foreach ($miembrosAdminTablero as $miembro) {
+            if (!in_array($miembro->id, $idsArray)) { // Verificar si el ID está en el array
+                $nuevoMiembro = new Miembros(); // Crear un nuevo objeto Miembros
+                $nuevoMiembro->user_id = $miembro->id; // Asignar el ID del usuario
+                $nuevoMiembro->caso_id = $casoId;
+                $nuevoMiembro->save(); // Guardar el nuevo miembro
             }
         }
     }
