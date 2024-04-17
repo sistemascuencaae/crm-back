@@ -1555,4 +1555,43 @@ class CasoController extends Controller
         $casos = Caso::with('formValores.campoValores.campo.formSeccion.formulario')->get();
         return response($casos);
     }
+
+    public function deleteCasoById($caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $dataCaso = $this->getCaso($caso_id);
+
+            $data = DB::transaction(function () use ($caso_id) {
+                $delete_solicitud_credito = DB::delete("DELETE FROM crm.solicitud_credito where caso_id = ?", [$caso_id]);
+                $delete_cliente_enrolamiento = DB::delete("DELETE FROM crm.cliente_enrolamiento where caso_id = ?", [$caso_id]);
+                $delete_requerimientos_caso = DB::delete("DELETE FROM crm.requerimientos_caso where caso_id = ?", [$caso_id]);
+                $delete_galerias = DB::delete("DELETE FROM crm.galerias g WHERE g.tipo_gal_id NOT IN (10, 11) and caso_id = ?", [$caso_id]);
+                $delete_archivos = DB::delete("DELETE FROM crm.archivos where caso_id = ?", [$caso_id]);
+                $delete_notificaciones = DB::delete("DELETE FROM crm.notificaciones where caso_id = ?", [$caso_id]);
+                $delete_tareas = DB::delete("DELETE FROM crm.tareas where caso_id = ?", [$caso_id]);
+                $delete_miembros = DB::delete("DELETE FROM crm.miembros where caso_id = ?", [$caso_id]);
+                $delete_comentarios = DB::delete("DELETE FROM crm.comentarios where caso_id = ?", [$caso_id]);
+                $delete_etiquetas = DB::delete("DELETE FROM crm.etiquetas where caso_id = ?", [$caso_id]);
+                $delete_nota = DB::delete("DELETE FROM crm.nota where caso_id = ?", [$caso_id]);
+                $delete_caso = DB::delete("DELETE FROM crm.caso where id = ?", [$caso_id]);
+                $delete_audits = DB::delete("DELETE FROM crm.audits where caso_id = ?", [$caso_id]);
+                $delete_control_tiempos_caso = DB::delete("DELETE FROM crm.control_tiempos_caso where caso_id = ?", [$caso_id]);
+                return 'ok';
+            });
+
+            $dataCaso->descripcion = "DELETED_BY_SUPER_USER";
+
+            broadcast(new TableroEvent($dataCaso));
+
+            $log->logInfo(CasoController::class, 'Se elimino con exito el caso con el ID: ' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $dataCaso));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al eliminar el caso con el ID: ' . $caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
