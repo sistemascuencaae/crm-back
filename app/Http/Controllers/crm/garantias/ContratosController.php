@@ -96,10 +96,10 @@ class ContratosController extends Controller
                                     c.cfa_id as cfa_id_gex,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as factura_gex,
                                     cg.num_meses as meses_gex,
-                                    c.cfa_fecha as fecha_desde,
-                                    c.cfa_fecha + cg.num_meses * interval'1 month'  as fecha_hasta,
+                                    (c.cfa_fecha + 12 * interval'1 month') + 1 * interval'1 day' as fecha_desde,
+                                    ((c.cfa_fecha + 12 * interval'1 month') + 1 * interval'1 day') + cg.num_meses * interval'1 month'  as fecha_hasta,
                                     (select pc.km_garantia from gex.producto_config pc where pc.pro_id = pr.pro_id) as km_garantia,
-                                    (2) as km_factor,
+                                    (select pc.km_factor from gex.producto_config pc where pc.pro_id = pr.pro_id) as km_factor,
                                     (select pc.tipo_servicio from gex.producto_config pc where pc.pro_id = pr.pro_id) as tipo_servicio
                             from cfactura c join dfactura d on c.cfa_id = d.cfa_id
                                             join producto pr on d.pro_id = pr.pro_id
