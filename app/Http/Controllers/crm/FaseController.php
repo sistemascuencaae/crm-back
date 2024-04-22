@@ -193,7 +193,7 @@ class FaseController extends Controller
             return response()->json(RespuestaApi::returnResultado('exception', 'Error al crear fase', $e));
         }
     }
-    public function listarfases($tabId, $fechaInicio, $fechaFin, $tipoTablero = null)
+    public function listarfases1($tabId, $fechaInicio, $fechaFin, $tipoTablero = null)
     {
         $data = Fase::with([
             'caso.user',
@@ -210,8 +210,15 @@ class FaseController extends Controller
                 $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
             },
             'condicionFaseMover',
-            'caso.estadodos',
             'caso.tipocaso',
+            //'caso.estadodos',
+            'caso.estadodos' => function ($query) use ($tipoTablero) {
+                if ($tipoTablero == 'KANBAN') {
+                    $query->where('nombre', '<>', 'TERMINADO');
+                } else {
+                    $query->whereNotNull('nombre');
+                }
+            },
             'caso' => function ($query) use ($fechaInicio, $fechaFin) {
                 $query->whereBetween('created_at', [
                     Carbon::parse($fechaInicio)->startOfDay(),
@@ -221,6 +228,49 @@ class FaseController extends Controller
         ])->where('tab_id', $tabId)
             ->orderBy('orden', 'asc')
             ->get();
+
+        return $data;
+    }
+    public function listarfases($tabId, $fechaInicio, $fechaFin, $tipoTablero = null)
+    {
+        $query = Fase::query()
+            ->with([
+                'caso.user',
+                'caso.userCreador',
+                'caso.clienteCrm',
+                'caso.resumen',
+                'caso.tareas' => function ($query) use ($tabId) {
+                    $query->where('tab_id', $tabId);
+                },
+                'caso.actividad',
+                'caso.miembros.usuario.departamento',
+                'caso.Etiqueta',
+                'caso.req_caso' => function ($query) {
+                    $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                },
+                'condicionFaseMover',
+                'caso.estadodos',
+                'caso.tipocaso',
+                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero) {
+                    $query->whereBetween('created_at', [
+                        Carbon::parse($fechaInicio)->startOfDay(),
+                        Carbon::parse($fechaFin)->endOfDay(),
+                    ]);
+                    $query->whereBetween('fecha_vencimiento', [
+                        Carbon::parse($fechaInicio)->startOfDay(),
+                        Carbon::parse($fechaFin)->endOfDay(),
+                    ]);
+                    if ($tipoTablero === 'KANBAN') {
+                        // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
+                        $query->whereDoesntHave('estadodos', function ($subquery) {
+                            $subquery->where('nombre', 'TERMINADO');
+                        });
+                    }
+                },
+            ])
+            ->where('tab_id', $tabId);
+
+        $data = $query->orderBy('orden', 'asc')->get();
 
         return $data;
     }
