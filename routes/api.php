@@ -544,6 +544,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // CONTROL TIEMPOS CASO
 
     Route::post('/editCalcularTiemposCaso/{caso_id}', [CasoController::class, 'editCalcularTiemposCaso']); // Editar
+    Route::delete('/deleteCasoById/{caso_id}', [CasoController::class, 'deleteCasoById']); // Eliminar caso por el id
 
     // TIPO CASO FORMULAS
 
