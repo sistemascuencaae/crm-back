@@ -3,6 +3,7 @@
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\ComercializacionController;
+use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
@@ -561,6 +562,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTutorial', [TutorialController::class, 'addTutorial']);
     Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
     Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
+
+    // DOCTRAN 
+    Route::get('/listDoctranOpenceo/{ddo_doctran}', [RenegociacionController::class, 'listDoctranOpenceo']); // Lista los doctran de openceo
 
 });
 
