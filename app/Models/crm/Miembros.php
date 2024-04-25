@@ -44,6 +44,18 @@ class Miembros extends Model
 
     public function usuario()
     {
-        return $this->belongsTo(User::class, "user_id", "id");
+        return $this->belongsTo(User::class, "user_id", "id")->select(
+            'id',
+            'name',
+            'surname',
+            'usu_id',
+            'usu_tipo_analista',
+            'dep_id',
+            'estado',
+            'usu_tipo',
+            'usu_alias',
+            'tab_id',
+            'en_linea'
+        );
     }
 }
