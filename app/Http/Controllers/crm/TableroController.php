@@ -347,32 +347,11 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
-            $data = VistaMisCasos::where('id_usuario_miembro', $user_id)->with('miembros.usuario.departamento', 'estadodos')->get();
-
-            // $data1 = DB::select("select
-            // u.id as id_usuario_miembro,  u.name as usuario_miembro,u2.name as dueno_caso, cs.nombre as nombre, cs.id as caso_id,
-            // cs.fecha_vencimiento, cs.created_at,ent.ent_id, (ent.ent_apellidos || ' '|| ent.ent_nombres) as cliente, f.nombre  as fase_nombre, f.color_id as fase_color, cs.prioridad,
-            // cg.uniqd, cg.nombre as nombre_grupo_chat, f.tab_id,tab.nombre, cs.estado_2
-            // from crm.miembros m
-            // inner join crm.caso cs on cs.id = m.caso_id
-            // inner join crm.users u on u.id = m.user_id
-            // inner join crm.users u2 on u2.id = cs.user_id
-            // inner join crm.fase f on f.id = cs.fas_id
-            // inner join crm.tablero tab on tab.id = f.tab_id
-            // inner join public.clienteCrm ent on ent.ent_id = cs.ent_id
-            // inner join crm.chat_groups cg on cg.id = m.chat_group_id
-            // where u.id = " . $user_id . "
-            // order By caso_id DESC");
-
-
-
-
-            // $data = (object) [
-            //     "miscasos" => $usuarios,
-            //     "miembros" => $departamentos,
-            //     "tableros" => $tableros,
-            //     "depUserTablero" => null
-            // ];
+            $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
+            ->with([
+                'miembros.usuario.departamento',
+                'estadodos'
+            ])->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
 
