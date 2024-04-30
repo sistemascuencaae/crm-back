@@ -563,8 +563,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
     Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
 
-    // DOCTRAN 
-    Route::get('/listDoctranOpenceo/{ddo_doctran}', [RenegociacionController::class, 'listDoctranOpenceo']); // Lista los doctran de openceo
+    // PAGARE
+    Route::post('/addHistorialPagare', [RenegociacionController::class, 'addHistorialPagare']); // add los doctran de openceo al crm
+    Route::get('/listHistorialPagare/{ddo_doctran}', [RenegociacionController::class, 'listHistorialPagare']); // listar doctran del crm
+    Route::get('/getPagareByCodigoHistorial/{codigo_historial}', [RenegociacionController::class, 'getPagareByCodigoHistorial']); // obtener pagare del crm
 
 });
 
