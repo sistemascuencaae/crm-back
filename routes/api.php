@@ -83,6 +83,7 @@ use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
+use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\WebSocketController;
 use Illuminate\Support\Facades\Route;
@@ -562,6 +563,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
     Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
 
+    // RENEGOCIACION
+    Route::post('/validarFacturaRenegociacion', [DdocumentoController::class, 'validarFacturaRenegociacion']);
 });
 
 Route::group([], function ($router) {
