@@ -3,6 +3,7 @@
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\ComercializacionController;
+use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
@@ -83,6 +84,7 @@ use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
+use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\WebSocketController;
 use Illuminate\Support\Facades\Route;
@@ -173,7 +175,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
-    Route::put('/actualizarCaso/{casoId}', [CasoController::class, 'actualizarCaso']); //
+    Route::put('/actualizarCaso/{casoId}/{tabId}', [CasoController::class, 'actualizarCaso']); //
     Route::put('/asignarmeCaso/{casoId}/{userId}', [CasoController::class, 'asignarmeCaso']); //
 
 
@@ -544,6 +546,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // CONTROL TIEMPOS CASO
 
     Route::post('/editCalcularTiemposCaso/{caso_id}', [CasoController::class, 'editCalcularTiemposCaso']); // Editar
+    Route::delete('/deleteCasoById/{caso_id}', [CasoController::class, 'deleteCasoById']); // Eliminar caso por el id
 
     // TIPO CASO FORMULAS
 
@@ -560,6 +563,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTutorial', [TutorialController::class, 'addTutorial']);
     Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
     Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
+
+    // RENEGOCIACION
+    Route::post('/validarFacturaRenegociacion', [DdocumentoController::class, 'validarFacturaRenegociacion']);
+
+    // PAGARE
+    Route::post('/addHistorialPagare', [RenegociacionController::class, 'addHistorialPagare']); // add los doctran de openceo al crm
+    Route::get('/listHistorialPagare/{ddo_doctran}', [RenegociacionController::class, 'listHistorialPagare']); // listar doctran del crm
+    Route::get('/getPagareByCodigoHistorial/{codigo_historial}', [RenegociacionController::class, 'getPagareByCodigoHistorial']); // obtener pagare del crm
 
 });
 

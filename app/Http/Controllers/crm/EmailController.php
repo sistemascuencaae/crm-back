@@ -37,7 +37,6 @@ class EmailController extends Controller
             Mail::to($email)->send(new SendMail($object));
             // return "Correo electrónico enviado correctamente a " . $email;
             $log->logInfo(EmailController::class, 'Correo electrónico enviado correctamente a ' . $email);
-
         } catch (Exception $e) {
             $log->logError(EmailController::class, 'Error al enviar el correo electrónico a ' . $email, $e);
 
@@ -64,14 +63,15 @@ class EmailController extends Controller
                     [$cliId, $reqCasoId, $casoId]
                 );
             }
-
             $object = (object) [
                 'email' => $request->input('email'),
                 'asunto' => $request->input('asunto'),
                 'link' => $request->input('link'),
             ];
 
-            Mail::to($object->email)->send(new sendMailLinkEnrolamiento($object));
+            if ($request->input('link') != null) {
+                Mail::to($object->email)->send(new sendMailLinkEnrolamiento($object));
+            }
 
             $log->logInfo(EmailController::class, 'Correo electrónico enviado correctamente a ' . $object->email);
 
@@ -241,7 +241,6 @@ class EmailController extends Controller
                 // Puedes devolver el array de correos aquí o hacer cualquier otra cosa con él
                 if (count($emailsArray) > 0) {
                     Mail::to($emailsArray)->send(new sendMailCambioFase($object));
-
                 } else {
                     $log->logError(EmailController::class, 'No existen correos para enviar.');
 
@@ -315,7 +314,6 @@ class EmailController extends Controller
                                             } else if ($formula->respuesta_caso->nombre == $rechazar) {
                                                 $urlEndPointRechazar = $urlEndPointAprobacionCreditoComite->valor . $formula->id . '/' . $caso_id . '/' . $formula->tab_id . '/' . $banMostrarVistaCreditoAprobado = 2;
                                             }
-
                                         }
 
                                         // Todos los datos que vamos a enviar en el correo
@@ -337,35 +335,30 @@ class EmailController extends Controller
 
                                         $exitoso = 'Correo electrónico enviado correctamente al comité';
                                         return null;
-
                                     } else {
                                         $log->logError(EmailController::class, 'No existe formulas en el tablero con el id: ' . $tablero_proximo_id);
 
                                         $error = 'No existe formulas en el tablero con el id: ' . $tablero_proximo_id;
                                         return null;
                                     }
-
                                 } else {
                                     $log->logError(EmailController::class, 'No existe el parametro del endPoint para aprobar o rechazar el credito');
 
                                     $error = 'No existe el parametro del endPoint para aprobar o rechazar el credito';
                                     return null;
                                 }
-
                             } else {
                                 $log->logError(EmailController::class, 'No existe el pedido con el id: ' . $caso->cpp_id);
 
                                 $error = 'No existe el pedido con el id: ' . $caso->cpp_id;
                                 return null;
                             }
-
                         } else {
                             $log->logError(EmailController::class, 'No existe parametros del comite');
 
                             $error = 'No existe parametros del comite';
                             return null;
                         }
-
                     } else {
 
                         $log->logError(EmailController::class, 'No existe un pedido en el caso #' . $caso_id);
@@ -373,14 +366,12 @@ class EmailController extends Controller
                         $error = 'No existe un pedido en el caso #' . $caso_id;
                         return null;
                     }
-
                 } else {
                     $log->logError(EmailController::class, 'No existe el caso #' . $caso_id);
 
                     $error = 'No existe el caso #' . $caso_id;
                     return null;
                 }
-
             });
 
             if ($error) {
@@ -388,12 +379,10 @@ class EmailController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('success', $exitoso, ''));
             }
-
         } catch (Exception $e) {
             $log->logError(EmailController::class, 'Error al enviar el correo electrónico al comité', $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 }

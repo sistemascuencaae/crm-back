@@ -7,6 +7,7 @@ use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\CondicionesFaseMover;
 use App\Models\crm\Fase;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -23,9 +24,12 @@ class FaseController extends Controller
     {
         $log = new Funciones();
         $tabId = $request->input('tabId');
+        $fechaDesde = $request->input('filtroFechaDesde');
+        $fechaHasta = $request->input('filtroFechaHasta');
+        $tipoTablero = $request->input('tipoTablero');
         try {
 
-            $data = $this->listarfases($tabId);
+            $data = $this->listarfases($tabId, $fechaDesde, $fechaHasta, $tipoTablero);
 
             $log->logInfo(FaseController::class, 'Se listo con exito las fases');
 
@@ -41,7 +45,7 @@ class FaseController extends Controller
     {
         $log = new Funciones();
         try {
-            $faseActual = Fase::with('condicionFaseMover', )->where('id', $faseId)->first();
+            $faseActual = Fase::with('condicionFaseMover',)->where('id', $faseId)->first();
             if ($faseActual) {
                 $log->logInfo(FaseController::class, 'Fase actual');
 
@@ -165,7 +169,8 @@ class FaseController extends Controller
         $log = new Funciones();
         try {
             $listaFases = $request->all();
-
+            $fechaDesde = $request->input('filtroFechaDesde');
+            $fechaHasta = $request->input('filtroFechaHasta');
             $id = DB::transaction(function () use ($listaFases) {
                 $tabId = 0;
                 foreach ($listaFases as $item) {
@@ -176,9 +181,8 @@ class FaseController extends Controller
                 }
 
                 return $tabId;
-
             });
-            $data = $this->listarFases($id);
+            $data = $this->listarFases($id, $fechaDesde, $fechaHasta);
 
             $log->logInfo(FaseController::class, 'Se actualizo con exito el orden de las fases');
 
@@ -189,9 +193,7 @@ class FaseController extends Controller
             return response()->json(RespuestaApi::returnResultado('exception', 'Error al crear fase', $e));
         }
     }
-
-
-    public function listarfases($tabId)
+    public function listarfases1($tabId, $fechaInicio, $fechaFin, $tipoTablero = null)
     {
         $data = Fase::with([
             'caso.user',
@@ -208,11 +210,67 @@ class FaseController extends Controller
                 $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
             },
             'condicionFaseMover',
-            'caso.estadodos',
-            'caso.tipocaso'
+            'caso.tipocaso',
+            //'caso.estadodos',
+            'caso.estadodos' => function ($query) use ($tipoTablero) {
+                if ($tipoTablero == 'KANBAN') {
+                    $query->where('nombre', '<>', 'TERMINADO');
+                } else {
+                    $query->whereNotNull('nombre');
+                }
+            },
+            'caso' => function ($query) use ($fechaInicio, $fechaFin) {
+                $query->whereBetween('created_at', [
+                    Carbon::parse($fechaInicio)->startOfDay(),
+                    Carbon::parse($fechaFin)->endOfDay(),
+                ]);
+            },
         ])->where('tab_id', $tabId)
             ->orderBy('orden', 'asc')
             ->get();
+
+        return $data;
+    }
+    public function listarfases($tabId, $fechaInicio, $fechaFin, $tipoTablero = null)
+    {
+        $query = Fase::query()
+            ->with([
+                'caso.user',
+                'caso.userCreador',
+                'caso.clienteCrm',
+                'caso.resumen',
+                'caso.tareas' => function ($query) use ($tabId) {
+                    $query->where('tab_id', $tabId);
+                },
+                'caso.actividad',
+                'caso.miembros.usuario.departamento',
+                'caso.Etiqueta',
+                'caso.req_caso' => function ($query) {
+                    $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                },
+                'condicionFaseMover',
+                'caso.estadodos',
+                'caso.tipocaso',
+                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero) {
+                    // $query->whereBetween('created_at', [
+                    //     Carbon::parse($fechaInicio)->startOfDay(),
+                    //     Carbon::parse($fechaFin)->endOfDay(),
+                    // ]);
+                    $query->whereBetween('fecha_vencimiento', [
+                        Carbon::parse($fechaInicio)->startOfDay(),
+                        Carbon::parse($fechaFin)->endOfDay(),
+                    ]);
+                    if ($tipoTablero === 'KANBAN') {
+                        // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
+                        $query->whereDoesntHave('estadodos', function ($subquery) {
+                            $subquery->where('nombre', 'TERMINADO');
+                        });
+                    }
+                },
+            ])
+            ->where('tab_id', $tabId);
+
+        $data = $query->orderBy('orden', 'asc')->get();
 
         return $data;
     }
