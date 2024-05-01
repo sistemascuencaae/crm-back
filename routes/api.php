@@ -3,6 +3,7 @@
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\ComercializacionController;
+use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
@@ -565,6 +566,12 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // RENEGOCIACION
     Route::post('/validarFacturaRenegociacion', [DdocumentoController::class, 'validarFacturaRenegociacion']);
+
+    // PAGARE
+    Route::post('/addHistorialPagare', [RenegociacionController::class, 'addHistorialPagare']); // add los doctran de openceo al crm
+    Route::get('/listHistorialPagare/{ddo_doctran}', [RenegociacionController::class, 'listHistorialPagare']); // listar doctran del crm
+    Route::get('/getPagareByCodigoHistorial/{codigo_historial}', [RenegociacionController::class, 'getPagareByCodigoHistorial']); // obtener pagare del crm
+
 });
 
 Route::group([], function ($router) {
