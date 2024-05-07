@@ -45,8 +45,9 @@ class ComercializacionController extends Controller
         $data = DB::table('crm.av_facturas_notascredito')
             ->where('mes', $mes)
             ->where('cfa_periodo', $periodo)
-            ->where('alm_nombre',$agencia)
             ->whereIn('emp_abreviacion', $empleados)
+            ->where('alm_nombre', $agencia)
+            ->orWhere('alm_nombre', 'LUIS CORDERO 1')
             ->get();
 
         // Devuelve los resultados

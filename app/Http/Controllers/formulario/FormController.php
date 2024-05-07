@@ -12,8 +12,7 @@ use App\Models\Formulario\Parametro;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use PhpParser\Node\Stmt\TryCatch;
+use Illuminate\Support\Str;
 
 class FormController extends Controller
 {
@@ -34,7 +33,6 @@ class FormController extends Controller
                 'campo.parametro.parametroHijos',
             ])->find($formId);
             $secciones = FormSeccion::where('form_id', $formId)
-                ->where('estado', true)
                 ->orderBy('orden', 'asc')
                 ->get();
 
@@ -90,6 +88,39 @@ class FormController extends Controller
         }
     }
 
+
+    public function cargarFormulario($formId) {
+
+        try {
+
+            $parametros = Parametro::with('parametroHijos')->get();
+            $formulario = Formulario::with([
+                'campo.tipo',
+                'campo.likert',
+                'campo.parametro.parametroHijos',
+                'campo.valor' => function ($query)  {
+                    $query->where('key', 0);
+                },
+            ])->find($formId);
+            $secciones = FormSeccion::where('form_id', $formId)
+                ->where('estado', true)
+                ->orderBy('orden', 'asc')
+                ->get();
+            $data = (object) [
+                "secciones" => $secciones,
+                "parametros" => $parametros,
+                "formulario" => $formulario,
+                //"keyFormulario" => $keyFormulario
+            ];
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+
+    }
+
+
+
     public function storeB($formId, $pacId)
     {
         try {
@@ -98,12 +129,8 @@ class FormController extends Controller
                 'campo.tipo',
                 'campo.likert',
                 'campo.parametro.parametroHijos',
-                'campo.valor' => function ($query) use ($pacId) {
-                    $query->where('pac_id', $pacId);
-                },
             ])->find($formId);
             $secciones = FormSeccion::where('form_id', $formId)
-                ->where('estado', true)
                 ->orderBy('orden', 'asc')
                 ->get();
 
