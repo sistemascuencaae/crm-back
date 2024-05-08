@@ -252,10 +252,10 @@ class FaseController extends Controller
                 'caso.estadodos',
                 'caso.tipocaso',
                 'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero) {
-                    $query->whereBetween('created_at', [
-                        Carbon::parse($fechaInicio)->startOfDay(),
-                        Carbon::parse($fechaFin)->endOfDay(),
-                    ]);
+                    // $query->whereBetween('created_at', [
+                    //     Carbon::parse($fechaInicio)->startOfDay(),
+                    //     Carbon::parse($fechaFin)->endOfDay(),
+                    // ]);
                     $query->whereBetween('fecha_vencimiento', [
                         Carbon::parse($fechaInicio)->startOfDay(),
                         Carbon::parse($fechaFin)->endOfDay(),

@@ -12,6 +12,7 @@ use App\Models\Formulario\FormTipoCampo;
 use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormValor;
 use App\Models\Formulario\Parametro;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -107,86 +108,71 @@ class CampoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
         }
     }
-    public function addCampoValor1(Request $request)
+
+    public function guardarFormulario(Request $request)
     {
         try {
-            $pacId = $request->input('pac_id');
-            DB::transaction(function () use ($request, $pacId) {
-                $valor = $request->all();
-                $campoId = $request->input('campoId');
-                $valor['pac_id'] = $pacId;
-
-                if ($request->input('id')) {
-                    $modificarCampo = FormValor::find($valor['id']);
-                    $modificarCampo->update($valor);
-                    return FormValor::find($valor['id']);
-                } else {
-                    $newValor = FormValor::create($valor);
-                    $newCampoValor = FormCampoValor::create([
-                        "valor_id" => $newValor->id,
-                        "campo_id" => $campoId
-                    ]);
-                    return FormValor::find($newValor->id);
+            DB::transaction(function () use ($request) {
+                $fechaHoraActual = Carbon::now();
+                $listaCampos = $request->all();
+                // Obtener el número mayor del campo key
+                $maxKey = DB::table('crm.form_valor')->max('key');  //-->
+                // Incrementar el número mayor para obtener el siguiente valor
+                $keyFormulario = $maxKey + 1;
+                foreach ($listaCampos as $key => $value) {
+                    $value['key'] = $keyFormulario;
+                    $value['created_at'] = $fechaHoraActual;
+                    $value['update_at'] = $fechaHoraActual;
+                    $this->addCampoValor(new Request($value));
                 }
             });
-            $data = Formulario::with([
-                'campo.tipo',
-                'campo.likert',
-                'campo.valor' => function ($query) use ($pacId) {
-                    $query->where('pac_id', $pacId);
-                },
-            ]);
-            return response()->json(RespuestaApi::returnResultado('success', 'Creado con éxito.', $data));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear.', $th->getMessage()));
-        }
-    }
-    public function addCampoValor(Request $request)
-    {
-        try {
-            $pacId = $request->input('pac_id');
-            $valor = $request->all();
-            //echo ('$valor->id: '.json_encode($valor['id']));
-            $campoId = $request->input('campoId');
-            $valorReal = null;
-            if ($request->input('id') !== 0) {
-                // Actualizar el registro existente
-                $modificarCampo = FormValor::find($valor['id']);
-                //echo ('$modificarCampo: '.json_encode($modificarCampo));
-                if ($modificarCampo) {
-                    $modificarCampo->update($valor);
-                }
-                $result = FormValor::find($valor['id']);
-                $valorReal = $result;
-            } else {
-                // Crear un nuevo registro
-                $newValor = FormValor::create($valor);
-                $newCampoValor = FormCampoValor::create([
-                    "valor_id" => $newValor->id,
-                    "campo_id" => $campoId
-                ]);
-                $result = FormValor::find($newValor->id);
-                $valorReal = $result;
-            }
-
-            $campo = FormCampo::find($campoId);
-            $data = $this->getNombreControles($campo->form_id, $pacId);
-            $seccionesActualizadas = $this->getTotalesSecciones($campo->form_id, $pacId);
-            $totalGlobalForm = $this->getTotalGlobalForm($campo->form_id, $pacId);
-            $formController = new FormController();
-            $result = (object)[
-                "nombresControles" => '', //$data,
-                "totalesSecciones" => $seccionesActualizadas,
-                "totalGlobalForm" => $totalGlobalForm,
-                "camposImprimir" => $formController->camposImprimir($campo->form_id, $pacId),
-                "valorReal" => $valorReal
-            ];
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $result));
+            $data = $request->all();
+            return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al realizar la operación.', $th->getMessage()));
         }
     }
+    public function addCampoValor(Request $request)
+    {
+        //try {
+        //$pacId = $request->input('pac_id');
+        $valor = $request->all();
+
+        //echo ('$valor->id: '.json_encode($valor['id']));
+        $campoId = $request->input('campoId');
+        $valorReal = null;
+        if ($request->input('id') !== 0) {
+            // Actualizar el registro existente
+            $modificarCampo = FormValor::find($valor['id']);
+            //echo ('$modificarCampo: '.json_encode($modificarCampo));
+            if ($modificarCampo) {
+                $modificarCampo->update($valor);
+            }
+            $result = FormValor::find($valor['id']);
+            $valorReal = $result;
+        } else {
+            // Crear un nuevo registro
+            $newValor = FormValor::create($valor);
+            $newCampoValor = FormCampoValor::create([
+                "valor_id" => $newValor->id,
+                "campo_id" => $campoId
+            ]);
+            $result = FormValor::find($newValor->id);
+            $valorReal = $result;
+        }
+
+        $result = (object)[
+            "nombresControles" => '',
+            "valorReal" => $valorReal
+        ];
+
+        //     return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $result));
+        // } catch (\Throwable $th) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al realizar la operación.', $th->getMessage()));
+        // }
+    }
+
+
     public function edit(Request $request, $id)
     {
 
@@ -436,7 +422,8 @@ class CampoController extends Controller
         }
     }
 
-    public function getTotalGlobalForm($formId, $pacId){
+    public function getTotalGlobalForm($formId, $pacId)
+    {
         try {
             $data = DB::selectOne("SELECT
             fc.form_id,

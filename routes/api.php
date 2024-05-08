@@ -84,6 +84,7 @@ use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
+use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\WebSocketController;
 use Illuminate\Support\Facades\Route;
@@ -262,6 +263,7 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::get('/list', [FormController::class, 'list']);
     Route::get('/storeA/{formId}', [FormController::class, 'storeA']);
     Route::get('/storeB/{formId}/{userId}', [FormController::class, 'storeB']);
+    Route::get('/cargarFormulario/{formId}', [FormController::class, 'cargarFormulario']);
     Route::get('/listByDepar/{depId}/{userId}', [FormController::class, 'listByDepar']); //
     Route::get('/formUser/{depId}/{userId}', [FormController::class, 'formUser']); //formUser
     Route::get('/byId/{formId}', [FormController::class, 'byId']); //formUser
@@ -284,7 +286,8 @@ Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::put('/edit/{id}', [CampoController::class, 'edit']);
     Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
     Route::post('/add', [CampoController::class, 'add']); //addCampoValor
-    Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']); //addCampoValor
+    //Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']); //addCampoValor
+    Route::post('/guardarFormulario', [CampoController::class, 'guardarFormulario']);
 });
 Route::group(['prefix' => 'form/seccion'], function ($router) {
     Route::get('/store', [FormSeccionController::class, 'store']);
@@ -562,6 +565,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTutorial', [TutorialController::class, 'addTutorial']);
     Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
     Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
+
+    // RENEGOCIACION
+    Route::post('/validarFacturaRenegociacion', [DdocumentoController::class, 'validarFacturaRenegociacion']);
 
     // PAGARE
     Route::post('/addHistorialPagare', [RenegociacionController::class, 'addHistorialPagare']); // add los doctran de openceo al crm
