@@ -99,18 +99,12 @@ class CasoController extends Controller
                 //$caso->user_creador_id = $userLoginId;
                 $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
                 $caso->save();
-
-
-
                 for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
                     $miembro->user_id = $miembros[$i];
                     //$miembro->chat_group_id = $newGrupo->id;
                     $caso->miembros()->save($miembro);
                 }
-
-
-
                 $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
 
                 $soporteController = new SoporteController();
@@ -949,10 +943,18 @@ class CasoController extends Controller
                 $reqCaso->acc_publico = $reqFase[$i]->acc_publico;
                 $reqCaso->desc_requerida = $reqFase[$i]->desc_requerida;
 
+                if($reqCaso->tipo_campo == "renegociacion"){
+                     $caso = DB::selectOne("SELECT doctran FROM crm.caso where id = ?",[$casoId]);
+                    if($caso->doctran){
+                        $reqCaso->titulo = $reqFase[$i]->nombre." (". $caso->doctran.")";
+                    }else{
+                        $reqCaso->titulo = $reqFase[$i]->nombre . "No se pudo encontrar el documento.";
+                    }
+                }
+
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(',', $reqCaso->valor_lista);
                     $nuevoArray = array();
-
                     foreach ($array as $item) {
                         $objeto = array(
                             'id' => $item,
@@ -960,7 +962,6 @@ class CasoController extends Controller
                         );
                         $nuevoArray[] = $objeto;
                     }
-
                     $reqCaso->valor_multiple = json_encode($nuevoArray);
                 }
 

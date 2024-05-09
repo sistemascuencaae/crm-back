@@ -19,7 +19,7 @@ class DdocumentoController extends Controller
 {
     public function validarFacturaRenegociacion(Request $request)
     {
-        try {
+        //try {
 
             $doctran = $request->input('doctran');
             $numeroCuotas = $request->input('numeroCuotas');
@@ -29,16 +29,20 @@ class DdocumentoController extends Controller
                 [$doctran]
             );
             if ($data) {
-                if ($numeroCuotas <= $data->numero_cuotas) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'Error en numero de cuota', []));
-                }
+                // if ($numeroCuotas <= $data->numero_cuotas) {
+                //     return response()->json(RespuestaApi::returnResultado('error', 'Error en numero de cuota', []));
+                // }
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'La factura no existe.', []));
             }
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-        }
+        // } catch (Exception $e) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        // }
+    }
+
+    public function renegociar(Request $request){
+        $doctran = $request->input('doctran');
     }
 }
