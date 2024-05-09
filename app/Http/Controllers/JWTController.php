@@ -140,7 +140,7 @@ class JWTController extends Controller
         $alm_nombre = '';
 
 
-        $accesos = DB::select("SELECT u.id as user_id, me.name from crm.users u
+        $accesos = DB::select("SELECT u.id as user_id, me.name, me.url from crm.users u
         inner join crm.profiles p on p.id = u.profile_id
         inner join crm.access acc on acc.profile_id = p.id and acc.ejecutar = 1
         inner join crm.menu me on me.id = acc.menu_id
