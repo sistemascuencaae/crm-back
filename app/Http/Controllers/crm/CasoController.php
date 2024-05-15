@@ -69,6 +69,8 @@ class CasoController extends Controller
         }
         try {
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
+
+
                 $caso = new Caso($casoInput);
                 $caso->save();
                 //buscar las tareas predefinidas
@@ -98,6 +100,9 @@ class CasoController extends Controller
                 $caso->nombre = 'CASO # ' . $caso->id;
                 //$caso->user_creador_id = $userLoginId;
                 $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+                if($caso->desc_json){
+
+                }
                 $caso->save();
                 for ($i = 0; $i < sizeof($miembros); $i++) {
                     $miembro = new Miembros();
@@ -942,15 +947,6 @@ class CasoController extends Controller
                 $reqCaso->orden = $reqFase[$i]->orden;
                 $reqCaso->acc_publico = $reqFase[$i]->acc_publico;
                 $reqCaso->desc_requerida = $reqFase[$i]->desc_requerida;
-
-                if($reqCaso->tipo_campo == "renegociacion"){
-                     $caso = DB::selectOne("SELECT doctran FROM crm.caso where id = ?",[$casoId]);
-                    if($caso->doctran){
-                        $reqCaso->titulo = $reqFase[$i]->nombre." (". $caso->doctran.")";
-                    }else{
-                        $reqCaso->titulo = $reqFase[$i]->nombre . "No se pudo encontrar el documento.";
-                    }
-                }
 
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(',', $reqCaso->valor_lista);
