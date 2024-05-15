@@ -50,8 +50,7 @@ class Caso extends Model
         "acc_publico",
         "cliente_id",
         "cpp_id",
-        "form_id",
-        "doctran"
+        "form_id"
     ];
 
     public function userCreador()
