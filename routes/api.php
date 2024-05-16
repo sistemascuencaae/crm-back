@@ -49,6 +49,7 @@ use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
+use App\Http\Controllers\MigracionNovasoft\MigracionController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
@@ -879,4 +880,15 @@ Route::group([
     Route::post('addMenu', [MenuController::class, 'addMenu']);
     Route::post('editMenu/{id}', [MenuController::class, 'editMenu']);
     Route::delete('deleteMenu/{id}', [MenuController::class, 'deleteMenu']);
+});
+
+
+
+
+
+// ---------- SISTEMAS HERNAN NOVASOFT----------
+
+Route::group(["prefix" => "almacenesespana"], function ($router) {
+    Route::get('/n8tt-aa1v-7g0a-m2ig-b7fq-c3ar-r1nc', [MigracionController::class, 'aav_migracion_cartera']);
+    Route::get('/2e62-aa1v-e3sr-m2ig-33fi-c3li-xhv3', [MigracionController::class, 'aav_migracion_cliente']);
 });
