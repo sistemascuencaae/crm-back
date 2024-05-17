@@ -43,12 +43,12 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-                [
-                    'add',
-                    //'addCasoOPMICreativa'
-                    'getCasoFormulario'
+            [
+                'add',
+                //'addCasoOPMICreativa'
+                'getCasoFormulario'
 
-                ]
+            ]
         ]);
     }
 
@@ -100,8 +100,7 @@ class CasoController extends Controller
                 $caso->nombre = 'CASO # ' . $caso->id;
                 //$caso->user_creador_id = $userLoginId;
                 $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
-                if($caso->desc_json){
-
+                if ($caso->desc_json) {
                 }
                 $caso->save();
                 for ($i = 0; $i < sizeof($miembros); $i++) {
@@ -324,18 +323,17 @@ class CasoController extends Controller
     {
         $log = new Funciones();
 
-        $data = [];
         $casoId = $request->input("casoId");
         $bloqueado = $request->input("bloqueado");
         $bloqueado_user = $request->input("bloqueado_user");
 
         try {
             $caso = Caso::find($casoId);
+
             if ($caso) {
                 $caso->bloqueado = $bloqueado;
                 $caso->bloqueado_user = $bloqueado_user;
                 $caso->save();
-                $data = $this->getCasoJoinTablero($casoId);
             }
             $data = $this->getCaso($casoId);
             broadcast(new TableroEvent($data));
@@ -357,7 +355,6 @@ class CasoController extends Controller
         INNER JOIN crm.fase fa on fa.id = ca.fas_id
         INNER JOIN crm.tablero ta on ta.id = fa.tab_id
         where ca.id = ' . $casoId);
-        //echo('<-------------------------------->                 '.json_encode($data).'            <-------------------------------->');
         return $data[0];
     }
 
@@ -779,38 +776,48 @@ class CasoController extends Controller
         $log = new Funciones();
 
         try {
-            $tabId = DB::select('SELECT t.id FROM crm.caso co
-            inner join crm.fase fa on fa.id = co.fas_id
+
+
+            //inner join crm.estados_caso ec on ec.id = ca.estado_2
+            $tabId = DB::selectOne('SELECT t.id, t.nombre FROM crm.caso ca
+            inner join crm.fase fa on fa.id = ca.fas_id
             inner join crm.tablero t on t.id = fa.tab_id
-                where co.id = ' . $casoId)[0];
+                where ca.id = ?',[$casoId]);
+
+
+
+
+
+
 
             $log->logInfo(CasoController::class, 'Se listo con exito el caso #' . $casoId);
+            //$userLogin = Auth::id();
+            //$user = DB::selectOne("SELECT usu_tipo FROM crm.users where id = ?", [$userLogin]);
 
-            return Caso::with([
-                'user',
-                'userCreador',
-                'clienteCrm',
-                'resumen',
-                'tareas' => function ($query) use ($tabId) {
-                    $query->where('tab_id', $tabId->id);
-                },
-                'actividad',
-                'Etiqueta',
-                'miembros.usuario.departamento',
-                'Galeria',
-                'Archivo',
-                'req_caso' => function ($query) {
-                    $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-                },
-                'tablero',
-                'fase.tablero',
-                'estadodos',
-                'tipocaso'
+                return Caso::with([
+                    'user',
+                    'userCreador',
+                    'clienteCrm',
+                    'resumen',
+                    'tareas' => function ($query) use ($tabId) {
+                        $query->where('tab_id', $tabId->id);
+                    },
+                    'actividad',
+                    'Etiqueta',
+                    'miembros.usuario.departamento',
+                    'Galeria',
+                    'Archivo',
+                    'req_caso' => function ($query) {
+                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    },
+                    'tablero',
+                    'fase.tablero',
+                    'estadodos',
+                    'tipocaso'
 
-            ])->where('id', $casoId)->first();
+                ])->where('id', $casoId)->first();
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al listar el caso #' . $casoId, $e);
-
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -1122,7 +1129,6 @@ class CasoController extends Controller
                             $telefonoCliente->save();
                         }
                     }
-
                 }
 
                 $clienteReferencias = DB::select("SELECT
@@ -1590,5 +1596,4 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 }
