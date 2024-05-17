@@ -2,7 +2,9 @@
 
 namespace App\Http\Resources\crm;
 
+use App\Http\Resources\RespuestaApi;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request as RequestFacade;
 use Illuminate\Support\Facades\Auth;
@@ -18,15 +20,6 @@ class Funciones
     return preg_replace($patron, '', $cadena);
   }
 
-  // // Ejemplo de uso
-// $cadena = "¡Hola123, ¿cómo estás?";
-// $alfanumericos = obtenerAlfanumericos($cadena);
-// echo $alfanumericos;  // Devolverá "Hola123cómoestás"
-
-
-
-  // $arrayUobjeto: Este parámetro representa el objeto (o array) que contiene las propiedades a formatear.
-  // $FechasTransformar: Este es un array que contiene los nombres de los campos que representan fechas en el objeto.
   public function formatoFechaItem($arrayUobjeto, $FechasTransformar)
   {
     try {
@@ -48,18 +41,6 @@ class Funciones
       throw $th;
     }
   }
-
-  // public function logInfo($controller, $rutaFuncion, $user_id, $user_ip, $msg, $id_objeto = null)
-  // { // id_objeto es, por ejemplo un tablero.id, caso.id, usuario.id    
-
-  //   Log::info('Controller: ' . $controller . ' | Ruta Funcion: ' . $rutaFuncion . ' | Usuario: ' . $user_id . ' | IP Usuario:' . $user_ip . ' | Mensaje: ' . $msg . $id_objeto);
-  // }
-
-  // public function logError($controller, $rutaFuncion, $user_id, $user_ip, $msg, $id_objeto = null, $exception)
-  // { // $exeption es el objeto de error que lanza los try catch
-
-  //   Log::error('Controller: ' . $controller . ' | Ruta Funcion: ' . $rutaFuncion . ' | Usuario: ' . $user_id . ' | IP Usuario:' . $user_ip . ' | Mensaje: ' . $msg . $id_objeto . ' | Error: ' . $exception->getMessage() . ' | En la linea (' . $exception->getLine() . ')');
-  // }
 
   public function logInfo($controller, $msg)
   {
@@ -97,6 +78,22 @@ class Funciones
         . ' | Mensaje: ' . $msg
       );
     }
+  }
+
+  public function descargarTxt($data, $nombreArchivo)
+  {
+      try {
+          // Establecer los encabezados de la respuesta para la descarga del archivo .txt
+          $headers = [
+              'Content-Type' => 'text/plain',
+              'Content-Disposition' => 'attachment; filename="' . $nombreArchivo . '"',
+          ];
+
+          // Crear la respuesta HTTP con el contenido del archivo adjunto
+          return response($data, 200, $headers);
+      } catch (Exception $e) {
+          return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+      }
   }
 
 }
