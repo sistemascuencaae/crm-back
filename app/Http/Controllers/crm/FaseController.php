@@ -9,7 +9,7 @@ use App\Models\crm\CondicionesFaseMover;
 use App\Models\crm\Fase;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -233,6 +233,11 @@ class FaseController extends Controller
     }
     public function listarfases($tabId, $fechaInicio, $fechaFin, $tipoTablero = null)
     {
+
+
+        $userLogin = Auth::id();
+        $user = DB::selectOne("SELECT usu_tipo FROM crm.users where id = ?",[$userLogin]);
+
         $query = Fase::query()
             ->with([
                 'caso.user',
@@ -251,16 +256,12 @@ class FaseController extends Controller
                 'condicionFaseMover',
                 'caso.estadodos',
                 'caso.tipocaso',
-                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero) {
-                    // $query->whereBetween('created_at', [
-                    //     Carbon::parse($fechaInicio)->startOfDay(),
-                    //     Carbon::parse($fechaFin)->endOfDay(),
-                    // ]);
+                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user) {
                     $query->whereBetween('fecha_vencimiento', [
                         Carbon::parse($fechaInicio)->startOfDay(),
                         Carbon::parse($fechaFin)->endOfDay(),
                     ]);
-                    if ($tipoTablero === 'KANBAN') {
+                    if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 4) {
                         // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
                         $query->whereDoesntHave('estadodos', function ($subquery) {
                             $subquery->where('nombre', 'TERMINADO');
