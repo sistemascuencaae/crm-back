@@ -141,9 +141,9 @@ class CasoController extends Controller
             // END Auditoria
             // le mando uno porque es la primera vez q se crea el caso
             $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
-            broadcast(new TableroEvent($casoCreado));
             $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
             $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
+            broadcast(new TableroEvent($casoCreado));
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
         } catch (\Throwable $e) {
             $log->logError(CasoController::class, 'Error al guardar el caso', $e);
@@ -778,47 +778,66 @@ class CasoController extends Controller
         try {
 
 
-            //inner join crm.estados_caso ec on ec.id = ca.estado_2
             $tabId = DB::selectOne('SELECT t.id, t.nombre FROM crm.caso ca
             inner join crm.fase fa on fa.id = ca.fas_id
             inner join crm.tablero t on t.id = fa.tab_id
-                where ca.id = ?',[$casoId]);
+                where ca.id = ?', [$casoId]);
 
+            //"nombre"	"cpp_id"	"cpp_estado"	"ecr_nombre"
+            //"CASO # 2664"	542	9	"APROBADO"
 
-
-
-
-
-
+            //VALIDAR CASO TERMINADO CUANDO TIENE UN CPEDIDO_PROFORMA DEL DYNAMO
+            $this->validarEstadoOPMdynamo($casoId);
             $log->logInfo(CasoController::class, 'Se listo con exito el caso #' . $casoId);
             //$userLogin = Auth::id();
             //$user = DB::selectOne("SELECT usu_tipo FROM crm.users where id = ?", [$userLogin]);
 
-                return Caso::with([
-                    'user',
-                    'userCreador',
-                    'clienteCrm',
-                    'resumen',
-                    'tareas' => function ($query) use ($tabId) {
-                        $query->where('tab_id', $tabId->id);
-                    },
-                    'actividad',
-                    'Etiqueta',
-                    'miembros.usuario.departamento',
-                    'Galeria',
-                    'Archivo',
-                    'req_caso' => function ($query) {
-                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-                    },
-                    'tablero',
-                    'fase.tablero',
-                    'estadodos',
-                    'tipocaso'
+            return Caso::with([
+                'user',
+                'userCreador',
+                'clienteCrm',
+                'resumen',
+                'tareas' => function ($query) use ($tabId) {
+                    $query->where('tab_id', $tabId->id);
+                },
+                'actividad',
+                'Etiqueta',
+                'miembros.usuario.departamento',
+                'Galeria',
+                'Archivo',
+                'req_caso' => function ($query) {
+                    $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                },
+                'tablero',
+                'fase.tablero',
+                'estadodos',
+                'tipocaso'
 
-                ])->where('id', $casoId)->first();
+            ])->where('id', $casoId)->first();
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al listar el caso #' . $casoId, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function validarEstadoOPMdynamo($casoId)
+    {
+        $cpedidoProforma = DB::selectOne("SELECT ca.nombre, cpp.cpp_id, cpp.cpp_estado, ec.ecr_nombre from crm.caso ca
+                inner join public.cpedido_proforma cpp on cpp.cpp_id = ca.cpp_id
+                inner join public.estado_credito ec on ec.ecr_id = cpp.cpp_estado
+                where ca.id = ?
+                order by ca.id", [$casoId]);
+        if ($cpedidoProforma) {
+            $tableroCaso = DB::selectOne("SELECT ta.nombre from crm.caso ca
+                inner join crm.fase fa on fa.id = ca.fas_id
+                inner join crm.tablero ta on ta.id = fa.tab_id
+                where ca.id = ?", [$casoId]);
+            if ($tableroCaso) {
+                $parametro = DB::selectOne("SELECT p.valor from crm.parametro p where p.abreviacion = 'TABFACOPM'");
+                if (stripos($parametro->valor, $tableroCaso->nombre) !== false) {
+                    DB::update("UPDATE public.cpedido_proforma SET cpp_estado = 9 WHERE cpp_id = ?", [$cpedidoProforma->cpp_id]);
+                }
+            }
         }
     }
 
@@ -1364,8 +1383,8 @@ class CasoController extends Controller
             }
             //--- Configuracion del destino del caso
             $configuracion = DB::selectOne("SELECT tcf.* from crm.tipo_caso tc
-        inner join crm.tipo_caso_formulas tcf on tcf.tc_id = tc.id
-        where tc.nombre = 'SOLICITUD DE CREDITO APP MOVIL' and tc.estado = true limit 1;");
+            inner join crm.tipo_caso_formulas tcf on tcf.tc_id = tc.id
+            where tc.nombre = 'SOLICITUD DE CREDITO APP MOVIL' and tc.estado = true limit 1;");
 
             if ($configuracion && $opm) {
 
