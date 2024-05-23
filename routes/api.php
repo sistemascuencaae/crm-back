@@ -26,6 +26,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\SerieGeneradaController;
 use App\Http\Controllers\crm\TipoCasoFormulasController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
@@ -575,6 +576,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listHistorialPagare/{ddo_doctran}', [RenegociacionController::class, 'listHistorialPagare']); // listar doctran del crm
     Route::get('/getPagareByCodigoHistorial/{codigo_historial}', [RenegociacionController::class, 'getPagareByCodigoHistorial']); // obtener pagare del crm
 
+    // SERIES GENERADAS
+
+    Route::get('/buscarSerieGex', [SerieGeneradaController::class, 'buscarSerieGex']);
+
 });
 
 Route::group([], function ($router) {
@@ -630,7 +635,6 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
     Route::post('/addEmail', [EmailController::class, 'addEmail']);
     Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
-
 });
 
 
@@ -892,4 +896,5 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/n8tt-aa1v-7g0a-m2ig-b7fq-c3ar-r1nc', [MigracionController::class, 'aav_migracion_cartera']);
     Route::get('/2e62-aa1v-e3sr-m2ig-33fi-c3li-xhv3', [MigracionController::class, 'aav_migracion_cliente']);
     Route::get('/7eiq-aa1v-72iu-m2ig-2nyv-r3ef-3l4y', [MigracionController::class, 'aav_migracion_referencias_cliente']);
+    Route::get('/8ert-aa1v-5tre-m2ig-3er2-c3se-98re', [MigracionController::class, 'aav_migracion_carteraxsecretaria2_periodoymes_actual']);
 });

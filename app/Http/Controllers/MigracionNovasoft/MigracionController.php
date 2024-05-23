@@ -19,7 +19,8 @@ class MigracionController extends Controller
             'except' => [
                 'aav_migracion_cartera',
                 'aav_migracion_cliente',
-                'aav_migracion_referencias_cliente'
+                'aav_migracion_referencias_cliente',
+                'aav_migracion_carteraxsecretaria2_periodoymes_actual'
             ]
         ]);
 
@@ -63,6 +64,17 @@ class MigracionController extends Controller
             $archivo = $this->funciones->descargarTxt($data, 'almespana_referencias_clientes.txt');
 
             return $archivo;
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function aav_migracion_carteraxsecretaria2_periodoymes_actual()
+    {
+        try {
+            $data = DB::table('public.aav_migracion_carteraxsecretaria2_periodoymes_actual')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
