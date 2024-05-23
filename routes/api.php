@@ -26,7 +26,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
-use App\Http\Controllers\crm\SerieGeneradaController;
+use App\Http\Controllers\crm\SeriesGeneradasController;
 use App\Http\Controllers\crm\TipoCasoFormulasController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
@@ -578,7 +578,8 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // SERIES GENERADAS
 
-    Route::get('/buscarSerieGex', [SerieGeneradaController::class, 'buscarSerieGex']);
+    Route::get('/buscarSerieGex', [SeriesGeneradasController::class, 'buscarSerieGex']);
+    Route::post('/addSeriesGeneradas', [SeriesGeneradasController::class, 'addSeriesGeneradas']);
 
 });
 
