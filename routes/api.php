@@ -578,7 +578,6 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // SERIES GENERADAS
 
-    Route::get('/buscarSerieGex', [SeriesGeneradasController::class, 'buscarSerieGex']);
     Route::post('/addSeriesGeneradas', [SeriesGeneradasController::class, 'addSeriesGeneradas']);
 
 });
