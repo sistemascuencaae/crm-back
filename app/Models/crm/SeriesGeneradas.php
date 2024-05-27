@@ -1,24 +1,16 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\crm;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 
-class Menu extends Model
+class SeriesGeneradas extends Model
 {
-    use HasFactory;
-
-    protected $table = 'crm.menu';
+    protected $table = 'crm.series_generadas';
 
     protected $fillable = [
-        "code",
-        "module",
-        "description",
-        "name",
-        "url",
-        "icon",
+        'serie'
     ];
 
     public function setCreatedAtAttribute($value)
@@ -31,5 +23,6 @@ class Menu extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
+
 
 }
