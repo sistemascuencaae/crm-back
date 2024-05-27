@@ -26,7 +26,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
-use App\Http\Controllers\crm\SerieGeneradaController;
+use App\Http\Controllers\crm\SeriesGeneradasController;
 use App\Http\Controllers\crm\TipoCasoFormulasController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
@@ -310,7 +310,10 @@ Route::group(['prefix' => 'parametros'], function ($router) {
 
 
 
+// ----------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------
 //----------------------- START RUTAS JUAN  ----------------------------------------------
+
 
 Route::group(["prefix" => "crm"], function ($router) {
 
@@ -444,12 +447,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::delete('/deleteCTipoResultadoCierre/{id}', [CTipoResultadoCierreController::class, 'deleteCTipoResultadoCierre']); // Eliminar
     Route::get('listResultadoIniciadoByTableroId/{tab_id}', [CTipoResultadoCierreController::class, 'listResultadoIniciadoByTableroId']); // listar
 
-    // CHAT GRUPAL
-
-    // Route::post('/addChatGrupal', [ChatController::class, 'addChatGrupal']); // guardar
-    // Route::get('/listChatByCasoId/{caso_id}', [ChatController::class, 'listChatByCasoId']); // by casi_id
-    // Route::post('/editChatGrupal/{id}', [ChatController::class, 'editChatGrupal']); // Editar
-
     // TIPO CASO
 
     Route::post('/addTipoCaso', [TipoCasoController::class, 'addTipoCaso']); // guardar
@@ -578,14 +575,13 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // SERIES GENERADAS
 
-    Route::get('/buscarSerieGex', [SerieGeneradaController::class, 'buscarSerieGex']);
+    Route::post('/addSeriesGeneradas', [SeriesGeneradasController::class, 'addSeriesGeneradas']);
 
 });
 
 Route::group([], function ($router) {
     Route::post('/getDocuments/{caso_id}', [EquifaxController::class, 'getDocuments']);
 });
-
 
 Route::group(["prefix" => "credito"], function ($router) {
 
@@ -639,15 +635,16 @@ Route::group(["prefix" => "credito"], function ($router) {
 
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
+// ----------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------
 
 
 
-
-
-
-
-
+// ----------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------
 //----------------------- START RUTAS JAIRO  ----------------------------------------------
+
+
 Route::group(["prefix" => "crm"], function ($router) {
     //Partes
     Route::get('/listado', [PartesController::class, 'listado']);
@@ -833,24 +830,17 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
     Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
 });
+
+
 //----------------------- END RUTAS JAIRO  ----------------------------------------------
+// ----------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------
 
 
 
+// PERFILES, MENU, ACCESOS
 
-
-
-
-
-
-
-
-
-
-
-Route::group([
-    'prefix' => 'profile',
-], function () {
+Route::group(['prefix' => 'profile'], function () {
     Route::get('all', [ProfileController::class, 'all']);
     Route::get('list', [ProfileController::class, 'list']);
     Route::get('list/{id}', [ProfileController::class, 'findById']);
@@ -858,26 +848,20 @@ Route::group([
     Route::post('edit/{id}', [ProfileController::class, 'edit']);
     Route::delete('deleteProfile/{id}', [ProfileController::class, 'deleteProfile']);
     Route::post('clonProfile', [ProfileController::class, 'clonProfile']);
+    Route::get('buscarAccesosByProfileId/{id}', [ProfileController::class, 'buscarAccesosByProfileId']);
 });
 
-
-Route::group([
-    'prefix' => 'access',
-], function () {
+Route::group(['prefix' => 'access'], function () {
     Route::get('program/{profile}/{program}', [ProfileController::class, 'findByProgram']);
     Route::get('menu/{userid}', [ProfileController::class, 'findByUser']);
 });
-Route::group([
-    'prefix' => 'company',
-], function () {
+
+Route::group(['prefix' => 'company'], function () {
     Route::get('lista/{id}', [CompanyController::class, 'findById']);
     Route::put('editar/{id}', [CompanyController::class, 'edit']);
 });
 
-Route::group([
-    'prefix' => 'menu',
-], function () {
-
+Route::group(['prefix' => 'menu'], function () {
     Route::get('list', [MenuController::class, 'list']);
     Route::get('list/{id}', [MenuController::class, 'findById']);
 
@@ -885,8 +869,6 @@ Route::group([
     Route::post('editMenu/{id}', [MenuController::class, 'editMenu']);
     Route::delete('deleteMenu/{id}', [MenuController::class, 'deleteMenu']);
 });
-
-
 
 
 
