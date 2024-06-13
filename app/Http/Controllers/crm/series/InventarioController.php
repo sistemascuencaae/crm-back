@@ -16,7 +16,7 @@ class InventarioController extends Controller
     {
         $this->middleware('auth:api');
     }
-    
+
     public function listado()
     {
         $data = DB::select("select c.numero,
@@ -29,14 +29,14 @@ class InventarioController extends Controller
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function productos()
     {
         $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta, pc.tipo_servicio as tipo from producto p left outer join gex.producto_config pc  on p.pro_id = pc.pro_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function bodegas()
     {
         $data = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b order by presenta");
@@ -94,8 +94,8 @@ class InventarioController extends Controller
             }
 
             DB::transaction(function() use ($request, $numero){
-                date_default_timezone_set("America/Guayaquil");                
-                
+                date_default_timezone_set("America/Guayaquil");
+
                 $fecha_crea = null;
                 $fecha_modifica = null;
 
@@ -110,10 +110,10 @@ class InventarioController extends Controller
                 $estado = $request->input('estado');
                 $bod_id = $request->input('bod_id');
                 $responsable = $request->input('responsable');
-    
+
                 $usuario_crea = $request->input('usuario_crea');
                 $usuario_modifica = $request->input('usuario_modifica');
-    
+
                 DB::table('gex.cinventario')->updateOrInsert(
                     ['numero' => $numero],
                     [
@@ -127,9 +127,9 @@ class InventarioController extends Controller
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
                     ]);
-            
-                $detalle = $request->input('detalle');                
-                
+
+                $detalle = $request->input('detalle');
+
                 foreach ($detalle as $d) {
                     DB::table('gex.dinventario')->updateOrInsert(
                         [
@@ -182,9 +182,9 @@ class InventarioController extends Controller
                     }
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Inventario grabado con exito', $numero));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
@@ -228,17 +228,17 @@ class InventarioController extends Controller
         try {
             DB::transaction(function() use ($numero){
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 $data = Inventario::with('detalle')->get()->where('numero', $numero)->first();
 
                 $fecha_crea = $data['fecha_crea'];
                 $fecha_modifica = date("Y-m-d h:i:s");
                 $estado = 'D';
                 $bod_id = $data['bod_id'];
-    
+
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $data['usuario_modifica'];
-    
+
                 DB::table('gex.cinventario')->updateOrInsert(
                     ['numero' => $numero],
                     [
@@ -250,9 +250,9 @@ class InventarioController extends Controller
                     'fecha_modifica' => $fecha_modifica,
                     ]);
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Inventario anulado con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
@@ -270,6 +270,23 @@ class InventarioController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Inventario eliminado con exito', []));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
+        }
+    }
+
+    public function validaSerieInv($producto, $serie,$tipo)
+    {
+        $data = DB::selectOne("select * from gex.dinventario d where d.pro_id = " . $producto . " and d.serie = '" . $serie . "' and d.tipo = '" . $tipo . "'");
+
+        if ($data) {
+            return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta inventariar ya existe en la base de datos, por favor verifique...', []));
+        } else {
+            $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.tipo = '" . $tipo . "'");
+
+            if ($data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta inventariar ya existe en la base de datos para la bodega seleccionada, por favor verifique...', []));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Serie no existe', []));
         }
     }
 }
