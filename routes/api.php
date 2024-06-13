@@ -728,6 +728,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/byInventarioProc/{numero}', [InventarioController::class, 'byInventarioProc']);
     Route::get('/anulaInventario/{numero}', [InventarioController::class, 'anulaInventario']);
     Route::get('/eliminaInventario/{numero}', [InventarioController::class, 'eliminaInventario']);
+    Route::get('/validaSerieInv/{producto}/{serie}/{tipo}', [InventarioController::class, 'validaSerieInv']);
 
     //Kardex de Series
     Route::get('/listadoProdKar', [KardexSeriesController::class, 'productos']);

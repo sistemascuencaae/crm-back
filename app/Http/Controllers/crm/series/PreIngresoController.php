@@ -16,7 +16,7 @@ class PreIngresoController extends Controller
     {
         $this->middleware('auth:api');
     }
-    
+
     public function listado()
     {
         $data = DB::select("select c.numero, c.fecha as fecha, guia_remision,
@@ -31,21 +31,21 @@ class PreIngresoController extends Controller
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function productos()
     {
         $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta, pc.tipo_servicio as tipo from producto p left outer join gex.producto_config pc  on p.pro_id = pc.pro_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function bodegas()
     {
         $data = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b order by presenta");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function clientes($busqueda)
     {
         $data = DB::select("select *
@@ -61,10 +61,16 @@ class PreIngresoController extends Controller
     public function validaSerie($producto, $serie, $tipo)
     {
         $data = DB::selectOne("select * from gex.producto_serie ps where ps.pro_id = " . $producto . " and ps.serie = '" . $serie . "' and ps.tipo = '" . $tipo . "'");
-        
+
         if($data) {
             return response()->json(RespuestaApi::returnResultado('error', 'La serie ingresada ya existe para el producto', []));
         }else{
+            $data = DB::selectOne("select * from gex.dinventario d where d.pro_id = " . $producto . " and d.serie = '" . $serie . "' and d.tipo = '" . $tipo . "'");
+
+            if ($data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'La serie ingresada ya existe para el producto', []));
+            }
+
             return response()->json(RespuestaApi::returnResultado('success', '200', []));
         }
     }
@@ -86,7 +92,7 @@ class PreIngresoController extends Controller
                                                         join almacen a on p.alm_id = a.alm_id
                                                         join ctipocom t on c.cti_id = t.cti_id
                                         where c.cfa_id = " . $data['cfa_id'])[0];
-            
+
                 $data['doc_rela'] = $rela->numero;
             }
         } else {
@@ -95,7 +101,7 @@ class PreIngresoController extends Controller
                                                     join almacen a on p.alm_id = a.alm_id
                                                     join ctipocom t on c.cti_id = t.cti_id
                                         where c.cmo_id = " . $data['cmo_id'])[0];
-            
+
             $data['doc_rela'] = $rela->numero;
         }
 
@@ -155,7 +161,7 @@ class PreIngresoController extends Controller
         try {
             DB::transaction(function() use ($request){
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 $numero = 0;
                 $fecha_crea = null;
                 $fecha_modifica = null;
@@ -176,10 +182,10 @@ class PreIngresoController extends Controller
                 $cfa_id = null;
                 $guia_remision = $request->input('guia_remision');
                 $cli_id = $request->input('cli_id');
-    
+
                 $usuario_crea = $request->input('usuario_crea');
                 $usuario_modifica = $request->input('usuario_modifica');
-    
+
                 DB::table('gex.cpreingreso')->updateOrInsert(
                     ['numero' => $numero],
                     [
@@ -196,9 +202,9 @@ class PreIngresoController extends Controller
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
                     ]);
-            
+
                 $detalle = $request->input('detalle');
-                
+
                 $data = (PreIngreso::with('detalle')->get()->where('numero', $numero)->first())['detalle'];
 
                 DB::table('gex.dpreingreso')->where('numero',$numero)->delete();
@@ -243,9 +249,9 @@ class PreIngresoController extends Controller
                         ]);
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Preingreso grabado con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
@@ -256,16 +262,16 @@ class PreIngresoController extends Controller
         try {
             DB::transaction(function() use ($numero){
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 $data = PreIngreso::with('detalle')->get()->where('numero', $numero)->first();
 
                 $fecha_crea = $data['fecha_crea'];
                 $fecha_modifica = date("Y-m-d h:i:s");
                 $estado = 'D';
-    
+
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $data['usuario_modifica'];
-    
+
                 DB::table('gex.cpreingreso')->updateOrInsert(
                     ['numero' => $numero],
                     [
@@ -281,9 +287,9 @@ class PreIngresoController extends Controller
                     DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Preingreso anulado con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
@@ -368,7 +374,7 @@ class PreIngresoController extends Controller
 
     public function cargaPreingresos() {
         $data = PreIngreso::with('detalle')->where('cmo_id', null)->where('estado', 'A')->get();
-        
+
         foreach ($data as $d) {
             $d['bodega'] = DB::selectone("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $d['bod_id']);
             $d['cliente'] = DB::selectone("select c.cli_id, concat(e.ent_identificacion, ' - ',
@@ -417,14 +423,14 @@ class PreIngresoController extends Controller
 
             DB::transaction(function() use ($preIngresos){
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 foreach ($preIngresos as $p) {
                     $numero = $p['numero'];
                     $fecha_crea = $p['fecha_crea'];
                     $fecha_modifica = date("Y-m-d h:i:s");
                     $cmo_id = $p['cmo_id'];
                     $cfa_id = $p['cfa_id'];
-        
+
                     $usuario_crea = $p['usuario_crea'];
                     $usuario_modifica = $p['usuario_modifica'];
 
@@ -441,9 +447,9 @@ class PreIngresoController extends Controller
                         ]);
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Preingresos relacionados con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
@@ -462,7 +468,7 @@ class PreIngresoController extends Controller
                 $fecha_modifica = date("Y-m-d h:i:s");
                 $cmo_id = null;
                 $cfa_id = null;
-        
+
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $usuario;
 
@@ -478,9 +484,9 @@ class PreIngresoController extends Controller
                     'fecha_modifica' => $fecha_modifica,
                     ]);
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se quitó la relacion del preingreso con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
