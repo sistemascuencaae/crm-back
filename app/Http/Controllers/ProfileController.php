@@ -5,10 +5,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Traits\FormatResponseTrait;
+use App\Models\Menu;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\Profile;
 use App\Models\Access;
@@ -21,27 +21,6 @@ class ProfileController extends Controller
     //       $this->middleware('auth:api');
     // }
 
-    public function all()
-    {
-        try {
-            $data = Profile::orderBy('id', 'asc')->get();
-
-            // Especificar las propiedades que representan fechas en tu objeto Nota
-            $dateFields = ['created_at', 'updated_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
-        } catch (Exception $e) {
-            return $this->getErrCustom($e->getMessage(), 'Error: la información no se logro conseguir: ');
-        }
-        // return response()->json($data);
-    }
-
     public function list()
     {
         try {
@@ -50,7 +29,7 @@ class ProfileController extends Controller
             $data = DB::select($sql);
 
             return $this->getOk($data);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->getErrCustom($e->getMessage(), 'Error: la información no se logro conseguir: ');
         }
     }
@@ -124,7 +103,7 @@ class ProfileController extends Controller
                 'status' => 'success',
                 'data' => $accesos
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $data = array(
                 'code' => 400,
                 'status' => 'error',
@@ -135,80 +114,66 @@ class ProfileController extends Controller
         return response()->json($data, $data['code']);
     }
 
+    // JUAN PERFILES
+
+    public function all()
+    {
+        try {
+            $data = Profile::orderBy('id', 'asc')->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at', 'updated_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
     public function create(Request $request)
     {
         try {
             $error = null;
             $exitoso = null;
-            // Accede al JSON enviado desde el frontend
-            $jsonData = $request->json()->all();
 
-            $data = DB::transaction(function () use ($jsonData, $request, &$error, &$exitoso) {
-                // Valida los datos (puedes usar la validación de Laravel, por ejemplo)
-                $validatedData = $this->validate($request, [
-                    'name' => 'required|string|max:255',
-                    'isactive' => 'required|integer',
-                    'access' => 'required|array',
-                    // Asegúrate de que 'access' sea un array
-                    // Define reglas de validación para los elementos en 'access' según tus necesidades
-                ]);
+            DB::transaction(function () use ($request, &$error, &$exitoso) {
 
-                // Verifica si ya existe un perfil con el mismo nombre
-                $existingProfile = Profile::where('name', $validatedData['name'])->first();
+                // Verificamos si ya existe un perfil con el mismo nombre
+                $existingProfile = Profile::where('name', $request->name)->first();
 
                 if ($existingProfile) {
                     $error = 'Ya EXISTE un perfil con el mismo nombre';
                     return null;
-                    // return response()->json(RespuestaApi::returnResultado('error', 'El perfil ya existe', ''), 409);
                 } else {
+                    $profile = Profile::create([
+                        'name' => $request->name,
+                        'isactive' => $request->isactive,
+                    ]);
 
-                    // Procesa los datos y crea un nuevo perfil
-                    $profile = new Profile();
-                    $profile->name = $validatedData['name'];
-                    $profile->isactive = $validatedData['isactive'];
-                    $profile->save(); // Guarda el perfil y obtén el ID
-                    // Asegúrate de guardar estos datos y obtener el ID del perfil
+                    // Crear los accesos del perfil
+                    foreach ($request->access as $accessData) {
+                        $accessData['profile_id'] = $profile->id;
+                        Access::create($accessData);
+                    }
 
-                    // for ($i = 0; $i < sizeof($jsonData['access']); $i++) {
-                    //     Access::create([
-                    //         "profile_id" => $profile['id'],
-                    //         "menu_id" => $jsonData['access'][$i]['menu_id'],
-                    //         "view" => $jsonData['access'][$i]['view'],
-                    //         "create" => $jsonData['access'][$i]['create'],
-                    //         "edit" => $jsonData['access'][$i]['edit'],
-                    //         "delete" => $jsonData['access'][$i]['delete'],
-                    //         "report" => $jsonData['access'][$i]['report'],
-                    //         "other" => $jsonData['access'][$i]['other']
-                    //     ]);
-                    // }
+                    $exitoso = Profile::orderBy('id', 'asc')->get();
 
-                    foreach ($validatedData['access'] as $accessData) {
-                        Access::create([
-                            'profile_id' => $profile->id,
-                            'menu_id' => $accessData['menu_id'],
-                            'view' => $accessData['view'],
-                            'create' => $accessData['create'],
-                            'edit' => $accessData['edit'],
-                            'delete' => $accessData['delete'],
-                            'report' => $accessData['report'],
-                            'ejecutar' => $accessData['ejecutar'],
-                        ]);
-                    };
-
-                    $exitoso = Profile::orderBy('id', 'desc')->get();
-
-                    // Especificar las propiedades que representan fechas en tu objeto Nota
+                    // Especificar las propiedades que representan fechas en tu objeto
                     $dateFields = ['created_at', 'updated_at'];
                     // Utilizar la función map para transformar y obtener una nueva colección
                     $exitoso->map(function ($item) use ($dateFields) {
-                        // $this->formatoFechaItem($item, $dateFields);
                         $funciones = new Funciones();
                         $funciones->formatoFechaItem($item, $dateFields);
                         return $item;
                     });
 
                     return null;
-                    // return Profile::orderBy('id', 'desc')->get();
                 }
             });
 
@@ -216,174 +181,96 @@ class ProfileController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', $error, ''));
             } else {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
-                // return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
             }
         } catch (Exception $e) {
-            // return response()->json($e);
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
-    // // Metodo original de leonardo
-    // public function create(Request $request)
-    // {
-    //     $date = date('Y-m-d H:i:s');
-    //     $json = $request->input('json', null);
-    //     $params_array = json_decode($json, true); //consigo un objeto
+    public function buscarAccesosByProfileId(Request $request, $profile_id)
+    {
+        try {
+            $menus = Menu::orderBy('code', 'asc')->get();
 
-    //     $validation = \Validator::make($params_array, [
-    //         'name' => 'required',
-    //     ]);
+            $accesosPerfil = [];
 
+            foreach ($menus as $menuData) {
+                $acceso = Access::where('profile_id', $profile_id)->where('menu_id', $menuData['id'])->with('menu')->first();
 
-    //     if (!$validation->fails()) {
-    //         $input = $request->all();
-    //         $profile = new Profile($params_array);
-    //         $profile->save();
-    //         $lastProfile = Profile::latest('id')->first();
+                if ($acceso) {
+                    // Agregamos el acceso al array, como hacer un push en el front angular
+                    $accesosPerfil[] = $acceso;
+                } else {
+                    // Si no se encuentra un acceso de un menu, creamos uno default
+                    $defaultAccess = [
+                        'id' => null,
+                        'profile_id' => $profile_id,
+                        'menu_id' => $menuData['id'],
+                        'view' => 0,
+                        'create' => 0,
+                        'edit' => 0,
+                        'delete' => 0,
+                        'report' => 0,
+                        'ejecutar' => 0,
+                        'created_at' => null,
+                        'updated_at' => null,
+                        'menu' => $menuData // Agregar el objeto Menu relacionado
+                    ];
+                    $accesosPerfil[] = (object) $defaultAccess;
+                }
+            }
 
-    //         foreach ($params_array['access'] as $parent_row) {
-    //             $access = new Access($parent_row);
-    //             $access->profile_id = $lastProfile->id;
-    //             $access->save();
-    //         }
-
-
-    //         if ($profile) {
-    //             //Confirma en Mensaje
-    //             $data = array(
-    //                 'code' => 200,
-    //                 'status' => 'success',
-    //                 'message' => 'Profile creada',
-    //                 'profile' => $profile,
-    //             );
-    //         } else {
-    //             //LA VALIDACION A FALLADO
-    //             $data = array(
-    //                 'code' => 404,
-    //                 'status' => 'error',
-    //                 'message' => 'Profile no creado',
-    //             );
-    //         }
-    //     } else {
-    //         //NO SE ENVIO NADA
-    //         $data = array(
-    //             'code' => 404,
-    //             'status' => 'error',
-    //             'message' => 'No has enviado ningun profile',
-    //             'profile' => $json,
-    //         );
-    //     }
-    //     return response()->json($data);
-    // }
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $accesosPerfil));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 
     public function edit(Request $request, $id)
     {
         try {
             $error = null;
             $exitoso = null;
-            //recoger datos por post
-            $json = $request->input('json', null);
-            $params_array = json_decode($json, true);
-            $params_array1 = $params_array;
 
-            $data = DB::transaction(function () use ($request, $json, $id, $params_array1, $params_array, &$error, &$exitoso) {
+            DB::transaction(function () use ($id, $request, &$error, &$exitoso) {
 
-                if (!empty($params_array)) {
-                    //validar los datos
-                    $validate = \Validator::make($params_array, [
-                        'id' => 'required',
-                    ]);
+                // Verificar si ya existe un perfil con el mismo nombre
+                $existingProfile = Profile::where('name', $request->name)
+                    ->where('id', '!=', $id) // Excluye el perfil que estás editando
+                    ->first();
 
-                    if ($validate->fails()) {
-                        //LA VALIDACION A FALLADO
-                        // $data = array(
-                        //     'code' => 404,
-                        //     'status' => 'error',
-                        //     'message' => 'Error: La validacion a fallado, revise que los datos requeridos esten completos',
-                        //     'error' => $validate->errors(),
-                        // );
-
-                        $error = 'Error: La validacion a fallado, revise que los datos requeridos esten completos';
-                        return null;
-                    } else {
-                        // try {
-
-                        // Verificar si ya existe un perfil con el mismo nombre
-                        $existingProfile = Profile::where('name', $params_array['name'])
-                            ->where('id', '!=', $id) // Excluye el perfil que estás editando
-                            ->first();
-
-                        if ($existingProfile) {
-                            $error = 'Ya EXISTE un perfil con el mismo nombre';
-                            return null;
-                            // return response()->json(RespuestaApi::returnResultado('error', 'El Perfil ya existe', ''));
-                        } else {
-
-                            // actualizo el profile
-                            unset($params_array1['access']);
-                            $profileId = Profile::where('id', $id)->update($params_array1);
-                            //Quitar campos que no quiero actualizar
-                            unset($params_array['id']);
-                            unset($params_array['created_at']);
-                            unset($params_array['updated_at']);
-
-                            //eliminos loa access actuales
-                            $res = Access::where('profile_id', $id)->delete();
-                            //guardo los nuevos access
-
-                            foreach ($params_array['access'] as $parent_row) {
-                                $access = new Access($parent_row);
-                                $access->profile_id = $id;
-                                $access->save();
-                            }
-
-
-                            unset($params_array['access']);
-
-                            // Obtener el perfil actualizado
-                            $updatedProfile = Profile::find($id);
-
-                            // $data = array(
-                            //     'code' => 200,
-                            //     'status' => 'success',
-                            //     'message' => 'Se modificó correctamente.',
-                            //     'data' => $updatedProfile,
-                            //     // Devuelve el perfil actualizado
-                            // );
-
-                            $exitoso = $updatedProfile;
-
-
-                            // Especificar las propiedades que representan fechas en tu objeto Nota
-                            $dateFields = ['created_at', 'updated_at'];
-                            $funciones = new Funciones();
-                            $funciones->formatoFechaItem($exitoso, $dateFields);
-
-
-                            return null;
-
-                        }
-                        // } catch (\Exception $e) {
-                        //     //. $e->getMessage()
-                        //     $data = array(
-                        //         'code' => 400,
-                        //         'status' => 'error',
-                        //         'message' => 'Error: No se pudo modificar, existe un conflicto en la base de datos: ',
-                        //         'error' => $e,
-                        //     );
-                        // }
-                    }
+                if ($existingProfile) {
+                    $error = 'Ya EXISTE un perfil con el mismo nombre';
+                    return null;
+                    // return response()->json(RespuestaApi::returnResultado('error', 'El Perfil ya existe', ''));
                 } else {
-                    // $data = array(
-                    //     'code' => 400,
-                    //     'status' => 'error',
-                    //     'message' => 'Error: No se ha enviado ninguna información, o la información esta incompleta.',
-                    // );
-                    $error = 'Error: No se ha enviado ninguna información, o la información esta incompleta.';
+
+                    $perfil = Profile::findOrFail($id);
+
+                    $perfil->update($request->all());
+
+                    //eliminos los access actuales
+                    Access::where('profile_id', $id)->delete();
+
+                    // Crear los accesos del perfil
+                    foreach ($request->access as $accessData) {
+                        $accessData['profile_id'] = $perfil->id;
+                        Access::create($accessData);
+                    }
+
+                    $exitoso = Profile::orderBy('id', 'asc')->get();
+
+                    // Especificar las propiedades que representan fechas en tu objeto
+                    $dateFields = ['created_at', 'updated_at'];
+                    // Utilizar la función map para transformar y obtener una nueva colección
+                    $exitoso->map(function ($item) use ($dateFields) {
+                        $funciones = new Funciones();
+                        $funciones->formatoFechaItem($item, $dateFields);
+                        return $item;
+                    });
+
                     return null;
                 }
-                // return response()->json($data, $data['code']);
             });
 
             if ($error) {
@@ -393,14 +280,14 @@ class ProfileController extends Controller
             }
 
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
     public function deleteProfile(Request $request, $id)
     {
         try {
-            $data = DB::transaction(function () use ($request, $id) {
+            $data = DB::transaction(function () use ($id) {
                 $profile = Profile::findOrFail($id);
 
                 // Verificar si existen usuarios relacionados con este perfil
@@ -426,58 +313,39 @@ class ProfileController extends Controller
             $error = null;
             $exitoso = null;
 
-            // Recoger datos por post
-            $json = $request->input('json', null);
-            $params_array = json_decode($json, true);
+            DB::transaction(function () use ($request, &$error, &$exitoso) {
 
-            $data = DB::transaction(function () use ($request, $json, $params_array, &$error, &$exitoso) {
-                // Validar los datos
-                $validate = \Validator::make($params_array, [
-                    'name' => 'required|string|max:255',
-                ]);
+                // Verificar si ya existe un perfil con el mismo nombre
+                $existingProfile = Profile::where('name', $request->name)->first();
 
-                if ($validate->fails()) {
-
-                    $error = 'Error: La validación ha fallado, revise que los datos requeridos estén completos';
+                if ($existingProfile) {
+                    $error = 'Ya EXISTE un perfil con el mismo nombre';
                     return null;
-
                 } else {
 
-                    // Verificar si ya existe un perfil con el mismo nombre
-                    $existingProfile = Profile::where('name', $params_array['name'])->first();
+                    $profile = Profile::create([
+                        'name' => $request->name,
+                        'isactive' => $request->isactive,
+                    ]);
 
-                    if ($existingProfile) {
-                        $error = 'Ya EXISTE un perfil con el mismo nombre';
-                        return null;
-                        // return response()->json(RespuestaApi::returnResultado('error', 'El Perfil ya existe', ''));
-                    } else {
-
-                        // Crea un nuevo perfil
-                        $profile = new Profile($params_array);
-                        $profile->save();
-
-                        // Guardar los nuevos access
-                        if (isset($params_array['access']) && is_array($params_array['access'])) {
-                            foreach ($params_array['access'] as $accessData) {
-                                $access = new Access($accessData);
-                                $access->profile_id = $profile->id; // Asigna el ID del nuevo perfil
-                                $access->save();
-                            }
-                        }
-
-                        $exitoso = Profile::orderBy('id', 'desc')->get();
-
-                        // Especificar las propiedades que representan fechas en tu objeto
-                        $dateFields = ['created_at', 'updated_at'];
-                        // Utilizar la función map para transformar y obtener una nueva colección
-                        $exitoso->map(function ($item) use ($dateFields) {
-                            $funciones = new Funciones();
-                            $funciones->formatoFechaItem($item, $dateFields);
-                            return $item;
-                        });
-
-                        return null;
+                    // Crear los accesos del perfil
+                    foreach ($request->access as $accessData) {
+                        $accessData['profile_id'] = $profile->id;
+                        Access::create($accessData);
                     }
+
+                    $exitoso = Profile::orderBy('id', 'asc')->get();
+
+                    // Especificar las propiedades que representan fechas en tu objeto
+                    $dateFields = ['created_at', 'updated_at'];
+                    // Utilizar la función map para transformar y obtener una nueva colección
+                    $exitoso->map(function ($item) use ($dateFields) {
+                        $funciones = new Funciones();
+                        $funciones->formatoFechaItem($item, $dateFields);
+                        return $item;
+                    });
+
+                    return null;
                 }
             });
 
