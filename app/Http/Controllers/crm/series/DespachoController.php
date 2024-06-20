@@ -55,7 +55,8 @@ class DespachoController extends Controller
                                     (select cast(sum(d.dfac_cantidad) as integer)
                                      from dfactura d
                                      where d.cfa_id = c.cfa_id
-                                            and not exists (select 1 from gex.producto_config pc where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G')) as cantidad,
+                                            and not exists (select 1 from gex.producto_config pc where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G')
+                                            and not exists (select 1 from producto p where p.pro_id = d.pro_id and p.pro_inventario = false)) as cantidad,
                                     coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cfa_id = c.cfa_id),0) as despachado
                             from cfactura c join puntoventa p on c.pve_id = p.pve_id
                                         join almacen a on p.alm_id = a.alm_id
@@ -371,7 +372,7 @@ class DespachoController extends Controller
                 $fecha_modifica = date("Y-m-d h:i:s");
                 $estado = 'D';
                 $bod_id = $data['bod_id'];
-    
+
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $data['usuario_modifica'];
     
@@ -385,9 +386,9 @@ class DespachoController extends Controller
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
                     ]);
-
+                    
                 foreach ($data['detalle'] as $d) {
-                    if ($bodDest == null) {
+                    if ($bodDest == "null") {
                         DB::table('gex.stock_serie')->updateOrInsert(
                             [
                                 'pro_id' => $d['pro_id'],
