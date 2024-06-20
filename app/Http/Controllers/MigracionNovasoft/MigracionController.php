@@ -20,7 +20,7 @@ class MigracionController extends Controller
                 'aav_migracion_cartera',
                 'aav_migracion_cliente',
                 'aav_migracion_referencias_cliente',
-                'aav_migracion_carteraxsecretaria2_periodoymes_actual',
+                'aav_migracion_CobrosxSecretaria_PeriodoyMes_Actual',
                 'aav_migracion_rutaje'
             ]
         ]);
@@ -70,10 +70,10 @@ class MigracionController extends Controller
         }
     }
 
-    public function aav_migracion_carteraxsecretaria2_periodoymes_actual()
+    public function aav_migracion_CobrosxSecretaria_PeriodoyMes_Actual()
     {
         try {
-            $data = DB::table('public.aav_migracion_carteraxsecretaria2_periodoymes_actual')->get();
+            $data = DB::table('public.aav_migracion_cobrosxsecretaria_periodoymes_actual')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
