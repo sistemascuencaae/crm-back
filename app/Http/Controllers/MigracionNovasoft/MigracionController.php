@@ -20,7 +20,8 @@ class MigracionController extends Controller
                 'aav_migracion_cartera',
                 'aav_migracion_cliente',
                 'aav_migracion_referencias_cliente',
-                'aav_migracion_carteraxsecretaria2_periodoymes_actual'
+                'aav_migracion_CobrosxSecretaria_PeriodoyMes_Actual',
+                'aav_migracion_rutaje'
             ]
         ]);
 
@@ -69,10 +70,23 @@ class MigracionController extends Controller
         }
     }
 
-    public function aav_migracion_carteraxsecretaria2_periodoymes_actual()
+    public function aav_migracion_CobrosxSecretaria_PeriodoyMes_Actual()
     {
         try {
-            $data = DB::table('public.aav_migracion_carteraxsecretaria2_periodoymes_actual')->get();
+            $data = DB::table('public.aav_migracion_cobrosxsecretaria_periodoymes_actual')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function aav_migracion_rutaje()
+    {
+        try {
+            $data = DB::table('public.aav_migracion_rutaje')
+            ->select('ent_id', 'ent_identificacion', 'ent_nombres', 'ent_apellidos', 'emp_abreviacion', 'cedula_cobrador', 'nombre_cobrador', 'fecha_reporte')
+            ->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
