@@ -97,7 +97,6 @@ class ArchivoController extends Controller
             $log->logInfo(ArchivoController::class, 'Se guardaron con exito los archivos en el caso: #' . $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivos));
-
         } catch (Exception $e) {
             $log->logError(ArchivoController::class, 'Error al guardar los archivos en el caso: #' . $caso_id, $e);
 
@@ -179,7 +178,6 @@ class ArchivoController extends Controller
             $log->logInfo(ArchivoController::class, 'Se guardo con exito el archivo en el caso: #' . $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $archivos));
-
         } catch (Exception $e) {
             $log->logError(ArchivoController::class, 'Error al guardar el archivo en el caso: #' . $caso_id, $e);
 
@@ -187,11 +185,11 @@ class ArchivoController extends Controller
         }
     }
 
-    public function listArchivoByCasoId($caso_id)
+    public function listArchivoByCasoId($caso_id, $tableroListaId)
     {
         $log = new Funciones();
         try {
-            $data = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
+            //$data = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
 
             // // Formatear las fechas
             // $data->transform(function ($item) {
@@ -200,15 +198,46 @@ class ArchivoController extends Controller
             //     return $item;
             // });
 
+            // $tabActual = DB::selectOne("SELECT tab.id  FROM crm.caso ca
+            // inner join crm.fase fa on fa.id = ca.fas_id
+            // inner join crm.tablero tab on tab.id = fa.tab_id
+            // where ca.id = $caso_id");
+
+
+
+            $archivosData = DB::select(
+            "SELECT * from (
+            select arch.* from crm.archivos arch
+            where arch.tipo <> 'Requerimiento'
+            union
+            select arch2.* from crm.archivos arch2
+            inner join crm.requerimientos_caso rc2 on rc2.archivos_id = arch2.id
+            where rc2.tab_id = ? or rc2.acc_publico = true
+            ) temp where temp.caso_id = ? ORDER BY temp.id DESC", [$tableroListaId, $caso_id]);
+
+            //where rc2.tab_id = 210 or rc2.acc_publico = true
+            //) temp where temp.caso_id = 2336 ORDER BY temp.id DESC");
+
+
             // Especificar las propiedades que representan fechas en tu objeto Nota
+            // $dateFields = ['created_at', 'updated_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $archivosData->map(function ($item) use ($dateFields) {
+            //     // $this->formatoFechaItem($item, $dateFields);
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
+            //********************************
             $dateFields = ['created_at', 'updated_at'];
+
             // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                // $this->formatoFechaItem($item, $dateFields);
+            $archivosData2 = collect($archivosData)->map(function ($item) use ($dateFields) {
+
                 $funciones = new Funciones();
                 $funciones->formatoFechaItem($item, $dateFields);
                 return $item;
-            });
+            })->all();
 
             // return response()->json(
             //     RespuestaApi::returnResultado(
@@ -231,8 +260,7 @@ class ArchivoController extends Controller
 
             $log->logInfo(ArchivoController::class, 'Se listo con exito los archivos del caso: #' . $caso_id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $data));
-
+            return response()->json(RespuestaApi::returnResultado('success', 'El listo con éxito', $archivosData));
         } catch (Exception $e) {
             $log->logError(ArchivoController::class, 'Error al listar los archivos del caso: #' . $caso_id, $e);
 
@@ -488,7 +516,6 @@ class ArchivoController extends Controller
             $log->logInfo(ArchivoController::class, 'Se creo con exito los archivos de Equifax en el caso: #' . $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
-
         } catch (Exception $e) {
             $log->logError(ArchivoController::class, 'Error al crear los archivos de Equifax en el caso: #' . $caso_id, $e);
 
@@ -589,5 +616,4 @@ class ArchivoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 }
