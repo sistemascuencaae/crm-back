@@ -338,7 +338,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addArchivo/{caso_id}', [ArchivoController::class, 'addArchivo']); // Guardar
     Route::post('/addArrayArchivos/{caso_id}', [ArchivoController::class, 'addArrayArchivos']); // Guardar
-    Route::get('/listArchivoByCasoId/{id}', [ArchivoController::class, 'listArchivoByCasoId']); // Listar
+    Route::get('/listArchivoByCasoId/{id}/{tableroListaId}', [ArchivoController::class, 'listArchivoByCasoId']); // Listar
     Route::post('/editArchivo/{id}', [ArchivoController::class, 'editArchivo']); // Editar
     Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'deleteArchivo']); // Eliminar
     //Para documentos de equifax
@@ -631,6 +631,11 @@ Route::group(["prefix" => "credito"], function ($router) {
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
     Route::post('/addEmail', [EmailController::class, 'addEmail']);
     Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
+
+    // FILTRAR CASOS RECHAZADOS Y TERMINADOS PARA QUE VEAN TODAS LAS ANALISTAS, ASI NO HAYA PARTICIPADO EN EL CASO
+
+    Route::get('/listCasosRechazadosTerminados/{fechaInicio}/{fechaFin}/{tableroId}', [CasoController::class, 'listCasosRechazadosTerminados']);
+
 });
 
 
