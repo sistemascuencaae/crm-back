@@ -138,8 +138,13 @@ class GaleriaController extends Controller
         try {
             // Recupera las galerías relacionadas con el caso_id desde la base de datos
             //$galerias = Galeria::where('caso_id', $caso_id)->get();
-
-            $galerias = DB::select("SELECT * from (
+            $userLoginId = Auth::id();
+            $user = DB::selectOne("SELECT * FROM crm.users where id = ?", [$userLoginId]);
+            $data = [];
+            if ($user->usu_tipo_analista !== 1) {
+                $data = Galeria::where('caso_id', $caso_id)->get();
+            } else {
+                $data = DB::select("SELECT * from (
             select ga.* from crm.galerias ga
             where ga.tipo_gal_id <> 8
             union
@@ -147,11 +152,13 @@ class GaleriaController extends Controller
             inner join crm.requerimientos_caso rc2 on rc2.galerias_id = ga2.id
             where rc2.acc_publico = true or (rc2.acc_publico = false and rc2.tab_id = $tabId)
             ) temp where temp.caso_id = $caso_id ORDER BY temp.id DESC");
+            }
+
 
 
             $log->logInfo(GaleriaController::class, 'Se listo con exito las imagenes del caso #' . $caso_id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $galerias));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             $log->logError(GaleriaController::class, 'Error al listar la imagenes del caso #' . $caso_id, $e);
 
