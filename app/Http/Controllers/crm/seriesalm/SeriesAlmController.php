@@ -67,26 +67,37 @@ class SeriesAlmController extends Controller
         }
     }
 
-    public function inventarioByNumero($numero_inventario)
+    // public function inventarioByNumero($numero_inventario)
+    // {
+    //     try {
+    //         $data = Inventario::where('numero', $numero_inventario)->with('detalle')->first();
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+    //     }
+    // }
+
+    // listar las bodegas activas e inactivas
+    public function listBodegas()
     {
         try {
-            $data = Inventario::where('numero', $numero_inventario)->with('detalle')->first();
+            $data = DB::select("SELECT * from public.bodega b order by b.bod_nombre asc;");
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
-    // listar las bodegas
-    public function listBiodegasActivas()
+    // buscar los inventarios por bodega
+    public function inventariosByBod_id($bod_id)
     {
-
-    }
-
-    // inventarios por bodega
-    public function inventariosByBod_id()
-    {
-
+        try {
+            $data = Inventario::where('bod_id', $bod_id)->with('detalle')->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
     }
 
     // borrar un item de un inventario
