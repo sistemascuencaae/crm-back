@@ -644,8 +644,9 @@ Route::group(["prefix" => "gex"], function ($router) {
     // SERIES ALM
 
     Route::delete('/borrarInventarioCompleto/{numero_inventario}', [SeriesAlmController::class, 'borrarInventarioCompleto']); // Borrar un inventario completo que no tenga despachos ni contratos
-    Route::get('/inventarioByNumero/{numero_inventario}', [SeriesAlmController::class, 'inventarioByNumero']); // Buscar un inventario con sus items
-    // borrarItemInventario($numero_inventario, $bod_id, $pro_id, $serie, $tipo)
+    Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
+    Route::get('/inventariosByBod_id/{bod_id}', [SeriesAlmController::class, 'inventariosByBod_id']); // listar todas las bodegas
+    Route::delete('/borrarItemInventario/{numero_inventario}/{bod_id}/{pro_id}/{serie}/{tipo}', [SeriesAlmController::class, 'borrarItemInventario']); // Borrar un inventario completo que no tenga despachos ni contratos
 
 });
 
