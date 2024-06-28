@@ -81,7 +81,7 @@ class SeriesAlmController extends Controller
     public function listBodegas()
     {
         try {
-            $data = DB::select("SELECT * from public.bodega b order by b.bod_nombre asc;");
+            $data = DB::select("SELECT * from public.bodega b where b.bod_activo = true order by b.bod_nombre asc;");
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (Exception $e) {
@@ -93,7 +93,9 @@ class SeriesAlmController extends Controller
     public function inventariosByBod_id($bod_id)
     {
         try {
-            $data = Inventario::where('bod_id', $bod_id)->with('detalle')->get();
+            $data = Inventario::where('bod_id', $bod_id)
+                ->with('detalle.producto', 'bodega')->get();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
