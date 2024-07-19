@@ -43,12 +43,12 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-                [
-                    'add',
-                    //'addCasoOPMICreativa'
-                    'getCasoFormulario'
+            [
+                'add',
+                //'addCasoOPMICreativa'
+                'getCasoFormulario'
 
-                ]
+            ]
         ]);
     }
 
@@ -59,7 +59,8 @@ class CasoController extends Controller
         $casoInput = $request->all();
         // $miembros = $request->input('miembros');
         $miembros2 = $request->input('miembros');
-
+        //datos formulario estatico creacion de usuario
+        $dataFormStatic = $request->input('form_estatico');
         // Verificar si $miembros2 es un string
         if (is_string($miembros2)) {
             // Convertir la cadena en un array usando la coma como delimitador
@@ -67,12 +68,15 @@ class CasoController extends Controller
         } else {
             $miembros = $miembros2;
         }
-        try {
-            $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
+       //try {
+            $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request, $dataFormStatic) {
 
 
                 $caso = new Caso($casoInput);
                 $caso->save();
+                if ($dataFormStatic) {
+                    $this->crearFormularioStatico($dataFormStatic, $caso->id);
+                }
                 //buscar las tareas predefinidas
                 //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
                 $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
@@ -145,13 +149,19 @@ class CasoController extends Controller
             $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
             broadcast(new TableroEvent($casoCreado));
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
-        } catch (\Throwable $e) {
-            $log->logError(CasoController::class, 'Error al guardar el caso', $e);
+        // } catch (\Throwable $e) {
+        //     $log->logError(CasoController::class, 'Error al guardar el caso', $e);
 
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
-        }
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
+        // }
     }
-
+    public function crearFormularioStatico($data, $casoId)
+    {
+        $dataObject = json_decode($data); // assuming $data is a JSON string
+        $dataObject->caso_id = $casoId;
+        $dataObject->user_id = Auth::id();
+        $result = DB::table('crm.formulario_estatico')->insert((array) $dataObject);
+    }
     public function formularioSoporte($request, $casoId)
     {
         $valoresFormulario = json_decode($request->input('valoresFormulario'), true);
@@ -1651,5 +1661,4 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-
 }
