@@ -26,6 +26,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\seriesalm\SeriesAlmController;
 use App\Http\Controllers\crm\SeriesGeneradasController;
 use App\Http\Controllers\crm\TipoCasoFormulasController;
 use App\Http\Controllers\crm\TipoTelefonoController;
@@ -638,6 +639,16 @@ Route::group(["prefix" => "credito"], function ($router) {
 
 });
 
+Route::group(["prefix" => "gex"], function ($router) {
+
+    // SERIES ALM
+
+    Route::delete('/borrarInventarioCompleto/{numero_inventario}', [SeriesAlmController::class, 'borrarInventarioCompleto']); // Borrar un inventario completo que no tenga despachos ni contratos
+    Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
+    Route::get('/inventariosByBod_id/{bod_id}', [SeriesAlmController::class, 'inventariosByBod_id']); // listar todas las bodegas
+    Route::delete('/borrarItemInventario/{numero_inventario}/{bod_id}/{pro_id}/{serie}/{tipo}', [SeriesAlmController::class, 'borrarItemInventario']); // Borrar un inventario completo que no tenga despachos ni contratos
+
+});
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
 // ----------------------------------------------------------------------------------------
