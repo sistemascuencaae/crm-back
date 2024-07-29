@@ -42,7 +42,7 @@ class ComercializacionController extends Controller
         $agencia = $request->input('agencia');
         $periodos = $request->input('periodos');
         $mes = $request->input('mes');
-        $data = DB::table('crm.av_ventas_agencia as va')
+        $data = DB::table('av_ventas_agencia as va')
             ->select(
                 'va.cfa_id',
                 'va.cfa_periodo',
@@ -55,17 +55,13 @@ class ComercializacionController extends Controller
                 'va.fecha_comprobante',
                 'va.comprobante',
                 'va.factura_afectada',
-                'va.venta_total'
+                DB::raw("CASE WHEN interes IS NOT NULL THEN (venta_total+interes) ELSE (venta_total+0) END AS venta_total")
             )
             ->join('entidad as ent', 'ent.ent_id', '=', 'va.ent_emp_id')
             ->where('va.almacen', $agencia)
             ->whereIn('va.cfa_periodo', $periodos)
             ->where('va.mes', $mes)
             ->where(function ($query) use ($periodos) {
-                // $query->where(function ($query) use ($periodos) {
-                //     $query->where('va.cfa_periodo', $periodos[0])
-                //         ->where('va.comprobante', 'like', '%FAE%');
-                // })
                 $query->where(function ($query) use ($periodos) {
                     $query->where('va.cfa_periodo', $periodos[1])
                         ->where(function ($query) {
