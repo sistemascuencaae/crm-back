@@ -65,13 +65,14 @@ class DespachoController extends Controller
                                         join entidad e on l.ent_id = e.ent_id
                             where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'DES') and c.cfa_fecha >= '2023-06-01'
                                     and p.bod_id = " . $bodega . "
-                                    and (not exists (select 1 from gex.cdespacho c1 where c1.cfa_id = c.cfa_id) or
+                                    and not exists (select 1 from cfactura dev where dev.cfa_transacc = 2 and cfa_facproveedor = concat(t.cti_sigla,'-', a.alm_codigo, '-', p.pve_numero, '-',  c.cfa_numero) and dev.cfa_periodo = c.cfa_periodo and dev.cfa_subtotal = c.cfa_subtotal)
+                                    and (not exists (select 1 from gex.cdespacho c1 where c1.cfa_id = c.cfa_id and c1.estado = 'A') or
                                             (select cast(sum(d.dfac_cantidad) as integer)
                                             from dfactura d
                                             where d.cfa_id = c.cfa_id
                                                     and not exists (select 1 from gex.producto_config pc where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G')) > (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
                                                                                                                 from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
-                                                                                                                where c2.cfa_id = c.cfa_id))
+                                                                                                                where c2.cfa_id = c.cfa_id and c2.estado = 'A'))
                             order by fecha, numero");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));

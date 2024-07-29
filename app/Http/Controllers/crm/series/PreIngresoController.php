@@ -58,19 +58,32 @@ class PreIngresoController extends Controller
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
 
+    // public function validaSerie($producto, $serie, $tipo)
+    // {
+    //     $data = DB::selectOne("select * from gex.producto_serie ps where ps.pro_id = " . $producto . " and ps.serie = '" . $serie . "' and ps.tipo = '" . $tipo . "'");
+
+    //     if($data) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'La serie ingresada ya existe para el producto', []));
+    //     }else{
+    //         $data = DB::selectOne("select * from gex.dinventario d where d.pro_id = " . $producto . " and d.serie = '" . $serie . "' and d.tipo = '" . $tipo . "'");
+
+    //         if ($data) {
+    //             return response()->json(RespuestaApi::returnResultado('error', 'La serie ingresada ya existe para el producto', []));
+    //         }
+
+    //         return response()->json(RespuestaApi::returnResultado('success', '200', []));
+    //     }
+    // }
+
     public function validaSerie($producto, $serie, $tipo)
     {
-        $data = DB::selectOne("select * from gex.producto_serie ps where ps.pro_id = " . $producto . " and ps.serie = '" . $serie . "' and ps.tipo = '" . $tipo . "'");
+        $data = DB::selectOne("select * from gex.dpreingreso d where d.serie = ?", [$serie]);
+        $data2 = DB::selectOne("select * from gex.producto_serie d where d.serie = ?", [$serie]);
+        $data3 = DB::selectOne("select * from gex.stock_serie d where d.serie = ?", [$serie]);
 
-        if($data) {
-            return response()->json(RespuestaApi::returnResultado('error', 'La serie ingresada ya existe para el producto', []));
-        }else{
-            $data = DB::selectOne("select * from gex.dinventario d where d.pro_id = " . $producto . " and d.serie = '" . $serie . "' and d.tipo = '" . $tipo . "'");
-
-            if ($data) {
-                return response()->json(RespuestaApi::returnResultado('error', 'La serie ingresada ya existe para el producto', []));
-            }
-
+        if ($data || $data2 || $data3) {
+            return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta ingresar ya existe para un producto: ' . $serie, ""));
+        } else {
             return response()->json(RespuestaApi::returnResultado('success', '200', []));
         }
     }
