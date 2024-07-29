@@ -273,19 +273,30 @@ class InventarioController extends Controller
         }
     }
 
-    public function validaSerieInv($producto, $serie,$tipo)
+    // public function validaSerieInv($producto, $serie,$tipo)
+    // {
+    //     $data = DB::selectOne("select * from gex.dinventario d where d.pro_id = " . $producto . " and d.serie = '" . $serie . "' and d.tipo = '" . $tipo . "'");
+
+    //     if ($data) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta inventariar ya existe en la base de datos, por favor verifique...', []));
+    //     } else {
+    //         $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.tipo = '" . $tipo . "'");
+
+    //         if ($data) {
+    //             return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta inventariar ya existe en la base de datos para la bodega seleccionada, por favor verifique...', []));
+    //         }
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Serie no existe', []));
+    //     }
+    // }
+
+    public function validaSerieInv($producto, $serie, $tipo)
     {
-        $data = DB::selectOne("select * from gex.dinventario d where d.pro_id = " . $producto . " and d.serie = '" . $serie . "' and d.tipo = '" . $tipo . "'");
+        $data = DB::selectOne("select * from gex.dinventario d where d.serie = ?", [$serie]);
 
         if ($data) {
-            return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta inventariar ya existe en la base de datos, por favor verifique...', []));
+            return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta ingresar ya existe para un producto: ' . $serie, ""));
         } else {
-            $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.tipo = '" . $tipo . "'");
-
-            if ($data) {
-                return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta inventariar ya existe en la base de datos para la bodega seleccionada, por favor verifique...', []));
-            }
-
             return response()->json(RespuestaApi::returnResultado('success', 'Serie no existe', []));
         }
     }
