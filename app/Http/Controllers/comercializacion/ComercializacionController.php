@@ -32,7 +32,51 @@ class ComercializacionController extends Controller
         }
     }
 
+
+
     public function ventasAlmacen(Request $request)
+    {
+
+        // Recupera el array enviado desde Angular
+        //$empleados = $request->input('empleados');
+        $agencia = $request->input('agencia');
+        $periodos = $request->input('periodos');
+        $mes = $request->input('mes');
+        $data = DB::table('av_ventas_agencia as va')
+            ->select(
+                'va.cfa_id',
+                'va.cfa_periodo',
+                'va.mes',
+                'va.almacen',
+                'va.ent_emp_id',
+                'va.emp_fae',
+                DB::raw("CONCAT(ent.ent_nombres, ' ', ent.ent_apellidos) as empleado"),
+                DB::raw("CASE WHEN va.politica <> 'CREDITO' THEN 'CONTADO' ELSE 'CREDITO' END as politica"),
+                'va.fecha_comprobante',
+                'va.comprobante',
+                'va.factura_afectada',
+                DB::raw("CASE WHEN interes IS NOT NULL THEN (venta_total+interes) ELSE (venta_total+0) END AS venta_total")
+            )
+            ->join('entidad as ent', 'ent.ent_id', '=', 'va.ent_emp_id')
+            ->where('va.almacen', $agencia)
+            ->whereIn('va.cfa_periodo', $periodos)
+            ->where('va.mes', $mes)
+            ->where(function ($query) use ($periodos) {
+                $query->where(function ($query) use ($periodos) {
+                    $query->where('va.cfa_periodo', $periodos[1])
+                        ->where(function ($query) {
+                            $query->where('va.comprobante', 'like', '%FAE%')
+                                ->orWhere('va.comprobante', 'like', '%NCE%');
+                        });
+                });
+            })
+            ->get();
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
+    }
+
+
+    public function ventasAlmacen0(Request $request)
     {
 
         // Recupera el array enviado desde Angular
