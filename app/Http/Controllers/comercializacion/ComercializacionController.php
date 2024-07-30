@@ -14,16 +14,16 @@ class ComercializacionController extends Controller
     {
         try {
 
-            $almacenes = DB::select("SELECT * from public.almacen where alm_activo = true order by alm_nombre");
-            $empleados = DB::select(
-                "SELECT emp.emp_id, emp.emp_abreviacion as codigo, (ent.ent_apellidos || ' ' || ent.ent_nombres) as nombre FROM public.empleado emp
-            inner join public.entidad ent on ent.ent_id = emp.ent_id
-            where emp.emp_activo = true"
-            );
+            $almacenes = DB::select("SELECT alm_codigo||'-'||alm_nombre as alm_nombre from public.almacen where alm_activo = true order by alm_nombre");
+            // $empleados = DB::select(
+            //     "SELECT emp.emp_id, emp.emp_abreviacion as codigo, (ent.ent_apellidos || ' ' || ent.ent_nombres) as nombre FROM public.empleado emp
+            // inner join public.entidad ent on ent.ent_id = emp.ent_id
+            // where emp.emp_activo = true"
+            // );
 
             $data = (object)[
                 "almacenes" => $almacenes,
-                "empleados" => $empleados
+                //"empleados" => $empleados
             ];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
@@ -40,36 +40,39 @@ class ComercializacionController extends Controller
         // Recupera el array enviado desde Angular
         //$empleados = $request->input('empleados');
         $agencia = $request->input('agencia');
-        $periodos = $request->input('periodos');
+        $periodo = $request->input('periodo');
         $mes = $request->input('mes');
-        $data = DB::table('av_ventas_agencia as va')
+        $data = DB::table('av_reporte_ventasxagencia as va')
             ->select(
-                'va.cfa_id',
-                'va.cfa_periodo',
-                'va.mes',
+                // 'va.cfa_id',
+                // 'va.cfa_periodo',
+                // 'va.mes',
+                // 'va.almacen',
+                // 'va.ent_emp_id',
+                // 'va.emp_fae',
+                // DB::raw("CONCAT(ent.ent_nombres, ' ', ent.ent_apellidos) as empleado"),
+                // DB::raw("CASE WHEN va.politica <> 'CREDITO' THEN 'CONTADO' ELSE 'CREDITO' END as politica"),
+                // 'va.fecha_comprobante',
+                // 'va.comprobante',
+                // 'va.factura_afectada',
+                //'111 as cfa_id',
+                DB::raw("0 as cfa_id"),
+                DB::raw("va.periodo as cfa_periodo"),
+                DB::raw("extract (month from va.fecha) as mes"),
                 'va.almacen',
-                'va.ent_emp_id',
-                'va.emp_fae',
-                DB::raw("CONCAT(ent.ent_nombres, ' ', ent.ent_apellidos) as empleado"),
-                DB::raw("CASE WHEN va.politica <> 'CREDITO' THEN 'CONTADO' ELSE 'CREDITO' END as politica"),
-                'va.fecha_comprobante',
+                'va.id_agente_factura as ent_emp_id',
+                'va.emp_abreviacion as emp_fae',
+                'va.agente_factura as empleado',
+                DB::raw("CASE WHEN va.interes > 0 THEN 'CREDITO' ELSE 'CONTADO' END as politica"),
+                'va.fecha',
                 'va.comprobante',
                 'va.factura_afectada',
-                DB::raw("CASE WHEN interes IS NOT NULL THEN (venta_total+interes) ELSE (venta_total+0) END AS venta_total")
+                DB::raw("va.subtotal_descuentos+interes as venta_total")
             )
-            ->join('entidad as ent', 'ent.ent_id', '=', 'va.ent_emp_id')
+            ->where('va.periodo', '=', $periodo)
+            ->whereMonth('va.fecha', $mes)
             ->where('va.almacen', $agencia)
-            ->whereIn('va.cfa_periodo', $periodos)
-            ->where('va.mes', $mes)
-            ->where(function ($query) use ($periodos) {
-                $query->where(function ($query) use ($periodos) {
-                    $query->where('va.cfa_periodo', $periodos[1])
-                        ->where(function ($query) {
-                            $query->where('va.comprobante', 'like', '%FAE%')
-                                ->orWhere('va.comprobante', 'like', '%NCE%');
-                        });
-                });
-            })
+            ->where('va.pve_numero', 501)
             ->get();
 
         return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
