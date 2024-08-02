@@ -897,4 +897,5 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/7eiq-aa1v-72iu-m2ig-2nyv-r3ef-3l4y', [MigracionController::class, 'aav_migracion_referencias_cliente']);
     Route::get('/8ert-aa1v-5tre-m2ig-3er2-c3se-98re', [MigracionController::class, 'aav_migracion_CobrosxSecretaria_PeriodoyMes_Actual']);
     Route::get('/9wet-aa1v-y9ri-m2ig-3er2-r3ut-t9yp', [MigracionController::class, 'aav_migracion_rutaje']);
+    Route::get('/5r3t-aa1v-y4ws-m2ig-ser5-c3rt-oe7p', [MigracionController::class, 'aav_migracion_cartera_historica']);
 });
