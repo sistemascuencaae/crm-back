@@ -88,6 +88,7 @@ use App\Http\Controllers\formulario\CampoController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\openceo\DdocumentoController;
+use App\Http\Controllers\openceo\TipoProductoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\WebSocketController;
 use Illuminate\Support\Facades\Route;
@@ -214,6 +215,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']); //list
 
     /************************  OPENCEO   *********************** */
+    
 
     Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
     Route::get('/listClientes/{parametro}', [ClienteOpenceoController::class, 'list']);
@@ -647,7 +649,7 @@ Route::group(["prefix" => "gex"], function ($router) {
     Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
     Route::get('/inventariosByBod_id/{bod_id}', [SeriesAlmController::class, 'inventariosByBod_id']); // listar todas las bodegas
     Route::delete('/borrarItemInventario/{numero_inventario}/{bod_id}/{pro_id}/{serie}/{tipo}', [SeriesAlmController::class, 'borrarItemInventario']); // Borrar un inventario completo que no tenga despachos ni contratos
-
+    Route::post('/saldoProSeries', [SeriesAlmController::class, 'saldoProSeries']); // listar todas las bodegas
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------

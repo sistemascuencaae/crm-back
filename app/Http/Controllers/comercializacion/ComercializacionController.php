@@ -67,7 +67,7 @@ class ComercializacionController extends Controller
                 'va.fecha',
                 'va.comprobante',
                 'va.factura_afectada',
-                DB::raw("va.subtotal_descuentos+interes as venta_total")
+                DB::raw("va.subtotal_descuentos_interes as venta_total")
             )
             ->where('va.periodo', '=', $periodo)
             ->whereMonth('va.fecha', $mes)
