@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\comercializacion\ComercializacionController;
+use App\Http\Controllers\openceo\TipoProductoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OpenceoController;
@@ -26,6 +27,7 @@ Route::group([
 Route::group([
     'prefix' => 'open',
 ], function () {
+    Route::get('/getTiposProducto', [TipoProductoController::class, 'getTiposProducto']);
     Route::get('agencias', [OpenceoController::class, 'agencias']);
     Route::get('departamentos', [OpenceoController::class, 'departamentos']);
     Route::get('ciudades', [OpenceoController::class, 'ciudades']);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\series\Inventario;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SeriesAlmController extends Controller
@@ -76,7 +77,6 @@ class SeriesAlmController extends Controller
                 } else {
                     return response()->json(RespuestaApi::returnResultado('error', 'No existe el inventario con el número: ' . $numero_inventario, ''));
                 }
-
             });
 
             return $data;
@@ -154,7 +154,6 @@ class SeriesAlmController extends Controller
                     $mensajeError .= ' de esta serie.';
 
                     return response()->json(RespuestaApi::returnResultado('error', $mensajeError, $existentes));
-
                 }
             });
 
@@ -162,6 +161,45 @@ class SeriesAlmController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
+    }
+    public function saldoProSeries(Request $request)
+    {
+        // Obtener parámetros del request
+        $tiposPro = $request->input('tiposPro');
+        $tiposProString = '{' . implode(',', array_map('intval', $tiposPro)) . '}';
+        $bodId = $request->input('bodId');
+        $periodo = $request->input('periodo');
+        $fechaInicio = $request->input('fechaInicio');
+        $fechaFin = $request->input('fechaFin');
+
+
+        // Ejecutar la consulta
+        $productos = DB::select("SELECT * FROM gex.obtener_saldo_pro_series( ?, ?, ?, ?, ?::INTEGER[] );", [$periodo, $bodId, $fechaInicio, $fechaFin, $tiposProString]);
+        // Convertir a colección y agrupar por pro_codigo
+        $productos = collect($productos);
+
+        $data = $productos->groupBy('pro_codigo')->map(function ($items, $pro_codigo) {
+            // Tomar el primer item como representativo del producto
+            $firstItem = $items->first();
+            return [
+                'pro_codigo' => $pro_codigo,
+                'pro_nombre' => $firstItem->pro_nombre,
+                'sumacantidades' => $firstItem->sumacantidades,
+                'series' => $items->filter(function ($item) {
+                    return !is_null($item->serie);
+                })->map(function ($item) {
+                    return [
+                        'serie' => $item->serie,
+                    ];
+                })->values()
+            ];
+        })->values();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Se listo con exito',
+            'data' => $data
+        ]);
     }
 
 }
