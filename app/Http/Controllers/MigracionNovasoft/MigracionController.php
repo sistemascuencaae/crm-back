@@ -21,7 +21,8 @@ class MigracionController extends Controller
                 'aav_migracion_cliente',
                 'aav_migracion_referencias_cliente',
                 'aav_migracion_CobrosxSecretaria_PeriodoyMes_Actual',
-                'aav_migracion_rutaje'
+                'aav_migracion_rutaje',
+                'aav_migracion_cartera_historica'
             ]
         ]);
 
@@ -85,10 +86,25 @@ class MigracionController extends Controller
     {
         try {
             $data = DB::table('public.aav_migracion_rutaje')
-            ->select('ent_id', 'ent_identificacion', 'ent_nombres', 'ent_apellidos', 'emp_abreviacion', 'cedula_cobrador', 'nombre_cobrador', 'fecha_reporte')
-            ->get();
+                ->select('ent_id', 'ent_identificacion', 'ent_nombres', 'ent_apellidos', 'emp_abreviacion', 'cedula_cobrador', 'nombre_cobrador', 'fecha_reporte')
+                ->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function aav_migracion_cartera_historica()
+    {
+        try {
+            $data = DB::table('public.aav_migracion_cartera_historica')
+                ->get();
+
+            // Generar el archivo .txt
+            $archivo = $this->funciones->descargarTxt($data, 'almespana_cartera_historica.txt');
+
+            return $archivo;
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
