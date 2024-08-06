@@ -26,6 +26,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\seriesalm\SeriesAlm2Controller;
 use App\Http\Controllers\crm\seriesalm\SeriesAlmController;
 use App\Http\Controllers\crm\SeriesGeneradasController;
 use App\Http\Controllers\crm\TipoCasoFormulasController;
@@ -649,7 +650,10 @@ Route::group(["prefix" => "gex"], function ($router) {
     Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
     Route::get('/inventariosByBod_id/{bod_id}', [SeriesAlmController::class, 'inventariosByBod_id']); // listar todas las bodegas
     Route::delete('/borrarItemInventario/{numero_inventario}/{bod_id}/{pro_id}/{serie}/{tipo}', [SeriesAlmController::class, 'borrarItemInventario']); // Borrar un inventario completo que no tenga despachos ni contratos
+    
+    Route::get('/listNotasCreditoDespachos', [SeriesAlm2Controller::class, 'listNotasCreditoDespachos']); // listar los despachos que tengan notas de credito
     Route::post('/saldoProSeries', [SeriesAlmController::class, 'saldoProSeries']); // listar todas las bodegas
+  
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
@@ -899,4 +903,5 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/7eiq-aa1v-72iu-m2ig-2nyv-r3ef-3l4y', [MigracionController::class, 'aav_migracion_referencias_cliente']);
     Route::get('/8ert-aa1v-5tre-m2ig-3er2-c3se-98re', [MigracionController::class, 'aav_migracion_CobrosxSecretaria_PeriodoyMes_Actual']);
     Route::get('/9wet-aa1v-y9ri-m2ig-3er2-r3ut-t9yp', [MigracionController::class, 'aav_migracion_rutaje']);
+    Route::get('/5r3t-aa1v-y4ws-m2ig-ser5-c3rt-oe7p', [MigracionController::class, 'aav_migracion_cartera_historica']);
 });
