@@ -216,7 +216,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']); //list
 
     /************************  OPENCEO   *********************** */
-    
+
 
     Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
     Route::get('/listClientes/{parametro}', [ClienteOpenceoController::class, 'list']);
@@ -650,10 +650,20 @@ Route::group(["prefix" => "gex"], function ($router) {
     Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
     Route::get('/inventariosByBod_id/{bod_id}', [SeriesAlmController::class, 'inventariosByBod_id']); // listar todas las bodegas
     Route::delete('/borrarItemInventario/{numero_inventario}/{bod_id}/{pro_id}/{serie}/{tipo}', [SeriesAlmController::class, 'borrarItemInventario']); // Borrar un inventario completo que no tenga despachos ni contratos
-    
+
     Route::get('/listNotasCreditoDespachos', [SeriesAlm2Controller::class, 'listNotasCreditoDespachos']); // listar los despachos que tengan notas de credito
     Route::post('/saldoProSeries', [SeriesAlmController::class, 'saldoProSeries']); // listar todas las bodegas
-  
+
+    Route::get('/dataSerieEliminar/{serie}', [SeriesAlmController::class, 'dataSerieEliminar']); // listar todas las bodegas
+
+    Route::delete('/eliminarSerieContrato/{alm_id}/{numero}', [SeriesAlmController::class, 'eliminarSerieContrato']);
+    Route::delete('/eliminarSerieDespacho/{numeroDes}/{serie}/{bodId}', [SeriesAlmController::class, 'eliminarSerieDespacho']);
+    Route::delete('/eliminarSerieInventario/{numeroInv}/{serie}/{pro_id}/{tipo}/{ssBodId}', [SeriesAlmController::class, 'eliminarSerieInventario']);
+    Route::delete('/eliminarSeriePreIngreso/{numeroInv}/{serie}/{pro_id}/{tipo}/{ssBodId}', [SeriesAlmController::class, 'eliminarSeriePreIngreso']);
+
+
+
+
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
