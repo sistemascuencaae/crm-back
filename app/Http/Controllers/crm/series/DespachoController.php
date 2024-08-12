@@ -12,11 +12,14 @@ use Illuminate\Support\Facades\DB;
 
 class DespachoController extends Controller
 {
-    public function __construct()
+
+    protected $variosSeries;
+    public function __construct(VariosSeries $variosSeries)
     {
         $this->middleware('auth:api');
+        $this->variosSeries = $variosSeries;
     }
-    
+
     public function listado($bodega)
     {
         $data = DB::select("select c.cmo_id,
@@ -77,7 +80,7 @@ class DespachoController extends Controller
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function listadoDespachos()
     {
         $data = DB::select("select c.numero, c.fecha as fecha,
@@ -107,7 +110,7 @@ class DespachoController extends Controller
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function productos($id, $tipo)
     {
         if ($tipo == 'INV') {
@@ -132,14 +135,14 @@ class DespachoController extends Controller
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function bodegas()
     {
         $data = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b order by presenta");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function clientes($tipo,$id)
     {
         if ($tipo == 'INV') {
@@ -166,14 +169,14 @@ class DespachoController extends Controller
     {
         $data = Despacho::with('detalle')->get()->where('numero', $numero)->first();
         $data['bodega'] = DB::selectOne("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $data['bod_id']);
-        
+
         if ($data['cmo_id'] == null) {
             $rela = DB::selectOne("select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
                                 from cfactura c join puntoventa p on c.pve_id = p.pve_id
                                                 join almacen a on p.alm_id = a.alm_id
                                                 join ctipocom t on c.cti_id = t.cti_id
                                 where c.cfa_id = " . $data['cfa_id']);
-        
+
             $data['doc_rela'] = $rela->numero;
 
             $data['cliente'] = DB::selectOne("select c1.cli_id, concat(e.ent_identificacion, ' - ',
@@ -187,7 +190,7 @@ class DespachoController extends Controller
                                                     join almacen a on p.alm_id = a.alm_id
                                                     join ctipocom t on c.cti_id = t.cti_id
                                         where c.cmo_id = " . $data['cmo_id']);
-            
+
             $data['doc_rela'] = $rela->numero;
 
             $data['cliente'] = DB::selectOne("select b.bod_id as cli_id, b.bod_nombre as presenta
@@ -210,7 +213,7 @@ class DespachoController extends Controller
     public function validaSerie($producto, $serie, $bodega, $tipo)
     {
         $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.bod_id = " . $bodega . " and ss.tipo = '" . $tipo . "'");
-        
+
         if($data) {
             return response()->json(RespuestaApi::returnResultado('success', 'Serie encontrada', []));
         }else{
@@ -230,8 +233,8 @@ class DespachoController extends Controller
             }
 
             DB::transaction(function() use ($request, $numero){
-                date_default_timezone_set("America/Guayaquil");                
-                
+                date_default_timezone_set("America/Guayaquil");
+
                 $fecha_crea = null;
                 $fecha_modifica = null;
 
@@ -249,10 +252,10 @@ class DespachoController extends Controller
                 $cmo_id = $request->input('cmo_id');
                 $cfa_id = $request->input('cfa_id');
                 $bod_id_origen = $request->input('bod_id_origen');
-    
+
                 $usuario_crea = $request->input('usuario_crea');
                 $usuario_modifica = $request->input('usuario_modifica');
-    
+
                 DB::table('gex.cdespacho')->updateOrInsert(
                     ['numero' => $numero],
                     [
@@ -268,7 +271,7 @@ class DespachoController extends Controller
                     'fecha_modifica' => $fecha_modifica,
                     'bod_id_origen' => $bod_id_origen,
                     ]);
-            
+
                 $detalle = $request->input('detalle');
 
                 foreach ($detalle as $d) {
@@ -304,9 +307,9 @@ class DespachoController extends Controller
                     }
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Despacho grabado con exito', $numero));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
@@ -366,7 +369,7 @@ class DespachoController extends Controller
         try {
             DB::transaction(function() use ($numero,$bodDest){
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 $data = Despacho::with('detalle')->get()->where('numero', $numero)->first();
 
                 $fecha_crea = $data['fecha_crea'];
@@ -376,7 +379,7 @@ class DespachoController extends Controller
 
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $data['usuario_modifica'];
-    
+
                 DB::table('gex.cdespacho')->updateOrInsert(
                     ['numero' => $numero],
                     [
@@ -387,7 +390,7 @@ class DespachoController extends Controller
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
                     ]);
-                    
+
                 foreach ($data['detalle'] as $d) {
                     if ($bodDest == "null") {
                         DB::table('gex.stock_serie')->updateOrInsert(
@@ -420,20 +423,21 @@ class DespachoController extends Controller
                     }
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Despacho anulado con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
     }
 
     public function eliminaDespacho($numero,$bodDest) {
+
         try {
             DB::transaction(function() use ($numero,$bodDest){
                 $dato = Despacho::with('detalle')->get()->where('numero', $numero)->first();
                 $bod_id = $dato['bod_id'];
-                
+
                 $data = $dato['detalle'];
 
                 DB::table('gex.ddespacho')->where('numero',$numero)->delete();
@@ -470,6 +474,7 @@ class DespachoController extends Controller
                             ]);
                     }
                 }
+                $this->variosSeries->resEliminaDespacho($dato);
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Despacho eliminado con exito', []));
