@@ -14,32 +14,32 @@ class VentasProductosGexController extends Controller
     {
         $this->middleware('auth:api');
     }
-    
+
     public function lineas()
     {
         $data = DB::select("select tp.tpr_id, tp.tpr_nombre from tipo_producto tp");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function lineasMotos()
     {
         $data = DB::select("select tp.tpr_id, tp.tpr_nombre from tipo_producto tp where tp.tpr_nombre like 'MOTO %'");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function productos($tipoProd)
     {
         $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p where p.tpr_id = " . $tipoProd);
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function almacenes()
     {
         $data = DB::select("select a.alm_id, a.alm_nombre
-                            from almacen a 
+                            from almacen a
                             union all
                             select p.pve_id, concat(a.alm_nombre, ' - ', p.pve_nombre)
                             from almacen a join puntoventa p on a.alm_id = p.alm_id
@@ -48,26 +48,27 @@ class VentasProductosGexController extends Controller
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function formasPago()
     {
         $data = DB::select("select p.pol_id, p.pol_nombre from politica p where pol_tipocli = 1 order by p.pol_nombre");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function vendedores()
     {
         $data = DB::select("select e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor from empleado e join entidad en on e.ent_id = en.ent_id order by en.ent_nombres");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function VentasProductosGex($tipoProd, $producto, $sucursal, $formaPago, $vendedor, $fecIni, $fecFin)
     {
         $data = DB::select("select c.cfa_fecha,
                                     (case when pc.tipo_servicio = 'M' then pv.pve_nombre else a.alm_nombre end) as sucursal,
                                     concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor,
+                                    en.ent_identificacion as ci_vendedor,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', pv.pve_numero, ' - ',  c.cfa_numero) as num_factura,
                                     tp.tpr_nombre as tipo_producto,
                                     concat(p.pro_codigo, ' - ', p.pro_nombre) as producto,
@@ -104,7 +105,7 @@ class VentasProductosGexController extends Controller
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function VentasMotosGex($tipoProd, $producto, $sucursal, $formaPago, $vendedor, $fecIni, $fecFin)
     {
         $data = DB::select("select c.cfa_fecha,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\comercializacion;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\comercializacion\VentasxAgencia;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +35,7 @@ class ComercializacionController extends Controller
 
 
 
-    public function ventasAlmacen(Request $request)
+    public function ventasAlmacen1(Request $request)
     {
 
         // Recupera el array enviado desde Angular
@@ -99,5 +100,27 @@ class ComercializacionController extends Controller
 
         // Devuelve los resultados
         return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
+    }
+
+    public function ventasAlmacen(Request $request)
+    {
+        $periodo = $request->input('periodo');
+        $almCodigo = $request->input('almCodigo');
+        $mes = $request->input('mes');
+
+        $data = VentasxAgencia::where('periodo', $periodo)
+        ->where('alm_codigo', $almCodigo)
+        ->where('pve_numero', 501)
+        ->whereMonth('fecha', $mes) // Filtra por el mes de la fecha
+        ->orderBy('total', 'desc')
+        ->get();
+
+        // $data =DB::select("select * from public.av_reporte_ventasxagencia v where v.periodo = 2024
+        //                     and extract (month from v.fecha) = 8
+        //                     and v.alm_codigo = 3
+        //                     and v.pve_numero=501
+        //                     order by total desc;");
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
     }
 }
