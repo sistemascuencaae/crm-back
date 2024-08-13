@@ -292,9 +292,11 @@ class InventarioController extends Controller
 
     public function validaSerieInv($producto, $serie, $tipo)
     {
-        $data = DB::selectOne("select * from gex.dinventario d where d.serie = ?", [$serie]);
+        $dataIn = DB::selectOne("select * from gex.dinventario d where d.serie = ?", [$serie]);
 
-        if ($data) {
+        $dataPre = DB::selectOne("select * from gex.dpreingreso d where d.serie = ?", [$serie]);
+
+        if ($dataIn || $dataPre) {
             return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta ingresar ya existe para un producto: ' . $serie, ""));
         } else {
             return response()->json(RespuestaApi::returnResultado('success', 'Serie no existe', []));

@@ -134,14 +134,13 @@ class JWTController extends Controller
     {
 
 
-        $alm = DB::selectOne('SELECT alm.alm_nombre, alm.alm_id from crm.users u
+        $alm = DB::selectOne('SELECT alm.alm_nombre, alm.alm_codigo, alm.alm_id from crm.users u
         inner join public.almacen alm on alm.alm_id = u.alm_id where u.id = ?', [auth('api')->user()->id]);
 
         $alm_id = null;
         $alm_nombre = '';
+        $alm_codigo = 0;
 
-// echo ('$alm: '.json_encode($alm));
-//         return;
 
         $accesos = DB::select("SELECT u.id as user_id, me.name, me.url from crm.users u
         inner join crm.profiles p on p.id = u.profile_id
@@ -152,6 +151,7 @@ class JWTController extends Controller
         if ($alm) {
             $alm_nombre = $alm->alm_nombre;
             $alm_id = $alm->alm_id;
+            $alm_codigo = $alm->alm_codigo;
         }
 
         $usuario = User::findOrFail(auth('api')->user()->id);
@@ -178,6 +178,7 @@ class JWTController extends Controller
                 "profile_id" => auth('api')->user()->profile_id,
                 "alm_nombre" => $alm_nombre,
                 "alm_id" => $alm_id,
+                "alm_codigo" => $alm_codigo,
             ]
         ]);
 
