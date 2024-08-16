@@ -109,18 +109,110 @@ class ComercializacionController extends Controller
         $mes = $request->input('mes');
 
         $data = VentasxAgencia::where('periodo', $periodo)
-        ->where('alm_codigo', $almCodigo)
-        ->where('pve_numero', 501)
-        ->whereMonth('fecha', $mes) // Filtra por el mes de la fecha
-        ->orderBy('total', 'desc')
-        ->get();
-
-        // $data =DB::select("select * from public.av_reporte_ventasxagencia v where v.periodo = 2024
-        //                     and extract (month from v.fecha) = 8
-        //                     and v.alm_codigo = 3
-        //                     and v.pve_numero=501
-        //                     order by total desc;");
+        ->select(
+            'politica',
+            'agente_factura',
+            'cti_sigla',
+            'fecha',
+            'comprobante',
+            'factura_afectada',
+            'subtotal_descuentos_interes',
+            'tipo_nota',
+            'periodo',
+            'fecha',
+            'total',
+            'subtotal_descuentos',
+            'id_agente_factura',
+            'emp_abreviacion',
+            'interes',
+            'politica2',
+            'ent_identificacion',
+            'cliente',
+            'alm_codigo',
+            'almacen',
+            'pve_numero',
+            'cfa_concepto',        )
+            ->where('alm_codigo', $almCodigo)
+            ->where('pve_numero', 501)
+            ->whereMonth('fecha', $mes) // Filtra por el mes de la fecha
+            ->orderBy('politica')
+            ->orderBy('agente_factura')
+            ->orderBy('cti_sigla')
+            ->orderBy('fecha', 'desc')
+            ->get();
 
         return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
     }
+
+
+    public function ventasTotales(Request $request)
+    {
+        $periodos = $request->input('periodos');
+        $almacen = $request->input('almacen');
+        //DB::statement('REFRESH MATERIALIZED VIEW crm.mv_reporte_ventasxagencia');
+        $data = DB::table('crm.mv_reporte_ventasxagencia')
+            ->select('periodo', 'almacen', DB::raw('ROUND(SUM(subtotal_descuentos_interes), 2) as venta_total'))
+            ->where('alm_codigo', $almacen)
+            ->whereIn('periodo', $periodos)
+            ->groupBy('periodo', 'almacen')
+            ->get();
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
+    }
+
+    public function ventasAlmacenesPeriodos(Request $request)
+    {
+        $periodo = $request->input('periodo');
+        $periodos = [$periodo, $periodo - 1];
+        $data = DB::table('crm.mv_reporte_ventasxagencia as v')
+            ->select('v.periodo', 'v.alm_codigo', 'v.almacen', DB::raw('SUM(v.subtotal_descuentos_interes) as venta_total'))
+            ->whereIn('v.periodo', $periodos)
+            //->whereIn('v.alm_codigo', $almCodigo)
+            ->groupBy('v.periodo', 'v.alm_codigo', 'v.almacen')
+            ->orderBy('v.alm_codigo', 'asc')
+            ->get();
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
+    }
+
+    public function ventasPorAgente(Request $request)
+    {
+
+        $mes = $request->input('mes');
+        $periodo = $request->input('periodo');
+        $almCodigo = $request->input('almCodigo');
+        $idAgente = $request->input('idAgente');
+        $data = DB::table('crm.mv_reporte_ventasxagencia as v')
+            ->select('v.fecha', 'v.politica', 'v.id_agente_factura', DB::raw('SUM(v.subtotal_descuentos_interes) as venta_total'))
+            ->where('v.periodo', $periodo)
+            ->where('v.almCodigo', $almCodigo)
+            ->whereMonth('fecha', $mes)
+            ->where('v.id_agente_factura', $idAgente)
+            ->groupBy('v.fecha', ' v.politica', 'v.id_agente_factura', 'v.agente_factura')
+            ->orderBy('v.fecha', 'asc')
+            ->get();
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
+    }
 }
+
+
+// $data = DB::table('crm.mv_reporte_ventasxagencia')
+// ->select(
+//     'tipo_nota',
+//     'periodo',
+//     'fecha',
+//     'comprobante',
+//     'total',
+//     'subtotal_descuentos',
+//     'subtotal_descuentos_interes',
+//     'id_agente_factura',
+//     'emp_abreviacion',
+//     'agente_factura',
+//     'interes',
+//     'politica',
+//     'politica2',
+//     'alm_codigo',
+//     'almacen',
+//     'factura_afectada',
+// )
+//     ->whereMonth('fecha', $mes)
+//     ->whereIn('alm_codigo', $almacenes)
+//     ->get();
