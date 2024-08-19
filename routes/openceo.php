@@ -35,4 +35,7 @@ Route::group([
     Route::get('v_dmovinv', [OpenceoController::class, 'v_dmovinv']);
     Route::get('/storeVentas', [ComercializacionController::class, 'storeVentas']);
     Route::post('/ventasAlmacen', [ComercializacionController::class, 'ventasAlmacen']);
+    Route::post('/ventasTotales', [ComercializacionController::class, 'ventasTotales']);
+    Route::post('/ventasAlmacenesPeriodos', [ComercializacionController::class, 'ventasAlmacenesPeriodos']);
+    Route::post('/ventasPorAgente', [ComercializacionController::class, 'ventasPorAgente']);
 });
