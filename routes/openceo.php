@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\comercializacion\CliReiterativoController;
 use App\Http\Controllers\comercializacion\ComercializacionController;
 use App\Http\Controllers\openceo\TipoProductoController;
 use Illuminate\Http\Request;
@@ -38,4 +39,6 @@ Route::group([
     Route::post('/ventasTotales', [ComercializacionController::class, 'ventasTotales']);
     Route::post('/ventasAlmacenesPeriodos', [ComercializacionController::class, 'ventasAlmacenesPeriodos']);
     Route::post('/ventasPorAgente', [ComercializacionController::class, 'ventasPorAgente']);
+    //CliReiterativoController
+    Route::get('/getCliReiIdenti/{identificacion}',[CliReiterativoController::class, 'getByIdentificacionCliReitera']);
 });

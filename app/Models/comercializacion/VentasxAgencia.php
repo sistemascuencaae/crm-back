@@ -33,7 +33,8 @@ class VentasxAgencia extends Model
         'alm_codigo',
         'almacen',
         'pve_numero',
-        'factura_afectada'
+        'factura_afectada',
+        'pve_nombre'
     ];
 
 }
