@@ -19,10 +19,17 @@ class CliReiterativoController extends Controller
         //delete from crm.data_temp_cli_reiterativo where user_id = 1 and ent_identificacion ='0104205497';
         //SELECT * FROM crm.fun_insert_ttemp_clireitera(1, '0104205497');
         //select * from crm.data_temp_cli_reiterativo where user_id = 1 and ent_identificacion ='0104205497';
-        //DB::delete("DELETE from crm.data_temp_cli_reiterativo where ent_identificacion = ?;", [$identificacion]);
-        //$data = DB::select("SELECT * FROM crm.fun_insert_ttemp_clireitera(?);", [$identificacion]);
         //$result = DB::select("SELECT * from crm.data_temp_cli_reiterativo where ent_identificacion = ?;",[$identificacion]);
+        $cliente = DB::selectOne("SELECT * from crm.data_temp_cli_reiterativo where ent_identificacion = ? limit 1;", [$identificacion]);
+        $data = null;
+        if (!$cliente) {
+            //DB::delete("DELETE from crm.data_temp_cli_reiterativo where ent_identificacion = ?;", [$identificacion]);
+            DB::select("SELECT * FROM crm.fun_insert_ttemp_clireitera(?);", [$identificacion]);
+        }
+
         $data = $this->getDataClienteReiterativo($identificacion);
+
+
 
         return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
     }
@@ -33,38 +40,45 @@ class CliReiterativoController extends Controller
         // if (sizeOf($data) > 0) {
         //     $cliente = $data[0]->cliente;
         // }
-        $infoCli = DB::selectOne("SELECT * from crm.data_temp_cli_reiterativo where ent_identificacion = ?",[$identificacion]);
+        $infoCli = DB::selectOne("SELECT * from crm.data_temp_cli_reiterativo where ent_identificacion = ?", [$identificacion]);
         $cliente = $infoCli->cliente;
-        $creditos = DB::select("SELECT cod_comprobante_fp from crm.data_temp_cli_reiterativo
-        where ent_identificacion = ? and interes notnull GROUP BY 1", [$identificacion]);
+        $fechaUltCreditoPagado = null;
+        $fechaUltimCuotaPagada = null;
+        $creditos = DB::select("SELECT cod_comprobante_fp from crm.data_temp_cli_reiterativo where ent_identificacion = ? and interes > 0 GROUP BY 1", [$identificacion]);
         $numeroCreditos = sizeof($creditos);
         $ultiCredPaga = DB::selectOne("SELECT cod_comprobante_fp, MAX(ddo_fecha_emision) AS max_fecha
             FROM crm.data_temp_cli_reiterativo
             WHERE ent_identificacion = ?
-            AND interes IS NOT NULL
+            AND interes > 0
             GROUP BY cod_comprobante_fp
 	        HAVING COUNT(DISTINCT tipo_vencido) = 1
 	        order by 2 desc limit 1", [$identificacion]);
-        $fechaUltCreditoPagado = $ultiCredPaga->max_fecha;
+        if ($ultiCredPaga) {
+            $fechaUltCreditoPagado = $ultiCredPaga->max_fecha;
+        }
+
         $docUltCuotaPagada = DB::selectOne("SELECT
             cod_comprobante_fp,
             fecha_cobro
             from crm.data_temp_cli_reiterativo
             where ent_identificacion = ?
-            and interes notnull
+            AND interes > 0
             and fecha_cobro notnull
             GROUP BY 1,2 order by 2 desc limit 1;", [$identificacion]);
-        $fechaUltimCuotaPagada = $docUltCuotaPagada->fecha_cobro;
+        if ($docUltCuotaPagada) {
+            $fechaUltimCuotaPagada = $docUltCuotaPagada->fecha_cobro;
+        }
 
         $atrasoCrePagado = DB::select("SELECT ddo_fecha_emision as fecha_emision, cod_comprobante_fp as compro, secuencia, MAX((COALESCE(ult_fecha_pago, fecha_actual) - fecha_vencimiento)::int) AS dias_atraso
             FROM crm.data_temp_cli_reiterativo
             WHERE ent_identificacion = ?
-            AND interes IS NOT NULL
+            AND interes > 0
+            AND secuencia <> 999
             AND cod_comprobante_fp IN (
                 SELECT cod_comprobante_fp
                 FROM crm.data_temp_cli_reiterativo
                 WHERE ent_identificacion = ?
-                AND interes IS NOT NULL
+                AND interes > 0
                 GROUP BY cod_comprobante_fp
                 HAVING COUNT(DISTINCT tipo_vencido) = 1
                 ORDER BY 1 DESC
@@ -72,15 +86,17 @@ class CliReiterativoController extends Controller
 
 
         $dataCreActivos = DB::select("SELECT
+            ddo_fecha_emision as fecha_emision,
             cod_comprobante_fp as compro,
             tipo_vencido,
             secuencia,
             MAX((COALESCE(ult_fecha_pago, fecha_actual) - fecha_vencimiento)::int) AS dias_atraso
 	            FROM crm.data_temp_cli_reiterativo
 	            WHERE ent_identificacion = ?
-	            AND interes IS NOT NULL
+	            AND interes > 0
+                AND secuencia <> 999
 	            AND tipo_vencido IN ('POR VENCER','VENCIDO' )
-            GROUP BY cod_comprobante_fp, secuencia, tipo_vencido ORDER BY cod_comprobante_fp, secuencia ASC;",[$identificacion]);
+            GROUP BY ddo_fecha_emision, cod_comprobante_fp, secuencia, tipo_vencido ORDER BY cod_comprobante_fp, secuencia ASC;", [$identificacion]);
 
 
         $data = (object) [
@@ -126,6 +142,49 @@ class CliReiterativoController extends Controller
 
             //echo ('sizeOf($data): '.json_encode(sizeOf($data)));
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
+        }
+    }
+
+    
+
+    public function comprobantesCliReiterativo($identificacion, $page, $itemsPerPage)
+    {
+        try {
+            // Establecemos la paginación con los parámetros recibidos
+            $data = DB::table('crm.data_temp_cli_reiterativo')
+                ->select(
+                    'ddo_fecha_emision',
+                    'cod_comprobante_fp',
+                    'secuencia',
+                    'fecha_vencimiento',
+                    'fecha_cobro',
+                    'cod_comprobante_cobro',
+                    'tipo_comprobante_cobro',
+                    'ccm_concepto',
+                    'tipo_vencido',
+                    'dias_atraso',
+                    DB::raw("MAX((COALESCE(ult_fecha_pago, fecha_actual) - fecha_vencimiento)::int) AS dias_atraso"),
+                )
+                ->where('ent_identificacion', $identificacion)
+                ->groupBy(
+                    'ddo_fecha_emision',
+                    'cod_comprobante_fp',
+                    'secuencia',
+                    'fecha_vencimiento',
+                    'fecha_cobro',
+                    'cod_comprobante_cobro',
+                    'tipo_comprobante_cobro',
+                    'ccm_concepto',
+                    'tipo_vencido',
+                    'dias_atraso'
+                )
+                ->orderBy('cod_comprobante_fp','asc')
+                ->orderBy('secuencia', 'asc')
+                ->paginate($itemsPerPage, ['*'], 'page', $page);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         }
