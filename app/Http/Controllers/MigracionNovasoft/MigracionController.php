@@ -22,7 +22,10 @@ class MigracionController extends Controller
                 'aav_migracion_referencias_cliente',
                 'aav_migracion_CobrosxSecretaria_PeriodoyMes_Actual',
                 'aav_migracion_rutaje',
-                'aav_migracion_cartera_historica'
+                'aav_migracion_cartera_historica',
+                'af_migracion_cartera_historica_api',
+                'af_migracion_cartera_historica_xcuotas_api',
+                'af_migracion_cartera_historica_xcuotas_xcobros_api'
             ]
         ]);
 
@@ -105,6 +108,45 @@ class MigracionController extends Controller
             $archivo = $this->funciones->descargarTxt($data, 'almespana_cartera_historica.txt');
 
             return $archivo;
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function af_migracion_cartera_historica_api($anio, $mes, $dia)
+    {
+        try {
+            // Select directo a una funcion de la base de datos
+            $data = DB::select('SELECT * FROM dashboard.af_migracion_cartera_historica_api(?, ?, ?)', [$anio, $mes, $dia]);
+
+            // $archivo = $this->funciones->descargarTxt($data, 'af_migracion_cartera_historica_api.txt');
+            // return $archivo;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function af_migracion_cartera_historica_xcuotas_api($anio, $mes, $dia)
+    {
+        try {
+            // Select directo a una funcion de la base de datos
+            $data = DB::select('SELECT * FROM dashboard.af_migracion_cartera_historica_xcuotas_api(?, ?, ?)', [$anio, $mes, $dia]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function af_migracion_cartera_historica_xcuotas_xcobros_api($anio, $mes, $dia)
+    {
+        try {
+            // Select directo a una funcion de la base de datos
+            $data = DB::select('SELECT * FROM dashboard.af_migracion_cartera_historica_xcuotas_xcobros_api(?, ?, ?)', [$anio, $mes, $dia]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
