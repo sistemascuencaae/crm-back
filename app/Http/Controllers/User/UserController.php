@@ -95,7 +95,7 @@ class UserController extends Controller
             }
 
             // SQL para sacar solo la columna emp_id del dynamo
-            // SELECT emp.emp_id 
+            // SELECT emp.emp_id
             // ROM entidad ent
             // JOIN empleado emp ON ent.ent_id = emp.ent_id
             // WHERE ent.ent_identificacion LIKE '%0102281953%';
@@ -198,7 +198,14 @@ class UserController extends Controller
     public function listAlmacenes()
     {
         try {
-            $data = Almacen::where('alm_activo', true)->orderBy('alm_nombre')->get();
+            $almacenes = Almacen::where('alm_activo', true)->orderBy('alm_nombre')->get();
+            $bodegas = DB::select("SELECT * FROM public.bodega WHERE bod_activo = true
+                        AND bod_nombre NOT LIKE '%CONSIG%';");
+
+            $data = (object)[
+                'almacenes' => $almacenes,
+                'bodegas' => $bodegas
+            ];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
