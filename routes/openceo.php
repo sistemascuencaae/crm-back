@@ -41,5 +41,7 @@ Route::group([
     Route::post('/ventasPorAgente', [ComercializacionController::class, 'ventasPorAgente']);
     //CliReiterativoController
     Route::get('/getCliReiIdenti/{identificacion}',[CliReiterativoController::class, 'getByIdentificacionCliReitera']);
-    Route::get('/comprobantesCliReiterativo/{identificacion}/{page}/{itemsPerPage}', [CliReiterativoController::class, 'comprobantesCliReiterativo']);
+    //Route::get('/comprobantesCliReiterativo/{identificacion}/{comprobante}/{page}/{itemsPerPage}', [CliReiterativoController::class, 'comprobantesCliReiterativo']);
+    Route::get('/comprobantesCliReiterativo/{comprobante}', [CliReiterativoController::class, 'comprobantesCliReiterativo']);
+    Route::get('/comproClienReitera/{identificacion}', [CliReiterativoController::class, 'comproClienReitera']);
 });
