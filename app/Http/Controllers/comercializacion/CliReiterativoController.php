@@ -76,7 +76,9 @@ class CliReiterativoController extends Controller
             }
 
             $data = $this->getDataClienteReiterativo($identificacion);
-
+            if($data === null){
+                return response()->json(RespuestaApi::returnResultado('error', 'El cliente no tiene historial crediticio con Almacenes España.', []));
+            }
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
@@ -90,6 +92,11 @@ class CliReiterativoController extends Controller
         //     $cliente = $data[0]->cliente;
         // }
         $infoCli = DB::selectOne("SELECT * from crm.data_temp_cli_reiterativo where ent_identificacion = ?", [$identificacion]);
+        if($infoCli === null){
+
+            return null;
+        }
+
         $cliente = $infoCli->cliente;
         $fechaUltCreditoPagado = null;
         $fechaUltimCuotaPagada = null;
