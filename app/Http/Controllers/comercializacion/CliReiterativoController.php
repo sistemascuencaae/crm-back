@@ -4,6 +4,8 @@ namespace App\Http\Controllers\comercializacion;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CliReiterativoController extends Controller
@@ -18,62 +20,67 @@ class CliReiterativoController extends Controller
     {
 
 
-        // try {
-        //$cliente = DB::selectOne("SELECT * from crm.data_temp_cli_reiterativo where ent_identificacion = ? limit 1;", [$identificacion]);
+        try {
 
-        //$data = null;
 
-        //if ($cliente) {
+            $cliente = DB::selectOne("SELECT * from crm.data_temp_cli_reiterativo where ent_identificacion = ? limit 1;", [$identificacion]);
 
-            DB::transaction(function () use ($identificacion) {
-                DB::delete("DELETE from crm.data_temp_cli_reiterativo where ent_identificacion = ?;", [$identificacion]);
-                //DB::selectOne("SELECT crm.fun_insert_ttemp_clireitera(?);", [$identificacion]);
-                DB::insert(" INSERT INTO crm.data_temp_cli_reiterativo (
+            if ($cliente) {
+                // Convierte 'created_at' a una instancia de Carbon
+                $createdAt = Carbon::parse($cliente->created_at);
+
+                // Verifica si han pasado 10 minutos desde la creación
+                if ($createdAt->diffInMinutes(Carbon::now()) >= 10) {
+                    // Ha pasado una hora o más
+                    DB::transaction(function () use ($identificacion) {
+                        DB::delete("DELETE from crm.data_temp_cli_reiterativo where ent_identificacion = ?;", [$identificacion]);
+                        DB::insert(" INSERT INTO crm.data_temp_cli_reiterativo (
                 ent_identificacion, dias_diferencia_cuotayrec, fecha_vencimiento, secuencia, secuencia_fp,
                 cod_comprobante_fp, interes, ddo_num_pago, cliente,
                 ddo_doctran, tipo_vencido, valor, valor_cobro,
                 ddo_monto, fecha_actual, ddo_fecha_emision, ddo_fechaven, fecha_cobro, ult_fecha_pago,cod_comprobante_cobro,tipo_comprobante_cobro, ccm_concepto,dias_atraso, created_at
-            )
-            SELECT
-				v1.ent_identificacion,
-                v1.dias_diferencia_cuotayrec,
-                v2.fecha_vencimiento,
-                v2.secuencia,
-                v3.secuencia_fp,
-                v2.cod_comprobante_fp,
-                v2.interes,
-                v1.ddo_num_pago,
-                v1.cliente,
-                v1.ddo_doctran,
-                v1.tipo_vencido,
-                v2.valor,
-                v3.valor_cobro,
-                v1.ddo_monto,
-                v1.fecha_actual,
-                v1.ddo_fecha_emision,
-                v1.ddo_fechaven,
-				v3.fecha_cobro,
-				v2.ult_fecha_pago,
-				v3.cod_comprobante_cobro,
-				v3.tipo_comprobante_cobro,
-				v3.ccm_concepto,
-				v2.dias_atraso,
-				CURRENT_DATE
-            FROM crm.av_clientes_reiterativo_por_cuota v1
-            INNER JOIN public.aav_migracion_cartera_historica_xcuotas v2
-                ON v2.cod_comprobante_fp = v1.ddo_doctran and v2.interes > 0
-            INNER JOIN public.aav_migracion_cartera_historica_xcuotas_xcobros_masconcepto v3
-                ON v3.cod_comprobante_fp = v1.ddo_doctran
-            WHERE v1.ent_identificacion = ?;",[$identificacion]);
-            });
-        //}
+                )
+                SELECT
+            	    v1.ent_identificacion,
+                    v1.dias_diferencia_cuotayrec,
+                    v2.fecha_vencimiento,
+                    v2.secuencia,
+                    v3.secuencia_fp,
+                    v2.cod_comprobante_fp,
+                    v2.interes,
+                    v1.ddo_num_pago,
+                    v1.cliente,
+                    v1.ddo_doctran,
+                    v1.tipo_vencido,
+                    v2.valor,
+                    v3.valor_cobro,
+                    v1.ddo_monto,
+                    v1.fecha_actual,
+                    v1.ddo_fecha_emision,
+                    v1.ddo_fechaven,
+            	    v3.fecha_cobro,
+            	    v2.ult_fecha_pago,
+            	    v3.cod_comprobante_cobro,
+            	    v3.tipo_comprobante_cobro,
+            	    v3.ccm_concepto,
+            	    v2.dias_atraso,
+            	    CURRENT_TIMESTAMP
+                FROM crm.av_clientes_reiterativo_por_cuota v1
+                INNER JOIN public.aav_migracion_cartera_historica_xcuotas v2
+                    ON v2.cod_comprobante_fp = v1.ddo_doctran and v2.interes > 0
+                INNER JOIN public.aav_migracion_cartera_historica_xcuotas_xcobros_masconcepto v3
+                    ON v3.cod_comprobante_fp = v1.ddo_doctran
+                WHERE v1.ent_identificacion = ?;", [$identificacion]);
+                    });
+                }
+            }
 
-        $data = $this->getDataClienteReiterativo($identificacion);
+            $data = $this->getDataClienteReiterativo($identificacion);
 
-        return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
-        // } catch (\Throwable $th) {
-        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
-        // }
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
+        }
     }
 
     public function getDataClienteReiterativo($identificacion)
@@ -156,37 +163,47 @@ class CliReiterativoController extends Controller
     }
 
 
-    public function comproClienReitera($identificacion)
+    public function comproClienReitera(Request $request)
     {
         try {
-            //$data = DB::select("SELECT distinct cod_comprobante_fp as name, false as activo  from crm.data_temp_cli_reiterativo where ent_identificacion = ? and interes > 0;", [$identificacion]);
-            $data = DB::select("SELECT ttemp.name,
-                    false as activo,
-                    MAX(ttempfae.pro_nombre) as productos,
-	                MAX(v1.tipo_nota) as tipo_nota,
-                    MAX(v1.comprobante) as comprobante,
-                    STRING_AGG(v1.pro_nombre, ', ') as pro_nombre
-                FROM (
-                    SELECT DISTINCT cod_comprobante_fp as name,
-                                    false as activo
-                    FROM crm.data_temp_cli_reiterativo
-                    WHERE ent_identificacion = ?
-                ) ttemp
-                LEFT JOIN av_notascredito_producto v1
-                    ON ttemp.name ILIKE '%' || v1.factura || '%'
-                inner join (
+
+            $comprobantes = $request->all(); // Asegúrate de que $comprobantes es un array de valores
+
+            // Convertimos el array a una cadena separada por comas
+            $comprobantesString = implode(',', array_map(function ($comprobante) {
+                return "'" . $comprobante . "'"; // Agregar comillas a cada valor
+            }, $comprobantes));
+
+
+            $data = DB::select("
+            SELECT ttemp.name,
+                   false as activo,
+                   MAX(ttempfae.pro_nombre) as productos,
+                   MAX(v1.tipo_nota) as tipo_nota,
+                   MAX(v1.comprobante) as comprobante,
+                   STRING_AGG(v1.pro_nombre, ', ') as pro_nombre
+            FROM (
+                SELECT DISTINCT cod_comprobante_fp as name,
+                                false as activo
+                FROM crm.data_temp_cli_reiterativo
+                WHERE cod_comprobante_fp IN ($comprobantesString) -- Aquí usamos la cadena separada por comas
+            ) ttemp
+            LEFT JOIN av_notascredito_producto v1
+                ON ttemp.name ILIKE '%' || v1.factura || '%'
+            INNER JOIN (
                 SELECT (cfa.cfa_periodo || '-' || cti.cti_sigla || '-' || alm.alm_codigo || '-' || pve.pve_numero || '-' || cfa.cfa_numero) AS comprobante,
                     STRING_AGG(pro.pro_codigo, ', ') AS pro_codigo,
                     STRING_AGG(pro.pro_nombre, ', ') AS pro_nombre
                 FROM cfactura cfa
                 INNER JOIN puntoventa pve ON pve.pve_id = cfa.pve_id
                 INNER JOIN almacen alm ON alm.alm_id = pve.alm_id
-                INNER JOIN ctipocom cti ON cti.cti_id = cfa.cti_id and cti.cti_id = 59
+                INNER JOIN ctipocom cti ON cti.cti_id = cfa.cti_id AND cti.cti_id = 59
                 INNER JOIN dfactura dfa ON dfa.cfa_id = cfa.cfa_id
                 INNER JOIN producto pro ON pro.pro_id = dfa.pro_id
                 GROUP BY cfa.cfa_periodo, cti.cti_sigla, alm.alm_codigo, pve.pve_numero, cfa.cfa_numero
-                ) ttempfae on ttempfae.comprobante = ttemp.name
-                GROUP BY ttemp.name;", [$identificacion]);
+            ) ttempfae ON ttempfae.comprobante = ttemp.name
+            GROUP BY ttemp.name;
+        ");
             if (sizeof($data) > 0) {
                 $data[0]->activo = true;
             }
