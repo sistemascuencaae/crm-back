@@ -107,42 +107,62 @@ class ComercializacionController extends Controller
         $periodo = $request->input('periodo');
         $almCodigo = $request->input('almCodigo');
         $mes = $request->input('mes');
+        $porteo = $request->input('porteo');
 
-        $data = VentasxAgencia::where('periodo', $periodo)
-        ->select(
-            'politica',
-            'agente_factura',
-            'cti_sigla',
-            'fecha',
-            'comprobante',
-            'factura_afectada',
-            'subtotal_descuentos_interes',
-            'tipo_nota',
-            'periodo',
-            'fecha',
-            'total',
-            'subtotal_descuentos',
-            'id_agente_factura',
-            'emp_abreviacion',
-            'interes',
-            'politica2',
-            'ent_identificacion',
-            'cliente',
-            'alm_codigo',
-            'almacen',
-            'pve_numero',
-            'cfa_concepto',        )
-            ->where('alm_codigo', $almCodigo)
-            ->where('pve_numero', 501)
-            ->whereMonth('fecha', $mes) // Filtra por el mes de la fecha
+        $data = $this->obtenerVentas($periodo, $almCodigo, $mes, $porteo);
+
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
+    }
+
+    public function obtenerVentas($periodo, $almCodigo, $mes, $porteo)
+    {
+        $query = VentasxAgencia::where('periodo', $periodo)
+            ->select(
+                'politica',
+                'agente_factura',
+                'cti_sigla',
+                'fecha',
+                'comprobante',
+                'factura_afectada',
+                'subtotal_descuentos_interes',
+                'tipo_nota',
+                'periodo',
+                'fecha',
+                'total',
+                'subtotal_descuentos',
+                'id_agente_factura',
+                'emp_abreviacion',
+                'interes',
+                'politica2',
+                'ent_identificacion',
+                'cliente',
+                'alm_codigo',
+                'almacen',
+                'pve_numero',
+                'cfa_concepto',
+                'pve_nombre'
+            )
+            ->where('periodo', $periodo);
+        // Si no es porteo, aplica los filtros adicionales
+        if ($porteo === false) {
+            $query->where('alm_codigo', $almCodigo)
+                ->where('pve_numero', 501);
+        } else {
+            $query->where('pve_nombre', 'LIKE', "%PUERTEO%");
+        }
+
+        $data = $query->whereMonth('fecha', $mes) // Filtra por el mes de la fecha
             ->orderBy('politica')
             ->orderBy('agente_factura')
             ->orderBy('cti_sigla')
             ->orderBy('fecha', 'desc')
             ->get();
+        //->paginate(20);
 
-        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
+        return $data;
     }
+
 
 
     public function ventasTotales(Request $request)
