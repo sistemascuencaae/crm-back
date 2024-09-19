@@ -246,84 +246,152 @@ class MigracionController extends Controller
     //     }
     // }
 
+    // este devuelve solo la primera foto del archivoy no las n imagenes
+    // public function imagenes_base64()
+    // {
+    //     try {
+    //         // Ruta del archivo JSON en el NAS
+    //         $jsonPath = "migracion_productos/productos_json.txt";
+    
+    //         // Verificar si el archivo JSON existe en el NAS
+    //         if (!Storage::disk('nas')->exists($jsonPath)) {
+    //             return response()->json(['message' => 'El archivo JSON no existe'], 404);
+    //         }
+    
+    //         // Obtener el contenido del archivo JSON
+    //         $jsonContent = Storage::disk('nas')->get($jsonPath);
+    //         $productos = json_decode($jsonContent, true); // Decodificar el JSON a un array asociativo
+    
+    //         if ($productos === null) {
+    //             return response()->json(['message' => 'Error al decodificar el JSON'], 500);
+    //         }
+    
+    //         // Array para almacenar productos con imágenes en base64
+    //         $productosConImagenes = [];
+    
+    //         // Recorrer los productos y buscar URLs en las columnas de imágenes
+    //         foreach ($productos as $producto) {
+    //             $sku = isset($producto['SKU']) ? $producto['SKU'] : 'SKU no disponible'; // Obtener el SKU o asignar valor por defecto
+    //             $imagenesProducto = [];
+    
+    //             for ($i = 1; $i <= 15; $i++) {
+    //                 $key = "Imagen $i";
+    //                 if (isset($producto[$key]) && filter_var($producto[$key], FILTER_VALIDATE_URL)) {
+    //                     try {
+    //                         // Obtener el contenido de la imagen desde el enlace
+    //                         $imagenContenido = @file_get_contents($producto[$key]);
+    
+    //                         if ($imagenContenido === false) {
+    //                             continue; // Saltar si no se puede obtener la imagen
+    //                         }
+    
+    //                         // Codificar el contenido de la imagen en base64
+    //                         $base64Imagen = base64_encode($imagenContenido);
+    
+    //                         // Obtener el tipo MIME de la imagen
+    //                         $infoImagen = @getimagesize($producto[$key]);
+    //                         $tipoMime = $infoImagen['mime'];
+    
+    //                         // Formatear en "data:image/jpeg;base64, ..."
+    //                         $base64ImagenConFormato = 'data:' . $tipoMime . ';base64,' . $base64Imagen;
+    
+    //                         // Agregar la imagen al array de imágenes del producto
+    //                         $imagenesProducto[] = [
+    //                             'url' => $producto[$key],
+    //                             'base64' => $base64ImagenConFormato
+    //                         ];
+    //                     } catch (Exception $e) {
+    //                         // Si ocurre algún error al convertir la imagen, continuar con la siguiente
+    //                         continue;
+    //                     }
+    //                 }
+    //             }
+    
+    //             // Si el producto tiene imágenes, agregarlo al array final
+    //             if (!empty($imagenesProducto)) {
+    //                 $productosConImagenes[] = [
+    //                     'SKU' => $sku,
+    //                     'imagenes' => $imagenesProducto
+    //                 ];
+    //             }
+    //         }
+    
+    //         // Verificar si se encontraron productos con imágenes
+    //         if (count($productosConImagenes) > 0) {
+    //             return response()->json($productosConImagenes, 200);
+    //         } else {
+    //             return response()->json(['message' => 'No se encontraron imágenes válidas en el archivo'], 404);
+    //         }
+    //     } catch (Exception $e) {
+    //         return response()->json(['message' => 'Error al procesar el archivo: ' . $e->getMessage()], 500);
+    //     }
+    // }
+    
+
     public function imagenes_base64()
-    {
-        try {
-            // Ruta del archivo JSON en el NAS
-            $jsonPath = "migracion_productos/productos_json.txt";
-    
-            // Verificar si el archivo JSON existe en el NAS
-            if (!Storage::disk('nas')->exists($jsonPath)) {
-                return response()->json(['message' => 'El archivo JSON no existe'], 404);
-            }
-    
-            // Obtener el contenido del archivo JSON
-            $jsonContent = Storage::disk('nas')->get($jsonPath);
-            $productos = json_decode($jsonContent, true); // Decodificar el JSON a un array asociativo
-    
-            if ($productos === null) {
-                return response()->json(['message' => 'Error al decodificar el JSON'], 500);
-            }
-    
-            // Array para almacenar productos con imágenes en base64
-            $productosConImagenes = [];
-    
-            // Recorrer los productos y buscar URLs en las columnas de imágenes
-            foreach ($productos as $producto) {
-                $sku = isset($producto['SKU']) ? $producto['SKU'] : 'SKU no disponible'; // Obtener el SKU o asignar valor por defecto
-                $imagenesProducto = [];
-    
-                for ($i = 1; $i <= 15; $i++) {
-                    $key = "Imagen $i";
-                    if (isset($producto[$key]) && filter_var($producto[$key], FILTER_VALIDATE_URL)) {
-                        try {
-                            // Obtener el contenido de la imagen desde el enlace
-                            $imagenContenido = @file_get_contents($producto[$key]);
-    
-                            if ($imagenContenido === false) {
-                                continue; // Saltar si no se puede obtener la imagen
-                            }
-    
-                            // Codificar el contenido de la imagen en base64
-                            $base64Imagen = base64_encode($imagenContenido);
-    
-                            // Obtener el tipo MIME de la imagen
-                            $infoImagen = @getimagesize($producto[$key]);
-                            $tipoMime = $infoImagen['mime'];
-    
-                            // Formatear en "data:image/jpeg;base64, ..."
-                            $base64ImagenConFormato = 'data:' . $tipoMime . ';base64,' . $base64Imagen;
-    
-                            // Agregar la imagen al array de imágenes del producto
-                            $imagenesProducto[] = [
-                                'url' => $producto[$key],
-                                'base64' => $base64ImagenConFormato
-                            ];
-                        } catch (Exception $e) {
-                            // Si ocurre algún error al convertir la imagen, continuar con la siguiente
-                            continue;
-                        }
-                    }
-                }
-    
-                // Si el producto tiene imágenes, agregarlo al array final
-                if (!empty($imagenesProducto)) {
-                    $productosConImagenes[] = [
-                        'SKU' => $sku,
-                        'imagenes' => $imagenesProducto
-                    ];
-                }
-            }
-    
-            // Verificar si se encontraron productos con imágenes
-            if (count($productosConImagenes) > 0) {
-                return response()->json($productosConImagenes, 200);
-            } else {
-                return response()->json(['message' => 'No se encontraron imágenes válidas en el archivo'], 404);
-            }
-        } catch (Exception $e) {
-            return response()->json(['message' => 'Error al procesar el archivo: ' . $e->getMessage()], 500);
+{
+    try {
+        // Obtener los productos y sus imágenes de la base de datos
+        $data = DB::SELECT("SELECT pro_id, pro_codigo, url_imagen FROM dashboard.at_producto_imagen");
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No se encontraron productos'], 404);
         }
+
+        // Array para almacenar productos con imágenes en base64
+        $productosConImagenes = [];
+
+        // Recorrer los productos y buscar URLs de imágenes
+        foreach ($data as $producto) {
+            $ProId = $producto->pro_id; // Obtener el código del producto
+            $codigoProducto = $producto->pro_codigo; // Obtener el código del producto
+            $urlImagen = $producto->url_imagen; // Obtener la URL de la imagen
+
+            // Validar si la URL de la imagen es válida
+            if (filter_var($urlImagen, FILTER_VALIDATE_URL)) {
+                try {
+                    // Obtener el contenido de la imagen desde el enlace
+                    $imagenContenido = @file_get_contents($urlImagen);
+
+                    if ($imagenContenido === false) {
+                        continue; // Saltar si no se puede obtener la imagen
+                    }
+
+                    // Codificar el contenido de la imagen en base64
+                    $base64Imagen = base64_encode($imagenContenido);
+
+                    // Obtener el tipo MIME de la imagen
+                    $infoImagen = @getimagesize($urlImagen);
+                    $tipoMime = $infoImagen['mime'];
+
+                    // Formatear en "data:image/jpeg;base64, ..."
+                    $base64ImagenConFormato = 'data:' . $tipoMime . ';base64,' . $base64Imagen;
+
+                    
+                        // Si el producto no está en el array, agregarlo con la primera imagen
+                        $productosConImagenes[$codigoProducto] = [
+                            'pro_id' => $ProId,
+                            'pro_codigo' => $codigoProducto,
+                            'base64' => $base64ImagenConFormato
+                        ];
+                    
+                } catch (Exception $e) {
+                    // Si ocurre algún error al convertir la imagen, continuar con la siguiente
+                    continue;
+                }
+            }
+        }
+
+        // Verificar si se encontraron productos con imágenes
+        if (!empty($productosConImagenes)) {
+            return response()->json(array_values($productosConImagenes), 200);
+        } else {
+            return response()->json(['message' => 'No se encontraron imágenes válidas'], 404);
+        }
+
+    } catch (Exception $e) {
+        return response()->json(['message' => 'Error al procesar los productos: ' . $e->getMessage()], 500);
     }
-    
+}
+
 }
