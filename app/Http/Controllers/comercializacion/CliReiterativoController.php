@@ -67,7 +67,7 @@ class CliReiterativoController extends Controller
             	    CURRENT_TIMESTAMP
                 FROM crm.av_clientes_reiterativo_por_cuota v1
                 INNER JOIN public.aav_migracion_cartera_historica_xcuotas v2
-                    ON v2.cod_comprobante_fp = v1.ddo_doctran and v2.interes > 0
+                    ON v2.cod_comprobante_fp = v1.ddo_doctran and v2.interes > 0 and v1.ddo_num_pago <> 999
                 INNER JOIN public.aav_migracion_cartera_historica_xcuotas_xcobros_masconcepto v3
                     ON v3.cod_comprobante_fp = v1.ddo_doctran
                 WHERE v1.ent_identificacion = ?;", [$identificacion]);

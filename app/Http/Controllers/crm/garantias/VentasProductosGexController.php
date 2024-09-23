@@ -67,6 +67,7 @@ class VentasProductosGexController extends Controller
     {
         $data = DB::select("select c.cfa_fecha,
                                     (case when pc.tipo_servicio = 'M' then pv.pve_nombre else a.alm_nombre end) as sucursal,
+                                    pv.pve_nombre,
                                     concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor,
                                     en.ent_identificacion as ci_vendedor,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', pv.pve_numero, ' - ',  c.cfa_numero) as num_factura,
@@ -110,6 +111,7 @@ class VentasProductosGexController extends Controller
     {
         $data = DB::select("select c.cfa_fecha,
                                     (case when pc.tipo_servicio = 'M' then pv.pve_nombre else a.alm_nombre end) as sucursal,
+                                    pv.pve_nombre,
                                     concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', pv.pve_numero, ' - ',  c.cfa_numero) as num_factura,
                                     tp.tpr_nombre as tipo_producto,
