@@ -396,7 +396,7 @@ class DespachoController extends Controller
                     $fecha_modifica = date("Y-m-d h:i:s");
                 }
 
-                $fecha = $request->input('fecha');
+                $fecha = $request->input('fecha') ? $request->input('fecha') : now();
                 $estado = $request->input('estado');
                 $bod_id = $request->input('bod_id');
                 $bod_id_fin = $request->input('bod_id_dest');
