@@ -85,6 +85,7 @@ use App\Http\Controllers\crm\garantias\ComisionesController;
 use App\Http\Controllers\crm\garantias\ProcComiController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
+use App\Http\Controllers\formulario\FormAuthDatosCliController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\openceo\DdocumentoController;
@@ -248,10 +249,15 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
     Route::get('/listarArchivosConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarArchivosConver']);
     Route::get('/listarGaleriaConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarGaleriaConver']);
+
 });
+// FORMULARIO AUTORIZACION TRATAMIENTO DE DATOS
 
-
-
+Route::group(["prefix" => "autorizaciones"], function ($router) {
+    Route::post('/add', [FormAuthDatosCliController::class, 'add']);
+    Route::get('/getAlmacenId/{id}', [FormAuthDatosCliController::class, 'getAlmacenId']);
+    Route::get('/listAlmacenes', [FormAuthDatosCliController::class, 'listAlmacenes']);
+});
 
 Route::group(["prefix" => "crm/audi"], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
@@ -264,6 +270,7 @@ Route::group([], function ($router) {
     Route::post('/token', [EquifaxController::class, 'loginEquifax']);
 });
 
+// FORMULARIOS FELIPE
 Route::group(["prefix" => "form"], function ($router) {
     Route::get('/list', [FormController::class, 'list']);
     Route::get('/storeA/{formId}', [FormController::class, 'storeA']);
@@ -279,6 +286,7 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::post('/addFormulario', [FormController::class, 'addFormulario']); //
     Route::get('listFormByIdTablero/{tab_id}', [FormController::class, 'listFormByIdTablero']); //
     Route::get('/storeCasoForm/{casoId}', [FormController::class, 'storeCasoForm']);
+
 });
 Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::get('/store', [CampoController::class, 'store']);
