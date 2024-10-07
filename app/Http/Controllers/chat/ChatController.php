@@ -39,7 +39,8 @@ class ChatController extends Controller
             'except' => [
                 'listConversaciones',
                 'listarMensajes',
-                'getImagenesSmg'
+                'getImagenesSmg',
+                'listarMensajesNoLeidos'
             ]
         ]);
     }

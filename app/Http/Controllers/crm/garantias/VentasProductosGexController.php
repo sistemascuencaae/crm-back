@@ -82,11 +82,13 @@ class VentasProductosGexController extends Controller
                                     v.intereses as interes,
                                     v.dfac_costoprecio + coalesce((select cg.valor_gex from cgex cg where cg.id_dfactura = d.dfac_id),0) * (case when v.dfac_costoprecio < 0 then -1 else 1 end) - v.dfac_dsc1y2 + v.dfac_iva + v.intereses as total,
                                     po.pol_nombre as forma_pago,
-                                    concat(ftp.factpa_plazo, ' ', ftp.factpa_tiempo) as plazo
+                                    concat(ftp.factpa_plazo, ' ', ftp.factpa_tiempo) as plazo,
+                                    mar.mar_nombre
                             from cfactura c join dfactura d on c.cfa_id = d.cfa_id
                                             join v_dfacturacompleto_almespa v on d.cfa_id = v.cfa_id and d.dfac_id = v.dfac_id
                                             left outer join fac_tipo_pago ftp on c.cfa_id = ftp.cfa_id
                                             join producto p on d.pro_id = p.pro_id and pro_inventario = true
+                                            join marca mar on mar.mar_id = p.mar_id
                                             join tipo_producto tp on p.tpr_id = tp.tpr_id
                                             left outer join politica po on c.pol_id = po.pol_id
                                             join puntoventa pv on c.pve_id = pv.pve_id
