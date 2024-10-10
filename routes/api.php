@@ -275,6 +275,7 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::get('/list', [FormController::class, 'list']);
     Route::get('/storeA/{formId}', [FormController::class, 'storeA']);
     Route::get('/storeB/{formId}/{userId}', [FormController::class, 'storeB']);
+    Route::get('/storeC/{casoId}', [FormController::class, 'storeC']);
     Route::get('/cargarFormulario/{formId}', [FormController::class, 'cargarFormulario']);
     Route::get('/listByDepar/{depId}/{userId}', [FormController::class, 'listByDepar']); //
     Route::get('/formUser/{depId}/{userId}', [FormController::class, 'formUser']); //formUser
