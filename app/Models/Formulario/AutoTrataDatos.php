@@ -18,7 +18,10 @@ class AutoTrataDatos extends Model
         'telefono_principal',
         'tipo_documento',
         'emp_id',
-        'alm_id'
+        'alm_id',
+        'autorizado',
+        'fecha_autorizado'
+
     ];
 
 }

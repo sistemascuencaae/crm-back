@@ -121,14 +121,16 @@
                     <td class="auto-style1" style="width: 111px"><strong>Email:</strong></td>
                     <td class="auto-style2">{{ $object->email }}</td>
                 </tr>
+                <tr>
+                    <td class="auto-style1" style="width: 111px"><strong>Identificación:</strong></td>
+                    <td class="auto-style2">{{ $object->identificacion }}</td>
+                </tr>
             </table>
 
             <hr />
 
             <strong>Para validar esta solicitud por favor haga click en el siguiente enlace.</strong>
-
-            <a href="#"> Aprobar autorización</a>
-
+            <a href="http://localhost:4222/validacion-auto-trata-datos/{{ $object->id }}">Aprobar autorización</a>
 
         </div>
     </div>
