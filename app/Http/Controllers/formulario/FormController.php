@@ -47,6 +47,27 @@ class FormController extends Controller
         }
     }
 
+    public function storeC($casoId)
+    {
+        try {
+
+            $almacenes = DB::select("SELECT alm_id, alm_codigo||'-'||alm_nombre as alm_nombre from public.almacen where alm_activo = true order by alm_nombre");
+            $formulario = null;
+            if($casoId != 0){
+                $formulario = DB::selectOne("SELECT * from crm.formulario_estatico where caso_id = ?",[$casoId]);
+            }
+
+            $data = (object)[
+                "almacenes" => $almacenes,
+                "formulario" => $formulario
+            ];
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
+        }
+    }
+
 
     public function addFormulario(Request $request)
     {

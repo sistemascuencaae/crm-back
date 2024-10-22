@@ -15,16 +15,11 @@ class ComercializacionController extends Controller
     {
         try {
 
-            $almacenes = DB::select("SELECT alm_codigo||'-'||alm_nombre as alm_nombre from public.almacen where alm_activo = true order by alm_nombre");
-            // $empleados = DB::select(
-            //     "SELECT emp.emp_id, emp.emp_abreviacion as codigo, (ent.ent_apellidos || ' ' || ent.ent_nombres) as nombre FROM public.empleado emp
-            // inner join public.entidad ent on ent.ent_id = emp.ent_id
-            // where emp.emp_activo = true"
-            // );
+            $almacenes = DB::select("SELECT alm_id, alm_codigo||'-'||alm_nombre as alm_nombre from public.almacen where alm_activo = true order by alm_nombre");
+
 
             $data = (object)[
-                "almacenes" => $almacenes,
-                //"empleados" => $empleados
+                "almacenes" => $almacenes
             ];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));

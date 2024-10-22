@@ -41,12 +41,12 @@ class VentasTotalesGexController extends Controller
 
     public function VentasTotalesGex($almacen, $usuario, $vendedor, $fecIni, $fecFin)
     {
-        $data = DB::select("select alm_id, alm_nombre, emp_id, vendedor, ci_vendedor,
+        $data = DB::select("select alm_id, alm_nombre, pve_nombre, emp_id, vendedor, ci_vendedor,
                                     sum(venta_bruta) as vta_bruto, sum(iva) as iva, sum(intereses) as intereses, sum(venta_neta) as vta_neta,
                                     sum(devolucion_bruta) as dev_bruta, sum(iva_devolucion) as iva_dev, sum(interes_devolucion) as interes_dev, sum(devolucion_neta) as dev_neta,
                                     sum(venta_bruta - devolucion_bruta) as total_bruto, sum(iva - iva_devolucion) as total_iva, sum(intereses - interes_devolucion) as total_interes, sum(venta_neta - devolucion_neta) as total_neto
                             from(
-                                select a.alm_id, a.alm_nombre,
+                                select a.alm_id, a.alm_nombre, p.pve_nombre,
                                                 e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor,
                                                 en.ent_identificacion as ci_vendedor,
                                                 sum(v.dfac_costoprecio) as venta_bruta,
@@ -70,9 +70,9 @@ class VentasTotalesGexController extends Controller
                                                 (e.emp_id = " . $vendedor . " or 0 = " . $vendedor . ") and
                                                 cast(c.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.prod_gex = true
-                                group by a.alm_id, a.alm_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos, en.ent_identificacion
+                                group by a.alm_id, a.alm_nombre, p.pve_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos, en.ent_identificacion
                                 union all
-                                select a.alm_id, a.alm_nombre,
+                                select a.alm_id, a.alm_nombre, p.pve_nombre,
                                                 e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor,
                                                 en.ent_identificacion as ci_vendedor,
                                                 0,
@@ -96,9 +96,9 @@ class VentasTotalesGexController extends Controller
                                                 (e.emp_id = " . $vendedor . " or 0 = " . $vendedor . ") and
                                                 cast(c.cnc_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.id_dfactura_gex is not null
-                                group by a.alm_id, a.alm_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos, en.ent_identificacion
+                                group by a.alm_id, a.alm_nombre, p.pve_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos, en.ent_identificacion
                                 union all
-                                select a.alm_id, a.alm_nombre,
+                                select a.alm_id, a.alm_nombre, p.pve_nombre,
                                                 e.emp_id, concat(en.ent_nombres, ' ', en.ent_apellidos) as vendedor,
                                                 en.ent_identificacion as ci_vendedor,
                                                 0,
@@ -122,8 +122,8 @@ class VentasTotalesGexController extends Controller
                                                 (e.emp_id = " . $vendedor . " or 0 = " . $vendedor . ") and
                                                 cast(v.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and c.cfa_transacc = 2
-                                group by a.alm_id, a.alm_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos, en.ent_identificacion) as tabla
-                            group by alm_id, alm_nombre, emp_id, vendedor, ci_vendedor
+                                group by a.alm_id, a.alm_nombre, p.pve_nombre, e.emp_id, en.ent_nombres, en.ent_apellidos, en.ent_identificacion) as tabla
+                            group by alm_id, alm_nombre, pve_nombre, emp_id, vendedor, ci_vendedor
                             order by alm_nombre, vendedor");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -131,12 +131,12 @@ class VentasTotalesGexController extends Controller
 
     public function VentasTotalesGexAlmacen($almacen, $usuario, $fecIni, $fecFin)
     {
-        $data = DB::select("select alm_id, alm_nombre,
+        $data = DB::select("SELECT alm_id, alm_nombre, pve_nombre,
                                     sum(venta_bruta) as vta_bruto, sum(iva) as iva, sum(intereses) as intereses, sum(venta_neta) as vta_neta,
                                     sum(devolucion_bruta) as dev_bruta, sum(iva_devolucion) as iva_dev, sum(interes_devolucion) as interes_dev, sum(devolucion_neta) as dev_neta,
                                     sum(venta_bruta - devolucion_bruta) as total_bruto, sum(iva - iva_devolucion) as total_iva, sum(intereses - interes_devolucion) as total_interes, sum(venta_neta - devolucion_neta) as total_neto
                             from(
-                                select a.alm_id, a.alm_nombre,
+                                select a.alm_id, a.alm_nombre, p.pve_nombre,
                                                 sum(v.dfac_costoprecio) as venta_bruta,
                                                 sum(round(v.dfac_iva,2)) as iva,
                                                 sum(round(v.intereses,2)) as intereses,
@@ -154,9 +154,9 @@ class VentasTotalesGexController extends Controller
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
                                                 cast(v.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.prod_gex = true
-                                group by a.alm_id, a.alm_nombre
+                                group by a.alm_id, a.alm_nombre, p.pve_nombre
                                 union all
-                                select a.alm_id, a.alm_nombre,
+                                select a.alm_id, a.alm_nombre, p.pve_nombre,
                                                 0,
                                                 0,
                                                 0,
@@ -174,9 +174,9 @@ class VentasTotalesGexController extends Controller
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
                                                 cast(c.cnc_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and d.id_dfactura_gex is not null
-                                group by a.alm_id, a.alm_nombre
+                                group by a.alm_id, a.alm_nombre, p.pve_nombre
                                 union all
-                                select a.alm_id, a.alm_nombre,
+                                select a.alm_id, a.alm_nombre, p.pve_nombre,
                                                 0,
                                                 0,
                                                 0,
@@ -195,8 +195,8 @@ class VentasTotalesGexController extends Controller
                                                                                 where u.id = " . $usuario . " and 0 = " . $almacen . " and rua.alm_id = a.alm_id)) and
                                                 cast(v.cfa_fecha as date) between '" . $fecIni . "' and '" . $fecFin . "'
                                                 and c.cfa_transacc = 2
-                                group by a.alm_id, a.alm_nombre) as tabla
-                            group by alm_id, alm_nombre
+                                group by a.alm_id, a.alm_nombre, p.pve_nombre) as tabla
+                            group by alm_id, alm_nombre, pve_nombre
                             order by alm_nombre");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
