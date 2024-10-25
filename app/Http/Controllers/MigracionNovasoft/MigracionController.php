@@ -28,6 +28,7 @@ class MigracionController extends Controller
                 'af_migracion_cartera_historica_xcuotas_api',
                 'af_migracion_cartera_historica_xcuotas_xcobros_api',
                 'imagenes_base64',
+                'aav_migracion_cliente_byIdentificacion',
             ]
         ]);
 
@@ -389,6 +390,18 @@ class MigracionController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron imágenes válidas', ''));
             }
 
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function aav_migracion_cliente_byIdentificacion($identificacion)
+    {
+        try {
+            // Select directo a una funcion de la base de datos
+            $data = DB::select("SELECT * FROM public.aav_migracion_cliente where ent_identificacion = '$identificacion'");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
