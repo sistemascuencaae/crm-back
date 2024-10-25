@@ -257,6 +257,8 @@ Route::group(["prefix" => "autorizaciones"], function ($router) {
     Route::post('/add', [FormAuthDatosCliController::class, 'add']);
     Route::get('/getAlmacenId/{id}', [FormAuthDatosCliController::class, 'getAlmacenId']);
     Route::get('/listAlmacenes', [FormAuthDatosCliController::class, 'listAlmacenes']);
+    Route::get('/store', [FormAuthDatosCliController::class, 'store']);
+    Route::get('/validarAutoTratDatos/{id}', [FormAuthDatosCliController::class, 'validarAutoTratDatos']);
 });
 
 Route::group(["prefix" => "crm/audi"], function ($router) {

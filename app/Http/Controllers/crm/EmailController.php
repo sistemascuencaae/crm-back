@@ -13,6 +13,7 @@ use App\Models\crm\EstadosFormulas;
 use App\Models\crm\Fase;
 use App\Models\mail\Email;
 use App\Models\mail\SendMail;
+use App\Models\mail\SendMailAutorizacionDatos;
 use App\Models\mail\sendMailCambioFase;
 use App\Models\mail\SendMailComite;
 use App\Models\mail\sendMailLinkEnrolamiento;
@@ -35,6 +36,22 @@ class EmailController extends Controller
         try {
             // $email = "juanjgsj@gmail.com";
             Mail::to($email)->send(new SendMail($object));
+            // return "Correo electrónico enviado correctamente a " . $email;
+            $log->logInfo(EmailController::class, 'Correo electrónico enviado correctamente a ' . $email);
+        } catch (Exception $e) {
+            $log->logError(EmailController::class, 'Error al enviar el correo electrónico a ' . $email, $e);
+
+            return "Error al enviar el correo: " . $e->getMessage();
+        }
+    }
+
+    // proforma
+    public function sendEmailAutoRevDatos($email, $object)
+    {
+        $log = new Funciones();
+        try {
+            // $email = "juanjgsj@gmail.com";
+            Mail::to($email)->send(new SendMailAutorizacionDatos($object));
             // return "Correo electrónico enviado correctamente a " . $email;
             $log->logInfo(EmailController::class, 'Correo electrónico enviado correctamente a ' . $email);
         } catch (Exception $e) {
