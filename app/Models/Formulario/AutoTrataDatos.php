@@ -16,7 +16,12 @@ class AutoTrataDatos extends Model
         'fecha_registro',
         'email',
         'telefono_principal',
-        'tipo_documento'
+        'tipo_documento',
+        'emp_id',
+        'alm_id',
+        'autorizado',
+        'fecha_autorizado'
+
     ];
-   
+
 }
