@@ -189,8 +189,7 @@ class CliReiterativoController extends Controller
                    MAX(v1.comprobante) as comprobante,
                    STRING_AGG(v1.pro_nombre, ', ') as pro_nombre
             FROM (
-                SELECT DISTINCT cod_comprobante_fp as name,
-                                false as activo
+                SELECT DISTINCT cod_comprobante_fp as name, false as activo
                 FROM crm.data_temp_cli_reiterativo
                 WHERE cod_comprobante_fp IN (
                 SELECT cod_comprobante_fp  from (SELECT cod_comprobante_fp, MAX(ddo_fecha_emision) AS max_fecha
