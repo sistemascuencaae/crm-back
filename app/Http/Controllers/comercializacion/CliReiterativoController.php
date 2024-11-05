@@ -24,7 +24,7 @@ class CliReiterativoController extends Controller
 
             if ($cliente) {
                 $createdAt = Carbon::parse($cliente->created_at);
-                if ($createdAt->diffInMinutes(Carbon::now()) >= 2060) {
+                if ($createdAt->diffInMinutes(Carbon::now()) >= 100) {
                     $this->insertarDataCliReitera($identificacion);
                 }
             } else {
@@ -189,8 +189,7 @@ class CliReiterativoController extends Controller
                    MAX(v1.comprobante) as comprobante,
                    STRING_AGG(v1.pro_nombre, ', ') as pro_nombre
             FROM (
-                SELECT DISTINCT cod_comprobante_fp as name,
-                                false as activo
+                SELECT DISTINCT cod_comprobante_fp as name, false as activo
                 FROM crm.data_temp_cli_reiterativo
                 WHERE cod_comprobante_fp IN (
                 SELECT cod_comprobante_fp  from (SELECT cod_comprobante_fp, MAX(ddo_fecha_emision) AS max_fecha
@@ -230,21 +229,15 @@ class CliReiterativoController extends Controller
 
         try {
             $data = DB::select("SELECT
-                v1.fecha as fecha_emision,
-                v1.cod_comprobante_fp,
-                v2.secuencia_fp,
-                v1.fecha_vencimiento,
-                (select ult_fecha_pago from crm.data_temp_cli_reiterativo v3 where v3.cod_comprobante_cobro = v2.cod_comprobante_cobro and v3.secuencia = v2.secuencia_fp limit 1) as ult_fecha_pago,
-                v2.cod_comprobante_cobro,
-                v2.tipo_comprobante_cobro,
-                v2.ccm_concepto,
-                (select tipo_vencido from crm.data_temp_cli_reiterativo v3 where v3.cod_comprobante_cobro = v2.cod_comprobante_cobro limit 1) as estado_cuota,
-                (select MAX((COALESCE(ult_fecha_pago, fecha_actual) - fecha_vencimiento)::int) AS dias_atraso from crm.data_temp_cli_reiterativo v3 where v2.cod_comprobante_cobro = v3.cod_comprobante_cobro limit 1) as dias_atraso_maximo,
-                (select dias_atraso from crm.data_temp_cli_reiterativo v3 where v3.cod_comprobante_cobro = v2.cod_comprobante_cobro and v3.secuencia = v2.secuencia_fp limit 1) as dias_atraso,
-                v2.valor_cobro
-                from public.aav_migracion_cartera_historica_xcuotas v1
-                inner join public.aav_migracion_cartera_historica_xcuotas_xcobros_masconcepto v2 on v2.cod_comprobante_fp = v1.cod_comprobante_fp and v1.secuencia = v2.secuencia_fp
-                where v1.cod_comprobante_fp = ? and v2.secuencia_fp < 999 order by v2.secuencia_fp asc;", [$comprobante]);
+	                    *,
+                        COALESCE(valor - SUM(valor_cobro) OVER (PARTITION BY secuencia_fp ORDER BY secuencia_fp, cod_comprobante_cobro ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), valor) AS diferencia
+                    FROM
+                        crm.cfa_cli_resumen
+                    WHERE
+                        cod_comprobante_fp = ?
+                    ORDER BY
+                        secuencia_fp, cod_comprobante_cobro;
+            ", [$comprobante]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
         } catch (\Throwable $th) {
