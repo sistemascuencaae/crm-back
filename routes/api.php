@@ -182,7 +182,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
     Route::put('/actualizarCaso/{casoId}/{tabId}', [CasoController::class, 'actualizarCaso']); //
     Route::put('/asignarmeCaso/{casoId}/{userId}', [CasoController::class, 'asignarmeCaso']); //
-
+    Route::post('/crearFormularioSoporte', [CasoController::class, 'crearFormularioSoporte']);
 
     Route::get('/getCasoFormulario', [CasoController::class, 'getCasoFormulario']);//
 
@@ -304,6 +304,7 @@ Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::post('/add', [CampoController::class, 'add']); //addCampoValor
     //Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']); //addCampoValor
     Route::post('/guardarFormulario', [CampoController::class, 'guardarFormulario']);
+
 });
 Route::group(['prefix' => 'form/seccion'], function ($router) {
     Route::get('/store', [FormSeccionController::class, 'store']);

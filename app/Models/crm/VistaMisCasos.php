@@ -28,6 +28,7 @@ class VistaMisCasos extends Model
         "nombre_tablero",
         "estado_2",
         "tc_id",
+        "user_creador_id"
     ];
 
     public function miembros(){

@@ -68,87 +68,89 @@ class CasoController extends Controller
         } else {
             $miembros = $miembros2;
         }
-       //try {
-            $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request, $dataFormStatic) {
+        //try {
+        $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request, $dataFormStatic) {
 
 
-                $caso = new Caso($casoInput);
-                $caso->save();
-                if ($dataFormStatic) {
-                    $this->crearFormularioStatico($dataFormStatic, $caso->id);
-                }
-                //buscar las tareas predefinidas
-                //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
-                $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
+            $caso = new Caso($casoInput);
+            $caso->save();
+            if ($dataFormStatic) {
+                $this->crearFormularioStatico($dataFormStatic, $caso->id);
+            }
+            //buscar las tareas predefinidas
+            //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
+            $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
                 inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
                 inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
                 where tc.id = ?', [$caso->tc_id]);
-                //insertar en la tabla tareas
-                foreach ($arrayDtipoTareas as $dtt) {
-                    $tarea = new Tareas();
-                    $tarea->nombre = $dtt->nombre;
-                    $tarea->requerido = $dtt->requerido;
-                    $tarea->estado = $dtt->estado;
-                    $tarea->ctt_id = $caso->ctt_id;
-                    $tarea->tab_id = $dtt->tab_id;
-                    $tarea->marcado = false;
-                    $caso->tareas()->save($tarea);
-                }
-                // $newGrupo = new ChatGroups();
-                // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
-                // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
-                //$newGrupo->save();
-                $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
-                //--------------------
-                $caso->estado_2 = $estadoInicial->id;
-                $caso->nombre = 'CASO # ' . $caso->id;
-                //$caso->user_creador_id = $userLoginId;
-                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
-                if ($caso->desc_json) {
-                }
-                $caso->save();
-                for ($i = 0; $i < sizeof($miembros); $i++) {
+            //insertar en la tabla tareas
+            foreach ($arrayDtipoTareas as $dtt) {
+                $tarea = new Tareas();
+                $tarea->nombre = $dtt->nombre;
+                $tarea->requerido = $dtt->requerido;
+                $tarea->estado = $dtt->estado;
+                $tarea->ctt_id = $caso->ctt_id;
+                $tarea->tab_id = $dtt->tab_id;
+                $tarea->marcado = false;
+                $caso->tareas()->save($tarea);
+            }
+            // $newGrupo = new ChatGroups();
+            // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
+            // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
+            //$newGrupo->save();
+            $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
+            //--------------------
+            $caso->estado_2 = $estadoInicial->id;
+            $caso->nombre = 'CASO # ' . $caso->id;
+            //$caso->user_creador_id = $userLoginId;
+            $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+            if ($caso->desc_json) {
+            }
+            $caso->save();
+            for ($i = 0; $i < sizeof($miembros); $i++) {
+                $mieExixte = Miembros::where("user_id",$miembros[$i])->where("caso_id", $caso->id)->first();
+                if (!$mieExixte) {
                     $miembro = new Miembros();
                     $miembro->user_id = $miembros[$i];
-                    //$miembro->chat_group_id = $newGrupo->id;
                     $caso->miembros()->save($miembro);
                 }
-                $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
-
-                $soporteController = new SoporteController();
-                $soporteController->addGaleriaArchivos($request, $caso->id);
-
-                return $this->getCaso($caso->id);
-            });
-            $dataFormSopo = $request->input('valoresFormulario');
-            if ($dataFormSopo) {
-                $this->formularioSoporte($request, $casoCreado['id']);
             }
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit = new Audits();
-            $audit->user_id = Auth::id();
-            $audit->event = 'created';
-            $audit->auditable_type = Caso::class;
-            $audit->auditable_id = $casoCreado->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
-            $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->estado_caso = $casoCreado->estadodos->nombre;
-            $audit->estado_caso_id = $casoCreado->estado_2;
-            $audit->accion = 'addCaso';
-            $audit->caso_id = $casoCreado->id;
-            $audit->save();
-            // END Auditoria
-            // le mando uno porque es la primera vez q se crea el caso
-            $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
-            $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
-            $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
-            broadcast(new TableroEvent($casoCreado));
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
+
+            $soporteController = new SoporteController();
+            $soporteController->addGaleriaArchivos($request, $caso->id);
+
+            return $this->getCaso($caso->id);
+        });
+        $dataFormSopo = $request->input('valoresFormulario');
+        if ($dataFormSopo) {
+            $this->formularioSoporte($request, $casoCreado['id']);
+        }
+        // START Bloque de código que genera un registro de auditoría manualmente
+        $audit = new Audits();
+        $audit->user_id = Auth::id();
+        $audit->event = 'created';
+        $audit->auditable_type = Caso::class;
+        $audit->auditable_id = $casoCreado->id;
+        $audit->user_type = User::class;
+        $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+        $audit->url = $request->fullUrl();
+        // Establecer old_values y new_values
+        $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
+        $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
+        $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+        $audit->estado_caso = $casoCreado->estadodos->nombre;
+        $audit->estado_caso_id = $casoCreado->estado_2;
+        $audit->accion = 'addCaso';
+        $audit->caso_id = $casoCreado->id;
+        $audit->save();
+        // END Auditoria
+        // le mando uno porque es la primera vez q se crea el caso
+        $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+        $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
+        $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
+        broadcast(new TableroEvent($casoCreado));
+        return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
         // } catch (\Throwable $e) {
         //     $log->logError(CasoController::class, 'Error al guardar el caso', $e);
 
@@ -1660,5 +1662,51 @@ class CasoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
+    }
+
+
+    public function crearFormularioSoporte(Request $request)
+    {
+        DB::transaction(function () use ($request) {
+            $data = $request->all();
+            foreach ($data as $key => $item) {
+
+                $campoValor = DB::selectOne("SELECT * FROM crm.form_campo WHERE nombre = ?;", [$item["control"]]);
+                $dataValor = (object)[
+                    // "valor_texto"=> $item["value"],
+                    // "valor_entero"=>,
+                    // "valor_decimal"=>,
+                    // "valor_boolean"=>,
+                    // "valor_json"=>,
+                    // "valor_array"=>,
+                    // "valor_date"=>,
+                    // "created_at"=>,
+                    // "updated_at"=>,
+                    // "deleted_at"=>,
+                    // "user_id"=>,
+                    // "orden"=>,
+                    // "pac_id"=>,
+                    // "caso_id"=>,
+                    // "key"=>,
+                ];
+                //echo ('$a->id: '.json_encode($a->id));
+                return;
+                // $dataCV = (object)[
+                //     "campo_id"=> $campoValor->id,
+                //     "valor_id"=> $campoValor->,
+                //     "fcl_id"=> ,
+                //     "created_at"=> ,
+                //     "updated_at"=> ,
+                //     "deleted_at"=> ,
+                // ];
+
+
+
+
+
+
+                $data = FormCampoValor::create([]);
+            }
+        });
     }
 }
