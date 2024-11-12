@@ -31,6 +31,7 @@ Route::group([
     Route::get('/getTiposProducto', [TipoProductoController::class, 'getTiposProducto']);
     Route::get('agencias', [OpenceoController::class, 'agencias']);
     Route::get('departamentos', [OpenceoController::class, 'departamentos']);
+    Route::get('comprobantes', [OpenceoController::class, 'comprobantes']);
     Route::get('ciudades', [OpenceoController::class, 'ciudades']);
     Route::get('cargos', [OpenceoController::class, 'cargos']);
     Route::get('v_dmovinv', [OpenceoController::class, 'v_dmovinv']);
@@ -44,4 +45,8 @@ Route::group([
     //Route::get('/comprobantesCliReiterativo/{identificacion}/{comprobante}/{page}/{itemsPerPage}', [CliReiterativoController::class, 'comprobantesCliReiterativo']);
     Route::get('/comprobantesCliReiterativo/{comprobante}', [CliReiterativoController::class, 'comprobantesCliReiterativo']);
     Route::post('/comproClienReitera', [CliReiterativoController::class, 'comproClienReitera']);
+    //---formularios dinamicos
+    Route::get('/getTiposComprobantesAlmacenes', [ComercializacionController::class, 'getTiposComprobantesAlmacenes']);
+    Route::get('/getComprobantes/{ctiId}/{almId}', [ComercializacionController::class, 'getComprobantes']);
+
 });
