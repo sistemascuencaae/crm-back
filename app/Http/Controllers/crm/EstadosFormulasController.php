@@ -21,7 +21,7 @@ class EstadosFormulasController extends Controller
     {
         $log = new Funciones();
         try {
-            $respuestas = EstadosFormulas::where('tab_id', $id)->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')->get();
+            $respuestas = EstadosFormulas::where('tab_id', $id)->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima','tipoCaso')->get();
 
             $log->logInfo(EstadosFormulasController::class, 'Se listo con exito los estados del tablero con el ID: ' . $id);
 
@@ -29,6 +29,18 @@ class EstadosFormulasController extends Controller
         } catch (Exception $e) {
             $log->logError(EstadosFormulasController::class, 'Error al listar los estados del tablero con el ID: ' . $id, $e);
 
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listarTiposCasoTablero($tabId)
+    {
+        try {
+
+            $data = DB::select("SELECT * FROM crm.tipo_caso WHERE tab_id = ?", [$tabId]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -51,7 +63,6 @@ class EstadosFormulasController extends Controller
                     // Si ya existe un registro con los mismos valores, devuelve un error
                     $error = 'Ya EXISTE un registro con los valores estado actual: ' . $existingRecord->estado_actual->nombre . ' y respuesta: ' . $existingRecord->respuesta_caso->nombre;
                     return null;
-
                 } else {
 
                     // Si no existe un registro con los mismos valores, crea el nuevo registro
@@ -76,7 +87,6 @@ class EstadosFormulasController extends Controller
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
             }
-
         } catch (Exception $e) {
             $log->logError(EstadosFormulasController::class, 'Error al guardar en addEstadosFormulas', $e);
 
@@ -104,7 +114,6 @@ class EstadosFormulasController extends Controller
                     // Si la actualización resultaría en valores duplicados, devuelve un error
                     $error = 'Ya EXISTE un registro con los valores estado actual: ' . $existingRecord->estado_actual->nombre . ' y respuesta: ' . $existingRecord->respuesta_caso->nombre;
                     return null;
-
                 } else {
 
                     $respuestas->update($request->all());
@@ -127,7 +136,6 @@ class EstadosFormulasController extends Controller
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $exitoso));
             }
-
         } catch (Exception $e) {
             $log->logError(EstadosFormulasController::class, 'Error al actualizar la formula del estado con el ID: ' . $id, $e);
 
@@ -156,5 +164,4 @@ class EstadosFormulasController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 }

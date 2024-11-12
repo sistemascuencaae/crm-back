@@ -547,6 +547,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
     Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
     Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
+    Route::get('/listarTiposCasoTablero/{tab_id}', [EstadosFormulasController::class, 'listarTiposCasoTablero']); // listar
+
 
     // ActividadesFormulas
 
