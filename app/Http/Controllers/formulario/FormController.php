@@ -5,10 +5,13 @@ namespace App\Http\Controllers\formulario;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
+use App\Models\Formulario\FormCampoValor;
 use App\Models\Formulario\FormSeccion;
 use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormUserCompletoView;
+use App\Models\Formulario\FormValor;
 use App\Models\Formulario\Parametro;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +22,17 @@ class FormController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => [
-            'list', 'listByDepar', 'formUser', 'listAll', 'storeA', 'storeB', 'formUser', 'getTotalesSecciones', 'impresion', 'listAnonimos', 'storeCasoForm'
+            'list',
+            'listByDepar',
+            'formUser',
+            'listAll',
+            'storeA',
+            'storeB',
+            'formUser',
+            'getTotalesSecciones',
+            'impresion',
+            'listAnonimos',
+            'storeCasoForm'
         ]]);
     }
 
@@ -53,8 +66,8 @@ class FormController extends Controller
 
             $almacenes = DB::select("SELECT alm_id, alm_codigo||'-'||alm_nombre as alm_nombre from public.almacen where alm_activo = true order by alm_nombre");
             $formulario = null;
-            if($casoId != 0){
-                $formulario = DB::selectOne("SELECT * from crm.formulario_estatico where caso_id = ?",[$casoId]);
+            if ($casoId != 0) {
+                $formulario = DB::selectOne("SELECT * from crm.formulario_estatico where caso_id = ?", [$casoId]);
             }
 
             $data = (object)[
@@ -110,7 +123,8 @@ class FormController extends Controller
     }
 
 
-    public function cargarFormulario($formId) {
+    public function cargarFormulario($formId)
+    {
 
         try {
 
@@ -119,7 +133,7 @@ class FormController extends Controller
                 'campo.tipo',
                 'campo.likert',
                 'campo.parametro.parametroHijos',
-                'campo.valor' => function ($query)  {
+                'campo.valor' => function ($query) {
                     $query->where('key', 0);
                 },
             ])->find($formId);
@@ -137,7 +151,6 @@ class FormController extends Controller
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
         }
-
     }
 
 
@@ -330,6 +343,111 @@ class FormController extends Controller
                 "formulario" => $formulario
             ];
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+    }
+
+
+
+    public function guardarFormularioValores(Request $request)
+    {
+        try {
+            $data = DB::transaction(function () use ($request) {
+                $fechaHoraActual = Carbon::now();
+                $listaCampos = $request->all();
+                $data = [];
+                foreach ($listaCampos as $key => $value) {
+                    $value['created_at'] = $fechaHoraActual;
+                    $value['update_at'] = $fechaHoraActual;
+                    $newItem = $this->addCampoValores(new Request($value));
+                    array_push($data, $newItem);
+                }
+                return $data;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Operación realizada con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al realizar la operación.', $th->getMessage()));
+        }
+    }
+    public function addCampoValores(Request $request)
+    {
+        $valor = $request->all();
+        $campoId = $request->input('campoId');
+        $valorReal = null;
+        // Crear un nuevo registro
+        $newValor = FormValor::create($valor);
+        $newCampoValor = FormCampoValor::create([
+            "valor_id" => $newValor->id,
+            "campo_id" => $campoId
+        ]);
+        $result = FormValor::find($newValor->id);
+        return $result;
+    }
+
+    public function cargarFormularioAyuda($casoId)
+    {
+        try {
+            $parametros = Parametro::with('parametroHijos')->get();
+
+            $form = DB::selectOne("SELECT * FROM crm.form_valor where caso_id = ?", [$casoId]);
+
+            $formulario = Formulario::with([
+                'campo.tipo',
+                'campo.likert',
+                'campo.parametro.parametroHijos',
+                'campo.valor' => function ($query) use ($casoId) {
+                    $query->where('caso_id', $casoId);
+                },
+            ])->find($form->key);
+            $secciones = FormSeccion::where('form_id', $form->key)
+                ->where('estado', true)
+                ->orderBy('orden', 'asc')
+                ->get();
+            $data = (object) [
+                "secciones" => $secciones,
+                //"parametros" => $parametros,
+                "formulario" => $formulario,
+                //"keyFormulario" => $keyFormulario
+            ];
+
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
+        }
+    }
+
+    public function getByTipoCasIdFormu($tcId)
+    {
+        try {
+        $parametros = Parametro::with('parametroHijos')->get();
+        $form = DB::selectOne("SELECT * from crm.formulario_tipo_caso where tc_id = $tcId");
+        $formulario = Formulario::with([
+            'campo.tipo',
+            'campo.likert',
+            'campo.parametro.parametroHijos',
+            'campo.valor' => function ($query) use ($tcId) {
+                $query->where('pac_id', 0);
+            },
+        ])->find($form->form_id);
+        $secciones = FormSeccion::where('form_id', $form->form_id)
+            ->where('estado', true)
+            ->orderBy('orden', 'asc')
+            ->get();
+
+        $data = (object) [
+            "secciones" => $secciones,
+            "parametros" => $parametros,
+            "formulario" => $formulario,
+            "totalGlobalForm" => [],
+            "totalesSecciones" => [],
+            "camposImprimir" => []
+        ];
+
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
         }

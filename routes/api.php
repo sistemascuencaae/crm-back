@@ -290,6 +290,10 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::get('listFormByIdTablero/{tab_id}', [FormController::class, 'listFormByIdTablero']); //
     Route::get('/storeCasoForm/{casoId}', [FormController::class, 'storeCasoForm']);
 
+    Route::post('/guardarFormularioValores', [FormController::class, 'guardarFormularioValores']);
+    Route::get('/cargarFormularioAyuda/{casoId}', [FormController::class, 'cargarFormularioAyuda']);
+    Route::get('/getByTipoCasIdFormu/{formId}/{casoId}', [FormController::class, 'getByTipoCasIdFormu']);
+
 });
 Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::get('/store', [CampoController::class, 'store']);
@@ -303,7 +307,7 @@ Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
     Route::post('/add', [CampoController::class, 'add']); //addCampoValor
     //Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']); //addCampoValor
-    Route::post('/guardarFormulario', [CampoController::class, 'guardarFormulario']);
+
 
 });
 Route::group(['prefix' => 'form/seccion'], function ($router) {
