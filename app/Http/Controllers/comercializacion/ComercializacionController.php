@@ -206,6 +206,62 @@ class ComercializacionController extends Controller
             ->get();
         return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
     }
+
+
+
+    public function getTiposComprobantesAlmacenes()
+    {
+        try {
+            $tiposCom = DB::select("SELECT * FROM public.ctipocom c
+                WHERE c.cti_sigla = ANY(
+                    string_to_array(
+                        (SELECT valor FROM crm.parametro p WHERE p.id = 11 LIMIT 1),
+                        ','
+                    )
+                );");
+            $almacenes = DB::select("SELECT * FROM public.almacen where alm_activo = true order by 1 desc");
+
+            $data = (object)[
+                "tiposCompro"=> $tiposCom,
+                "almacenes" => $almacenes
+            ];
+
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
+    public function getComprobantes($ctiId, $almId) {
+        try {
+
+            $data = DB::select("SELECT comprobante||'-'||estado as comproba_estado, * from (SELECT
+                    (cti.cti_sigla || '-' || alm.alm_codigo || '-' || pv.pve_numero || '-' || t.ccm_numero) AS comprobante,
+                    CASE
+                        WHEN t.ccm_estado = 9 THEN 'ELIMINADO'
+                        ELSE 'MAYORIZADO'
+                    END AS estado,
+                    t.ccm_id,
+                    cti.cti_id,
+                    pv.pve_id,
+                    t.ccm_numero,
+                    t.ccm_periodo,
+                    t.ccm_estado,
+                    t.ccm_fecha
+                FROM Ccomproba t
+                JOIN CTipoCom cti ON cti.cti_id = t.cti_id
+                JOIN PuntoVenta pv ON pv.pve_id = t.pve_id
+                JOIN Almacen alm ON alm.alm_id = pv.alm_id
+                WHERE t.ccm_fecha BETWEEN CURRENT_DATE - INTERVAL '20 day' AND CURRENT_DATE and
+                cti.cti_id = ? and alm.alm_id = ?) ttemp",[$ctiId, $almId]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }
 
 

@@ -348,6 +348,7 @@ class TableroController extends Controller
         $log = new Funciones();
         try {
             $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
+            ->whereOr('user_creador_id', $user_id)
             ->with([
                 'miembros.usuario.departamento',
                 'estadodos'
