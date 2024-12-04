@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\appreact\ReactNativeMaps;
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\RenegociacionController;
@@ -139,6 +140,11 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 });
 
 
+
+//app react native--------------------------------
+Route::group(['middleware' => 'api', "prefix" => "reactapp"], function ($router) {
+    Route::get('/getCoordenadasAlm/{almId}', [ReactNativeMaps::class, 'getCoordenadasAlm']);
+});
 
 
 
@@ -938,3 +944,4 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_migracion_cliente_byIdentificacion/{identificacion}', [MigracionController::class, 'aav_migracion_cliente_byIdentificacion']);
     Route::get('/aav_acuerdos_de_pago', [MigracionController::class, 'aav_acuerdos_de_pago']);
 });
+
