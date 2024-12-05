@@ -23,12 +23,16 @@ class StockProSerieController extends Controller
     public function loadInitialData($bodId){
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
+            $bodega = DB::selectOne("SELECT bod_id, bod_nombre, ubi_nombre from public.bodega b
+            left join public.ubicacion u on u.ubi_id = b.ubi_id where bod_id = ? limit 1;",[$bodId]);
+
             $datosSeries = DB::select("SELECT tt.*, (stock_actual-stock_serie) as diferencia from (
             select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
             (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
             from av_stock_producto_bodega sbo) tt where tt.bod_id = ?",[$bodId]);
 
             $data = (object)[
+                "bodega" => $bodega,
                 "productoSeries" => $datosSeries
             ];
 
