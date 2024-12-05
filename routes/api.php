@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\appreact\ReactNativeMaps;
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\RenegociacionController;
@@ -83,8 +84,10 @@ use App\Http\Controllers\crm\garantias\MetasRecalcController;
 use App\Http\Controllers\crm\garantias\ProcMetasController;
 use App\Http\Controllers\crm\garantias\ComisionesController;
 use App\Http\Controllers\crm\garantias\ProcComiController;
+use App\Http\Controllers\crm\seriesalm\StockProSerieController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
+use App\Http\Controllers\formulario\ComponentsController;
 use App\Http\Controllers\formulario\FormAuthDatosCliController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
@@ -139,6 +142,11 @@ Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
 });
 
 
+
+//app react native--------------------------------
+Route::group(['middleware' => 'api', "prefix" => "reactapp"], function ($router) {
+    Route::get('/getCoordenadasAlm/{almId}', [ReactNativeMaps::class, 'getCoordenadasAlm']);
+});
 
 
 
@@ -307,6 +315,9 @@ Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
     Route::post('/add', [CampoController::class, 'add']); //addCampoValor
     //Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']); //addCampoValor
+    //----------------------------------------------------------------CAMPOS COMPONENTES FORMULARIO DINAMICO
+    Route::get('/loadInitialData', [ComponentsController::class, 'loadInitialData']);
+    Route::post('/listarEntidades', [ComponentsController::class, 'listarEntidades']);
 
 
 });
@@ -679,7 +690,8 @@ Route::group(["prefix" => "gex"], function ($router) {
     Route::delete('/eliminarSeriePreIngreso/{numeroInv}/{serie}/{pro_id}/{tipo}/{ssBodId}', [SeriesAlmController::class, 'eliminarSeriePreIngreso']);
 
 
-
+    //toma de iinventario
+    Route::get('/loadInitialData/{bodId}', [StockProSerieController::class, 'loadInitialData']); // listar los despachos que tengan notas de credito
 
 });
 
@@ -938,3 +950,4 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_migracion_cliente_byIdentificacion/{identificacion}', [MigracionController::class, 'aav_migracion_cliente_byIdentificacion']);
     Route::get('/aav_acuerdos_de_pago', [MigracionController::class, 'aav_acuerdos_de_pago']);
 });
+
