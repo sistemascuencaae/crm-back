@@ -110,7 +110,7 @@ class StockProSerieController extends Controller
                                     'updated_at' => now(),
                                 ]);
                             }
-                        }
+                        } 
                     } else {
                         // Si el id es null, insertamos una nueva serie
                         $serieExistente = SerieInventario::where('serie', $item['serie'])->first();
@@ -133,7 +133,7 @@ class StockProSerieController extends Controller
 
                 // Si encontramos series duplicadas, las retornamos
                 if (count($duplicadas) > 0) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'Algunas series ya existen', $duplicadas));
+                    return response()->json(RespuestaApi::returnResultado('error', 'Las siguientes series ya existen', $duplicadas));
                 }
             }
 
