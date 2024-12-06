@@ -110,7 +110,7 @@ class StockProSerieController extends Controller
                                     'updated_at' => now(),
                                 ]);
                             }
-                        }
+                        } 
                     } else {
                         // Si el id es null, insertamos una nueva serie
                         $serieExistente = SerieInventario::where('serie', $item['serie'])->first();
