@@ -31,7 +31,7 @@ class StockProSerieController extends Controller
             $datosSeries = $this->listarSlados($bodId);
 
 
-            $data = (object)[
+            $data = (object) [
                 "bodega" => $bodega,
                 "productoSeries" => $datosSeries
             ];
@@ -49,18 +49,11 @@ class StockProSerieController extends Controller
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
             $datosSeries = DB::select("SELECT distinct(tt.bodega), sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from (
-            select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
-            (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
-
-            from av_stock_producto_bodega sbo) tt where tt.bod_id = ?", [$bodId]);
+                                                select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
+                                                (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
+                                                from av_stock_producto_bodega sbo) tt group by 1;");
 
             $data = (object) [
-                "bodega" => $bodega,
-
-            from av_stock_producto_bodega sbo) tt group by 1;");
-
-            $data = (object)[
-
                 "productoSeries" => $datosSeries
             ];
 
@@ -70,6 +63,7 @@ class StockProSerieController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
         }
     }
+
 
     public function listSeries($pro_id, $bod_id)
     {
@@ -88,6 +82,8 @@ class StockProSerieController extends Controller
 
             $data = $request->input('data'); // Recibe los datos del frontend
             $eliminados = $request->input('eliminados'); // Datos de los elementos eliminados
+
+            $bod_id = $data[0]['bod_id'];
 
             if ($data) {
                 // Guardaremos las series duplicadas para devolverlas en la respuesta
@@ -153,7 +149,7 @@ class StockProSerieController extends Controller
 
             DB::commit(); // Commit the transaction after the operation
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', []));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $this->listarSlados($bod_id)));
         } catch (Exception $e) {
             DB::rollback(); // Si ocurre un error, se hace rollback de la transacción
 
@@ -177,8 +173,6 @@ class StockProSerieController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Serie no existe.', []));
             }
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
         }
@@ -188,15 +182,13 @@ class StockProSerieController extends Controller
     {
         try {
             $data = DB::selectOne("SELECT ss.serie, p.pro_codigo, p.pro_nombre from crm.stock_pro_serie ss
-                 inner join public.producto p on p.pro_id = ss.pro_id where serie = ?;", [ $serie]);
+                 inner join public.producto p on p.pro_id = ss.pro_id where serie = ?;", [$serie]);
 
             if ($data) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Serie no existe.', []));
             }
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
         }
@@ -206,9 +198,9 @@ class StockProSerieController extends Controller
     {
         try {
 
-            $data = DB::transaction(function () use ($serie, $bodId){
+            $data = DB::transaction(function () use ($serie, $bodId) {
                 $dataSerie = DB::selectOne("SELECT  * from crm.stock_pro_serie ss where bod_id = ? and serie = ?", [$bodId, $serie]);
-                $serieElim = DB::insert("INSERT INTO crm.despacho_serie(bod_id, pro_id, serie) VALUES( ?, ?, ?);",[$dataSerie->bod_id, $dataSerie->pro_id, $dataSerie->serie]);
+                $serieElim = DB::insert("INSERT INTO crm.despacho_serie(bod_id, pro_id, serie) VALUES( ?, ?, ?);", [$dataSerie->bod_id, $dataSerie->pro_id, $dataSerie->serie]);
                 DB::delete("DELETE FROM crm.stock_pro_serie WHERE id = ?", [$dataSerie->id]);
 
                 $saldoSeries = $this->listarSlados($bodId);
@@ -221,7 +213,6 @@ class StockProSerieController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Serie no existe.', []));
             }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
         }
@@ -234,11 +225,11 @@ class StockProSerieController extends Controller
 
             $data = DB::transaction(function () use ($serie, $bodId) {
                 $dataSerie = DB::selectOne("SELECT  * from crm.stock_pro_serie ss where bod_id = ? and serie = ?", [$bodId, $serie]);
-                if($dataSerie){
-                    DB::update("UPDATE crm.stock_pro_serie SET bod_id = ? WHERE id = ?;",[$bodId, $dataSerie->id]);
-                }else{
+                if ($dataSerie) {
+                    DB::update("UPDATE crm.stock_pro_serie SET bod_id = ? WHERE id = ?;", [$bodId, $dataSerie->id]);
+                } else {
                     DB::insert("INSERT INTO crm.stock_pro_serie (bod_id, pro_id, serie, created_at, updated_at)
-                        VALUES(?, ?, ?, CURRENT_DATE, CURRENT_DATE);",[$bodId, $dataSerie->pro_id, $serie]);
+                        VALUES(?, ?, ?, CURRENT_DATE, CURRENT_DATE);", [$bodId, $dataSerie->pro_id, $serie]);
                 }
 
 
@@ -253,30 +244,20 @@ class StockProSerieController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Serie no existe.', []));
             }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
         }
     }
 
 
-    private function listarSlados($bodId){
+    private function listarSlados($bodId)
+    {
         $datosSeries = DB::select("SELECT tt.*, (stock_actual-stock_serie) as diferencia from (
             select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
             (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
             from av_stock_producto_bodega sbo) tt where tt.bod_id = ? order by tt.stock_actual desc", [$bodId]);
         return $datosSeries;
     }
-
-
-
-
-
-
-
-
-
-
 
 
 }
