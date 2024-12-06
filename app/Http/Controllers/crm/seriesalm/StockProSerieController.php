@@ -133,7 +133,7 @@ class StockProSerieController extends Controller
 
                 // Si encontramos series duplicadas, las retornamos
                 if (count($duplicadas) > 0) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'Algunas series ya existen', $duplicadas));
+                    return response()->json(RespuestaApi::returnResultado('error', 'Las siguientes series ya existen', $duplicadas));
                 }
             }
 
