@@ -692,6 +692,8 @@ Route::group(["prefix" => "gex"], function ($router) {
 
     //toma de iinventario
     Route::get('/loadInitialData/{bodId}', [StockProSerieController::class, 'loadInitialData']); // listar los despachos que tengan notas de credito
+    Route::get('/listSeries/{pro_id}/{bod_id}', [StockProSerieController::class, 'listSeries']);
+    Route::post('/addSeriesInv', [StockProSerieController::class, 'addSeriesInv']);
 
 });
 
