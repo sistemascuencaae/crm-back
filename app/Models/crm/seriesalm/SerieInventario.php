@@ -11,7 +11,7 @@ class SerieInventario extends Model
     use HasFactory;
 
     protected $table = 'crm.stock_pro_serie';
-    protected $fillable = ["bod_id", "pro_id", "serie"];
+    protected $fillable = ["bod_id", "pro_id", "serie", "disabled"];
 
     public function setCreatedAtAttribute($value)
     {
