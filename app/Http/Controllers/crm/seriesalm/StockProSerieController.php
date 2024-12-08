@@ -110,7 +110,7 @@ class StockProSerieController extends Controller
                                     'updated_at' => now(),
                                 ]);
                             }
-                        } 
+                        }
                     } else {
                         // Si el id es null, insertamos una nueva serie
                         $serieExistente = SerieInventario::where('serie', $item['serie'])->first();
@@ -200,9 +200,8 @@ class StockProSerieController extends Controller
 
             $data = DB::transaction(function () use ($serie, $bodId) {
                 $dataSerie = DB::selectOne("SELECT  * from crm.stock_pro_serie ss where bod_id = ? and serie = ?", [$bodId, $serie]);
-                $serieElim = DB::insert("INSERT INTO crm.despacho_serie(bod_id, pro_id, serie) VALUES( ?, ?, ?);", [$dataSerie->bod_id, $dataSerie->pro_id, $dataSerie->serie]);
+                $serieElim = DB::insert("INSERT INTO crm.bitacora_series(bod_id, pro_id, serie) VALUES( ?, ?, ?);", [$dataSerie->bod_id, $dataSerie->pro_id, $dataSerie->serie]);
                 DB::delete("DELETE FROM crm.stock_pro_serie WHERE id = ?", [$dataSerie->id]);
-
                 $saldoSeries = $this->listarSlados($bodId);
                 return $saldoSeries;
             });
