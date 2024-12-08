@@ -75,71 +75,101 @@ class StockProSerieController extends Controller
         }
     }
 
+    // Este metodo crea, actualiza y elimina las series
+    // public function addSeriesInv(Request $request)
+    // {
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $data = $request->input('data'); // Recibe los datos del frontend
+    //         $eliminados = $request->input('eliminados'); // Datos de los elementos eliminados
+
+    //         $bod_id = $data[0]['bod_id'];
+
+    //         if ($data) {
+    //             // Guardaremos las series duplicadas para devolverlas en la respuesta
+    //             $duplicadas = [];
+
+    //             // Recorremos las series enviadas en el array
+    //             foreach ($data as $item) {
+    //                 // Si el item tiene un ID (es decir, es una actualización)
+    //                 if (isset($item['id']) && $item['id'] !== null) {
+    //                     // Buscar la serie con ese ID
+    //                     $serieExistente = SerieInventario::find($item['id']);
+
+    //                     if ($serieExistente) {
+    //                         // Verificar si la serie que intentas actualizar ya tiene el mismo nombre en la base de datos
+    //                         if (SerieInventario::where('serie', $item['serie'])->where('id', '!=', $item['id'])->exists()) {
+    //                             // Si existe otra serie con el mismo nombre, la agregamos a la lista de duplicadas
+    //                             $duplicadas[] = $serieExistente;
+    //                         } else {
+    //                             // Actualizamos la serie existente
+    //                             $serieExistente->update([
+    //                                 'bod_id' => $item['bod_id'],
+    //                                 'pro_id' => $item['pro_id'],
+    //                                 'serie' => $item['serie'],
+    //                                 'updated_at' => now(),
+    //                             ]);
+    //                         }
+    //                     } 
+    //                 } else {
+    //                     // Si el id es null, insertamos una nueva serie
+    //                     $serieExistente = SerieInventario::where('serie', $item['serie'])->first();
+
+    //                     if ($serieExistente) {
+    //                         // Si la serie ya existe, la agregamos a la lista de duplicadas
+    //                         $duplicadas[] = $serieExistente;
+    //                     } else {
+    //                         // Si no existe, creamos la serie
+    //                         SerieInventario::create([
+    //                             'bod_id' => $item['bod_id'],
+    //                             'pro_id' => $item['pro_id'],
+    //                             'serie' => $item['serie'],
+    //                             'created_at' => now(),
+    //                             'updated_at' => now(),
+    //                         ]);
+    //                     }
+    //                 }
+    //             }
+
+    //             // Si encontramos series duplicadas, las retornamos
+    //             if (count($duplicadas) > 0) {
+    //                 return response()->json(RespuestaApi::returnResultado('error', 'Las siguientes series ya existen', $duplicadas));
+    //             }
+    //         }
+
+    //         // Aquí podrías manejar los registros eliminados si es necesario
+    //         if ($eliminados) {
+    //             foreach ($eliminados as $item) {
+    //                 $serie = SerieInventario::find($item['id']);
+    //                 if ($serie) {
+    //                     $serie->delete();
+    //                 }
+    //             }
+    //         }
+
+    //         DB::commit(); // Commit the transaction after the operation
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $this->listarSlados($bod_id)));
+    //     } catch (Exception $e) {
+    //         DB::rollback(); // Si ocurre un error, se hace rollback de la transacción
+
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar', $e->getMessage()));
+    //     }
+    // }
+
     public function addSeriesInv(Request $request)
     {
         try {
             DB::beginTransaction();
 
-            $data = $request->input('data'); // Recibe los datos del frontend
-            $eliminados = $request->input('eliminados'); // Datos de los elementos eliminados
+            $eliminarSeries = $request->input('eliminarSeries');
+            $nuevasSeries = $request->input('nuevasSeries');
+            $bod_id = $request->input('bod_id');
 
-            $bod_id = $data[0]['bod_id'];
-
-            if ($data) {
-                // Guardaremos las series duplicadas para devolverlas en la respuesta
-                $duplicadas = [];
-
-                // Recorremos las series enviadas en el array
-                foreach ($data as $item) {
-                    // Si el item tiene un ID (es decir, es una actualización)
-                    if (isset($item['id']) && $item['id'] !== null) {
-                        // Buscar la serie con ese ID
-                        $serieExistente = SerieInventario::find($item['id']);
-
-                        if ($serieExistente) {
-                            // Verificar si la serie que intentas actualizar ya tiene el mismo nombre en la base de datos
-                            if (SerieInventario::where('serie', $item['serie'])->where('id', '!=', $item['id'])->exists()) {
-                                // Si existe otra serie con el mismo nombre, la agregamos a la lista de duplicadas
-                                $duplicadas[] = $serieExistente;
-                            } else {
-                                // Actualizamos la serie existente
-                                $serieExistente->update([
-                                    'bod_id' => $item['bod_id'],
-                                    'pro_id' => $item['pro_id'],
-                                    'serie' => $item['serie'],
-                                    'updated_at' => now(),
-                                ]);
-                            }
-                        } 
-                    } else {
-                        // Si el id es null, insertamos una nueva serie
-                        $serieExistente = SerieInventario::where('serie', $item['serie'])->first();
-
-                        if ($serieExistente) {
-                            // Si la serie ya existe, la agregamos a la lista de duplicadas
-                            $duplicadas[] = $serieExistente;
-                        } else {
-                            // Si no existe, creamos la serie
-                            SerieInventario::create([
-                                'bod_id' => $item['bod_id'],
-                                'pro_id' => $item['pro_id'],
-                                'serie' => $item['serie'],
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ]);
-                        }
-                    }
-                }
-
-                // Si encontramos series duplicadas, las retornamos
-                if (count($duplicadas) > 0) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'Las siguientes series ya existen', $duplicadas));
-                }
-            }
-
-            // Aquí podrías manejar los registros eliminados si es necesario
-            if ($eliminados) {
-                foreach ($eliminados as $item) {
+            // Validacion si hay series para eliminar
+            if ($eliminarSeries && count($eliminarSeries) > 0) {
+                foreach ($eliminarSeries as $item) {
                     $serie = SerieInventario::find($item['id']);
                     if ($serie) {
                         $serie->delete();
@@ -147,8 +177,18 @@ class StockProSerieController extends Controller
                 }
             }
 
-            DB::commit(); // Commit the transaction after the operation
+            // Validacion si hay nuevas series para crear
+            if ($nuevasSeries && count($nuevasSeries) > 0) {
+                foreach ($nuevasSeries as $item) {
+                    SerieInventario::create([
+                        'bod_id' => $item['bod_id'],
+                        'pro_id' => $item['pro_id'],
+                        'serie' => $item['serie']
+                    ]);
+                }
+            }
 
+            DB::commit(); // Commit the transaction after the operation
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $this->listarSlados($bod_id)));
         } catch (Exception $e) {
             DB::rollback(); // Si ocurre un error, se hace rollback de la transacción
@@ -156,11 +196,6 @@ class StockProSerieController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar', $e->getMessage()));
         }
     }
-
-
-
-
-
 
     public function getSerieDesCliente($serie, $bodId)
     {
@@ -258,6 +293,5 @@ class StockProSerieController extends Controller
             from av_stock_producto_bodega sbo) tt where tt.bod_id = ? order by tt.stock_actual desc", [$bodId]);
         return $datosSeries;
     }
-
 
 }
