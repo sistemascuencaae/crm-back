@@ -158,7 +158,6 @@ class StockProSerieController extends Controller
     //     }
     // }
 
-
     public function addSeriesInv(Request $request)
     {
         try {
@@ -226,7 +225,7 @@ class StockProSerieController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar', $e->getMessage()));
         }
     }
-
+  
     public function getSerieDesCliente($serie, $bodId)
     {
         try {
@@ -264,10 +263,8 @@ class StockProSerieController extends Controller
         try {
 
             $data = DB::transaction(function () use ($serie, $bodId) {
-                $dataSerie = DB::selectOne("SELECT  * from crm.stock_pro_serie ss where bod_id = ? and serie = ?", [$bodId, $serie]);
-                $serieElim = DB::insert("INSERT INTO crm.despacho_serie(bod_id, pro_id, serie) VALUES( ?, ?, ?);", [$dataSerie->bod_id, $dataSerie->pro_id, $dataSerie->serie]);
-                DB::delete("DELETE FROM crm.stock_pro_serie WHERE id = ?", [$dataSerie->id]);
-
+                
+                DB::delete("DELETE FROM crm.stock_pro_serie WHERE serie = ? and bod_id = ?;", [$serie, $bodId]);
                 $saldoSeries = $this->listarSlados($bodId);
                 return $saldoSeries;
             });
