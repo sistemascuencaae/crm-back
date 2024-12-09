@@ -111,7 +111,7 @@ class StockProSerieController extends Controller
     //                                 'updated_at' => now(),
     //                             ]);
     //                         }
-    //                     } 
+    //                     }
     //                 } else {
     //                     // Si el id es null, insertamos una nueva serie
     //                     $serieExistente = SerieInventario::where('serie', $item['serie'])->first();
@@ -218,14 +218,14 @@ class StockProSerieController extends Controller
 
             // Si no hubo duplicados, devolvemos el mensaje de éxito
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $this->listarSlados($bod_id)));
-
         } catch (Exception $e) {
             DB::rollback(); // Si ocurre un error, hacemos rollback
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar', $e->getMessage()));
         }
     }
-  
+
+
     public function getSerieDesCliente($serie, $bodId)
     {
         try {
@@ -261,20 +261,19 @@ class StockProSerieController extends Controller
     public function despacharSerie($serie, $bodId)
     {
         try {
+            $serieExiste = DB::selectOne("SELECT ss.serie, p.pro_codigo, p.pro_nombre from crm.stock_pro_serie ss
+                 inner join public.producto p on p.pro_id = ss.pro_id and ss.bod_id = ? where serie = ?;", [$bodId, $serie]);
 
-            $data = DB::transaction(function () use ($serie, $bodId) {
-                
-                DB::delete("DELETE FROM crm.stock_pro_serie WHERE serie = ? and bod_id = ?;", [$serie, $bodId]);
-                $saldoSeries = $this->listarSlados($bodId);
-                return $saldoSeries;
-            });
-
-            if ($data) {
+            if ($serieExiste) {
+                $data = DB::transaction(function () use ($serie, $bodId) {
+                    DB::delete("DELETE FROM crm.stock_pro_serie WHERE serie = ? and bod_id = ?;", [$serie, $bodId]);
+                    $saldoSeries = $this->listarSlados($bodId);
+                    return $saldoSeries;
+                });
                 return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con exito.', $data));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Serie no existe.', []));
             }
-
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
         }
@@ -305,7 +304,6 @@ class StockProSerieController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Serie no existe.', []));
             }
-
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
         }
@@ -320,5 +318,4 @@ class StockProSerieController extends Controller
             from av_stock_producto_bodega sbo) tt where tt.bod_id = ? order by tt.stock_actual desc", [$bodId]);
         return $datosSeries;
     }
-
 }
