@@ -48,10 +48,10 @@ class StockProSerieController extends Controller
     {
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
-            $datosSeries = DB::select("SELECT distinct(tt.bodega), sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from (
-                                                select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
-                                                (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
-                                                from av_stock_producto_bodega sbo) tt group by 1;");
+            $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id,  sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from (
+                            select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
+                            (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
+                            from av_stock_producto_bodega sbo) tt group by 1,2;");
 
             $data = (object) [
                 "productoSeries" => $datosSeries
