@@ -25,8 +25,10 @@ class StockProSerieController extends Controller
     {
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
+            $bodUserId = Auth::id();
+            $bodId = DB::selectOne("SELECT bod_id FROM crm.users where id = ?;",[$bodUserId]);
             $bodega = DB::selectOne("SELECT bod_id, bod_nombre, ubi_nombre from public.bodega b
-            left join public.ubicacion u on u.ubi_id = b.ubi_id where bod_id = ? limit 1;", [$bodId]);
+            left join public.ubicacion u on u.ubi_id = b.ubi_id where bod_id = ? limit 1;", [$bodId->bod_id]);
             $datosSeries = $this->listarSlados($bodId);
             $data = (object) [
                 "bodega" => $bodega,
@@ -46,7 +48,8 @@ class StockProSerieController extends Controller
             $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id, bodega, sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from (
                             select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
                             (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
-                            from av_stock_producto_bodega_sinregalos sbo) tt group by 1,2,3;");
+                            from av_stock_producto_bodega_sinregalos sbo) tt  where tt.bod_id not in (
+                            16,47,50,60,61,181,182,200,209,211, 225) group by 1,2,3;");
 
             $data = (object) [
                 "productoSeries" => $datosSeries

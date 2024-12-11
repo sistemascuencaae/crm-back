@@ -111,7 +111,17 @@ class UserController extends Controller
             }
 
             // Si no existe, crea el nuevo usuario
-            User::create($request->all());
+            $newUserData = User::create($request->all());
+
+            if ($request->input('bod_id')) {
+                $bodConsigUser = DB::selectOne("SELECT
+                b2.bod_id as bod_add FROM crm.users u INNER JOIN public.bodega b ON b.bod_id = u.bod_id
+                LEFT JOIN public.bodega b2 ON CAST(b2.bod_codigo AS INTEGER) = (CAST(b.bod_codigo AS INTEGER) + 100)
+                WHERE b.bod_id IS NOT null and u.id = ? order by 1 asc limit 1;", [$newUserData->id]);
+                $newUserData->bod_id_dos = $bodConsigUser->bod_add;
+                $newUserData->save();
+            }
+
 
             $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen')->get();
 
@@ -145,7 +155,20 @@ class UserController extends Controller
 
             $usuario->update($request->all());
 
+            if ($request->input('bod_id')) {
+                $bodConsigUser = DB::selectOne("SELECT
+                b2.bod_id as bod_add FROM crm.users u INNER JOIN public.bodega b ON b.bod_id = u.bod_id
+                LEFT JOIN public.bodega b2 ON CAST(b2.bod_codigo AS INTEGER) = (CAST(b.bod_codigo AS INTEGER) + 100)
+                WHERE b.bod_id IS NOT null and u.id = ? order by 1 asc limit 1;", [$usuario->id]);
+                $usuario->bod_id_dos = $bodConsigUser->bod_add;
+                $usuario->save();
+            }
+
             $data = User::where('id', $usuario->id)->with('Departamento', 'perfil_analista', 'perfil', 'almacen')->first();
+
+
+
+
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
