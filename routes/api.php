@@ -700,6 +700,7 @@ Route::group(["prefix" => "gex"], function ($router) {
     Route::get('/getSerieDesCliente/{serie}/{bodId}', [StockProSerieController::class, 'getSerieDesCliente']);
     Route::get('/getSerie/{serie}', [StockProSerieController::class, 'getSerie']);
     Route::get('/despacharSerie/{serie}/{bodId}', [StockProSerieController::class, 'despacharSerie']);
+    Route::get('/reportePorBodegaId/{bodId}', [StockProSerieController::class, 'reportePorBodegaId']);
 
 
 });
