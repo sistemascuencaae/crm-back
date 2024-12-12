@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Controllers\Controller;
 use App\Models\crm\seriesalm\SerieInventario;
+use Illuminate\Support\Facades\Auth;
 
 class StockProSerieController extends Controller
 {
@@ -15,7 +16,7 @@ class StockProSerieController extends Controller
     {
         $this->middleware('auth:api', [
             'except' => [
-                'loadInitialData',
+                //'loadInitialData',
             ]
         ]);
     }
@@ -24,19 +25,15 @@ class StockProSerieController extends Controller
     {
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
+            $bodUserId = Auth::id();
+            $bodId = DB::selectOne("SELECT bod_id FROM crm.users where id = ?;",[$bodUserId]);
             $bodega = DB::selectOne("SELECT bod_id, bod_nombre, ubi_nombre from public.bodega b
-            left join public.ubicacion u on u.ubi_id = b.ubi_id where bod_id = ? limit 1;", [$bodId]);
-
-
+            left join public.ubicacion u on u.ubi_id = b.ubi_id where bod_id = ? limit 1;", [$bodId->bod_id]);
             $datosSeries = $this->listarSlados($bodId);
-
-
             $data = (object) [
                 "bodega" => $bodega,
                 "productoSeries" => $datosSeries
             ];
-
-
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
@@ -48,10 +45,11 @@ class StockProSerieController extends Controller
     {
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
-            $datosSeries = DB::select("SELECT distinct(tt.bodega), sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from (
-                                                select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
-                                                (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
-                                                from av_stock_producto_bodega sbo) tt group by 1;");
+            $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id, bodega, sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from (
+                            select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
+                            (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
+                            from av_stock_producto_bodega_sinregalos sbo) tt  where tt.bod_id not in (
+                            16,47,50,60,61,181,182,200,209,211, 225) group by 1,2,3;");
 
             $data = (object) [
                 "productoSeries" => $datosSeries
@@ -261,15 +259,30 @@ class StockProSerieController extends Controller
     public function despacharSerie($serie, $bodId)
     {
         try {
-            $serieExiste = DB::selectOne("SELECT ss.serie, p.pro_codigo, p.pro_nombre from crm.stock_pro_serie ss
-                 inner join public.producto p on p.pro_id = ss.pro_id and ss.bod_id = ? where serie = ?;", [$bodId, $serie]);
+            $serieExiste = DB::selectOne("SELECT ss.serie, p.pro_codigo, p.pro_nombre, bod_id from crm.stock_pro_serie ss
+                 inner join public.producto p on p.pro_id = ss.pro_id where serie = ?;", [$serie]);
+            $userId = Auth::id();
+            $bodIdUser = DB::selectOne("SELECT * from crm.users where id = ?;", [$userId]);
 
             if ($serieExiste) {
-                $data = DB::transaction(function () use ($serie, $bodId) {
-                    DB::delete("DELETE FROM crm.stock_pro_serie WHERE serie = ? and bod_id = ?;", [$serie, $bodId]);
-                    $saldoSeries = $this->listarSlados($bodId);
-                    return $saldoSeries;
-                });
+                if ($bodIdUser) {
+                    if ($bodIdUser->bod_id == $serieExiste->bod_id || $bodIdUser->bod_id_dos == $serieExiste->bod_id) {
+                        $data = DB::transaction(function () use ($serie, $bodId) {
+                            DB::delete("DELETE FROM crm.stock_pro_serie WHERE serie = ?;", [$serie]);
+                            $saldoSeries = $this->listarSlados($bodId);
+                            return $saldoSeries;
+                        });
+                    }else{
+                        return response()->json(RespuestaApi::returnResultado('error', 'Error bodega no asignada.', []));
+                    }
+
+                }else{
+                    return response()->json(RespuestaApi::returnResultado('error', 'Error permisos de usuario.', []));
+                }
+
+
+
+
                 return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con exito.', $data));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Serie no existe.', []));
@@ -312,10 +325,57 @@ class StockProSerieController extends Controller
 
     private function listarSlados($bodId)
     {
-        $datosSeries = DB::select("SELECT tt.*, (stock_actual-stock_serie) as diferencia from (
+
+        $userId = Auth::id();
+        $bodUser = DB::selectOne("SELECT bod_id,bod_id_dos from crm.users where id = ?;", [$userId]);
+
+        $idBodegas = [];
+
+        if ($bodUser->bod_id) {
+            array_push($idBodegas, $bodUser->bod_id);
+        }
+        if ($bodUser->bod_id_dos) {
+            array_push($idBodegas, $bodUser->bod_id_dos);
+        }
+
+        if (!empty($idBodegas)) {
+            // Construye la lista de IDs separada por comas
+            $placeholders = implode(',', array_fill(0, count($idBodegas), '?'));
+
+            $datosSeries = DB::select("SELECT tt.*, (stock_actual - stock_serie) AS diferencia
+                            FROM (
+                                SELECT pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
+                                (SELECT COUNT(serie)
+                                 FROM crm.stock_pro_serie ss
+                                 WHERE ss.pro_id = sbo.pro_id AND ss.bod_id = sbo.bod_id) AS stock_serie
+                                FROM av_stock_producto_bodega_sinregalos sbo
+                            ) tt
+                            WHERE tt.bod_id IN ($placeholders)
+                            ORDER BY tt.stock_actual DESC ", $idBodegas);
+        } else {
+            $datosSeries = []; // Si no hay bodegas, retorna un array vacío
+        }
+
+        return $datosSeries;
+    }
+
+
+    public function reportePorBodegaId($bodId)
+    {
+        try {
+            $datosSeries = DB::select("SELECT tt.*, (stock_actual-stock_serie) as diferencia from (
             select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
             (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
-            from av_stock_producto_bodega sbo) tt where tt.bod_id = ? order by tt.stock_actual desc", [$bodId]);
-        return $datosSeries;
+            from av_stock_producto_bodega_sinregalos sbo) tt where tt.bod_id = ? order by tt.stock_actual desc", [$bodId]);
+            $bodega = DB::selectOne("SELECT bod_id, bod_nombre, ubi_nombre from public.bodega b
+            left join public.ubicacion u on u.ubi_id = b.ubi_id where bod_id = ? limit 1;", [$bodId]);
+            $data = (object) [
+                "bodega" => $bodega,
+                "productoSeries" => $datosSeries
+            ];
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+        }
     }
 }
