@@ -45,11 +45,8 @@ class StockProSerieController extends Controller
     {
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
-            $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id, bodega, sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from (
-                            select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
-                            (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
-                            from av_stock_producto_bodega_sinregalos sbo) tt  where tt.bod_id not in (
-                            16,47,50,60,61,181,182,200,209,211, 225) group by 1,2,3;");
+            $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id, bodega, sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from
+                                 av_stock_producto_bodega_sinregalos_v3 tt WHERE  bod_id not in ( 16,47,50,60,61,181,182,200,209,211, 225) group by 1,2,3;");
 
             $data = (object) [
                 "productoSeries" => $datosSeries
@@ -342,16 +339,18 @@ class StockProSerieController extends Controller
             // Construye la lista de IDs separada por comas
             $placeholders = implode(',', array_fill(0, count($idBodegas), '?'));
 
-            $datosSeries = DB::select("SELECT tt.*, (stock_actual - stock_serie) AS diferencia
-                            FROM (
-                                SELECT pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
-                                (SELECT COUNT(serie)
-                                 FROM crm.stock_pro_serie ss
-                                 WHERE ss.pro_id = sbo.pro_id AND ss.bod_id = sbo.bod_id) AS stock_serie
-                                FROM av_stock_producto_bodega_sinregalos sbo
-                            ) tt
-                            WHERE tt.bod_id IN ($placeholders)
-                            ORDER BY tt.stock_actual DESC ", $idBodegas);
+            // $datosSeries = DB::select("SELECT tt.*, (stock_actual - stock_serie) AS diferencia
+            //                 FROM (
+            //                     SELECT pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
+            //                     (SELECT COUNT(serie)
+            //                      FROM crm.stock_pro_serie ss
+            //                      WHERE ss.pro_id = sbo.pro_id AND ss.bod_id = sbo.bod_id) AS stock_serie
+            //                     FROM av_stock_producto_bodega_sinregalos sbo
+            //                 ) tt
+            //                 WHERE tt.bod_id IN ($placeholders)
+            //                 ORDER BY tt.stock_actual DESC ", $idBodegas);
+            $datosSeries = DB::select("SELECT * FROM av_stock_producto_bodega_sinregalos_v3 WHERE BOD_ID IN ($placeholders)", $idBodegas);
+                            //tt ORDER BY tt.stock_actual DESC
         } else {
             $datosSeries = []; // Si no hay bodegas, retorna un array vacío
         }
@@ -363,10 +362,7 @@ class StockProSerieController extends Controller
     public function reportePorBodegaId($bodId)
     {
         try {
-            $datosSeries = DB::select("SELECT tt.*, (stock_actual-stock_serie) as diferencia from (
-            select pro_id, pro_codigo, pro_nombre, bod_id, bodega, stock_actual,
-            (select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id ) as stock_serie
-            from av_stock_producto_bodega_sinregalos sbo) tt where tt.bod_id = ? order by tt.stock_actual desc", [$bodId]);
+            $datosSeries = DB::select("SELECT * FROM av_stock_producto_bodega_sinregalos_v3 WHERE  bod_id = ? order by  stock_actual desc", [$bodId]);
             $bodega = DB::selectOne("SELECT bod_id, bod_nombre, ubi_nombre from public.bodega b
             left join public.ubicacion u on u.ubi_id = b.ubi_id where bod_id = ? limit 1;", [$bodId]);
             $data = (object) [

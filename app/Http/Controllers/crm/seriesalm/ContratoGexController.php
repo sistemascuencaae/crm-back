@@ -22,12 +22,29 @@ class ContratoGexController extends Controller
     {
         try {
             $facturas = DB::select("SELECT
+                (case e.ent_tipo_identificacion when '1' then 'CEDULA' when '2' then 'RUC' else 'PASAPORTE' end) as tipo_identificacion,
 	            e.ent_identificacion,
 	            e.ent_nombres || ' '||e.ent_apellidos as cliente,
 	            e.ent_email,
 	            dir.dir_calle_principal,
 	            dir.dir_calle_secundaria,
 	            prv.prv_nombre as provincia_cli, cnt.ctn_nombre as canton_cli,
+	            (select string_agg(tel_numero, '/')
+                from (select te.tel_numero
+                        from telefono te
+                        where te.tte_id in (1,3) and te.tel_id = e.ent_telefono_principal
+                        union
+                        select te.tel_numero
+                        from telefono_entidad ten join telefono te on ten.tel_id = te.tel_id
+                        where te.tte_id in (1,3) and ten.ent_id = e.ent_id) as tabla) as telefono,
+                (select string_agg(tel_numero, '/')
+                from (select te.tel_numero
+                        from telefono te
+                        where te.tte_id = 2 and te.tel_id = e.ent_telefono_principal
+                        union
+                        select te.tel_numero
+                        from telefono_entidad ten join telefono te on ten.tel_id = te.tel_id
+                        where te.tte_id = 2 and ten.ent_id = e.ent_id) as tabla) as celular,
                 c.cfa_id,
                 c.alm_id,
                 c.alm_nombre,
@@ -37,7 +54,7 @@ class ContratoGexController extends Controller
 	            inner join public.ubicacion u on u.ubi_id = a.ubi_id
 	            inner join public.ubicacion u2 on u2.ubi_id = u.ubi_reporta
 	            where a.alm_id = c.alm_id) as provincia,
-                c.cfa_fecha,
+                 c.cfa_fecha::DATE AS cfa_fecha,
                 c.cfa_periodo,
                 c.factura,
                 d.dfac_id,
