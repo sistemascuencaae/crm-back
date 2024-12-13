@@ -178,7 +178,7 @@ class StockProSerieController extends Controller
                 // Recorrer las nuevas series para detectar duplicados antes de insertar
                 foreach ($nuevasSeries as $item) {
                     // Verificar si ya existe la serie en la base de datos
-                    $serieExistente = SerieInventario::where('serie', $item['serie'])->first();
+                    $serieExistente = SerieInventario::where('serie', $item['serie'])->with('producto')->with('bodega')->first();
 
                     if ($serieExistente) {
                         // Si la serie ya existe, agregarla al array de duplicadas
