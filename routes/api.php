@@ -84,6 +84,7 @@ use App\Http\Controllers\crm\garantias\MetasRecalcController;
 use App\Http\Controllers\crm\garantias\ProcMetasController;
 use App\Http\Controllers\crm\garantias\ComisionesController;
 use App\Http\Controllers\crm\garantias\ProcComiController;
+use App\Http\Controllers\crm\seriesalm\ContratoGexController;
 use App\Http\Controllers\crm\seriesalm\StockProSerieController;
 use App\Http\Controllers\crm\TableroProcesosController;
 use App\Http\Controllers\formulario\CampoController;
@@ -192,7 +193,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::put('/asignarmeCaso/{casoId}/{userId}', [CasoController::class, 'asignarmeCaso']); //
     Route::post('/crearFormularioSoporte', [CasoController::class, 'crearFormularioSoporte']);
 
-    Route::get('/getCasoFormulario', [CasoController::class, 'getCasoFormulario']);//
+    Route::get('/getCasoFormulario', [CasoController::class, 'getCasoFormulario']); //
 
 
     //---------------------------------------------------------------->PRUEBAS
@@ -244,7 +245,7 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::get('/listarMensajes/{converId}/{tipoConver}/{numeroPagina}', [ChatController::class, 'listarMensajes']);
     Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']); //
     Route::delete('/eliminarMensaje/{mensajeId}/{converId}/{tipoConver}', [ChatController::class, 'eliminarMensaje']); //
-    Route::put('/actualizarMensaje/{converId}/{tipoConver}/{accion}', [ChatController::class, 'actualizarMensaje']);//
+    Route::put('/actualizarMensaje/{converId}/{tipoConver}/{accion}', [ChatController::class, 'actualizarMensaje']); //
     Route::get('/usuariosParaChat', [ChatController::class, 'usuariosParaChat']); //
     Route::post('/iniciarChatNormal', [ChatController::class, 'iniciarChatNormal']);
     Route::post('/iniciarChatGrupal', [ChatController::class, 'iniciarChatGrupal']); //
@@ -257,7 +258,6 @@ Route::group(["prefix" => "chat"], function ($router) {
     Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
     Route::get('/listarArchivosConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarArchivosConver']);
     Route::get('/listarGaleriaConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarGaleriaConver']);
-
 });
 // FORMULARIO AUTORIZACION TRATAMIENTO DE DATOS
 
@@ -301,7 +301,6 @@ Route::group(["prefix" => "form"], function ($router) {
     Route::post('/guardarFormularioValores', [FormController::class, 'guardarFormularioValores']);
     Route::get('/cargarFormularioAyuda/{casoId}', [FormController::class, 'cargarFormularioAyuda']);
     Route::get('/getByTipoCasIdFormu/{formId}/{casoId}', [FormController::class, 'getByTipoCasIdFormu']);
-
 });
 Route::group(['prefix' => 'form/campo'], function ($router) {
     Route::get('/store', [CampoController::class, 'store']);
@@ -318,8 +317,6 @@ Route::group(['prefix' => 'form/campo'], function ($router) {
     //----------------------------------------------------------------CAMPOS COMPONENTES FORMULARIO DINAMICO
     Route::get('/loadInitialData', [ComponentsController::class, 'loadInitialData']);
     Route::post('/listarEntidades', [ComponentsController::class, 'listarEntidades']);
-
-
 });
 Route::group(['prefix' => 'form/seccion'], function ($router) {
     Route::get('/store', [FormSeccionController::class, 'store']);
@@ -608,7 +605,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     // SERIES GENERADAS
 
     Route::post('/addSeriesGeneradas', [SeriesGeneradasController::class, 'addSeriesGeneradas']);
-
 });
 
 Route::group([], function ($router) {
@@ -667,7 +663,12 @@ Route::group(["prefix" => "credito"], function ($router) {
     // FILTRAR CASOS RECHAZADOS Y TERMINADOS PARA QUE VEAN TODAS LAS ANALISTAS, ASI NO HAYA PARTICIPADO EN EL CASO
 
     Route::get('/listCasosRechazadosTerminados/{fechaInicio}/{fechaFin}/{tableroId}', [CasoController::class, 'listCasosRechazadosTerminados']);
+});
 
+//contratos gex felipe
+Route::group( ["prefix" => "gex-contrato"], function ($router) {
+    Route::get('/loadInitialData/{almId}', [ContratoGexController::class, 'loadInitialData']); // listar todas las bodegas
+    Route::post('/generarContratoCRM', [ContratoGexController::class, 'generarContratoCRM']); // listar todas las bodegas
 });
 
 Route::group(["prefix" => "gex"], function ($router) {
@@ -701,8 +702,6 @@ Route::group(["prefix" => "gex"], function ($router) {
     Route::get('/getSerie/{serie}', [StockProSerieController::class, 'getSerie']);
     Route::get('/despacharSerie/{serie}/{bodId}', [StockProSerieController::class, 'despacharSerie']);
     Route::get('/reportePorBodegaId/{bodId}', [StockProSerieController::class, 'reportePorBodegaId']);
-
-
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
@@ -961,4 +960,3 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_acuerdos_de_pago', [MigracionController::class, 'aav_acuerdos_de_pago']);
     Route::get('/aav_migracion_productos_facturados/{factura}', [MigracionController::class, 'aav_migracion_productos_facturados']);
 });
-
