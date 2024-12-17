@@ -47,6 +47,7 @@ class ContratoGexCRM extends Model
         'ubicacion',
         'usuario_crea',
         'usuario_modifica',
+        'bod_id'
 
     ];
 
