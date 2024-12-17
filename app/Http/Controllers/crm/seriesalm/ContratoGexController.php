@@ -8,6 +8,7 @@ use App\Models\crm\garantias\ContratoGex;
 use App\Models\crm\series\Despacho;
 use App\Models\crm\series\Inventario;
 use App\Models\crm\seriesalm\ContratoGexCRM;
+use App\Models\crm\seriesalm\ContratoGexCRMDeleted;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -19,6 +20,17 @@ class ContratoGexController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api');
+    }
+
+
+    public function listarContratosBodega($bodId)
+    {
+        try {
+            $data = ContratoGexCRM::where("bod_id", $bodId)->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+        }
     }
 
     public function loadInitialData($almId)
@@ -69,6 +81,7 @@ class ContratoGexController extends Controller
                 from cfactura c
 				                join crm.av_cfactura_cnotacre_lineal c4 on c4.cfa_id = c.cfa_id
 				                join dfactura d on c.cfa_id = d.cfa_id AND c4.ccm_estado = 2 AND c.cfa_periodo >= 2022 AND d.prod_gex IS NOT null AND d.id_producto_gex IS NOT null and c4.alm_id = 1
+                                --JOIN crm.contrato_gex cg1 ON cg1.cfa_id = c.cfa_id AND cg1.pro_id = d.pro_id AND cg1.deleted_at IS NULL
                                 join puntoventa p on c.pve_id = p.pve_id
                                 join almacen a on p.alm_id = a.alm_id
                                 join producto pr on d.pro_id = pr.pro_id
@@ -98,8 +111,6 @@ class ContratoGexController extends Controller
     public function generarContratoCRM(Request $request)
     {
         try {
-
-
             $res = DB::transaction(function () use ($request) {
                 $dataContrato = $request->all();
                 $serie = $request->input("serie");
@@ -110,8 +121,8 @@ class ContratoGexController extends Controller
                 $dataContrato["numero"] = $ultimoFolio->folio;
                 $dataContrato["fecha"] = Carbon::now();
                 $dataContrato["bod_id"] = $bodUser->bod_id;
+                $dataContrato["usuario_crea"] = $userId;
                 $data = ContratoGexCRM::create($dataContrato);
-
                 //Eliminar serie del inventario
                 $serieExiste = DB::selectOne("SELECT ss.id, ss.serie, bod_id from crm.stock_pro_serie ss where serie = ?;", [$serie]);
                 if (!$serieExiste) {
@@ -135,10 +146,6 @@ class ContratoGexController extends Controller
                         "data" => $serie
                     ];
                 }
-
-
-
-
                 return (object)[
                     "status" => "success",
                     "message" => "",
@@ -183,7 +190,7 @@ class ContratoGexController extends Controller
             }
             if ($serieExiste) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Serie existe', $serie));
-            }else{
+            } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Error, Serie no existe: ' . $serie, []));
             }
         } catch (\Throwable $th) {
@@ -221,7 +228,27 @@ class ContratoGexController extends Controller
 
 
 
+    public function eliminarContratoId($id)
+    {
+        try {
+            $data = DB::transaction( function () use ($id) {
+                $data = ContratoGexCRM::find($id);
+                $data->deleted_at = Carbon::now();
+                $dataArray = $data->toArray();
+                ContratoGexCRMDeleted::create($dataArray);
+                if ($data) {
+                    $data->forceDelete();
+                } else {
+                    return response()->json(RespuestaApi::returnResultado('error', 'El Contrato no existe ', []));
+                }
+                return $data;
+            });
 
 
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Contrato eliminado con exito!', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+        }
+    }
 }
-

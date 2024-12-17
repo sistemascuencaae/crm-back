@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Controllers\Controller;
+use App\Models\crm\seriesalm\ContratoGexCRM;
 use App\Models\crm\seriesalm\SerieInventario;
 use Illuminate\Support\Facades\Auth;
 
@@ -179,10 +180,17 @@ class StockProSerieController extends Controller
                 foreach ($nuevasSeries as $item) {
                     // Verificar si ya existe la serie en la base de datos
                     $serieExistente = SerieInventario::where('serie', $item['serie'])->with('producto')->with('bodega')->first();
+                    $serieExisteContrato = ContratoGexCRM::where('serie', $item['serie'])->with('producto')->with('bodega')->first();
 
-                    if ($serieExistente) {
+                    if ($serieExistente || $serieExisteContrato) {
                         // Si la serie ya existe, agregarla al array de duplicadas
-                        $duplicadas[] = $serieExistente;
+
+                        if($serieExisteContrato){
+                            $duplicadas[] = $serieExisteContrato;
+                        }else{
+                            $duplicadas[] = $serieExistente;
+                        }
+
                     } else {
                         SerieInventario::create([
                             'bod_id' => $item['bod_id'],
