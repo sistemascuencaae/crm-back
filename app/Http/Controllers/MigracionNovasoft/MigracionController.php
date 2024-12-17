@@ -4,6 +4,7 @@ namespace App\Http\Controllers\MigracionNovasoft;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
+use App\Models\openceo\Aav_migracion_cabecera_productos_facturados;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use App\Http\Resources\RespuestaApi;
@@ -30,6 +31,7 @@ class MigracionController extends Controller
                 'imagenes_base64',
                 'aav_migracion_cliente_byIdentificacion',
                 'aav_acuerdos_de_pago',
+                'aav_migracion_productos_facturados',
             ]
         ]);
 
@@ -412,6 +414,17 @@ class MigracionController extends Controller
     {
         try {
             $data = DB::select("SELECT * FROM public.aav_acuerdos_de_pago");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function aav_migracion_productos_facturados($factura)
+    {
+        try {
+            $data = Aav_migracion_cabecera_productos_facturados::where('cod_comprobante_fp', $factura)->with('detalle')->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
