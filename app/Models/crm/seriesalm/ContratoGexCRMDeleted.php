@@ -2,19 +2,17 @@
 
 namespace App\Models\crm\seriesalm;
 
-use App\Models\openceo\Bodega;
-use App\Models\openceo\Producto;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class ContratoGexCRM extends Model
+class ContratoGexCRMDeleted extends Model
 {
     use HasFactory;
     use SoftDeletes;
 
-    protected $table = 'crm.contrato_gex';
+    protected $table = 'crm.contrato_gex_eliminados';
     protected $fillable = [
         'alm_id',
         'celular',
@@ -51,7 +49,8 @@ class ContratoGexCRM extends Model
         'ubicacion',
         'usuario_crea',
         'usuario_modifica',
-        'bod_id'
+        'bod_id',
+        'deleted_at'
 
     ];
 
@@ -72,15 +71,5 @@ class ContratoGexCRM extends Model
         $this->attributes["deleted_at"] = Carbon::now();
     }
 
-
-    public function producto()
-    {
-        return $this->belongsTo(Producto::class, "pro_id", "pro_id");
-    }
-
-    public function bodega()
-    {
-        return $this->belongsTo(Bodega::class, "bod_id", "bod_id");
-    }
 
 }

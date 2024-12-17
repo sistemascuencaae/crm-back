@@ -8,9 +8,11 @@ use App\Models\crm\garantias\ContratoGex;
 use App\Models\crm\series\Despacho;
 use App\Models\crm\series\Inventario;
 use App\Models\crm\seriesalm\ContratoGexCRM;
+use App\Models\crm\seriesalm\ContratoGexCRMDeleted;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ContratoGexController extends Controller
@@ -18,6 +20,17 @@ class ContratoGexController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api');
+    }
+
+
+    public function listarContratosBodega($bodId)
+    {
+        try {
+            $data = ContratoGexCRM::where("bod_id", $bodId)->get();
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+        }
     }
 
     public function loadInitialData($almId)
@@ -68,6 +81,7 @@ class ContratoGexController extends Controller
                 from cfactura c
 				                join crm.av_cfactura_cnotacre_lineal c4 on c4.cfa_id = c.cfa_id
 				                join dfactura d on c.cfa_id = d.cfa_id AND c4.ccm_estado = 2 AND c.cfa_periodo >= 2022 AND d.prod_gex IS NOT null AND d.id_producto_gex IS NOT null and c4.alm_id = 1
+                                --JOIN crm.contrato_gex cg1 ON cg1.cfa_id = c.cfa_id AND cg1.pro_id = d.pro_id AND cg1.deleted_at IS NULL
                                 join puntoventa p on c.pve_id = p.pve_id
                                 join almacen a on p.alm_id = a.alm_id
                                 join producto pr on d.pro_id = pr.pro_id
@@ -97,28 +111,142 @@ class ContratoGexController extends Controller
     public function generarContratoCRM(Request $request)
     {
         try {
+            $res = DB::transaction(function () use ($request) {
+                $dataContrato = $request->all();
+                $serie = $request->input("serie");
+                $almId = $request->input('alm_id');
+                $userId = Auth::id();
+                $bodUser = DB::selectOne("SELECT bod_id,bod_id_dos from crm.users where id = ?;", [$userId]);
+                $ultimoFolio = DB::selectOne("SELECT * from gex.folios_contratos fc  where alm_id = 1 order by folio desc limit 1;");
+                $dataContrato["numero"] = $ultimoFolio->folio;
+                $dataContrato["fecha"] = Carbon::now();
+                $dataContrato["bod_id"] = $bodUser->bod_id;
+                $dataContrato["usuario_crea"] = $userId;
+                $data = ContratoGexCRM::create($dataContrato);
+                //Eliminar serie del inventario
+                $serieExiste = DB::selectOne("SELECT ss.id, ss.serie, bod_id from crm.stock_pro_serie ss where serie = ?;", [$serie]);
+                if (!$serieExiste) {
+                    $serie = strtoupper($serie); // Convertir a mayúsculas
+                    $serieExiste = DB::selectOne("SELECT ss.id, ss.serie, bod_id FROM crm.stock_pro_serie ss
+                           WHERE UPPER(serie) = ?;", [$serie]);
+                }
+                if ($serieExiste) {
+                    DB::delete("DELETE FROM crm.stock_pro_serie WHERE id = ?;", [$serieExiste->id]);
+                    DB::table('gex.folios_contratos')->updateOrInsert(
+                        ['alm_id' => $almId],
+                        [
+                            'alm_id' => $almId,
+                            'folio' => $ultimoFolio->folio + 1,
+                        ]
+                    );
+                } else {
+                    return (object)[
+                        "status" => "error",
+                        "message" => "La serie no existe en el inventario",
+                        "data" => $serie
+                    ];
+                }
+                return (object)[
+                    "status" => "success",
+                    "message" => "",
+                    "data" => $data
+                ];
+            });
 
-            $dataContrato = $request->all();
 
-            $almId = $request->input('alm_id');
-            $ultimoFolio = DB::selectOne("SELECT * from gex.folios_contratos fc  where alm_id = 1 order by folio desc limit 1;");
+            if ($res->status == "error") {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error, Serie no existe: ' . $res->data, []));
+            }
+            $userId = Auth::id();
+            $bodId = DB::selectOne("SELECT bod_id FROM crm.users where id = ?;", [$userId]);
+            $saldos = $this->listarSaldos($bodId->bod_id);
 
-
-            $dataContrato["numero"] = $ultimoFolio->folio;
-            $dataContrato["fecha"] = Carbon::now();
-            $data = ContratoGexCRM::create($dataContrato);
-
-
-            DB::table('gex.folios_contratos')->updateOrInsert(
-                ['alm_id' => $almId],
-                [
-                    'alm_id' => $almId,
-                    'folio' => $ultimoFolio->folio,
-                ]
-            );
+            $data = (object)[
+                "saldos" => $saldos,
+                "contrato" => $res->data
+            ];
 
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+        }
+    }
+
+
+    public function validarSerieContrato(Request $request)
+    {
+        try {
+            $serie = $request->input("serie");
+            $proId = $request->input("proId");
+            $bodId = $request->input("bodId");
+            //Eliminar serie del inventario
+            $serieExiste = DB::selectOne("SELECT ss.id, ss.serie, bod_id from crm.stock_pro_serie ss
+                            where serie = ? and pro_id = ? and bod_id = ?;", [$serie, $proId, $bodId]);
+            if (!$serieExiste) {
+                $serie = strtoupper($serie); // Convertir a mayúsculas
+                $serieExiste = DB::selectOne("SELECT ss.id, ss.serie, bod_id FROM crm.stock_pro_serie ss
+                            WHERE UPPER(serie) = ? and pro_id = ? and bod_id = ?;", [$serie, $proId, $bodId]);
+            }
+            if ($serieExiste) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Serie existe', $serie));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error, Serie no existe: ' . $serie, []));
+            }
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+        }
+    }
+
+
+    private function listarSaldos($bodId)
+    {
+
+        $userId = Auth::id();
+        $bodUser = DB::selectOne("SELECT bod_id,bod_id_dos from crm.users where id = ?;", [$userId]);
+
+        $idBodegas = [];
+
+        if ($bodUser->bod_id) {
+            array_push($idBodegas, $bodUser->bod_id);
+        }
+        if ($bodUser->bod_id_dos) {
+            array_push($idBodegas, $bodUser->bod_id_dos);
+        }
+
+        if (!empty($idBodegas)) {
+            // Construye la lista de IDs separada por comas
+            $placeholders = implode(',', array_fill(0, count($idBodegas), '?'));
+            $datosSeries = DB::select("SELECT * FROM av_stock_producto_bodega_sinregalos_v3 WHERE BOD_ID IN ($placeholders)", $idBodegas);
+            //tt ORDER BY tt.stock_actual DESC
+        } else {
+            $datosSeries = []; // Si no hay bodegas, retorna un array vacío
+        }
+
+        return $datosSeries;
+    }
+
+
+
+    public function eliminarContratoId($id)
+    {
+        try {
+            $data = DB::transaction( function () use ($id) {
+                $data = ContratoGexCRM::find($id);
+                $data->deleted_at = Carbon::now();
+                $dataArray = $data->toArray();
+                ContratoGexCRMDeleted::create($dataArray);
+                if ($data) {
+                    $data->forceDelete();
+                } else {
+                    return response()->json(RespuestaApi::returnResultado('error', 'El Contrato no existe ', []));
+                }
+                return $data;
+            });
+
+
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Contrato eliminado con exito!', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
         }
