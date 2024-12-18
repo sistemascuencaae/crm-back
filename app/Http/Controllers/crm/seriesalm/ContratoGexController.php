@@ -226,12 +226,27 @@ class ContratoGexController extends Controller
         return $datosSeries;
     }
 
+    public function getContratoGexCrmId($contratoId)
+    {
+        try {
+
+            $data = ContratoGexCRM::find($contratoId);
+
+            if ($data) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Contrato eliminado con exito!', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', []));
+            }
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+        }
+    }
 
 
     public function eliminarContratoId($id)
     {
         try {
-            $data = DB::transaction( function () use ($id) {
+            $data = DB::transaction(function () use ($id) {
                 $data = ContratoGexCRM::find($id);
                 $data->deleted_at = Carbon::now();
                 $dataArray = $data->toArray();

@@ -672,6 +672,8 @@ Route::group( ["prefix" => "gex-contrato"], function ($router) {
     Route::post('/validarSerieContrato', [ContratoGexController::class, 'validarSerieContrato']); //
     Route::get('/listarContratosBodega/{bod_id}', [ContratoGexController::class, 'listarContratosBodega']);
     Route::delete('/eliminarContratoId/{id}', [ContratoGexController::class, 'eliminarContratoId']);
+    Route::get('/getContratoGexCrmId/{id}', [ContratoGexController::class, 'getContratoGexCrmId']);
+
 
 
 });
