@@ -8,6 +8,7 @@ use App\Models\crm\garantias\ContratoGex;
 use App\Models\crm\garantias\FolioContratos;
 use App\Models\crm\series\Despacho;
 use App\Models\crm\series\Inventario;
+use App\Models\crm\seriesalm\BitacoraSeries;
 use App\Models\crm\seriesalm\ContratoGexCRM;
 use App\Models\crm\seriesalm\ContratoGexCRMDeleted;
 use Carbon\Carbon;
@@ -95,9 +96,10 @@ class ContratoGexController extends Controller
                                 join v_ubicacion vu on c1.ubi_id = vu.ubi3_id --c.cfa_id = 446464
                                 join cgex cg on cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex
                 where not exists (select 1 from crm.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
+                --and not exists (select 1 from gex.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
                 group by p.alm_id, a.alm_nombre, e.ent_nombres, e.ent_apellidos, ve.ent_tipo_identificacion, ve.ent_identificacion, ve.dir_calle_principal, ve.dir_numeracion,
                         ve.dir_calle_secundaria, vu.ubi_nombre, vu.ubi2_nombre, e.ent_email, pr.pro_id, tp.tpr_nombre, pr.pro_nombre, c.cfa_id, t.cti_sigla, a.alm_codigo, p.pve_numero,
-                        c.cfa_numero, c.cfa_fecha, m.mar_nombre,cg.num_meses, c.cfa_fecha, a.ubi_id, e.ent_telefono_principal, e.ent_id, d.id_producto_gex;",[$almId]);
+                        c.cfa_numero, c.cfa_fecha, m.mar_nombre,cg.num_meses, c.cfa_fecha, a.ubi_id, e.ent_telefono_principal, e.ent_id, d.id_producto_gex;", [$almId]);
             $data = (object)[
                 "facturas" => $facturas
             ];
@@ -143,7 +145,7 @@ class ContratoGexController extends Controller
                         ['alm_id' => $almId],
                         [
                             'alm_id' => $almId,
-                            'folio' => $ultimoFolio->folio+1,
+                            'folio' => $ultimoFolio->folio + 1,
                         ]
                     );
                 } else {
@@ -153,6 +155,16 @@ class ContratoGexController extends Controller
                         "data" => $serie
                     ];
                 }
+
+
+                $nuevaDataBitacora = (object)[
+                    "serie" => $serie,
+                    "bod_id" => $bodUser->bod_id,
+                    "pro_id" => $dataContrato["pro_id"],
+                    "cfa_id" => $dataContrato["cfa_id"],
+                    "accion" => 'SALIDA SERIE CLIENTE'
+                ];
+                BitacoraSeries::create((array)$nuevaDataBitacora);
                 return (object)[
                     "status" => "success",
                     "message" => "",
@@ -167,6 +179,8 @@ class ContratoGexController extends Controller
             $userId = Auth::id();
             $bodId = DB::selectOne("SELECT bod_id FROM crm.users where id = ?;", [$userId]);
             $saldos = $this->listarSaldos($bodId->bod_id);
+            $serie = $request->input("serie");
+
             $data = (object)[
                 "saldos" => $saldos,
                 "contrato" => $res->data
@@ -194,6 +208,8 @@ class ContratoGexController extends Controller
                 $serieExiste = DB::selectOne("SELECT ss.id, ss.serie, bod_id FROM crm.stock_pro_serie ss
                             WHERE UPPER(serie) = ? and pro_id = ? and bod_id = ?;", [$serie, $proId, $bodId]);
             }
+
+
             if ($serieExiste) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Serie existe', $serie));
             } else {
