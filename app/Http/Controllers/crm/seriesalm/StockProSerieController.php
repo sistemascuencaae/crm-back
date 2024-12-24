@@ -370,12 +370,20 @@ class StockProSerieController extends Controller
                 BitacoraSeries::create((array)$nuevaDataBitacora);
                 return true;
             }
-
-
-
             return false;
         } else {
             return false;
+        }
+    }
+
+
+    public function buscarProCodigo($proCodigo)
+    {
+        try {
+            $data = DB::selectOne("SELECT * FROM public.producto where pro_codigo = ?",[$proCodigo]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
         }
     }
 }

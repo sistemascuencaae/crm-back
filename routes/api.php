@@ -706,6 +706,7 @@ Route::group(["prefix" => "gex"], function ($router) {
     Route::get('/getSerie/{serie}', [StockProSerieController::class, 'getSerie']);
     Route::get('/despacharSerie/{serie}/{bodId}', [StockProSerieController::class, 'despacharSerie']);
     Route::get('/reportePorBodegaId/{bodId}', [StockProSerieController::class, 'reportePorBodegaId']);
+    Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
