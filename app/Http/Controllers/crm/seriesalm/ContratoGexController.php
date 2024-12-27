@@ -5,8 +5,10 @@ namespace App\Http\Controllers\crm\seriesalm;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\garantias\ContratoGex;
+use App\Models\crm\garantias\FolioContratos;
 use App\Models\crm\series\Despacho;
 use App\Models\crm\series\Inventario;
+use App\Models\crm\seriesalm\BitacoraSeries;
 use App\Models\crm\seriesalm\ContratoGexCRM;
 use App\Models\crm\seriesalm\ContratoGexCRMDeleted;
 use Carbon\Carbon;
@@ -62,7 +64,7 @@ class ContratoGexController extends Controller
                                 where te.tte_id = 2 and ten.ent_id = e.ent_id) as tabla) as celular,
                         e.ent_email as email,
                         pr.pro_id,
-                        concat(trim(tp.tpr_nombre), ' / ', pr.pro_nombre) as producto,
+                        concat(pr.pro_codigo,' / ', trim(tp.tpr_nombre), ' / ', pr.pro_nombre) as producto,
                         c.cfa_id,
                         concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as factura,
                         cast(c.cfa_fecha as date) as fecha_compra,
@@ -80,7 +82,7 @@ class ContratoGexController extends Controller
                         d.id_producto_gex
                 from cfactura c
 				                join crm.av_cfactura_cnotacre_lineal c4 on c4.cfa_id = c.cfa_id
-				                join dfactura d on c.cfa_id = d.cfa_id AND c4.ccm_estado = 2 AND c.cfa_periodo >= 2022 AND d.prod_gex IS NOT null AND d.id_producto_gex IS NOT null and c4.alm_id = 1
+				                join dfactura d on c.cfa_id = d.cfa_id AND c4.ccm_estado = 2 AND c.cfa_periodo >= 2022 AND d.prod_gex IS NOT null AND d.id_producto_gex IS NOT null and c4.alm_id = ?
                                 --JOIN crm.contrato_gex cg1 ON cg1.cfa_id = c.cfa_id AND cg1.pro_id = d.pro_id AND cg1.deleted_at IS NULL
                                 join puntoventa p on c.pve_id = p.pve_id
                                 join almacen a on p.alm_id = a.alm_id
@@ -91,12 +93,13 @@ class ContratoGexController extends Controller
                                 join cliente c1 on c.cli_id = c1.cli_id
                                 join entidad e on c1.ent_id = e.ent_id
                                 join v_entidad ve on e.ent_id = ve.ent_id
-                                join v_ubicacion vu on c1.ubi_id = vu.ubi3_id
+                                join v_ubicacion vu on c1.ubi_id = vu.ubi3_id --c.cfa_id = 446464
                                 join cgex cg on cg.id_dfactura = d.dfac_id and cg.pro_id_gex = d.id_producto_gex
-                where c.cfa_id = 446464 and not exists (select 1 from crm.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
+                where not exists (select 1 from crm.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
+                --and not exists (select 1 from gex.contrato_gex cg where cg.cfa_id = d.cfa_id and cg.pro_id = d.pro_id)
                 group by p.alm_id, a.alm_nombre, e.ent_nombres, e.ent_apellidos, ve.ent_tipo_identificacion, ve.ent_identificacion, ve.dir_calle_principal, ve.dir_numeracion,
                         ve.dir_calle_secundaria, vu.ubi_nombre, vu.ubi2_nombre, e.ent_email, pr.pro_id, tp.tpr_nombre, pr.pro_nombre, c.cfa_id, t.cti_sigla, a.alm_codigo, p.pve_numero,
-                        c.cfa_numero, c.cfa_fecha, m.mar_nombre,cg.num_meses, c.cfa_fecha, a.ubi_id, e.ent_telefono_principal, e.ent_id, d.id_producto_gex;");
+                        c.cfa_numero, c.cfa_fecha, m.mar_nombre,cg.num_meses, c.cfa_fecha, a.ubi_id, e.ent_telefono_principal, e.ent_id, d.id_producto_gex;", [$almId]);
             $data = (object)[
                 "facturas" => $facturas
             ];
@@ -117,7 +120,13 @@ class ContratoGexController extends Controller
                 $almId = $request->input('alm_id');
                 $userId = Auth::id();
                 $bodUser = DB::selectOne("SELECT bod_id,bod_id_dos from crm.users where id = ?;", [$userId]);
-                $ultimoFolio = DB::selectOne("SELECT * from gex.folios_contratos fc  where alm_id = 1 order by folio desc limit 1;");
+                $ultimoFolio = DB::selectOne("SELECT * FROM gex.folios_contratos fc WHERE alm_id = ? ORDER BY folio DESC LIMIT 1;", [$almId]);
+                if (!$ultimoFolio) {
+                    $ultimoFolio = FolioContratos::create([
+                        'alm_id' => $almId,
+                        'folio' => 1,
+                    ]);
+                }
                 $dataContrato["numero"] = $ultimoFolio->folio;
                 $dataContrato["fecha"] = Carbon::now();
                 $dataContrato["bod_id"] = $bodUser->bod_id;
@@ -146,6 +155,16 @@ class ContratoGexController extends Controller
                         "data" => $serie
                     ];
                 }
+
+
+                $nuevaDataBitacora = (object)[
+                    "serie" => $serie,
+                    "bod_id" => $bodUser->bod_id,
+                    "pro_id" => $dataContrato["pro_id"],
+                    "cfa_id" => $dataContrato["cfa_id"],
+                    "accion" => 'SALIDA SERIE CLIENTE'
+                ];
+                BitacoraSeries::create((array)$nuevaDataBitacora);
                 return (object)[
                     "status" => "success",
                     "message" => "",
@@ -160,6 +179,7 @@ class ContratoGexController extends Controller
             $userId = Auth::id();
             $bodId = DB::selectOne("SELECT bod_id FROM crm.users where id = ?;", [$userId]);
             $saldos = $this->listarSaldos($bodId->bod_id);
+            $serie = $request->input("serie");
 
             $data = (object)[
                 "saldos" => $saldos,
@@ -188,6 +208,8 @@ class ContratoGexController extends Controller
                 $serieExiste = DB::selectOne("SELECT ss.id, ss.serie, bod_id FROM crm.stock_pro_serie ss
                             WHERE UPPER(serie) = ? and pro_id = ? and bod_id = ?;", [$serie, $proId, $bodId]);
             }
+
+
             if ($serieExiste) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Serie existe', $serie));
             } else {
@@ -226,12 +248,27 @@ class ContratoGexController extends Controller
         return $datosSeries;
     }
 
+    public function getContratoGexCrmId($contratoId)
+    {
+        try {
+
+            $data = ContratoGexCRM::find($contratoId);
+
+            if ($data) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Contrato eliminado con exito!', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', []));
+            }
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+        }
+    }
 
 
     public function eliminarContratoId($id)
     {
         try {
-            $data = DB::transaction( function () use ($id) {
+            $data = DB::transaction(function () use ($id) {
                 $data = ContratoGexCRM::find($id);
                 $data->deleted_at = Carbon::now();
                 $dataArray = $data->toArray();
