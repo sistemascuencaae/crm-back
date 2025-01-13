@@ -32,6 +32,7 @@ class MigracionController extends Controller
                 'aav_migracion_cliente_byIdentificacion',
                 'aav_acuerdos_de_pago',
                 'aav_migracion_productos_facturados',
+                'historica_byComprobante',
             ]
         ]);
 
@@ -425,6 +426,33 @@ class MigracionController extends Controller
     {
         try {
             $data = Aav_migracion_cabecera_productos_facturados::where('cod_comprobante_fp', $factura)->with('detalle')->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function historica_byComprobante($factura, $historicaInteger)
+    {
+        try {
+            if ($historicaInteger == 1) {
+                $historica = DB::selectOne("select * from aav_migracion_cartera_historica where cod_comprobante_fp = '$factura'");
+                $xcuotas_xcobros = DB::select("select * from aav_migracion_cartera_historica_xcuotas_xcobros where cod_comprobante_fp = '$factura'");
+                $xcuotas = DB::select("select * from aav_migracion_cartera_historica_xcuotas where cod_comprobante_fp = '$factura'");
+                $data = [
+                    'historica' => $historica,
+                    'xcuotas' => $xcuotas,
+                    'xcuotas_xcobros' => $xcuotas_xcobros,
+                ];
+            } else {
+                $xcuotas_xcobros = DB::select("select * from aav_migracion_cartera_historica_xcuotas_xcobros where cod_comprobante_fp = '$factura'");
+                $xcuotas = DB::select("select * from aav_migracion_cartera_historica_xcuotas where cod_comprobante_fp = '$factura'");
+                $data = [
+                    'xcuotas' => $xcuotas,
+                    'xcuotas_xcobros' => $xcuotas_xcobros,
+                ];
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
