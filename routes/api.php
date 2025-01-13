@@ -964,4 +964,5 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_migracion_cliente_byIdentificacion/{identificacion}', [MigracionController::class, 'aav_migracion_cliente_byIdentificacion']);
     Route::get('/aav_acuerdos_de_pago', [MigracionController::class, 'aav_acuerdos_de_pago']);
     Route::get('/aav_migracion_productos_facturados/{factura}', [MigracionController::class, 'aav_migracion_productos_facturados']);
+    Route::get('/historica_byComprobante/{factura}/{historicaInteger}', [MigracionController::class, 'historica_byComprobante']);
 });
