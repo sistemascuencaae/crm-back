@@ -52,6 +52,7 @@ use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
+use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
@@ -707,6 +708,14 @@ Route::group(["prefix" => "gex"], function ($router) {
     Route::get('/despacharSerie/{serie}/{bodId}', [StockProSerieController::class, 'despacharSerie']);
     Route::get('/reportePorBodegaId/{bodId}', [StockProSerieController::class, 'reportePorBodegaId']);
     Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
+});
+
+Route::group(["prefix" => "formulario"], function ($router) {
+
+    // FORMULARIOS2
+
+    Route::get('/listFormByTipoCaso/{tipoCaso_id}', [Formulario2Controller::class, 'listFormByTipoCaso']);
+
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
