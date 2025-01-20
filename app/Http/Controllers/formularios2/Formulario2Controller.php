@@ -89,9 +89,20 @@ class Formulario2Controller extends Controller
         }
     }
 
-    public function deleteCampo()
+    public function deleteFormulario(Request $request, $id)
     {
+        try {
+            $data = DB::transaction(function () use ($request, $id) {
+                $formulario = Formularios::findOrFail($id);
 
+                $formulario->delete();
+                return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderByDesc('id')->get();
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
     }
 
 }
