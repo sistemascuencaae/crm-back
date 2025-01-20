@@ -667,7 +667,7 @@ Route::group(["prefix" => "credito"], function ($router) {
 });
 
 //contratos gex felipe
-Route::group( ["prefix" => "gex-contrato"], function ($router) {
+Route::group(["prefix" => "gex-contrato"], function ($router) {
     Route::get('/loadInitialData/{almId}', [ContratoGexController::class, 'loadInitialData']);
     Route::post('/generarContratoCRM', [ContratoGexController::class, 'generarContratoCRM']);
     Route::post('/validarSerieContrato', [ContratoGexController::class, 'validarSerieContrato']); //
@@ -714,7 +714,10 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
     // FORMULARIOS2
 
+    Route::get('/listAll', [Formulario2Controller::class, 'listAll']);
     Route::get('/listFormByTipoCaso/{tipoCaso_id}', [Formulario2Controller::class, 'listFormByTipoCaso']);
+
+    Route::post('/addEditFormulario', [Formulario2Controller::class, 'addEditFormulario']);
 
 });
 

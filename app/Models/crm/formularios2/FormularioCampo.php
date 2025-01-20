@@ -19,7 +19,8 @@ class FormularioCampo extends Model
         "requerido",
         "descripcion",
         "orden",
-        "estado"
+        "estado",
+        "opciones_campo"
     ];
 
     public function setCreatedAtAttribute($value)
@@ -33,8 +34,4 @@ class FormularioCampo extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function campo_opcion()
-    {
-        return $this->hasMany(CampoOpcion::class, "fc_id", "id");
-    }
 }
