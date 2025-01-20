@@ -18,6 +18,7 @@ class Formulario2Controller extends Controller
     }
 
     public function listAll()
+    // Este metodo se una para listar todos los formularios en el CRUD de formularios dinamicos
     {
         try {
             // Excluimos el id 1 de la tabla crm.formularios, porque el id 1 es nuestro default
@@ -102,6 +103,20 @@ class Formulario2Controller extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listAllSinRelacion()
+    // Este metodo se una para listar todos los formularios en el CRUD de 'tipo de caso'
+    // no trae la relacion formulario_campo y es mas liviado la consulta a la base
+    {
+        try {
+            // Excluimos el id 1 de la tabla crm.formularios, porque el id 1 es nuestro default
+            $data = Formularios::orderByDesc('id')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
     }
 

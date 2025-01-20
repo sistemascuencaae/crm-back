@@ -338,7 +338,7 @@ class SeriesAlmController extends Controller
         }
     }
 
-    public function eliminarSerieDespacho($numeroDes, $serie, $bodId,)
+    public function eliminarSerieDespacho($numeroDes, $serie, $bodId)
     {
         try {
 

@@ -716,9 +716,10 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
     Route::get('/listAll', [Formulario2Controller::class, 'listAll']);
     Route::get('/listFormByTipoCaso/{tipoCaso_id}', [Formulario2Controller::class, 'listFormByTipoCaso']);
-
+    
     Route::post('/addEditFormulario', [Formulario2Controller::class, 'addEditFormulario']);
     Route::delete('/deleteFormulario/{id}', [Formulario2Controller::class, 'deleteFormulario']);
+    Route::get('/listAllSinRelacion', [Formulario2Controller::class, 'listAllSinRelacion']);
 
 });
 
