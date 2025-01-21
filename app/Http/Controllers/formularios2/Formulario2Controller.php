@@ -4,6 +4,8 @@ namespace App\Http\Controllers\formularios2;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\formularios2\CFormularios;
+use App\Models\crm\formularios2\DFormularios;
 use App\Models\crm\formularios2\FormularioCampo;
 use App\Models\crm\formularios2\Formularios;
 use App\Models\crm\TipoCaso;
@@ -22,7 +24,7 @@ class Formulario2Controller extends Controller
     {
         try {
             // Excluimos el id 1 de la tabla crm.formularios, porque el id 1 es nuestro default
-            $data = Formularios::where('id', '!=', 1)->with('formulario_campo')->orderByDesc('id')->get();
+            $data = Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
@@ -34,8 +36,13 @@ class Formulario2Controller extends Controller
     {
         try {
             $data = TipoCaso::where('id', $tipoCaso_id)
-                ->with('formularios.formulario_campo')
+                ->with([
+                    'formularios.formulario_campo' => function ($query) {
+                        $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
+                    }
+                ])
                 ->first();
+
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
@@ -117,6 +124,41 @@ class Formulario2Controller extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
+        }
+    }
+
+    public function addCDFormulario(Request $request)
+    {
+        try {
+            $data = DB::transaction(function () use ($request) {
+
+                $cFormulario = CFormularios::create($request->all());
+
+                // aqui es donmde yo debo de obtener el cform_id para guardar en el DFormulario
+
+                if (count($request->dFormulario) > 0) {
+                    // Iteramos sobre los campos del formulario
+                    foreach ($request->dFormulario as $item) {
+                        // Asignamos el id del formulario al campo
+                        $item['cform_id'] = $cFormulario->id;
+
+                        // Si el campo tiene id, lo actualizamos, si no lo creamos
+                        // if ($item['id']) {
+                        //     FormularioCampo::where('id', $item['id'])->update($item);
+                        // } else {
+                        DFormularios::create($item); // Crear si no tiene id
+                        // }
+                    }
+                }
+
+
+                return CFormularios::where('id', $cFormulario->id)->with('dformularios')->first();
+                ;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 

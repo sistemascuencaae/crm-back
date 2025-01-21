@@ -20,7 +20,8 @@ class FormularioCampo extends Model
         "descripcion",
         "orden",
         "estado",
-        "opciones_campo"
+        "opciones_campo",
+        "form_control_name",
     ];
 
     public function setCreatedAtAttribute($value)

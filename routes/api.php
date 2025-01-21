@@ -720,6 +720,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::post('/addEditFormulario', [Formulario2Controller::class, 'addEditFormulario']);
     Route::delete('/deleteFormulario/{id}', [Formulario2Controller::class, 'deleteFormulario']);
     Route::get('/listAllSinRelacion', [Formulario2Controller::class, 'listAllSinRelacion']);
+    Route::post('/addCDFormulario', [Formulario2Controller::class, 'addCDFormulario']);
 
 });
 
