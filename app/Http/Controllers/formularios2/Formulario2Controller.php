@@ -69,9 +69,12 @@ class Formulario2Controller extends Controller
 
                         // Si el campo tiene id, lo actualizamos, si no lo creamos
                         if ($accessData['id']) {
+                            $accessData['form_control_name'] = $accessData['tipo'] . $accessData['id'];
                             FormularioCampo::where('id', $accessData['id'])->update($accessData);
                         } else {
-                            FormularioCampo::create($accessData); // Crear si no tiene id
+                            $newCampo = FormularioCampo::create($accessData); // Crear si no tiene id
+                            $newCampo->form_control_name = $accessData['tipo'] . $newCampo->id;
+                            $newCampo->save();
                         }
                     }
                 }
@@ -88,7 +91,7 @@ class Formulario2Controller extends Controller
 
 
                 // Retornamos la lista de formularios con sus campos
-                return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderByDesc('id')->get();
+                return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
@@ -158,6 +161,30 @@ class Formulario2Controller extends Controller
             return response()->json($data);
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listCFormulario($form_id)
+    {
+        try {
+            // $data = Formularios::where('id', $form_id)
+            //     ->with([
+            //         'formulario_campo.respuesta' => function ($query) {
+            //             $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
+            //         }
+            //     ])
+            //     ->first();
+            $data = CFormularios::where('id', $form_id)
+                ->with([
+                    'formulario.formulario_campo.respuesta' => function ($query) {
+                        $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
+                    }
+                ])
+                ->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
     }
 

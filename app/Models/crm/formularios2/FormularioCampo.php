@@ -35,4 +35,9 @@ class FormularioCampo extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
+    public function respuesta()
+    {
+        return $this->belongsTo(DFormularios::class, "id", "fc_id");
+    }
+
 }

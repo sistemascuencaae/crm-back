@@ -30,4 +30,10 @@ class CFormularios extends Model
     {
         return $this->hasMany(DFormularios::class, "cform_id");
     }
+
+    public function formulario()
+    {
+        return $this->belongsTo(Formularios::class, "form_id", "id");
+    }
+
 }
