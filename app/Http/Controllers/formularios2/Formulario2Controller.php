@@ -151,12 +151,11 @@ class Formulario2Controller extends Controller
                     }
                 }
 
+                return $cFormulario->id;
 
-                return CFormularios::where('id', $cFormulario->id)->with('dformularios')->first();
-                ;
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
+            return response()->json($data);
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
