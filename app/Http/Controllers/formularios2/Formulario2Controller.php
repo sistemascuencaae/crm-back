@@ -43,7 +43,6 @@ class Formulario2Controller extends Controller
                 ])
                 ->first();
 
-
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
@@ -145,17 +144,11 @@ class Formulario2Controller extends Controller
                         // Asignamos el id del formulario al campo
                         $item['cform_id'] = $cFormulario->id;
 
-                        // Si el campo tiene id, lo actualizamos, si no lo creamos
-                        // if ($item['id']) {
-                        //     FormularioCampo::where('id', $item['id'])->update($item);
-                        // } else {
                         DFormularios::create($item); // Crear si no tiene id
-                        // }
                     }
                 }
 
                 return $cFormulario->id;
-
             });
 
             return response()->json($data);
@@ -167,13 +160,6 @@ class Formulario2Controller extends Controller
     public function listCFormulario($form_id)
     {
         try {
-            // $data = Formularios::where('id', $form_id)
-            //     ->with([
-            //         'formulario_campo.respuesta' => function ($query) {
-            //             $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
-            //         }
-            //     ])
-            //     ->first();
             $data = CFormularios::where('id', $form_id)
                 ->with([
                     'formulario.formulario_campo.respuesta' => function ($query) {
@@ -185,6 +171,24 @@ class Formulario2Controller extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
+        }
+    }
+
+    public function editValorRespuesta(Request $request, $id)
+    {
+        try {
+            $data = DB::transaction(function () use ($request, $id) {
+
+                $campoRespuesta = DFormularios::findOrFail($id);
+
+                $campoRespuesta->update($request->all());
+
+                return $campoRespuesta;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
