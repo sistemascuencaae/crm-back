@@ -80,7 +80,7 @@ class Formulario2Controller extends Controller
 
 
                 // Código de eliminación de campos
-                if (count($request->formulario_campo_eliminados) > 0) {
+                if (isset($request->formulario_campo_eliminados) && count($request->formulario_campo_eliminados) > 0) {
                     foreach ($request->formulario_campo_eliminados as $accessDataEliminar) {
                         if (isset($accessDataEliminar['id'])) { // conprueba si tiene un id para eliminar
                             FormularioCampo::where('id', $accessDataEliminar['id'])->delete();
