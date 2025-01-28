@@ -724,6 +724,8 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
     Route::get('/listCFormulario/{cForm_id}', [Formulario2Controller::class, 'listCFormulario']);
     Route::post('/editValorRespuesta/{id}', [Formulario2Controller::class, 'editValorRespuesta']); // Editar
+    
+    Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
 
 });
 

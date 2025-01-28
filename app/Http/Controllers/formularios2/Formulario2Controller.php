@@ -192,4 +192,20 @@ class Formulario2Controller extends Controller
         }
     }
 
+    // juan endPoint que se utiliza para la llamada del cliente en los formularios 2
+    public function listCliente_byIdentificacion($identificacion)
+    {
+        try {
+            $data = DB::selectOne("SELECT cli_id, ent_id, ent_identificacion, ent_nombre_comercial FROM public.aav_migracion_cliente where ent_identificacion = '$identificacion'");
+
+            if (!$data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no existe con la identificación ' . $identificacion, ''));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }
