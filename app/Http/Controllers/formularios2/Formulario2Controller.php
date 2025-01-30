@@ -208,4 +208,20 @@ class Formulario2Controller extends Controller
         }
     }
 
+    public function listFormulario2($id){
+        try {
+            $data = Formularios::where('id', $id)
+                ->with([
+                    'formulario_campo' => function ($query) {
+                        $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
+                    }
+                ])
+                ->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
+        }
+    }
+
 }

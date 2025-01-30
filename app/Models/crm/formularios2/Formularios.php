@@ -13,7 +13,10 @@ class Formularios extends Model
     protected $table = 'crm.formularios';
     protected $fillable = [
         "nombre",
-        "descripcion"
+        "descripcion",
+        "header",
+        "footer",
+        "color",
     ];
 
     public function setCreatedAtAttribute($value)
