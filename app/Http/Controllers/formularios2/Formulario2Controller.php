@@ -68,11 +68,11 @@ class Formulario2Controller extends Controller
 
                         // Si el campo tiene id, lo actualizamos, si no lo creamos
                         if ($accessData['id']) {
-                            $accessData['form_control_name'] = $accessData['tipo'] . $accessData['id'];
+                            $accessData['form_control_name'] = $accessData['etiqueta'] . $accessData['id'];
                             FormularioCampo::where('id', $accessData['id'])->update($accessData);
                         } else {
                             $newCampo = FormularioCampo::create($accessData); // Crear si no tiene id
-                            $newCampo->form_control_name = $accessData['tipo'] . $newCampo->id;
+                            $newCampo->form_control_name = $accessData['etiqueta'] . $newCampo->id;
                             $newCampo->save();
                         }
                     }
@@ -197,8 +197,8 @@ class Formulario2Controller extends Controller
     public function listCliente_byIdentificacion($identificacion)
     {
         try {
-            $data = DB::selectOne("SELECT cli_id, ent_id, ent_identificacion, ent_nombre_comercial FROM public.aav_migracion_cliente where ent_identificacion = '$identificacion'");
-
+            $data = DB::selectOne("SELECT cli_id, ent_id, ent_identificacion, ent_nombre_comercial, ent_nombre, ent_apellidos, direccion, calle_secundaria, numero_casa, telefono_domicilio, prv_nombre, ctn_nombre, ent_email FROM public.aav_migracion_cliente where ent_identificacion = '$identificacion'");
+            
             if (!$data) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no existe con la identificación ' . $identificacion, ''));
             }
