@@ -151,7 +151,8 @@ class Formulario2Controller extends Controller
                 return $cFormulario->id;
             });
 
-            return response()->json($data);
+            // return response()->json($data);
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
