@@ -229,7 +229,7 @@ class Formulario2Controller extends Controller
                     $titulo = $imagen->getClientOriginalName();
 
                     // Fecha actual
-                    $fechaActual = Carbon::now();
+                    $fechaActual = Carbon::now()->format('Y-m-d');
 
                     // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
                     $fecha_actual = str_replace(':', '-', $fechaActual);
