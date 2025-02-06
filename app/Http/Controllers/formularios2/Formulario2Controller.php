@@ -226,7 +226,9 @@ class Formulario2Controller extends Controller
                     }
 
                     $imagen = $request->file('imagen_file');
-                    $titulo = $imagen->getClientOriginalName();
+                    // $titulo = $imagen->getClientOriginalName();
+                    $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // reemplaza los espacios por un -
+
 
                     // Fecha actual
                     $fechaActual = Carbon::now()->format('Y-m-d');
