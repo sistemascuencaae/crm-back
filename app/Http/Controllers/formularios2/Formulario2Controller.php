@@ -12,6 +12,8 @@ use App\Models\crm\TipoCaso;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class Formulario2Controller extends Controller
 {
@@ -49,61 +51,25 @@ class Formulario2Controller extends Controller
         }
     }
 
-    public function addEditFormulario(Request $request)
-    {
-        try {
-            $data = DB::transaction(function () use ($request) {
-                // actualizamos o creamos un formulario
-                $formulario = Formularios::updateOrCreate(
-                    ['id' => $request->formulario['id']], // Si el id existe, lo actualiza, si no lo crea
-                    $request->formulario
-                );
-
-
-                if (count($request->formulario_campo) > 0) {
-                    // Iteramos sobre los campos del formulario
-                    foreach ($request->formulario_campo as $accessData) {
-                        // Asignamos el id del formulario al campo
-                        $accessData['form_id'] = $formulario->id;
-
-                        // Si el campo tiene id, lo actualizamos, si no lo creamos
-                        if ($accessData['id']) {
-                            $accessData['form_control_name'] = $accessData['etiqueta'] . $accessData['id'];
-                            FormularioCampo::where('id', $accessData['id'])->update($accessData);
-                        } else {
-                            $newCampo = FormularioCampo::create($accessData); // Crear si no tiene id
-                            $newCampo->form_control_name = $accessData['etiqueta'] . $newCampo->id;
-                            $newCampo->save();
-                        }
-                    }
-                }
-
-
-                // Código de eliminación de campos
-                if (isset($request->formulario_campo_eliminados) && count($request->formulario_campo_eliminados) > 0) {
-                    foreach ($request->formulario_campo_eliminados as $accessDataEliminar) {
-                        if (isset($accessDataEliminar['id'])) { // conprueba si tiene un id para eliminar
-                            FormularioCampo::where('id', $accessDataEliminar['id'])->delete();
-                        }
-                    }
-                }
-
-
-                // Retornamos la lista de formularios con sus campos
-                return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
-            });
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
-    }
-
     public function deleteFormulario(Request $request, $id)
     {
         try {
             $data = DB::transaction(function () use ($request, $id) {
                 $formulario = Formularios::findOrFail($id);
+
+                if ($formulario->image) {
+
+                    $parametro = DB::table('crm.parametro')
+                        ->where('abreviacion', 'NAS')
+                        ->first();
+
+                    if ($parametro->nas == true) {
+                        Storage::disk('nas')->delete($formulario->image); //Mandamos a borrar la foto de nuestra carpeta NAS
+                    } else {
+                        Storage::disk('local')->delete($formulario->image); //Mandamos a borrar la foto de nuestra carpeta storage
+                    }
+
+                }
 
                 $formulario->delete();
                 return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderByDesc('id')->get();
@@ -198,7 +164,7 @@ class Formulario2Controller extends Controller
     {
         try {
             $data = DB::selectOne("SELECT cli_id, ent_id, ent_identificacion, ent_nombre_comercial, ent_nombre, ent_apellidos, direccion, calle_secundaria, numero_casa, telefono_domicilio, prv_nombre, ctn_nombre, ent_email FROM public.aav_migracion_cliente where ent_identificacion = '$identificacion'");
-            
+
             if (!$data) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no existe con la identificación ' . $identificacion, ''));
             }
@@ -209,7 +175,8 @@ class Formulario2Controller extends Controller
         }
     }
 
-    public function listFormulario2($id){
+    public function listFormulario2($id)
+    {
         try {
             $data = Formularios::where('id', $id)
                 ->with([
@@ -225,4 +192,142 @@ class Formulario2Controller extends Controller
         }
     }
 
+    public function addEditFormulario(Request $request)
+    {
+        try {
+
+            $data = DB::transaction(function () use ($request) {
+
+                // Decodificar formulario y formulario_campo
+                $formulario = json_decode($request->input('formulario'), true);
+                $formulario_campo = json_decode($request->input('formulario_campo'), true);
+                $formulario_campo_eliminados = json_decode($request->input('formulario_campo_eliminados'), true);
+
+                // Crear o actualizar el formulario
+                $formulario = Formularios::updateOrCreate(
+                    ['id' => $formulario['id']],
+                    $formulario
+                );
+
+                // Manejo de la imagen, si existe
+                if ($request->hasFile('imagen_file')) {
+                    $parametro = DB::table('crm.parametro')
+                        ->where('abreviacion', 'NAS')
+                        ->first();
+
+                    if ($formulario->image) {
+                        if ($parametro->nas == true) {
+                            // Eliminamos la imagen anterior del disco NAS
+                            Storage::disk('nas')->delete($formulario->image);
+                        } else {
+                            // Eliminamos la imagen anterior del disco NAS
+                            Storage::disk('local')->delete($formulario->image);
+                        }
+                    }
+
+                    $imagen = $request->file('imagen_file');
+                    $titulo = $imagen->getClientOriginalName();
+
+                    // Fecha actual
+                    $fechaActual = Carbon::now();
+
+                    // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                    $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                    if ($parametro->nas == true) {
+                        $path = Storage::disk('nas')->putFileAs("formularios/formulariosExternos/" . $formulario->id, $imagen, $formulario->id . '-' . $fecha_actual . '-' . $titulo);
+                    } else {
+                        $path = Storage::disk('local')->putFileAs("formularios/formulariosExternos/" . $formulario->id, $imagen, $formulario->id . '-' . $fecha_actual . '-' . $titulo);
+                    }
+
+                    $formulario->image = $path; // Aquí obtenemos la ruta de la imagen en la que se encuentra
+                    $formulario->save(); // Aquí guardo la ruta de la imagen actualizada
+                }
+
+                // Si existen campos de formulario
+                if (count($formulario_campo) > 0) {
+                    foreach ($formulario_campo as $accessData) {
+                        $accessData['form_id'] = $formulario->id;
+
+                        if ($accessData['id']) {
+                            $accessData['form_control_name'] = $accessData['etiqueta'] . $accessData['id'];
+                            FormularioCampo::where('id', $accessData['id'])->update($accessData);
+                        } else {
+                            $newCampo = FormularioCampo::create($accessData);
+                            $newCampo->form_control_name = $accessData['etiqueta'] . $newCampo->id;
+                            $newCampo->save();
+                        }
+                    }
+                }
+
+                // Eliminación de campos
+                if (isset($formulario_campo_eliminados) && count($formulario_campo_eliminados) > 0) {
+                    foreach ($formulario_campo_eliminados as $accessDataEliminar) {
+                        if (isset($accessDataEliminar['id'])) {
+                            FormularioCampo::where('id', $accessDataEliminar['id'])->delete();
+                        }
+                    }
+                }
+
+                // Retornamos la lista de formularios con sus campos
+                return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
+
+
+// public function addEditFormularioOriginal(Request $request)
+//     {
+//         try {
+//             $data = DB::transaction(function () use ($request) {
+//                 // actualizamos o creamos un formulario
+//                 $formulario = Formularios::updateOrCreate(
+//                     ['id' => $request->formulario['id']], // Si el id existe, lo actualiza, si no lo crea
+//                     $request->formulario
+//                 );
+
+
+//                 if (count($request->formulario_campo) > 0) {
+//                     // Iteramos sobre los campos del formulario
+//                     foreach ($request->formulario_campo as $accessData) {
+//                         // Asignamos el id del formulario al campo
+//                         $accessData['form_id'] = $formulario->id;
+
+//                         // Si el campo tiene id, lo actualizamos, si no lo creamos
+//                         if ($accessData['id']) {
+//                             $accessData['form_control_name'] = $accessData['etiqueta'] . $accessData['id'];
+//                             FormularioCampo::where('id', $accessData['id'])->update($accessData);
+//                         } else {
+//                             $newCampo = FormularioCampo::create($accessData); // Crear si no tiene id
+//                             $newCampo->form_control_name = $accessData['etiqueta'] . $newCampo->id;
+//                             $newCampo->save();
+//                         }
+//                     }
+//                 }
+
+
+//                 // Código de eliminación de campos
+//                 if (isset($request->formulario_campo_eliminados) && count($request->formulario_campo_eliminados) > 0) {
+//                     foreach ($request->formulario_campo_eliminados as $accessDataEliminar) {
+//                         if (isset($accessDataEliminar['id'])) { // conprueba si tiene un id para eliminar
+//                             FormularioCampo::where('id', $accessDataEliminar['id'])->delete();
+//                         }
+//                     }
+//                 }
+
+
+//                 // Retornamos la lista de formularios con sus campos
+//                 return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
+//             });
+
+//             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
+//         } catch (Exception $e) {
+//             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+//         }
+//     }
