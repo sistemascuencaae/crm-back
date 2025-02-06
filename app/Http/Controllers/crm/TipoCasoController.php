@@ -45,10 +45,10 @@ class TipoCasoController extends Controller
                 // Si no existe, crea un nuevo registro
                 $tipoCaso = TipoCaso::create($request->all());
                 $resultado = TipoCaso::where('tab_id', $tipoCaso->tab_id)->with('cTipoTarea.dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
-                $form_id = $request->input('form_id');
-                if ($form_id) {
+                $form_id2 = $request->input('form_id2');
+                if ($form_id2) {
                     $formtipocasoId = DB::table('crm.formulario_tipo_caso')->insert([
-                        'form_id' => $form_id,
+                        'form_id' => $form_id2,
                         'tc_id' => $tipoCaso->id,
                         'tab_id' => $request->input('tab_id'),
                     ]);
@@ -136,16 +136,16 @@ class TipoCasoController extends Controller
 
             $tipoCaso->update($request->all());
 
-            $form_id = $request->input('form_id');
+            $form_id2 = $request->input('form_id2');
 
-            if ($form_id) {
+            if ($form_id2) {
 
                 $formtipocaso = FormularioTipoCaso::where('tc_id', $tipoCaso->id)->first();
 
 
                 if ($formtipocaso) {
                     $formtipocaso->update([
-                        'form_id' => $form_id,
+                        'form_id' => $form_id2,
                     ]);
                     //echo 'actualizado';
                     // echo ('$form_id: '.json_encode($form_id));
@@ -154,7 +154,7 @@ class TipoCasoController extends Controller
                     // echo ('$formtipocaso: ' . json_encode($formtipocaso));
                 } else {
                     $formtipocasoId = DB::table('crm.formulario_tipo_caso')->insert([
-                        'form_id' => $form_id,
+                        'form_id' => $form_id2,
                         'tc_id' => $tipoCaso->id,
                         'tab_id' => $request->input('tab_id'),
                     ]);

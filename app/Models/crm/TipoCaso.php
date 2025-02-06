@@ -4,13 +4,12 @@ namespace App\Models\crm;
 
 // use App\Models\crm\TipoCaso;
 
+use App\Models\crm\formularios2\Formularios;
 use App\Models\Formulario\FormularioTipoCaso;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
-use OwenIt\Auditing\Contracts\Auditable;
-use OwenIt\Auditing\Auditable as AuditableTrait;
 
 class TipoCaso extends Model
 {
@@ -21,7 +20,7 @@ class TipoCaso extends Model
 
     protected $table = 'crm.tipo_caso';
 
-    protected $fillable = ["nombre", "estado", "tab_id", "ctt_id"];
+    protected $fillable = ["nombre", "estado", "tab_id", "ctt_id", "form_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -49,4 +48,10 @@ class TipoCaso extends Model
     {
         return $this->belongsTo(FormularioTipoCaso::class, 'id', 'tc_id');
     }
+
+    public function formularios()
+    {
+        return $this->belongsTo(Formularios::class, 'form_id', 'id');
+    }
+
 }

@@ -52,6 +52,7 @@ use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
+use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
@@ -666,7 +667,7 @@ Route::group(["prefix" => "credito"], function ($router) {
 });
 
 //contratos gex felipe
-Route::group( ["prefix" => "gex-contrato"], function ($router) {
+Route::group(["prefix" => "gex-contrato"], function ($router) {
     Route::get('/loadInitialData/{almId}', [ContratoGexController::class, 'loadInitialData']);
     Route::post('/generarContratoCRM', [ContratoGexController::class, 'generarContratoCRM']);
     Route::post('/validarSerieContrato', [ContratoGexController::class, 'validarSerieContrato']); //
@@ -707,6 +708,27 @@ Route::group(["prefix" => "gex"], function ($router) {
     Route::get('/despacharSerie/{serie}/{bodId}', [StockProSerieController::class, 'despacharSerie']);
     Route::get('/reportePorBodegaId/{bodId}', [StockProSerieController::class, 'reportePorBodegaId']);
     Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
+});
+
+Route::group(["prefix" => "formulario"], function ($router) {
+
+    // FORMULARIOS2
+
+    Route::get('/listAll', [Formulario2Controller::class, 'listAll']);
+    Route::get('/listFormByTipoCaso/{tipoCaso_id}', [Formulario2Controller::class, 'listFormByTipoCaso']);
+
+    Route::post('/addEditFormulario', [Formulario2Controller::class, 'addEditFormulario']);
+    Route::delete('/deleteFormulario/{id}', [Formulario2Controller::class, 'deleteFormulario']);
+    Route::get('/listAllSinRelacion', [Formulario2Controller::class, 'listAllSinRelacion']);
+    Route::post('/addCDFormulario', [Formulario2Controller::class, 'addCDFormulario']);
+
+    Route::get('/listCFormulario/{cForm_id}', [Formulario2Controller::class, 'listCFormulario']);
+    Route::post('/editValorRespuesta/{id}', [Formulario2Controller::class, 'editValorRespuesta']); // Editar
+    
+    Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
+    
+    Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
+
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
