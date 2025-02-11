@@ -376,7 +376,6 @@ class Formulario2Controller extends Controller
     }
 }
 
-
     private function uploadImage($request, $formulario, $imageField, $imageColumn)
     {
         if ($request->hasFile($imageField)) {
@@ -415,18 +414,6 @@ class Formulario2Controller extends Controller
         }
     }
     
-    public function listArchivos2()
-    {
-        try {
-            // Select directo a una funcion de la base de datos
-            $data = DB::select("SELECT * FROM crm.archivos2");
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-        }
-    }
-
 }
 
 
