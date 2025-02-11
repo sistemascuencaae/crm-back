@@ -18,6 +18,7 @@ class Formularios extends Model
         "footer",
         "color",
         "image",
+        "image_company",
     ];
 
     public function setCreatedAtAttribute($value)

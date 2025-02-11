@@ -728,6 +728,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
     
     Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
+    Route::get('/listArchivos2', [Formulario2Controller::class, 'listArchivos2']);
 
 });
 
