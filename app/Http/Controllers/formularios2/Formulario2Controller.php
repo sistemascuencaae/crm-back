@@ -8,6 +8,7 @@ use App\Models\crm\formularios2\CFormularios;
 use App\Models\crm\formularios2\DFormularios;
 use App\Models\crm\formularios2\FormularioCampo;
 use App\Models\crm\formularios2\Formularios;
+use App\Models\crm\formularios2\Secciones;
 use App\Models\crm\TipoCaso;
 use Exception;
 use Illuminate\Http\Request;
@@ -318,70 +319,164 @@ class Formulario2Controller extends Controller
     //     }
     // }
 
-    
-    
+
+
     public function addEditFormulario(Request $request)
-{
-    try {
-        $data = DB::transaction(function () use ($request) {
-            // Decodificar formulario y formulario_campo
-            $formulario = json_decode($request->input('formulario'), true);
-            $formulario_campo = json_decode($request->input('formulario_campo'), true);
-            $formulario_campo_eliminados = json_decode($request->input('formulario_campo_eliminados'), true);
+    {
+        try {
+            $data = DB::transaction(function () use ($request) {
+                // Decodificar formulario
+                $formulario = json_decode($request->input('formulario'), true);
+                // $formulario_campo_eliminados = json_decode($request->input('formulario_campo_eliminados'), true);
 
-            // Crear o actualizar el formulario
-            $formulario = Formularios::updateOrCreate(
-                ['id' => $formulario['id']],
-                $formulario
-            );
+                // Crear o actualizar el formulario
+                $formularioGuardado = Formularios::updateOrCreate(
+                    ['id' => $formulario['id']],
+                    $formulario
+                );
 
-            // Subir la imagen de fondo
-            $this->uploadImage($request, $formulario, 'imagen_file', 'image');
 
-            // Subir la imagen del logo
-            $this->uploadImage($request, $formulario, 'imagen_file2', 'image_company');
+                // ----------------------------------
+                // ----------------------------------
 
-            // Manejo de los campos de formulario
-            if (count($formulario_campo) > 0) {
-                foreach ($formulario_campo as $accessData) {
-                    $accessData['form_id'] = $formulario->id;
+                if ($request->hasFile('imagen_file') || $request->hasFile('imagen_file2')) {
+                    $parametro = DB::table('crm.parametro')
+                        ->where('abreviacion', 'NAS')
+                        ->first();
+                }
 
-                    if ($accessData['id']) {
-                        $accessData['form_control_name'] = $accessData['etiqueta'] . $accessData['id'];
-                        FormularioCampo::where('id', $accessData['id'])->update($accessData);
+                // Pregunto si existe
+                if ($request->hasFile('imagen_file')) {
+
+                    if ($formularioGuardado->image) {
+                        if ($parametro->nas == true) {
+                            // Eliminamos la imagen anterior del NAS
+                            Storage::disk('nas')->delete($formularioGuardado->image);
+                        } else {
+                            // Eliminamos la imagen anterior local
+                            Storage::disk('local')->delete($formularioGuardado->image);
+                        }
+                    }
+
+                    $imagen = $request->file('imagen_file');
+                    $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // reemplaza los espacios por un -
+
+                    // Fecha actual
+                    $fechaActual = Carbon::now()->format('Y-m-d');
+
+                    // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                    $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                    if ($parametro->nas == true) {
+                        $path = Storage::disk('nas')->putFileAs("formularios/formulariosExternos/" . $formularioGuardado->id, $imagen, $formularioGuardado->id . '-' . $fecha_actual . '-' . $titulo);
                     } else {
-                        $newCampo = FormularioCampo::create($accessData);
-                        $newCampo->form_control_name = $accessData['etiqueta'] . $newCampo->id;
-                        $newCampo->save();
+                        $path = Storage::disk('local')->putFileAs("formularios/formulariosExternos/" . $formularioGuardado->id, $imagen, $formularioGuardado->id . '-' . $fecha_actual . '-' . $titulo);
+                    }
+
+                    $formularioGuardado->image = $path; // Aquí obtenemos la ruta de la imagen en la que se encuentra
+                    $formularioGuardado->save(); // Aquí guardo la ruta de la imagen actualizada
+                }
+
+
+                if ($request->hasFile('imagen_file2')) { // image del logo de la empresa
+
+                    if ($formularioGuardado->image_company) {
+                        if ($parametro->nas == true) {
+                            // Eliminamos la imagen anterior del NAS
+                            Storage::disk('nas')->delete($formularioGuardado->image_company);
+                        } else {
+                            // Eliminamos la imagen anterior local
+                            Storage::disk('local')->delete($formularioGuardado->image_company);
+                        }
+                    }
+
+                    $imagen2 = $request->file('imagen_file2');
+                    $titulo = str_replace(' ', '-', $imagen2->getClientOriginalName()); // reemplaza los espacios por un -
+
+                    // Fecha actual
+                    $fechaActual = Carbon::now()->format('Y-m-d');
+
+                    // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                    $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                    if ($parametro->nas == true) {
+                        $path = Storage::disk('nas')->putFileAs("formularios/formulariosExternos/" . $formularioGuardado->id, $imagen2, $formularioGuardado->id . '-' . $fecha_actual . '-' . $titulo);
+                    } else {
+                        $path = Storage::disk('local')->putFileAs("formularios/formulariosExternos/" . $formularioGuardado->id, $imagen2, $formularioGuardado->id . '-' . $fecha_actual . '-' . $titulo);
+                    }
+
+                    $formularioGuardado->image_company = $path; // Aquí obtenemos la ruta de la imagen en la que se encuentra
+                    $formularioGuardado->save(); // Aquí guardo la ruta de la imagen actualizada
+                }
+
+                // ----------------------------------
+                // ----------------------------------
+
+
+                // echo json_encode($formularioGuardado);
+                // Ahora que tenemos el formulario guardado con un ID, podemos asignar el form_id a las secciones
+                foreach ($formulario['secciones'] ?? [] as $seccionData) {
+                    // Asegúrate de usar el ID correcto para el formulario guardado
+                    if (empty($seccionData['id'])) {
+                        // Crear nueva sección si no existe ID
+                        $seccion = Secciones::create([
+                            'nombre' => $seccionData['nombre'],
+                            'descripcion' => $seccionData['descripcion'],
+                            'orden' => $seccionData['orden'],
+                            'estado' => $seccionData['estado'],
+                            'form_id' => $formularioGuardado->id, // Asigna el form_id del formulario guardado
+                            // Otros campos necesarios
+                        ]);
+                    } else {
+                        // Actualizar o crear sección si ya existe ID
+                        $seccion = Secciones::updateOrCreate(
+                            ['id' => $seccionData['id']], // Buscar por ID
+                            $seccionData // Datos para actualizar
+                        );
+                    }
+
+                    // Si hay campos dentro de la sección, creamos o actualizamos los campos
+                    if (isset($seccionData['campos']) && count($seccionData['campos']) > 0) {
+                        foreach ($seccionData['campos'] as $campoData) {
+                            $campoData['form_id'] = $formularioGuardado->id; // Usar el ID guardado del formulario
+                            $campoData['seccion_id'] = $seccion->id; // Asociar el campo con la sección correspondiente
+
+                            // Asegurarse de que opciones_campo sea un string
+                            if (isset($campoData['opciones_campo']) && is_array($campoData['opciones_campo'])) {
+                                // Si por alguna razón opciones_campo es un array, convertirlo a un string
+                                $campoData['opciones_campo'] = implode('ൠ', $campoData['opciones_campo']);
+                            }
+
+                            // Si el ID del campo es null, se crea; si ya existe, se actualiza
+                            if (empty($campoData['id'])) {
+                                // Crear un nuevo campo si no tiene ID
+                                FormularioCampo::create($campoData);
+                            } else {
+                                // Actualizar el campo si ya existe el ID
+                                FormularioCampo::updateOrCreate(['id' => $campoData['id']], $campoData);
+                            }
+                        }
                     }
                 }
-            }
 
-            // Eliminación de campos
-            if (isset($formulario_campo_eliminados) && count($formulario_campo_eliminados) > 0) {
-                foreach ($formulario_campo_eliminados as $accessDataEliminar) {
-                    if (isset($accessDataEliminar['id'])) {
-                        FormularioCampo::where('id', $accessDataEliminar['id'])->delete();
-                    }
-                }
-            }
 
-            // Retornamos la lista de formularios con sus campos
-            return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
-        });
+                // Retornar los formularios guardados, excluyendo el formulario con id 1
+                return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
+            });
 
-        return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
-    } catch (Exception $e) {
-        return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
+        }
     }
-}
+
 
     private function uploadImage($request, $formulario, $imageField, $imageColumn)
     {
         if ($request->hasFile($imageField)) {
             // Obtener el parámetro NAS
             $parametro = DB::table('crm.parametro')->where('abreviacion', 'NAS')->first();
-    
+
             // Eliminar imagen anterior si existe
             if ($formulario->$imageColumn) {
                 if ($parametro->nas == true) {
@@ -392,28 +487,28 @@ class Formulario2Controller extends Controller
                     Storage::disk('local')->delete($formulario->$imageColumn);
                 }
             }
-    
+
             // Obtener la nueva imagen
             $imagen = $request->file($imageField);
             $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
-    
+
             // Fecha actual para agregar a la imagen
             $fechaActual = Carbon::now()->format('Y-m-d');
             $fecha_actual = str_replace(':', '-', $fechaActual); // Reemplazar ':' para evitar problemas en los nombres de archivo
-    
+
             // Definir la ruta de almacenamiento
             if ($parametro->nas == true) {
                 $path = Storage::disk('nas')->putFileAs("formularios/formulariosExternos/" . $formulario->id, $imagen, $formulario->id . '-' . $fecha_actual . '-' . $titulo);
             } else {
                 $path = Storage::disk('local')->putFileAs("formularios/formulariosExternos/" . $formulario->id, $imagen, $formulario->id . '-' . $fecha_actual . '-' . $titulo);
             }
-    
+
             // Actualizar la columna correspondiente con la nueva ruta de la imagen
             $formulario->$imageColumn = $path;
             $formulario->save();
         }
     }
-    
+
 }
 
 
