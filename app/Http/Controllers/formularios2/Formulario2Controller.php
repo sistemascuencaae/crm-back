@@ -65,28 +65,84 @@ class Formulario2Controller extends Controller
         }
     }
 
+    // public function deleteFormulario(Request $request, $id)
+    // {
+    //     try {
+    //         $data = DB::transaction(function () use ($request, $id) {
+    //             $formulario = Formularios::findOrFail($id);
+
+    //             if ($formulario->image || $formulario->image_company) {
+    //                 $parametro = DB::table('crm.parametro')
+    //                     ->where('abreviacion', 'NAS')
+    //                     ->first();
+    //             }
+
+    //             if ($formulario->image) {
+    //                 if ($parametro->nas == true) {
+    //                     Storage::disk('nas')->delete($formulario->image); //Mandamos a borrar la foto de nuestra carpeta NAS
+    //                 } else {
+    //                     Storage::disk('local')->delete($formulario->image); //Mandamos a borrar la foto de nuestra carpeta storage
+    //                 }
+    //             }
+
+    //             if ($formulario->image_company) {
+    //                 if ($parametro->nas == true) {
+    //                     Storage::disk('nas')->delete($formulario->image_company); //Mandamos a borrar la foto de nuestra carpeta NAS
+    //                 } else {
+    //                     Storage::disk('local')->delete($formulario->image_company); //Mandamos a borrar la foto de nuestra carpeta storage
+    //                 }
+    //             }
+
+    //             $formulario->delete();
+    //             return Formularios::where('id', '!=', 1)->with('secciones.campos')->orderBy('id', 'asc')->get();
+    //         });
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+    //     }
+    // }
+
+
     public function deleteFormulario(Request $request, $id)
     {
         try {
             $data = DB::transaction(function () use ($request, $id) {
                 $formulario = Formularios::findOrFail($id);
 
-                if ($formulario->image) {
-
+                if ($formulario->image || $formulario->image_company) {
                     $parametro = DB::table('crm.parametro')
                         ->where('abreviacion', 'NAS')
                         ->first();
+                }
 
+                if ($formulario->image) {
                     if ($parametro->nas == true) {
                         Storage::disk('nas')->delete($formulario->image); //Mandamos a borrar la foto de nuestra carpeta NAS
                     } else {
                         Storage::disk('local')->delete($formulario->image); //Mandamos a borrar la foto de nuestra carpeta storage
                     }
+                }
 
+                if ($formulario->image_company) {
+                    if ($parametro->nas == true) {
+                        Storage::disk('nas')->delete($formulario->image_company); //Mandamos a borrar la foto de nuestra carpeta NAS
+                    } else {
+                        Storage::disk('local')->delete($formulario->image_company); //Mandamos a borrar la foto de nuestra carpeta storage
+                    }
+                }
+
+                // Eliminar campos asociados a las secciones del formulario
+                foreach ($formulario->secciones as $seccion) {
+                    // Eliminar los campos asociados a la sección
+                    FormularioCampo::where('seccion_id', $seccion->id)->delete();
+
+                    // Eliminar la sección
+                    Secciones::where('id', $seccion->id)->delete();
                 }
 
                 $formulario->delete();
-                return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderByDesc('id')->get();
+                return Formularios::where('id', '!=', 1)->with('secciones.campos')->orderBy('id', 'asc')->get();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
@@ -340,7 +396,8 @@ class Formulario2Controller extends Controller
             $data = DB::transaction(function () use ($request) {
                 // Decodificar formulario
                 $formulario = json_decode($request->input('formulario'), true);
-                // $formulario_campo_eliminados = json_decode($request->input('formulario_campo_eliminados'), true);
+                $campos_eliminados = json_decode($request->input('campos_eliminados'), true);
+                $secciones_eliminados = json_decode($request->input('secciones_eliminados'), true);
 
                 // Crear o actualizar el formulario
                 $formularioGuardado = Formularios::updateOrCreate(
@@ -468,6 +525,29 @@ class Formulario2Controller extends Controller
                                 // Actualizar el campo si ya existe el ID
                                 FormularioCampo::updateOrCreate(['id' => $campoData['id']], $campoData);
                             }
+                        }
+                    }
+                }
+
+
+                // Eliminación de campos primero
+                if (isset($campos_eliminados) && count($campos_eliminados) > 0) {
+                    foreach ($campos_eliminados as $accessDataEliminar) {
+                        if (isset($accessDataEliminar['id'])) {
+                            FormularioCampo::where('id', $accessDataEliminar['id'])->delete();
+                        }
+                    }
+                }
+
+                // Eliminación de secciones después de los campos
+                if (isset($secciones_eliminados) && count($secciones_eliminados) > 0) {
+                    foreach ($secciones_eliminados as $seccionDataEliminar) {
+                        if (isset($seccionDataEliminar['id'])) {
+                            // Primero asegurarte de que no hay campos asociados a la sección antes de eliminarla
+                            FormularioCampo::where('seccion_id', $seccionDataEliminar['id'])->delete();
+
+                            // Eliminar la sección
+                            Secciones::where('id', $seccionDataEliminar['id'])->delete();
                         }
                     }
                 }
