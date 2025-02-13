@@ -22,12 +22,25 @@ class Formulario2Controller extends Controller
     {
     }
 
+    // public function listAll()
+    // // Este metodo se una para listar todos los formularios en el CRUD de formularios dinamicos
+    // {
+    //     try {
+    //         // Excluimos el id 1 de la tabla crm.formularios, porque el id 1 es nuestro default
+    //         $data = Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
+    //     }
+    // }
+
     public function listAll()
     // Este metodo se una para listar todos los formularios en el CRUD de formularios dinamicos
     {
         try {
             // Excluimos el id 1 de la tabla crm.formularios, porque el id 1 es nuestro default
-            $data = Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
+            $data = Formularios::where('id', '!=', 1)->with('secciones.campos')->orderBy('id', 'asc')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
@@ -461,7 +474,7 @@ class Formulario2Controller extends Controller
 
 
                 // Retornar los formularios guardados, excluyendo el formulario con id 1
-                return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
+                return Formularios::where('id', '!=', 1)->with('secciones.campos')->orderBy('id', 'asc')->get();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));

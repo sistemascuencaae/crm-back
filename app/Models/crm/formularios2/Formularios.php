@@ -32,8 +32,13 @@ class Formularios extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function formulario_campo()
+    // public function campos()
+    // {
+    //     return $this->hasMany(FormularioCampo::class, "form_id", "id");
+    // }
+
+    public function secciones()
     {
-        return $this->hasMany(FormularioCampo::class, "form_id", "id");
+        return $this->hasMany(Secciones::class, "form_id", "id");
     }
 }

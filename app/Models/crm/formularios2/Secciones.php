@@ -35,4 +35,9 @@ class Secciones extends Model
     //     return $this->hasMany(FormularioCampo::class, "form_id", "id");
     // }
 
+    public function campos()
+    {
+        return $this->hasMany(FormularioCampo::class, "seccion_id", "id");
+    }
+
 }
