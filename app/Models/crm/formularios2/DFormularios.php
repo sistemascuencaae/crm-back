@@ -14,7 +14,8 @@ class DFormularios extends Model
     protected $fillable = [
         "cform_id",
         "fc_id",
-        "valor"
+        "valor",
+        "seccion_id",
     ];
 
     public function setCreatedAtAttribute($value)

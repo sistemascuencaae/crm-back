@@ -165,34 +165,68 @@ class Formulario2Controller extends Controller
         }
     }
 
+    // public function addCDFormulario(Request $request)
+    // {
+    //     try {
+    //         $data = DB::transaction(function () use ($request) {
+
+    //             $cFormulario = CFormularios::create($request->all());
+
+    //             // aqui es donmde yo debo de obtener el cform_id para guardar en el DFormulario
+
+    //             if (count($request->dFormulario) > 0) {
+    //                 // Iteramos sobre los campos del formulario
+    //                 foreach ($request->dFormulario as $item) {
+    //                     // Asignamos el id del formulario al campo
+    //                     $item['cform_id'] = $cFormulario->id;
+
+    //                     DFormularios::create($item); // Crear si no tiene id
+    //                 }
+    //             }
+
+    //             return $cFormulario->id;
+    //         });
+
+    //         // return response()->json($data);
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', $data));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+    //     }
+    // }
+
+
     public function addCDFormulario(Request $request)
     {
         try {
             $data = DB::transaction(function () use ($request) {
-
+    
+                // Crear el formulario principal en CFormularios
                 $cFormulario = CFormularios::create($request->all());
-
-                // aqui es donmde yo debo de obtener el cform_id para guardar en el DFormulario
-
+    
+                // Aquí estamos guardando los datos del formulario en la tabla DFormularios
                 if (count($request->dFormulario) > 0) {
                     // Iteramos sobre los campos del formulario
                     foreach ($request->dFormulario as $item) {
-                        // Asignamos el id del formulario al campo
+                        // Asignamos el id del formulario recién creado
                         $item['cform_id'] = $cFormulario->id;
-
-                        DFormularios::create($item); // Crear si no tiene id
+                        
+                        // Insertamos el campo en la tabla DFormularios
+                        DFormularios::create($item); // Insertamos los datos del campo
                     }
                 }
-
-                return $cFormulario->id;
+    
+                return $cFormulario->id; // Retornamos el ID del formulario recién creado
             });
-
-            // return response()->json($data);
+    
+            // Respondemos con un mensaje de éxito
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', $data));
         } catch (Exception $e) {
+            // En caso de error, capturamos la excepción y respondemos con el error
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+    
+
 
     public function listCFormulario($form_id)
     {
@@ -248,10 +282,23 @@ class Formulario2Controller extends Controller
     public function listFormulario2($id)
     {
         try {
+            // $data = Formularios::where('id', $id)
+            //     ->with([
+            //         'secciones.campos' => function ($query) {
+            //             $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
+            //         }
+            //     ])
+            //     ->first();
+
             $data = Formularios::where('id', $id)
                 ->with([
-                    'formulario_campo' => function ($query) {
-                        $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
+                    'secciones' => function ($query) {
+                        // Ordena las secciones por el atributo 'orden'
+                        $query->orderBy('orden', 'asc');
+                    },
+                    'secciones.campos' => function ($query) {
+                        // Ordena los campos por el atributo 'orden' dentro de cada sección
+                        $query->orderBy('orden', 'asc');
                     }
                 ])
                 ->first();
@@ -517,14 +564,20 @@ class Formulario2Controller extends Controller
                                 $campoData['opciones_campo'] = implode('ൠ', $campoData['opciones_campo']);
                             }
 
+
                             // Si el ID del campo es null, se crea; si ya existe, se actualiza
                             if (empty($campoData['id'])) {
                                 // Crear un nuevo campo si no tiene ID
-                                FormularioCampo::create($campoData);
+                                $newCampo = FormularioCampo::create($campoData);
+                                $newCampo->form_control_name = str_replace(' ', '', $campoData['etiqueta']) . $newCampo->id;
+                                $newCampo->save();
                             } else {
                                 // Actualizar el campo si ya existe el ID
+                                $campoData['form_control_name'] = str_replace(' ', '', $campoData['etiqueta']) . $campoData['id'];
                                 FormularioCampo::updateOrCreate(['id' => $campoData['id']], $campoData);
                             }
+
+
                         }
                     }
                 }
