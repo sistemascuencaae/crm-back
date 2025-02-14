@@ -316,26 +316,19 @@ class Formulario2Controller extends Controller
         }
     }
 
+    // Este listar se llama en el formulario externo
     public function listFormulario2($id)
     {
         try {
-            // $data = Formularios::where('id', $id)
-            //     ->with([
-            //         'secciones.campos' => function ($query) {
-            //             $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
-            //         }
-            //     ])
-            //     ->first();
-
             $data = Formularios::where('id', $id)
                 ->with([
                     'secciones' => function ($query) {
-                        // Ordena las secciones por el atributo 'orden'
-                        $query->orderBy('orden', 'asc');
+                        // Filtra las secciones donde el estado sea true y ordena por 'orden'
+                        $query->where('estado', true)->orderBy('orden', 'asc');
                     },
                     'secciones.campos' => function ($query) {
-                        // Ordena los campos por el atributo 'orden' dentro de cada sección
-                        $query->orderBy('orden', 'asc');
+                        // Filtra los campos donde el estado sea true y ordena por 'orden'
+                        $query->where('estado', true)->orderBy('orden', 'asc');
                     }
                 ])
                 ->first();
@@ -645,18 +638,18 @@ class Formulario2Controller extends Controller
 
                 // Retornar los formularios guardados, excluyendo el formulario con id 1
                 return Formularios::where('id', '!=', 1)->with([
-                                            'secciones' => function ($query) {
-                                                // Ordena las secciones por el atributo 'orden'
-                                                $query->orderBy('orden', 'asc');
-                                            },
-                                            'secciones.campos' => function ($query) {
-                                                // Ordena los campos dentro de cada sección por el atributo 'orden'
-                                                $query->orderBy('orden', 'asc');
-                                            }
-                                        ])
-                                            ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
-                                            ->get();
-                        });
+                    'secciones' => function ($query) {
+                        // Ordena las secciones por el atributo 'orden'
+                        $query->orderBy('orden', 'asc');
+                    },
+                    'secciones.campos' => function ($query) {
+                        // Ordena los campos dentro de cada sección por el atributo 'orden'
+                        $query->orderBy('orden', 'asc');
+                    }
+                ])
+                    ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
+                    ->get();
+            });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
         } catch (Exception $e) {
