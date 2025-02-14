@@ -17,6 +17,7 @@ class Secciones extends Model
         "orden",
         "estado",
         "form_id",
+        "espacios",
     ];
 
     public function setCreatedAtAttribute($value)

@@ -48,13 +48,36 @@ class Formulario2Controller extends Controller
         }
     }
 
+    // public function listFormByTipoCaso($tipoCaso_id)
+    // {
+    //     try {
+    //         $data = TipoCaso::where('id', $tipoCaso_id)
+    //             ->with([
+    //                 'formularios.formulario_campo' => function ($query) {
+    //                     $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
+    //                 }
+    //             ])
+    //             ->first();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
+    //     }
+    // }
+
+
     public function listFormByTipoCaso($tipoCaso_id)
     {
         try {
             $data = TipoCaso::where('id', $tipoCaso_id)
                 ->with([
-                    'formularios.formulario_campo' => function ($query) {
-                        $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
+                    'formularios.secciones' => function ($query) {
+                        // Ordena las secciones por el atributo 'orden'
+                        $query->orderBy('orden', 'asc');
+                    },
+                    'formularios.secciones.campos' => function ($query) {
+                        // Ordena los campos dentro de cada sección por el atributo 'orden'
+                        $query->orderBy('orden', 'asc');
                     }
                 ])
                 ->first();
@@ -199,25 +222,25 @@ class Formulario2Controller extends Controller
     {
         try {
             $data = DB::transaction(function () use ($request) {
-    
+
                 // Crear el formulario principal en CFormularios
                 $cFormulario = CFormularios::create($request->all());
-    
+
                 // Aquí estamos guardando los datos del formulario en la tabla DFormularios
                 if (count($request->dFormulario) > 0) {
                     // Iteramos sobre los campos del formulario
                     foreach ($request->dFormulario as $item) {
                         // Asignamos el id del formulario recién creado
                         $item['cform_id'] = $cFormulario->id;
-                        
+
                         // Insertamos el campo en la tabla DFormularios
                         DFormularios::create($item); // Insertamos los datos del campo
                     }
                 }
-    
+
                 return $cFormulario->id; // Retornamos el ID del formulario recién creado
             });
-    
+
             // Respondemos con un mensaje de éxito
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', $data));
         } catch (Exception $e) {
@@ -225,8 +248,6 @@ class Formulario2Controller extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-    
-
 
     public function listCFormulario($form_id)
     {
