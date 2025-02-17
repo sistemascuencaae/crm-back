@@ -88,12 +88,12 @@ class Formulario2Controller extends Controller
             $data = TipoCaso::where('id', $tipoCaso_id)
                 ->with([
                     'formularios.secciones' => function ($query) {
-                        // Ordena las secciones por el atributo 'orden'
-                        $query->orderBy('orden', 'asc');
+                        // Filtra las secciones donde el estado sea true y ordena por 'orden'
+                        $query->where('estado', true)->orderBy('orden', 'asc');
                     },
                     'formularios.secciones.campos' => function ($query) {
-                        // Ordena los campos dentro de cada sección por el atributo 'orden'
-                        $query->orderBy('orden', 'asc');
+                        // Filtra los campos donde el estado sea true y ordena por 'orden'
+                        $query->where('estado', true)->orderBy('orden', 'asc');
                     }
                 ])
                 ->first();
@@ -270,8 +270,17 @@ class Formulario2Controller extends Controller
         try {
             $data = CFormularios::where('id', $form_id)
                 ->with([
-                    'formulario.formulario_campo.respuesta' => function ($query) {
-                        $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
+                    'formulario.secciones' => function ($query) {
+                        // Ordenar las secciones por el atributo 'orden'
+                        $query->where('estado', true)->orderBy('orden', 'asc');
+                    },
+                    'formulario.secciones.campos' => function ($query) {
+                        // Ordenar los campos por el atributo 'orden'
+                        $query->where('estado', true)->orderBy('orden', 'asc');
+                    },
+                    'formulario.secciones.campos.respuesta' => function ($query) {
+                        // Ordenar las respuestas por 'id'
+                        $query->orderBy('id', 'asc');
                     }
                 ])
                 ->first();
@@ -697,54 +706,3 @@ class Formulario2Controller extends Controller
     }
 
 }
-
-
-// public function addEditFormularioOriginal(Request $request)
-//     {
-//         try {
-//             $data = DB::transaction(function () use ($request) {
-//                 // actualizamos o creamos un formulario
-//                 $formulario = Formularios::updateOrCreate(
-//                     ['id' => $request->formulario['id']], // Si el id existe, lo actualiza, si no lo crea
-//                     $request->formulario
-//                 );
-
-
-//                 if (count($request->formulario_campo) > 0) {
-//                     // Iteramos sobre los campos del formulario
-//                     foreach ($request->formulario_campo as $accessData) {
-//                         // Asignamos el id del formulario al campo
-//                         $accessData['form_id'] = $formulario->id;
-
-//                         // Si el campo tiene id, lo actualizamos, si no lo creamos
-//                         if ($accessData['id']) {
-//                             $accessData['form_control_name'] = $accessData['etiqueta'] . $accessData['id'];
-//                             FormularioCampo::where('id', $accessData['id'])->update($accessData);
-//                         } else {
-//                             $newCampo = FormularioCampo::create($accessData); // Crear si no tiene id
-//                             $newCampo->form_control_name = $accessData['etiqueta'] . $newCampo->id;
-//                             $newCampo->save();
-//                         }
-//                     }
-//                 }
-
-
-//                 // Código de eliminación de campos
-//                 if (isset($request->formulario_campo_eliminados) && count($request->formulario_campo_eliminados) > 0) {
-//                     foreach ($request->formulario_campo_eliminados as $accessDataEliminar) {
-//                         if (isset($accessDataEliminar['id'])) { // conprueba si tiene un id para eliminar
-//                             FormularioCampo::where('id', $accessDataEliminar['id'])->delete();
-//                         }
-//                     }
-//                 }
-
-
-//                 // Retornamos la lista de formularios con sus campos
-//                 return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
-//             });
-
-//             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
-//         } catch (Exception $e) {
-//             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-//         }
-//     }
