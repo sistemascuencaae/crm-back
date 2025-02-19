@@ -733,6 +733,8 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
     Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
     Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
+    Route::get('/listFormulariosByUsuId/{usu_id}', [Formulario2UsuariosController::class, 'listFormulariosByUsuId']); // Formularios Usuarios
+    Route::get('/listRespuestasByFormId/{form_id}', [Formulario2UsuariosController::class, 'listRespuestasByFormId']); // Formularios Usuarios
 
 });
 

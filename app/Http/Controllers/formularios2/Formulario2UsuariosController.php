@@ -30,39 +30,6 @@ class Formulario2UsuariosController extends Controller
         }
     }
 
-
-    // public function addEditFormulariosUsuarios(Request $request)
-    // {
-    //     try {
-    //         $data = DB::transaction(function () use ($request) {
-
-    //             // Iteramos sobre cada item del array que nos llegó
-    //             foreach ($request->all() as $item) {
-
-    //                 // Insertamos cada registro en la tabla 'formularios_usuarios'
-    //                 FormulariosUsuarios::create([
-    //                     'form_id' => $item['form_id'],  // El id del formulario
-    //                     'usu_id' => $item['usu_id'],   // El id del usuario
-    //                 ]);
-    //             }
-
-    //             return Formularios::where('id', '!=', 1)
-    //                 ->with('formularioUsuarios.usuario')
-    //                 ->orderBy('id', 'desc') // Esto ordena los formularios por el ID
-    //                 ->get();
-    //         });
-
-    //         // Si la transacción fue exitosa, respondemos con un mensaje de éxito.
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', $data));
-    //     } catch (Exception $e) {
-    //         // En caso de error, respondemos con un mensaje de error
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-    //     }
-    // }
-
-
-
-
     public function addEditFormulariosUsuarios(Request $request)
     {
         try {
@@ -91,9 +58,9 @@ class Formulario2UsuariosController extends Controller
 
                 // Si todo va bien, obtenemos los formularios actualizados
                 return Formularios::where('id', '!=', 1)
-                ->with('formularioUsuarios.usuario')
-                // ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
-                ->get();
+                    ->with('formularioUsuarios.usuario')
+                    // ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
+                    ->get();
             });
 
             // Si la transacción fue exitosa, respondemos con un mensaje de éxito
@@ -104,8 +71,30 @@ class Formulario2UsuariosController extends Controller
         }
     }
 
+    public function listFormulariosByUsuId($usu_id)
+    {
+        try {
+            $data = FormulariosUsuarios::where('usu_id', $usu_id)
+                ->with('formulario')
+                ->get();
 
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
+        }
+    }
 
+    public function listRespuestasByFormId($form_id)
+    {
+        try {
+            $query = DB::selectOne("SELECT * FROM crm.af_obtener_datos_formulario9($form_id)");
 
+            $data = json_decode($query->resultado, true);  // Convierto para que me devuelva el array de las respuestas, porque la funcion de LEO devuelve un string
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
+        }
+    }
 
 }

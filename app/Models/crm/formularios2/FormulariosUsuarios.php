@@ -33,9 +33,9 @@ class FormulariosUsuarios extends Model
         return $this->belongsTo(User::class, "usu_id", "id");
     }
 
-    // public function formulario()
-    // {
-    //     return $this->belongsTo(Formularios::class, "form_id", "id");
-    // }
+    public function formulario()
+    {
+        return $this->belongsTo(Formularios::class, "form_id", "id");
+    }
 
 }
