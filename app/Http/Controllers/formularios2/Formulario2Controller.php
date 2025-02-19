@@ -8,6 +8,7 @@ use App\Models\crm\formularios2\CFormularios;
 use App\Models\crm\formularios2\DFormularios;
 use App\Models\crm\formularios2\FormularioCampo;
 use App\Models\crm\formularios2\Formularios;
+use App\Models\crm\formularios2\FormulariosUsuarios;
 use App\Models\crm\formularios2\Secciones;
 use App\Models\crm\TipoCaso;
 use Exception;
@@ -704,5 +705,4 @@ class Formulario2Controller extends Controller
             $formulario->save();
         }
     }
-
 }

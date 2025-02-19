@@ -54,6 +54,7 @@ use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
+use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
@@ -729,6 +730,9 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
     
     Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
+
+    Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
+    Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
 
 });
 

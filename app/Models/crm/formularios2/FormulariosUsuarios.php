@@ -2,23 +2,19 @@
 
 namespace App\Models\crm\formularios2;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Formularios extends Model
+class FormulariosUsuarios extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.formularios';
+    protected $table = 'crm.formularios_usuarios';
     protected $fillable = [
-        "nombre",
-        "descripcion",
-        "header",
-        "footer",
-        "color",
-        "image",
-        "image_company",
+        "form_id",
+        "usu_id",
     ];
 
     public function setCreatedAtAttribute($value)
@@ -31,14 +27,15 @@ class Formularios extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-    
-    public function secciones()
+
+    public function usuario()
     {
-        return $this->hasMany(Secciones::class, "form_id", "id");
+        return $this->belongsTo(User::class, "usu_id", "id");
     }
 
-    public function formularioUsuarios()
-    {
-        return $this->hasMany(FormulariosUsuarios::class, "form_id", "id");
-    }
+    // public function formulario()
+    // {
+    //     return $this->belongsTo(Formularios::class, "form_id", "id");
+    // }
+
 }
