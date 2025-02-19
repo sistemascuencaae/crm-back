@@ -88,6 +88,10 @@ class Formulario2Controller extends Controller
         try {
             $data = TipoCaso::where('id', $tipoCaso_id)
                 ->with([
+                    'formularios' => function ($query) {
+                        // Filtra las secciones donde el estado sea true y ordena por 'orden'
+                        $query->where('estado', true);
+                    },
                     'formularios.secciones' => function ($query) {
                         // Filtra las secciones donde el estado sea true y ordena por 'orden'
                         $query->where('estado', true)->orderBy('orden', 'asc');
@@ -99,7 +103,12 @@ class Formulario2Controller extends Controller
                 ])
                 ->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+                if ($data->formularios) {
+                    return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+                } else {
+                    return response()->json(RespuestaApi::returnResultado('error', 'Formulario inactivo, por favor, comuniquese con el administrador.', ''));
+                }
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
@@ -287,6 +296,7 @@ class Formulario2Controller extends Controller
                 ->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
@@ -330,7 +340,7 @@ class Formulario2Controller extends Controller
     public function listFormulario2($id)
     {
         try {
-            $data = Formularios::where('id', $id)
+            $data = Formularios::where('id', $id)->where('estado', true)
                 ->with([
                     'secciones' => function ($query) {
                         // Filtra las secciones donde el estado sea true y ordena por 'orden'
