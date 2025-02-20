@@ -275,25 +275,25 @@ class Formulario2Controller extends Controller
         }
     }
 
-    public function listCFormulario($form_id)
+    public function listCFormulario($cform_id)
     {
         try {
-            $data = CFormularios::where('id', $form_id)
-                ->with([
-                    'formulario.secciones' => function ($query) {
-                        // Ordenar las secciones por el atributo 'orden'
-                        $query->where('estado', true)->orderBy('orden', 'asc');
-                    },
-                    'formulario.secciones.campos' => function ($query) {
-                        // Ordenar los campos por el atributo 'orden'
-                        $query->where('estado', true)->orderBy('orden', 'asc');
-                    },
-                    'formulario.secciones.campos.respuesta' => function ($query) {
-                        // Ordenar las respuestas por 'id'
-                        $query->orderBy('id', 'asc');
-                    }
-                ])
-                ->first();
+            $data = CFormularios::where('id', $cform_id)
+            ->with([
+                'formulario.secciones' => function ($query) {
+                    // Ordenar las secciones por el atributo 'orden'
+                    $query->where('estado', true)->orderBy('orden', 'asc');
+                },
+                'formulario.secciones.campos' => function ($query) {
+                    // Ordenar los campos por el atributo 'orden'
+                    $query->where('estado', true)->orderBy('orden', 'asc');
+                },
+                'formulario.secciones.campos.respuesta' => function ($query) use ($cform_id) {
+                    // Filtrar las respuestas por 'cform_id' y ordenarlas por 'id'
+                    $query->where('cform_id', $cform_id)->orderBy('id', 'asc');
+                }
+            ])
+            ->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
 
