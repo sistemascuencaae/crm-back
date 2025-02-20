@@ -18,6 +18,8 @@ class Formularios extends Model
         "footer",
         "color",
         "image",
+        "image_company",
+        "estado",
     ];
 
     public function setCreatedAtAttribute($value)
@@ -30,9 +32,14 @@ class Formularios extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-
-    public function formulario_campo()
+    
+    public function secciones()
     {
-        return $this->hasMany(FormularioCampo::class, "form_id", "id");
+        return $this->hasMany(Secciones::class, "form_id", "id");
+    }
+
+    public function formularioUsuarios()
+    {
+        return $this->hasMany(FormulariosUsuarios::class, "form_id", "id");
     }
 }

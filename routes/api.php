@@ -5,6 +5,7 @@ use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
 use App\Http\Controllers\crm\BitacoraController;
@@ -53,6 +54,7 @@ use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
+use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
@@ -728,6 +730,20 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
     
     Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
+
+    Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
+    Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
+    Route::get('/listFormulariosByUsuId/{usu_id}', [Formulario2UsuariosController::class, 'listFormulariosByUsuId']); // Formularios Usuarios
+    Route::get('/listRespuestasByFormId/{form_id}', [Formulario2UsuariosController::class, 'listRespuestasByFormId']); // Formularios Usuarios
+
+});
+
+Route::group(["prefix" => "configuracion"], function ($router) {
+
+    // configuracion
+
+    Route::get('/listAllArchivos2', [Archivos2Controller::class, 'listAllArchivos2']);
+    Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
 
 });
 

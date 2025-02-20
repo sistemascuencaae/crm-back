@@ -22,6 +22,9 @@ class FormularioCampo extends Model
         "estado",
         "opciones_campo",
         "form_control_name",
+        "espacios",
+        "url",
+        "seccion_id",
     ];
 
     public function setCreatedAtAttribute($value)
