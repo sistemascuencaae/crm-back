@@ -76,9 +76,16 @@ class Formulario2UsuariosController extends Controller
         try {
             $data = FormulariosUsuarios::where('usu_id', $usu_id)
                 ->with('formulario')
+                ->select('form_id', 'usu_id')
+                ->distinct()
                 ->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+            if ($data) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'No tiene ningún formulario asignado', ''));
+            }
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
@@ -87,11 +94,16 @@ class Formulario2UsuariosController extends Controller
     public function listRespuestasByFormId($form_id)
     {
         try {
-            $query = DB::selectOne("SELECT * FROM crm.af_obtener_datos_formulario9($form_id)");
+            $query = DB::selectOne("SELECT * FROM crm.af_obtener_datos_formulario9(?)", [$form_id]);
 
             $data = json_decode($query->resultado, true);  // Convierto para que me devuelva el array de las respuestas, porque la funcion de LEO devuelve un string
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+            if (count($data) > 0) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este formulario no tiene respuestas', ''));
+            }
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
