@@ -109,4 +109,20 @@ class Formulario2UsuariosController extends Controller
         }
     }
 
+    public function af_cliente_dfactura($identificacion)
+    {
+        try {
+            // 2 es el número de años que va a consultar
+            $data = DB::select("SELECT * FROM public.af_cliente_dfactura(?,2)", [$identificacion]);
+
+            if (count($data) > 0) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'No existe facturas para este cliente.', ''));
+            }
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
+        }
+    }
+
 }
