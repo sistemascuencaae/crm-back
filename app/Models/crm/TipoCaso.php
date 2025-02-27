@@ -4,7 +4,7 @@ namespace App\Models\crm;
 
 // use App\Models\crm\TipoCaso;
 
-use App\Models\crm\formularios2\Formularios;
+use App\Models\crm\formularios2\Form;
 use App\Models\Formulario\FormularioTipoCaso;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -49,9 +49,9 @@ class TipoCaso extends Model
         return $this->belongsTo(FormularioTipoCaso::class, 'id', 'tc_id');
     }
 
-    public function formularios()
+    public function form()
     {
-        return $this->belongsTo(Formularios::class, 'form_id', 'id');
+        return $this->belongsTo(Form::class, 'form_id', 'id');
     }
 
 }

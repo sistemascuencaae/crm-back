@@ -4,8 +4,8 @@ namespace App\Http\Controllers\formularios2;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\formularios2\Formularios;
-use App\Models\crm\formularios2\FormulariosUsuarios;
+use App\Models\crm\formularios2\Form;
+use App\Models\crm\formularios2\FormUser;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,9 +19,8 @@ class Formulario2UsuariosController extends Controller
     public function listFormulariosUsuarios()
     {
         try {
-            $data = Formularios::where('id', '!=', 1)
-                ->with('formularioUsuarios.usuario')
-                // ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
+            $data = Form::where('id', '!=', 1)
+                ->with('formUser.usuario')
                 ->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
@@ -38,8 +37,8 @@ class Formulario2UsuariosController extends Controller
                 // Primero, eliminamos los usuarios que están en el array usuariosEliminados
                 if (isset($request->usuariosEliminados) && count($request->usuariosEliminados) > 0) {
                     foreach ($request->usuariosEliminados as $usuarioEliminado) {
-                        // Eliminamos el usuario de la tabla 'formularios_usuarios' por 'usu_id'
-                        FormulariosUsuarios::where('usu_id', $usuarioEliminado['usu_id'])
+                        // Eliminamos el usuario de la tabla 'formularios_usuarios' por 'user_id'
+                        FormUser::where('user_id', $usuarioEliminado['user_id'])
                             ->where('form_id', $usuarioEliminado['form_id'])
                             ->delete();
                     }
@@ -49,17 +48,16 @@ class Formulario2UsuariosController extends Controller
                 if (isset($request->usuariosNuevos) && count($request->usuariosNuevos) > 0) {
                     foreach ($request->usuariosNuevos as $usuarioNuevo) {
                         // Insertamos el nuevo usuario en la tabla 'formularios_usuarios'
-                        FormulariosUsuarios::create([
+                        FormUser::create([
                             'form_id' => $usuarioNuevo['form_id'],
-                            'usu_id' => $usuarioNuevo['usu_id'],
+                            'user_id' => $usuarioNuevo['user_id'],
                         ]);
                     }
                 }
 
                 // Si todo va bien, obtenemos los formularios actualizados
-                return Formularios::where('id', '!=', 1)
-                    ->with('formularioUsuarios.usuario')
-                    // ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
+                return Form::where('id', '!=', 1)
+                    ->with('formUser.usuario')
                     ->get();
             });
 
@@ -71,12 +69,12 @@ class Formulario2UsuariosController extends Controller
         }
     }
 
-    public function listFormulariosByUsuId($usu_id)
+    public function listFormulariosByUsuId($user_id)
     {
         try {
-            $data = FormulariosUsuarios::where('usu_id', $usu_id)
-                ->with('formulario')
-                ->select('form_id', 'usu_id')
+            $data = FormUser::where('user_id', $user_id)
+                ->with('form')
+                ->select('form_id', 'user_id')
                 ->distinct()
                 ->get();
 
