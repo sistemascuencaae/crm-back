@@ -78,7 +78,7 @@ class Formulario2UsuariosController extends Controller
                 ->distinct()
                 ->get();
 
-            if ($data) {
+            if ($data->count() > 0) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene ningún formulario asignado', ''));
