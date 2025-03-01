@@ -3,10 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\formulario\CampoController;
-use App\Http\Controllers\formulario\FormController;
 use App\Http\Resources\crm\Funciones;
-use App\Http\Resources\RespuestaApi;
 use App\Models\crm\TipoCaso;
 use App\Models\Formulario\FormSeccion;
 use App\Models\Formulario\Formulario;
@@ -15,67 +12,100 @@ use App\Models\Formulario\Parametro;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Resources\RespuestaApi;
 
 class TipoCasoController extends Controller
 {
-    // public function addTipoCaso(Request $request)
-    // {
-    //     try {
-    //         $tipoCaso = TipoCaso::create($request->all());
-
-    //         $resultado = TipoCaso::where('tab_id', $tipoCaso->tab_id)->with('cTipoTarea.dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
-
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
 
     public function addTipoCaso(Request $request)
     {
         try {
+            $error = null;
+            $exitoso = null;
+
             // Validar si ya existe un registro con el mismo ctt_id
-            $data = DB::transaction(function () use ($request) {
+            DB::transaction(function () use ($request, &$error, &$exitoso) {
                 $cttId = $request->input('ctt_id');
                 $existingTipoCaso = TipoCaso::where('ctt_id', $cttId)->first();
+
                 if ($existingTipoCaso) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'La Tarea ya esta asignada o un Tipo Caso', ''));
+                    // return response()->json(RespuestaApi::returnResultado('error', 'La Tarea ya está asignada o un Tipo Caso', ''));
+                    $error = 'La Tarea ya está asignada o un Tipo Caso';
+                    return null;
+                } else {
+                    // Obtener y transformar el array 'tab' en una cadena con el delimitador 'ൠ'
+                    $tabs = $request->input('tab');  // Array de tab
+                    $tabString = implode('ൠ', array_map(function ($item) {
+                        return $item['nombre']; // Extraer el nombre de cada tab
+                    }, $tabs));
+
+                    // Añadir la cadena transformada al request
+                    $request->merge(['tab' => $tabString]);
+
+                    // Si no existe, crea un nuevo registro
+                    $tipoCaso = TipoCaso::create($request->all());
+
+                    // Obtener el resultado después de la creación
+                    $exitoso = TipoCaso::where('tab_id', $tipoCaso->tab_id)->with('cTipoTarea.dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+
+                    // Convertir 'tab' en array para cada resultado
+                    $exitoso->each(function ($tipoCaso) {
+                        if (!empty($tipoCaso->tab)) {
+                            // Convertir la cadena de 'tab' a un array utilizando el delimitador 'ൠ'
+                            $tipoCaso->tab = explode('ൠ', $tipoCaso->tab);
+                        }
+                    });
+
+                    // Inserción en la tabla 'formulario_tipo_caso'
+                    $form_id2 = $request->input('form_id2');
+                    if ($form_id2) {
+                        DB::table('crm.formulario_tipo_caso')->insert([
+                            'form_id' => $form_id2,
+                            'tc_id' => $tipoCaso->id,
+                            'tab_id' => $request->input('tab_id'),
+                        ]);
+                    }
+
+                    return null;
                 }
-                // Si no existe, crea un nuevo registro
-                $tipoCaso = TipoCaso::create($request->all());
-                $resultado = TipoCaso::where('tab_id', $tipoCaso->tab_id)->with('cTipoTarea.dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
-                $form_id2 = $request->input('form_id2');
-                if ($form_id2) {
-                    $formtipocasoId = DB::table('crm.formulario_tipo_caso')->insert([
-                        'form_id' => $form_id2,
-                        'tc_id' => $tipoCaso->id,
-                        'tab_id' => $request->input('tab_id'),
-                    ]);
-                }
-                return $resultado;
             });
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
+            }
+
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
         }
     }
-
 
     public function listTipoCasoByIdTablero($tab_id)
     {
         try {
+            // Obtener los resultados de la base de datos
             $resultado = TipoCaso::where('tab_id', $tab_id)
                 ->with(
                     'cTipoTarea.dTipoTarea',
                     'formTipoCaso.formulario'
                 )
                 ->orderBy('estado', 'DESC')
-                ->orderBy('id', 'DESC')->get();
+                ->orderBy('id', 'DESC')
+                ->get();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $resultado));
+            // Convertir 'tab' a un array después de obtener los resultados
+            $resultado->each(function ($tipoCaso) {
+                if (!empty($tipoCaso->tab)) {
+                    // Convertir la cadena de 'tab' a un array utilizando el delimitador 'ൠ'
+                    $tipoCaso->tab = explode('ൠ', $tipoCaso->tab);
+                }
+            });
+
+            // Retornar los resultados con el atributo 'tab' convertido en array
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $resultado));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
@@ -100,23 +130,6 @@ class TipoCasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-    // public function editTipoCaso(Request $request, $id)
-    // {
-    //     try {
-    //         $tipoCaso = TipoCaso::findOrFail($id);
-
-    //         $tipoCaso->update($request->all());
-
-    //         $resultado = TipoCaso::where('id', $tipoCaso->id)
-    //                 ->with('cTipoTarea.dTipoTarea')
-    //                 ->first();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $resultado));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
 
     public function editTipoCaso(Request $request, $id)
     {
@@ -176,7 +189,6 @@ class TipoCasoController extends Controller
         }
     }
 
-
     public function deleteTipoCaso($id)
     {
         try {
@@ -189,8 +201,6 @@ class TipoCasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-
 
     public function addFormularioTc($tab_id)
     {
@@ -214,7 +224,6 @@ class TipoCasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 
     public function getByTipoCasIdFormu1($tcId)
     {

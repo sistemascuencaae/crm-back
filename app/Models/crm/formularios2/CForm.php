@@ -2,19 +2,17 @@
 
 namespace App\Models\crm\formularios2;
 
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class FormulariosUsuarios extends Model
+class CForm extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.formularios_usuarios';
+    protected $table = 'crm.cform';
     protected $fillable = [
-        "form_id",
-        "usu_id",
+        "form_id"
     ];
 
     public function setCreatedAtAttribute($value)
@@ -28,14 +26,14 @@ class FormulariosUsuarios extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function usuario()
+    public function dform()
     {
-        return $this->belongsTo(User::class, "usu_id", "id");
+        return $this->hasMany(DForm::class, "cform_id");
     }
 
-    public function formulario()
+    public function form()
     {
-        return $this->belongsTo(Formularios::class, "form_id", "id");
+        return $this->belongsTo(Form::class, "form_id", "id");
     }
 
 }

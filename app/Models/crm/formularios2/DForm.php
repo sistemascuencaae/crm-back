@@ -6,20 +6,16 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Formularios extends Model
+class DForm extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.formularios';
+    protected $table = 'crm.dform';
     protected $fillable = [
-        "nombre",
-        "descripcion",
-        "header",
-        "footer",
-        "color",
-        "image",
-        "image_company",
-        "estado",
+        "cform_id",
+        "field_id",
+        "value",
+        "seccion_id",
     ];
 
     public function setCreatedAtAttribute($value)
@@ -32,14 +28,5 @@ class Formularios extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-    
-    public function secciones()
-    {
-        return $this->hasMany(Secciones::class, "form_id", "id");
-    }
 
-    public function formularioUsuarios()
-    {
-        return $this->hasMany(FormulariosUsuarios::class, "form_id", "id");
-    }
 }

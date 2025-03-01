@@ -6,23 +6,22 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class FormularioCampo extends Model
+class Field extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.formulario_campo';
+    protected $table = 'crm.field';
     protected $fillable = [
         "form_id",
-        "nombre",
-        "etiqueta",
-        "tipo",
-        "requerido",
-        "descripcion",
-        "orden",
-        "estado",
-        "opciones_campo",
+        "label",
+        "type",
+        "required",
+        "description",
+        "order",
+        "isactive",
+        "opcion",
         "form_control_name",
-        "espacios",
+        "margin",
         "url",
         "seccion_id",
     ];
@@ -38,9 +37,9 @@ class FormularioCampo extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function respuesta()
+    public function dform()
     {
-        return $this->belongsTo(DFormularios::class, "id", "fc_id");
+        return $this->belongsTo(DForm::class, "id", "field_id");
     }
 
 }

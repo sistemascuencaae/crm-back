@@ -2,22 +2,19 @@
 
 namespace App\Models\crm\formularios2;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Secciones extends Model
+class FormUser extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.secciones';
+    protected $table = 'crm.form_user';
     protected $fillable = [
-        "nombre",
-        "descripcion",
-        "orden",
-        "estado",
         "form_id",
-        "espacios",
+        "user_id",
     ];
 
     public function setCreatedAtAttribute($value)
@@ -31,14 +28,14 @@ class Secciones extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    // public function formulario_campo()
-    // {
-    //     return $this->hasMany(FormularioCampo::class, "form_id", "id");
-    // }
-
-    public function campos()
+    public function usuario()
     {
-        return $this->hasMany(FormularioCampo::class, "seccion_id", "id");
+        return $this->belongsTo(User::class, "user_id", "id");
+    }
+
+    public function form()
+    {
+        return $this->belongsTo(Form::class, "form_id", "id");
     }
 
 }

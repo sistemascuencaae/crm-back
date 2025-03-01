@@ -4,12 +4,11 @@ namespace App\Http\Controllers\formularios2;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\formularios2\CFormularios;
-use App\Models\crm\formularios2\DFormularios;
-use App\Models\crm\formularios2\FormularioCampo;
-use App\Models\crm\formularios2\Formularios;
-use App\Models\crm\formularios2\FormulariosUsuarios;
-use App\Models\crm\formularios2\Secciones;
+use App\Models\crm\formularios2\CForm;
+use App\Models\crm\formularios2\DForm;
+use App\Models\crm\formularios2\Form;
+use App\Models\crm\formularios2\Field;
+use App\Models\crm\formularios2\Seccion;
 use App\Models\crm\TipoCaso;
 use Exception;
 use Illuminate\Http\Request;
@@ -23,41 +22,24 @@ class Formulario2Controller extends Controller
     {
     }
 
-    // public function listAll()
-    // // Este metodo se una para listar todos los formularios en el CRUD de formularios dinamicos
-    // {
-    //     try {
-    //         // Excluimos el id 1 de la tabla crm.formularios, porque el id 1 es nuestro default
-    //         $data = Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
-    //     }
-    // }
-
-
     public function listAll()
     // Este metodo se una para listar todos los formularios en el CRUD de formularios dinamicos
     {
         try {
             // Excluimos el id 1 de la tabla crm.formularios, porque el id 1 es nuestro default
-            // $data = Formularios::where('id', '!=', 1)->with('secciones.campos')->orderBy('id', 'asc')->get();
-
-            $data = Formularios::where('id', '!=', 1)
+            $data = Form::where('id', '!=', 1)
                 ->with([
-                    'secciones' => function ($query) {
+                    'seccion' => function ($query) {
                         // Ordena las secciones por el atributo 'orden'
-                        $query->orderBy('orden', 'asc');
+                        $query->orderBy('order', 'asc');
                     },
-                    'secciones.campos' => function ($query) {
+                    'seccion.campo' => function ($query) {
                         // Ordena los campos dentro de cada sección por el atributo 'orden'
-                        $query->orderBy('orden', 'asc');
+                        $query->orderBy('order', 'asc');
                     }
                 ])
                 ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
                 ->get();
-
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
@@ -65,99 +47,39 @@ class Formulario2Controller extends Controller
         }
     }
 
-    // public function listFormByTipoCaso($tipoCaso_id)
-    // {
-    //     try {
-    //         $data = TipoCaso::where('id', $tipoCaso_id)
-    //             ->with([
-    //                 'formularios.formulario_campo' => function ($query) {
-    //                     $query->orderBy('id', 'asc');  // Ordena ASC los campos por 'id'
-    //                 }
-    //             ])
-    //             ->first();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
-    //     }
-    // }
-
-
     public function listFormByTipoCaso($tipoCaso_id)
     {
         try {
             $data = TipoCaso::where('id', $tipoCaso_id)
                 ->with([
-                    'formularios' => function ($query) {
-                        // Filtra las secciones donde el estado sea true y ordena por 'orden'
-                        $query->where('estado', true);
+                    'form' => function ($query) {
+                        $query->where('isactive', true);
                     },
-                    'formularios.secciones' => function ($query) {
-                        // Filtra las secciones donde el estado sea true y ordena por 'orden'
-                        $query->where('estado', true)->orderBy('orden', 'asc');
+                    'form.seccion' => function ($query) {
+                        $query->where('isactive', true)->orderBy('order', 'asc');
                     },
-                    'formularios.secciones.campos' => function ($query) {
-                        // Filtra los campos donde el estado sea true y ordena por 'orden'
-                        $query->where('estado', true)->orderBy('orden', 'asc');
+                    'form.seccion.campo' => function ($query) {
+                        $query->where('isactive', true)->orderBy('order', 'asc');
                     }
                 ])
                 ->first();
 
-                if ($data->formularios) {
-                    return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
-                } else {
-                    return response()->json(RespuestaApi::returnResultado('error', 'Formulario inactivo, por favor, comuniquese con el administrador.', ''));
-                }
+            if ($data->form) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Formulario inactivo, por favor, comuniquese con el administrador.', ''));
+            }
 
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
     }
 
-    // public function deleteFormulario(Request $request, $id)
-    // {
-    //     try {
-    //         $data = DB::transaction(function () use ($request, $id) {
-    //             $formulario = Formularios::findOrFail($id);
-
-    //             if ($formulario->image || $formulario->image_company) {
-    //                 $parametro = DB::table('crm.parametro')
-    //                     ->where('abreviacion', 'NAS')
-    //                     ->first();
-    //             }
-
-    //             if ($formulario->image) {
-    //                 if ($parametro->nas == true) {
-    //                     Storage::disk('nas')->delete($formulario->image); //Mandamos a borrar la foto de nuestra carpeta NAS
-    //                 } else {
-    //                     Storage::disk('local')->delete($formulario->image); //Mandamos a borrar la foto de nuestra carpeta storage
-    //                 }
-    //             }
-
-    //             if ($formulario->image_company) {
-    //                 if ($parametro->nas == true) {
-    //                     Storage::disk('nas')->delete($formulario->image_company); //Mandamos a borrar la foto de nuestra carpeta NAS
-    //                 } else {
-    //                     Storage::disk('local')->delete($formulario->image_company); //Mandamos a borrar la foto de nuestra carpeta storage
-    //                 }
-    //             }
-
-    //             $formulario->delete();
-    //             return Formularios::where('id', '!=', 1)->with('secciones.campos')->orderBy('id', 'asc')->get();
-    //         });
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-    //     }
-    // }
-
-
     public function deleteFormulario(Request $request, $id)
     {
         try {
             $data = DB::transaction(function () use ($request, $id) {
-                $formulario = Formularios::findOrFail($id);
+                $formulario = Form::findOrFail($id);
 
                 if ($formulario->image || $formulario->image_company) {
                     $parametro = DB::table('crm.parametro')
@@ -184,14 +106,14 @@ class Formulario2Controller extends Controller
                 // Eliminar campos asociados a las secciones del formulario
                 foreach ($formulario->secciones as $seccion) {
                     // Eliminar los campos asociados a la sección
-                    FormularioCampo::where('seccion_id', $seccion->id)->delete();
+                    Field::where('seccion_id', $seccion->id)->delete();
 
                     // Eliminar la sección
-                    Secciones::where('id', $seccion->id)->delete();
+                    Seccion::where('id', $seccion->id)->delete();
                 }
 
                 $formulario->delete();
-                return Formularios::where('id', '!=', 1)->with('secciones.campos')->orderBy('id', 'asc')->get();
+                return Form::where('id', '!=', 1)->with('seccion.campo')->orderBy('id', 'asc')->get();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
@@ -202,11 +124,10 @@ class Formulario2Controller extends Controller
 
     public function listAllSinRelacion()
     // Este metodo se una para listar todos los formularios en el CRUD de 'tipo de caso'
-    // no trae la relacion formulario_campo y es mas liviado la consulta a la base
     {
         try {
             // Excluimos el id 1 de la tabla crm.formularios, porque el id 1 es nuestro default
-            $data = Formularios::orderByDesc('id')->get();
+            $data = Form::orderByDesc('id')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
@@ -214,57 +135,27 @@ class Formulario2Controller extends Controller
         }
     }
 
-    // public function addCDFormulario(Request $request)
-    // {
-    //     try {
-    //         $data = DB::transaction(function () use ($request) {
-
-    //             $cFormulario = CFormularios::create($request->all());
-
-    //             // aqui es donmde yo debo de obtener el cform_id para guardar en el DFormulario
-
-    //             if (count($request->dFormulario) > 0) {
-    //                 // Iteramos sobre los campos del formulario
-    //                 foreach ($request->dFormulario as $item) {
-    //                     // Asignamos el id del formulario al campo
-    //                     $item['cform_id'] = $cFormulario->id;
-
-    //                     DFormularios::create($item); // Crear si no tiene id
-    //                 }
-    //             }
-
-    //             return $cFormulario->id;
-    //         });
-
-    //         // return response()->json($data);
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', $data));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-    //     }
-    // }
-
-
     public function addCDFormulario(Request $request)
     {
         try {
             $data = DB::transaction(function () use ($request) {
 
                 // Crear el formulario principal en CFormularios
-                $cFormulario = CFormularios::create($request->all());
+                $cForm = CForm::create($request->all());
 
                 // Aquí estamos guardando los datos del formulario en la tabla DFormularios
-                if (count($request->dFormulario) > 0) {
+                if (count($request->dForm) > 0) {
                     // Iteramos sobre los campos del formulario
-                    foreach ($request->dFormulario as $item) {
+                    foreach ($request->dForm as $item) {
                         // Asignamos el id del formulario recién creado
-                        $item['cform_id'] = $cFormulario->id;
+                        $item['cform_id'] = $cForm->id;
 
                         // Insertamos el campo en la tabla DFormularios
-                        DFormularios::create($item); // Insertamos los datos del campo
+                        DForm::create($item); // Insertamos los datos del campo
                     }
                 }
 
-                return $cFormulario->id; // Retornamos el ID del formulario recién creado
+                return $cForm->id; // Retornamos el ID del formulario recién creado
             });
 
             // Respondemos con un mensaje de éxito
@@ -278,22 +169,22 @@ class Formulario2Controller extends Controller
     public function listCFormulario($cform_id)
     {
         try {
-            $data = CFormularios::where('id', $cform_id)
-            ->with([
-                'formulario.secciones' => function ($query) {
-                    // Ordenar las secciones por el atributo 'orden'
-                    $query->where('estado', true)->orderBy('orden', 'asc');
-                },
-                'formulario.secciones.campos' => function ($query) {
-                    // Ordenar los campos por el atributo 'orden'
-                    $query->where('estado', true)->orderBy('orden', 'asc');
-                },
-                'formulario.secciones.campos.respuesta' => function ($query) use ($cform_id) {
-                    // Filtrar las respuestas por 'cform_id' y ordenarlas por 'id'
-                    $query->where('cform_id', $cform_id)->orderBy('id', 'asc');
-                }
-            ])
-            ->first();
+            $data = CForm::where('id', $cform_id)
+                ->with([
+                    'form.seccion' => function ($query) {
+                        // Ordenar las secciones por el atributo 'orden'
+                        $query->where('isactive', true)->orderBy('order', 'asc');
+                    },
+                    'form.seccion.campo' => function ($query) {
+                        // Ordenar los campos por el atributo 'orden'
+                        $query->where('isactive', true)->orderBy('order', 'asc');
+                    },
+                    'form.seccion.campo.dform' => function ($query) use ($cform_id) {
+                        // Filtrar las respuestas por 'cform_id' y ordenarlas por 'id'
+                        $query->where('cform_id', $cform_id)->orderBy('id', 'asc');
+                    }
+                ])
+                ->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
 
@@ -307,7 +198,7 @@ class Formulario2Controller extends Controller
         try {
             $data = DB::transaction(function () use ($request, $id) {
 
-                $campoRespuesta = DFormularios::findOrFail($id);
+                $campoRespuesta = DForm::findOrFail($id);
 
                 $campoRespuesta->update($request->all());
 
@@ -340,15 +231,15 @@ class Formulario2Controller extends Controller
     public function listFormulario2($id)
     {
         try {
-            $data = Formularios::where('id', $id)->where('estado', true)
+            $data = Form::where('id', $id)->where('isactive', true)
                 ->with([
-                    'secciones' => function ($query) {
+                    'seccion' => function ($query) {
                         // Filtra las secciones donde el estado sea true y ordena por 'orden'
-                        $query->where('estado', true)->orderBy('orden', 'asc');
+                        $query->where('isactive', true)->orderBy('order', 'asc');
                     },
-                    'secciones.campos' => function ($query) {
+                    'seccion.campo' => function ($query) {
                         // Filtra los campos donde el estado sea true y ordena por 'orden'
-                        $query->where('estado', true)->orderBy('orden', 'asc');
+                        $query->where('isactive', true)->orderBy('order', 'asc');
                     }
                 ])
                 ->first();
@@ -358,134 +249,6 @@ class Formulario2Controller extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
     }
-
-    // public function addEditFormulario(Request $request)
-    // {
-    //     try {
-
-    //         $data = DB::transaction(function () use ($request) {
-
-    //             // Decodificar formulario y formulario_campo
-    //             $formulario = json_decode($request->input('formulario'), true);
-    //             $formulario_campo = json_decode($request->input('formulario_campo'), true);
-    //             $formulario_campo_eliminados = json_decode($request->input('formulario_campo_eliminados'), true);
-
-    //             // Crear o actualizar el formulario
-    //             $formulario = Formularios::updateOrCreate(
-    //                 ['id' => $formulario['id']],
-    //                 $formulario
-    //             );
-
-    //             // Manejo de la imagen, si existe
-    //             if ($request->hasFile('imagen_file')) { // img de fondo del formulario
-    //                 $parametro = DB::table('crm.parametro')
-    //                     ->where('abreviacion', 'NAS')
-    //                     ->first();
-
-    //                 if ($formulario->image) {
-    //                     if ($parametro->nas == true) {
-    //                         // Eliminamos la imagen anterior del disco NAS
-    //                         Storage::disk('nas')->delete($formulario->image);
-    //                     } else {
-    //                         // Eliminamos la imagen anterior del disco NAS
-    //                         Storage::disk('local')->delete($formulario->image);
-    //                     }
-    //                 }
-
-    //                 $imagen = $request->file('imagen_file');
-    //                 // $titulo = $imagen->getClientOriginalName();
-    //                 $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // reemplaza los espacios por un -
-
-
-    //                 // Fecha actual
-    //                 $fechaActual = Carbon::now()->format('Y-m-d');
-
-    //                 // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
-    //                 $fecha_actual = str_replace(':', '-', $fechaActual);
-
-    //                 if ($parametro->nas == true) {
-    //                     $path = Storage::disk('nas')->putFileAs("formularios/formulariosExternos/" . $formulario->id, $imagen, $formulario->id . '-' . $fecha_actual . '-' . $titulo);
-    //                 } else {
-    //                     $path = Storage::disk('local')->putFileAs("formularios/formulariosExternos/" . $formulario->id, $imagen, $formulario->id . '-' . $fecha_actual . '-' . $titulo);
-    //                 }
-
-    //                 $formulario->image = $path; // Aquí obtenemos la ruta de la imagen en la que se encuentra
-    //                 $formulario->save(); // Aquí guardo la ruta de la imagen actualizada
-    //             }
-
-
-
-    //             if ($request->hasFile('imagen_file2')) { // image del logo de la empresa
-    //                 $parametro = DB::table('crm.parametro')
-    //                     ->where('abreviacion', 'NAS')
-    //                     ->first();
-
-    //                 if ($formulario->image_company) {
-    //                     if ($parametro->nas == true) {
-    //                         // Eliminamos la imagen anterior del disco NAS
-    //                         Storage::disk('nas')->delete($formulario->image_company);
-    //                     } else {
-    //                         // Eliminamos la imagen anterior del disco NAS
-    //                         Storage::disk('local')->delete($formulario->image_company);
-    //                     }
-    //                 }
-
-    //                 $imagen2 = $request->file('imagen_file2');
-    //                 $titulo = str_replace(' ', '-', $imagen2->getClientOriginalName()); // reemplaza los espacios por un -
-
-
-    //                 // Fecha actual
-    //                 $fechaActual = Carbon::now()->format('Y-m-d');
-
-    //                 // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
-    //                 $fecha_actual = str_replace(':', '-', $fechaActual);
-
-    //                 if ($parametro->nas == true) {
-    //                     $path = Storage::disk('nas')->putFileAs("formularios/formulariosExternos/" . $formulario->id, $imagen2, $formulario->id . '-' . $fecha_actual . '-' . $titulo);
-    //                 } else {
-    //                     $path = Storage::disk('local')->putFileAs("formularios/formulariosExternos/" . $formulario->id, $imagen2, $formulario->id . '-' . $fecha_actual . '-' . $titulo);
-    //                 }
-
-    //                 $formulario->image_company = $path; // Aquí obtenemos la ruta de la imagen en la que se encuentra
-    //                 $formulario->save(); // Aquí guardo la ruta de la imagen actualizada
-    //             }
-
-    //             // Si existen campos de formulario
-    //             if (count($formulario_campo) > 0) {
-    //                 foreach ($formulario_campo as $accessData) {
-    //                     $accessData['form_id'] = $formulario->id;
-
-    //                     if ($accessData['id']) {
-    //                         $accessData['form_control_name'] = $accessData['etiqueta'] . $accessData['id'];
-    //                         FormularioCampo::where('id', $accessData['id'])->update($accessData);
-    //                     } else {
-    //                         $newCampo = FormularioCampo::create($accessData);
-    //                         $newCampo->form_control_name = $accessData['etiqueta'] . $newCampo->id;
-    //                         $newCampo->save();
-    //                     }
-    //                 }
-    //             }
-
-    //             // Eliminación de campos
-    //             if (isset($formulario_campo_eliminados) && count($formulario_campo_eliminados) > 0) {
-    //                 foreach ($formulario_campo_eliminados as $accessDataEliminar) {
-    //                     if (isset($accessDataEliminar['id'])) {
-    //                         FormularioCampo::where('id', $accessDataEliminar['id'])->delete();
-    //                     }
-    //                 }
-    //             }
-
-    //             // Retornamos la lista de formularios con sus campos
-    //             return Formularios::where('id', '!=', 1)->with('formulario_campo')->orderBy('id', 'asc')->get();
-    //         });
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
-
-
 
     public function addEditFormulario(Request $request)
     {
@@ -497,14 +260,10 @@ class Formulario2Controller extends Controller
                 $secciones_eliminados = json_decode($request->input('secciones_eliminados'), true);
 
                 // Crear o actualizar el formulario
-                $formularioGuardado = Formularios::updateOrCreate(
+                $formularioGuardado = Form::updateOrCreate(
                     ['id' => $formulario['id']],
                     $formulario
                 );
-
-
-                // ----------------------------------
-                // ----------------------------------
 
                 if ($request->hasFile('imagen_file') || $request->hasFile('imagen_file2')) {
                     $parametro = DB::table('crm.parametro')
@@ -576,68 +335,60 @@ class Formulario2Controller extends Controller
                     $formularioGuardado->save(); // Aquí guardo la ruta de la imagen actualizada
                 }
 
-                // ----------------------------------
-                // ----------------------------------
-
-
-                // echo json_encode($formularioGuardado);
                 // Ahora que tenemos el formulario guardado con un ID, podemos asignar el form_id a las secciones
-                foreach ($formulario['secciones'] ?? [] as $seccionData) {
+                foreach ($formulario['seccion'] ?? [] as $seccionData) {
                     // Asegúrate de usar el ID correcto para el formulario guardado
                     if (empty($seccionData['id'])) {
                         // Crear nueva sección si no existe ID
-                        $seccion = Secciones::create([
-                            'nombre' => $seccionData['nombre'],
-                            'descripcion' => $seccionData['descripcion'],
-                            'orden' => $seccionData['orden'],
-                            'estado' => $seccionData['estado'],
+                        $seccion = Seccion::create([
+                            'name' => $seccionData['name'],
+                            'description' => $seccionData['description'],
+                            'order' => $seccionData['order'],
+                            'isactive' => $seccionData['isactive'],
                             'form_id' => $formularioGuardado->id, // Asigna el form_id del formulario guardado
-                            // Otros campos necesarios
+                            'margin' => $seccionData['margin'],
                         ]);
                     } else {
                         // Actualizar o crear sección si ya existe ID
-                        $seccion = Secciones::updateOrCreate(
+                        $seccion = Seccion::updateOrCreate(
                             ['id' => $seccionData['id']], // Buscar por ID
                             $seccionData // Datos para actualizar
                         );
                     }
 
                     // Si hay campos dentro de la sección, creamos o actualizamos los campos
-                    if (isset($seccionData['campos']) && count($seccionData['campos']) > 0) {
-                        foreach ($seccionData['campos'] as $campoData) {
+                    if (isset($seccionData['campo']) && count($seccionData['campo']) > 0) {
+                        foreach ($seccionData['campo'] as $campoData) {
                             $campoData['form_id'] = $formularioGuardado->id; // Usar el ID guardado del formulario
                             $campoData['seccion_id'] = $seccion->id; // Asociar el campo con la sección correspondiente
 
                             // Asegurarse de que opciones_campo sea un string
-                            if (isset($campoData['opciones_campo']) && is_array($campoData['opciones_campo'])) {
+                            if (isset($campoData['opcion']) && is_array($campoData['opcion'])) {
                                 // Si por alguna razón opciones_campo es un array, convertirlo a un string
-                                $campoData['opciones_campo'] = implode('ൠ', $campoData['opciones_campo']);
+                                $campoData['opcion'] = implode('ൠ', $campoData['opcion']);
                             }
-
 
                             // Si el ID del campo es null, se crea; si ya existe, se actualiza
                             if (empty($campoData['id'])) {
                                 // Crear un nuevo campo si no tiene ID
-                                $newCampo = FormularioCampo::create($campoData);
-                                $newCampo->form_control_name = str_replace(' ', '', $campoData['etiqueta']) . $newCampo->id;
+                                $newCampo = Field::create($campoData);
+                                $newCampo->form_control_name = str_replace(' ', '', $campoData['label']) . $newCampo->id;
                                 $newCampo->save();
                             } else {
                                 // Actualizar el campo si ya existe el ID
-                                $campoData['form_control_name'] = str_replace(' ', '', $campoData['etiqueta']) . $campoData['id'];
-                                FormularioCampo::updateOrCreate(['id' => $campoData['id']], $campoData);
+                                $campoData['form_control_name'] = str_replace(' ', '', $campoData['label']) . $campoData['id'];
+                                Field::updateOrCreate(['id' => $campoData['id']], $campoData);
                             }
-
 
                         }
                     }
                 }
 
-
                 // Eliminación de campos primero
                 if (isset($campos_eliminados) && count($campos_eliminados) > 0) {
                     foreach ($campos_eliminados as $accessDataEliminar) {
                         if (isset($accessDataEliminar['id'])) {
-                            FormularioCampo::where('id', $accessDataEliminar['id'])->delete();
+                            Field::where('id', $accessDataEliminar['id'])->delete();
                         }
                     }
                 }
@@ -647,24 +398,23 @@ class Formulario2Controller extends Controller
                     foreach ($secciones_eliminados as $seccionDataEliminar) {
                         if (isset($seccionDataEliminar['id'])) {
                             // Primero asegurarte de que no hay campos asociados a la sección antes de eliminarla
-                            FormularioCampo::where('seccion_id', $seccionDataEliminar['id'])->delete();
+                            Field::where('seccion_id', $seccionDataEliminar['id'])->delete();
 
                             // Eliminar la sección
-                            Secciones::where('id', $seccionDataEliminar['id'])->delete();
+                            Seccion::where('id', $seccionDataEliminar['id'])->delete();
                         }
                     }
                 }
 
-
                 // Retornar los formularios guardados, excluyendo el formulario con id 1
-                return Formularios::where('id', '!=', 1)->with([
-                    'secciones' => function ($query) {
+                return Form::where('id', '!=', 1)->with([
+                    'seccion' => function ($query) {
                         // Ordena las secciones por el atributo 'orden'
-                        $query->orderBy('orden', 'asc');
+                        $query->orderBy('order', 'asc');
                     },
-                    'secciones.campos' => function ($query) {
+                    'seccion.campo' => function ($query) {
                         // Ordena los campos dentro de cada sección por el atributo 'orden'
-                        $query->orderBy('orden', 'asc');
+                        $query->orderBy('order', 'asc');
                     }
                 ])
                     ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
@@ -676,7 +426,6 @@ class Formulario2Controller extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
         }
     }
-
 
     private function uploadImage($request, $formulario, $imageField, $imageColumn)
     {
