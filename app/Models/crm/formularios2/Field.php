@@ -39,7 +39,8 @@ class Field extends Model
 
     public function dform()
     {
-        return $this->belongsTo(DForm::class, "id", "field_id");
+        // return $this->belongsTo(DForm::class, "id", "field_id");
+        return $this->hasMany(DForm::class, "field_id", "id");
     }
 
 }
