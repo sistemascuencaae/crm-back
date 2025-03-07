@@ -103,13 +103,16 @@ class Formulario2Controller extends Controller
                     }
                 }
 
-                // Eliminar campos asociados a las secciones del formulario
-                foreach ($formulario->secciones as $seccion) {
-                    // Eliminar los campos asociados a la sección
-                    Field::where('seccion_id', $seccion->id)->delete();
+                // Verificar si existe el array de secciones y tiene elementos
+                if (!empty($formulario->secciones)) {
+                    // Eliminar campos asociados a las secciones del formulario
+                    foreach ($formulario->secciones as $seccion) {
+                        // Eliminar los campos asociados a la sección
+                        Field::where('seccion_id', $seccion->id)->delete();
 
-                    // Eliminar la sección
-                    Seccion::where('id', $seccion->id)->delete();
+                        // Eliminar la sección
+                        Seccion::where('id', $seccion->id)->delete();
+                    }
                 }
 
                 $formulario->delete();
