@@ -103,13 +103,16 @@ class Formulario2Controller extends Controller
                     }
                 }
 
-                // Eliminar campos asociados a las secciones del formulario
-                foreach ($formulario->secciones as $seccion) {
-                    // Eliminar los campos asociados a la sección
-                    Field::where('seccion_id', $seccion->id)->delete();
+                // Verificar si existe el array de secciones y tiene elementos
+                if (!empty($formulario->secciones)) {
+                    // Eliminar campos asociados a las secciones del formulario
+                    foreach ($formulario->secciones as $seccion) {
+                        // Eliminar los campos asociados a la sección
+                        Field::where('seccion_id', $seccion->id)->delete();
 
-                    // Eliminar la sección
-                    Seccion::where('id', $seccion->id)->delete();
+                        // Eliminar la sección
+                        Seccion::where('id', $seccion->id)->delete();
+                    }
                 }
 
                 $formulario->delete();
@@ -135,37 +138,6 @@ class Formulario2Controller extends Controller
         }
     }
 
-    public function addCDFormulario(Request $request)
-    {
-        try {
-            $data = DB::transaction(function () use ($request) {
-
-                // Crear el formulario principal en CFormularios
-                $cForm = CForm::create($request->all());
-
-                // Aquí estamos guardando los datos del formulario en la tabla DFormularios
-                if (count($request->dForm) > 0) {
-                    // Iteramos sobre los campos del formulario
-                    foreach ($request->dForm as $item) {
-                        // Asignamos el id del formulario recién creado
-                        $item['cform_id'] = $cForm->id;
-
-                        // Insertamos el campo en la tabla DFormularios
-                        DForm::create($item); // Insertamos los datos del campo
-                    }
-                }
-
-                return $cForm->id; // Retornamos el ID del formulario recién creado
-            });
-
-            // Respondemos con un mensaje de éxito
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', $data));
-        } catch (Exception $e) {
-            // En caso de error, capturamos la excepción y respondemos con el error
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-        }
-    }
-
     public function listCFormulario($cform_id)
     {
         try {
@@ -187,7 +159,6 @@ class Formulario2Controller extends Controller
                 ->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
@@ -464,4 +435,78 @@ class Formulario2Controller extends Controller
             $formulario->save();
         }
     }
+
+    public function addCDFormulario(Request $request)
+    {
+        try {
+            $data = DB::transaction(function () use ($request) {
+
+                $input_form_id = json_decode($request->input('form_id'), true);
+                $input_dform = json_decode($request->input('dform'), true);
+
+                // echo json_encode($input_dform);
+
+                $dForm_guardado = null;
+
+                // Crear el formulario principal en CFormularios
+                $cForm = CForm::create([
+                    'form_id' => $input_form_id
+                ]);
+
+                // Guardar los datos del formulario en la tabla DFormularios
+                if (count($input_dform) > 0) {
+                    // Iteramos sobre los campos del formulario
+                    foreach ($input_dform as $item) {
+                        // Asignamos el id del formulario recién creado
+                        $item['cform_id'] = $cForm->id;
+
+                        // Insertamos los datos en la tabla DFormularios
+                        $dForm_guardado = DForm::create($item);
+                    }
+                }
+
+                // Ahora, procesamos los archivos relacionados con este formulario
+                $archivos = $request->file('archivos');  // Obtiene los archivos
+
+                if ($archivos) {
+                    // Verificamos el parámetro NAS para decidir dónde guardar los archivos
+                    $parametro = DB::table('crm.parametro')->where('abreviacion', 'NAS')->first();
+
+                    // Iteramos sobre los archivos recibidos
+                    foreach ($archivos as $archivoData) {
+                        $nombreUnico = str_replace(' ', '-', $cForm->id . '-' . $archivoData->getClientOriginalName());
+                        $extension = $archivoData->getClientOriginalExtension();
+
+                        // Determinamos la ruta de almacenamiento (local o NAS)
+                        $path = Storage::disk($parametro->nas ? 'nas' : 'local')->putFileAs(
+                            "formularios/formulariosExternos/" . $cForm->id . '/archivos',
+                            $archivoData,
+                            $nombreUnico
+                        );
+
+                        // Guardar la ruta del archivo en la base de datos (en DFormularios)
+                        DForm::create([
+                            "cform_id" => $cForm->id,
+                            "field_id" => $dForm_guardado->field_id,
+                            "value" => $path,  // Ruta del archivo
+                            "seccion_id" => $dForm_guardado->seccion_id,
+                        ]);
+                    }
+                }
+                // else {
+                //     echo ('no hay archivos para guardar....');
+                // }
+
+                // Retornamos el ID del formulario recién creado
+                return $cForm->id;
+            });
+
+            // Respondemos con un mensaje de éxito
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', $data));
+        } catch (Exception $e) {
+            // En caso de error, capturamos la excepción y respondemos con el error
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }
