@@ -10,6 +10,7 @@ use App\Models\crm\formularios2\Form;
 use App\Models\crm\formularios2\Field;
 use App\Models\crm\formularios2\Seccion;
 use App\Models\crm\TipoCaso;
+use App\Models\crm\TipoCasoFormulas;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -506,6 +507,36 @@ class Formulario2Controller extends Controller
         } catch (Exception $e) {
             // En caso de error, capturamos la excepción y respondemos con el error
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listFormulaByIdForm($form_id)
+    {
+        try {
+            // $data = TipoCasoFormulas::with('tipoCaso')->get();
+
+            $data = TipoCasoFormulas::with('tipoCaso')
+                ->whereHas('tipoCaso', function ($query) {
+                    // Filtramos para que tipo_caso.form_id sea diferente de 1 (1 es del default de los formularios)
+                    $query->where('form_id', '!=', 1);
+                })
+                ->get();
+            // echo ($data);
+
+            // Filtramos aquellos que tengan un tipo_caso con el form_id especificado
+            $filtered = array_filter($data->toArray(), function ($formulario) use ($form_id) {
+                return $formulario['tipo_caso']['form_id'] == $form_id;
+            });
+
+            if (!empty($filtered)) {
+                // Devolvemos el primer objeto
+                $filteredItem = reset($filtered); // reset() devuelve el primer valor del array filtrado
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $filteredItem));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este formulario no tiene una fórmula asignada.', ''));
+            }
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
     }
 
