@@ -24,6 +24,7 @@ class Field extends Model
         "margin",
         "url",
         "seccion_id",
+        "group"
     ];
 
     public function setCreatedAtAttribute($value)
