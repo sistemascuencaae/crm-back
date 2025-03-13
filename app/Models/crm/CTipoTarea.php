@@ -13,7 +13,7 @@ class CTipoTarea extends Model
 {
     use HasFactory;
 
-    use SoftDeletes;
+    // use SoftDeletes;
 
     protected $table = 'crm.ctipo_tarea';
 
@@ -30,11 +30,11 @@ class CTipoTarea extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function setDeletedAtAttribute($value)
-    {
-        date_default_timezone_set("America/Guayaquil");
-        $this->attributes["deleted_at"] = Carbon::now();
-    }
+    // public function setDeletedAtAttribute($value)
+    // {
+    //     date_default_timezone_set("America/Guayaquil");
+    //     $this->attributes["deleted_at"] = Carbon::now();
+    // }
 
     public function dTipoTarea()
     {

@@ -439,8 +439,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     // CTAREA
 
     Route::post('/addCTarea', [CTareaController::class, 'addCTarea']); // guardar
-    Route::get('/listTareasByIdTablero/{tab_id}', [CTareaController::class, 'listTareasByIdTablero']); // guardar
-    Route::post('/updateCTarea/{id}', [CTareaController::class, 'updateCTarea']); // Edita la tarea
+    Route::get('/listTareas', [CTareaController::class, 'listTareas']); // guardar
+    Route::post('/editCTarea/{id}', [CTareaController::class, 'editCTarea']); // Edita la tarea
+    Route::delete('/deleteCTarea/{id}', [CTareaController::class, 'deleteCTarea']); // Edita la tarea
 
     // CACTIVIDAD
 

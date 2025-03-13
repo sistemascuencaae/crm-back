@@ -77,27 +77,27 @@ class CasoController extends Controller
             if ($dataFormStatic) {
                 $this->crearFormularioStatico($dataFormStatic, $caso->id);
             }
-            //buscar las tareas predefinidas
-            //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
-            $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
-                inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
-                inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
-                where tc.id = ?', [$caso->tc_id]);
-            //insertar en la tabla tareas
-            foreach ($arrayDtipoTareas as $dtt) {
-                $tarea = new Tareas();
-                $tarea->nombre = $dtt->nombre;
-                $tarea->requerido = $dtt->requerido;
-                $tarea->estado = $dtt->estado;
-                $tarea->ctt_id = $caso->ctt_id;
-                $tarea->tab_id = $dtt->tab_id;
-                $tarea->marcado = false;
-                $caso->tareas()->save($tarea);
-            }
-            // $newGrupo = new ChatGroups();
-            // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
-            // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
-            //$newGrupo->save();
+            // //buscar las tareas predefinidas
+            // //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
+            // $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
+            //     inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
+            //     inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
+            //     where tc.id = ?', [$caso->tc_id]);
+            // //insertar en la tabla tareas
+            // foreach ($arrayDtipoTareas as $dtt) {
+            //     $tarea = new Tareas();
+            //     $tarea->nombre = $dtt->nombre;
+            //     $tarea->requerido = $dtt->requerido;
+            //     $tarea->estado = $dtt->estado;
+            //     $tarea->ctt_id = $caso->ctt_id;
+            //     $tarea->tab_id = $dtt->tab_id;
+            //     $tarea->marcado = false;
+            //     $caso->tareas()->save($tarea);
+            // }
+            // // $newGrupo = new ChatGroups();
+            // // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
+            // // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
+            // //$newGrupo->save();
             $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
             //--------------------
             $caso->estado_2 = $estadoInicial->id;

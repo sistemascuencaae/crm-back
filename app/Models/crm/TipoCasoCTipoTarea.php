@@ -4,20 +4,15 @@ namespace App\Models\crm;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
-use OwenIt\Auditing\Contracts\Auditable;
-use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class DTipoTarea extends Model
+class TipoCasoCTipoTarea extends Model
 {
     use HasFactory;
 
-    // use SoftDeletes;
+    protected $table = 'crm.tipo_caso_ctipo_tarea';
 
-    protected $table = 'crm.dtipo_tarea';
-
-    protected $fillable = ["nombre", "requerido", "estado", "ctt_id"];
+    protected $fillable = ["tipo_caso_id", "ctipo_tarea_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -30,10 +25,13 @@ class DTipoTarea extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    // public function setDeletedAtAttribute($value)
+    // public function dTipoTarea()
     // {
-    //     date_default_timezone_set("America/Guayaquil");
-    //     $this->attributes["deleted_at"] = Carbon::now();
+    //     return $this->hasMany(DTipoTarea::class, "ctt_id", "ctipo_tarea_id");
     // }
 
+    public function cTipoTarea()
+    {
+        return $this->belongsTo(CTipoTarea::class, "ctipo_tarea_id","id");
+    }
 }
