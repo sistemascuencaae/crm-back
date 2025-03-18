@@ -540,13 +540,14 @@ class Formulario2Controller extends Controller
         }
     }
 
-    // public function listFacturas($fechaInicio, $fechaFin, $tipo)
-    public function listFacturas()
+    public function listFacturas($fechaInicio, $fechaFin, $tipo)
     {
         try {
             // $tipo 1 = Pendientes
             // $tipo 2 = Procesadas
-            $data = DB::select("SELECT * from av_cartera_historica_agrupada_diasatraso");
+            $data = DB::select("SELECT * FROM av_cartera_historica_agrupada_diasatraso 
+                                            WHERE fecha >= '$fechaInicio' and fecha <= '$fechaFin' 
+                                            ORDER BY fecha ASC");
 
             if (!$data) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron facturas.', ''));

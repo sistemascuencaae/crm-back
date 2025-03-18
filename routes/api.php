@@ -729,7 +729,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::post('/editValorRespuesta/{id}', [Formulario2Controller::class, 'editValorRespuesta']); // Editar
     
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
-    Route::get('/listFacturas', [Formulario2Controller::class, 'listFacturas']); // lista de facturas
+    Route::get('/listFacturas/{fechaInicio}/{fechaFin}/{tipo}', [Formulario2Controller::class, 'listFacturas']); // lista de facturas
     
     Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
 
