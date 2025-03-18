@@ -16,6 +16,7 @@ use App\Models\crm\ControlTiemposCaso;
 use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\Estados;
 use App\Models\crm\EstadosFormulas;
+use App\Models\crm\formularios2\CasoComprobante;
 use App\Models\crm\Miembros;
 use App\Models\crm\Notificaciones;
 use App\Models\crm\ReferenciasCliente;
@@ -43,12 +44,12 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-            [
-                'add',
-                //'addCasoOPMICreativa'
-                'getCasoFormulario'
+                [
+                    'add',
+                    //'addCasoOPMICreativa'
+                    'getCasoFormulario'
 
-            ]
+                ]
         ]);
     }
 
@@ -108,7 +109,7 @@ class CasoController extends Controller
             }
             $caso->save();
             for ($i = 0; $i < sizeof($miembros); $i++) {
-                $mieExixte = Miembros::where("user_id",$miembros[$i])->where("caso_id", $caso->id)->first();
+                $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
                 if (!$mieExixte) {
                     $miembro = new Miembros();
                     $miembro->user_id = $miembros[$i];
@@ -119,6 +120,15 @@ class CasoController extends Controller
 
             $soporteController = new SoporteController();
             $soporteController->addGaleriaArchivos($request, $caso->id);
+
+
+            $ccm_id_input = $request->input('ccm_id');
+            if ($ccm_id_input) {
+                CasoComprobante::create([
+                    'caso_id' => $caso->id,
+                    'ccm_id' => $ccm_id_input,
+                ]);
+            }
 
             return $this->getCaso($caso->id);
         });
@@ -1672,7 +1682,7 @@ class CasoController extends Controller
             foreach ($data as $key => $item) {
 
                 $campoValor = DB::selectOne("SELECT * FROM crm.form_campo WHERE nombre = ?;", [$item["control"]]);
-                $dataValor = (object)[
+                $dataValor = (object) [
                     // "valor_texto"=> $item["value"],
                     // "valor_entero"=>,
                     // "valor_decimal"=>,

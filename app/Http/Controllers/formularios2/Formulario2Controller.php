@@ -540,9 +540,12 @@ class Formulario2Controller extends Controller
         }
     }
 
+    // public function listFacturas($fechaInicio, $fechaFin, $tipo)
     public function listFacturas()
     {
         try {
+            // $tipo 1 = Pendientes
+            // $tipo 2 = Procesadas
             $data = DB::select("SELECT * from av_cartera_historica_agrupada_diasatraso");
 
             if (!$data) {
