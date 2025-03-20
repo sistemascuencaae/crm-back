@@ -751,6 +751,7 @@ Route::group(["prefix" => "configuracion"], function ($router) {
 
     Route::get('/listAllArchivos2', [Archivos2Controller::class, 'listAllArchivos2']);
     Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
+    Route::delete('/deleteArchivos2/{id}', [Archivos2Controller::class, 'deleteArchivos2']);
 
 });
 

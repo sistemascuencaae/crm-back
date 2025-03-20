@@ -79,5 +79,61 @@ class Archivos2Controller extends Controller
         }
     }
 
-}
+    public function deleteArchivos2($id)
+    {
+        $archivoPath = ''; // Initialize the variable
+        $data = null; // Initialize $data to ensure it's available in catch block
+    
+        $parametro = DB::table('crm.parametro')
+            ->where('abreviacion', 'NAS')
+            ->first();
+    
+        try {
+            // Start the transaction and assign the result to $data
+            $data = DB::transaction(function () use ($id, &$archivoPath, $parametro) {
+                $archivo = Archivos2::findOrFail($id);
+    
+                // Get the old values (old value)
+                $valorAntiguo = $archivo;
+    
+                // Store the file path before attempting to delete it
+                $archivoPath = $archivo->url;
+    
+                if ($parametro->nas == true) {
+                    // Try to get the content of the file
+                    $archivoNas = Storage::disk('nas')->get($archivoPath);
+                } else {
+                    // Try to get the content of the file
+                    $archivoNas = Storage::disk('local')->get($archivoPath);
+                }
+    
+                // Delete the file from the database
+                $archivo->delete();
+    
+                return $archivo; // Return the deleted file record
+            });
+    
+            // If the transaction is successful, delete the file permanently
+            if ($parametro->nas == true) {
+                Storage::disk('nas')->delete($archivoPath);
+            } else {
+                Storage::disk('local')->delete($archivoPath);
+            }
+    
+            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $data));
+        } catch (Exception $e) {
+            // In case of error, restore the file from the temporary variable
+            if (!empty($archivoPath)) {
+                if ($parametro->nas == true) {
+                    Storage::disk('nas')->put($archivoPath, $data);
+                } else {
+                    Storage::disk('local')->put($archivoPath, $data);
+                }
+            }
+    
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+    
 
+}
