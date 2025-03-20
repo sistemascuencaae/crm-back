@@ -16,6 +16,7 @@ use App\Models\crm\ControlTiemposCaso;
 use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\Estados;
 use App\Models\crm\EstadosFormulas;
+use App\Models\crm\formularios2\CasoComprobante;
 use App\Models\crm\Miembros;
 use App\Models\crm\Notificaciones;
 use App\Models\crm\ReferenciasCliente;
@@ -43,12 +44,12 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-            [
-                'add',
-                //'addCasoOPMICreativa'
-                'getCasoFormulario'
+                [
+                    'add',
+                    //'addCasoOPMICreativa'
+                    'getCasoFormulario'
 
-            ]
+                ]
         ]);
     }
 
@@ -77,27 +78,27 @@ class CasoController extends Controller
             if ($dataFormStatic) {
                 $this->crearFormularioStatico($dataFormStatic, $caso->id);
             }
-            //buscar las tareas predefinidas
-            //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
-            $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
-                inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
-                inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
-                where tc.id = ?', [$caso->tc_id]);
-            //insertar en la tabla tareas
-            foreach ($arrayDtipoTareas as $dtt) {
-                $tarea = new Tareas();
-                $tarea->nombre = $dtt->nombre;
-                $tarea->requerido = $dtt->requerido;
-                $tarea->estado = $dtt->estado;
-                $tarea->ctt_id = $caso->ctt_id;
-                $tarea->tab_id = $dtt->tab_id;
-                $tarea->marcado = false;
-                $caso->tareas()->save($tarea);
-            }
-            // $newGrupo = new ChatGroups();
-            // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
-            // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
-            //$newGrupo->save();
+            // //buscar las tareas predefinidas
+            // //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
+            // $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
+            //     inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
+            //     inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
+            //     where tc.id = ?', [$caso->tc_id]);
+            // //insertar en la tabla tareas
+            // foreach ($arrayDtipoTareas as $dtt) {
+            //     $tarea = new Tareas();
+            //     $tarea->nombre = $dtt->nombre;
+            //     $tarea->requerido = $dtt->requerido;
+            //     $tarea->estado = $dtt->estado;
+            //     $tarea->ctt_id = $caso->ctt_id;
+            //     $tarea->tab_id = $dtt->tab_id;
+            //     $tarea->marcado = false;
+            //     $caso->tareas()->save($tarea);
+            // }
+            // // $newGrupo = new ChatGroups();
+            // // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
+            // // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
+            // //$newGrupo->save();
             $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
             //--------------------
             $caso->estado_2 = $estadoInicial->id;
@@ -108,7 +109,7 @@ class CasoController extends Controller
             }
             $caso->save();
             for ($i = 0; $i < sizeof($miembros); $i++) {
-                $mieExixte = Miembros::where("user_id",$miembros[$i])->where("caso_id", $caso->id)->first();
+                $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
                 if (!$mieExixte) {
                     $miembro = new Miembros();
                     $miembro->user_id = $miembros[$i];
@@ -119,6 +120,15 @@ class CasoController extends Controller
 
             $soporteController = new SoporteController();
             $soporteController->addGaleriaArchivos($request, $caso->id);
+
+
+            $ccm_id_input = $request->input('ccm_id');
+            if ($ccm_id_input) {
+                CasoComprobante::create([
+                    'caso_id' => $caso->id,
+                    'ccm_id' => $ccm_id_input,
+                ]);
+            }
 
             return $this->getCaso($caso->id);
         });
@@ -1672,7 +1682,7 @@ class CasoController extends Controller
             foreach ($data as $key => $item) {
 
                 $campoValor = DB::selectOne("SELECT * FROM crm.form_campo WHERE nombre = ?;", [$item["control"]]);
-                $dataValor = (object)[
+                $dataValor = (object) [
                     // "valor_texto"=> $item["value"],
                     // "valor_entero"=>,
                     // "valor_decimal"=>,

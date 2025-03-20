@@ -439,8 +439,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     // CTAREA
 
     Route::post('/addCTarea', [CTareaController::class, 'addCTarea']); // guardar
-    Route::get('/listTareasByIdTablero/{tab_id}', [CTareaController::class, 'listTareasByIdTablero']); // guardar
-    Route::post('/updateCTarea/{id}', [CTareaController::class, 'updateCTarea']); // Edita la tarea
+    Route::get('/listTareas', [CTareaController::class, 'listTareas']); // guardar
+    Route::post('/editCTarea/{id}', [CTareaController::class, 'editCTarea']); // Edita la tarea
+    Route::delete('/deleteCTarea/{id}', [CTareaController::class, 'deleteCTarea']); // Edita la tarea
 
     // CACTIVIDAD
 
@@ -728,6 +729,8 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::post('/editValorRespuesta/{id}', [Formulario2Controller::class, 'editValorRespuesta']); // Editar
     
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
+    Route::get('/listFacturasPendientes/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasPendientes']); // lista de facturas
+    Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
     
     Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
 
@@ -748,6 +751,7 @@ Route::group(["prefix" => "configuracion"], function ($router) {
 
     Route::get('/listAllArchivos2', [Archivos2Controller::class, 'listAllArchivos2']);
     Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
+    Route::delete('/deleteArchivos2/{id}', [Archivos2Controller::class, 'deleteArchivos2']);
 
 });
 

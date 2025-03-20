@@ -13,18 +13,18 @@ use Illuminate\Support\Facades\DB;
 
 class CTareaController extends Controller
 {
-    public function listTareasByIdTablero($tab_id)
+    public function listTareas()
     {
         $log = new Funciones();
 
         try {
-            $tareas = CTipoTarea::where('tab_id', $tab_id)->with('DTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+            $tareas = CTipoTarea::with('dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
-            $log->logInfo(CTareaController::class, 'Se listo con exito las tareas del tablero, con el ID: ' . $tab_id);
+            $log->logInfo(CTareaController::class, 'Se listo con exito las tareas.');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tareas));
         } catch (Exception $e) {
-            $log->logError(CTareaController::class, 'Error al listar las tareas del tablero, con el ID: ' . $tab_id, $e);
+            $log->logError(CTareaController::class, 'Error al listar las tareas.', $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -45,12 +45,10 @@ class CTareaController extends Controller
                         "nombre" => $cTar['tareas'][$i]['nombre'],
                         "requerido" => $cTar['tareas'][$i]['requerido'],
                         "estado" => $cTar['tareas'][$i]['estado'],
-                        "tab_id" => $cTar['tareas'][$i]['tab_id'],
                     ]);
                 }
 
-                // return CTipoTarea::with('dTipoTarea')->orderBy("id", "desc")->get();
-                return CTipoTarea::where('tab_id', $cTarea['tab_id'])->with('dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
+                return CTipoTarea::with('dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
             });
 
             $log->logInfo(CTareaController::class, 'Se guardo con exito la tarea');
@@ -63,47 +61,7 @@ class CTareaController extends Controller
         }
     }
 
-    // public function updateCTarea(Request $request, $id)
-    // {
-    //     try {
-    //         $tareas = $request->input('tareas');
-    //         $cTarea = $request->all();
-
-    //         $dataRe = DB::transaction(function () use ($cTarea, $id, $tareas) {
-    //             CTipoTarea::where('id', $id)
-    //                 ->update([
-    //                     'nombre' => $cTarea['nombre'],
-    //                     'estado' => $cTarea['estado']
-    //                 ]);
-
-    //             for ($i = 0; $i < sizeof($tareas); $i++) {
-    //                 if ($tareas[$i]['id']) {
-    //                     DTipoTarea::where('id', $tareas[$i]['id'])
-    //                         ->update($tareas[$i]);
-    //                 } else {
-    //                     DTipoTarea::create([
-    //                         "ctt_id" => $id,
-    //                         "nombre" => $tareas[$i]['nombre'],
-    //                         "requerido" => $tareas[$i]['requerido'],
-    //                         "estado" => $tareas[$i]['estado']
-    //                     ]);
-    //                 }
-    //             }
-
-    //             // return CTipoTarea::with('dTipoTarea')->orderBy('id', 'DESC')->get();
-    //             return CTipoTarea::with('dTipoTarea')->get();
-    //         });
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo la Tarea con éxito', $dataRe));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-    //     }
-    //     // UPDATE crm.dtipo_tarea
-    //     // SET ctt_id=80, nombre='ULLOA VICENTE', requerido=true, estado=true, created_at='2023-07-10 10:15:51.000', updated_at='2023-07-10 10:15:51.000', deleted_at=NULL
-    //     // WHERE id=23;
-    // }
-
-    public function updateCTarea(Request $request, $id)
+    public function editCTarea(Request $request, $id)
     {
         $log = new Funciones();
 
@@ -136,7 +94,6 @@ class CTareaController extends Controller
                             "nombre" => $tareas[$i]['nombre'],
                             "requerido" => $tareas[$i]['requerido'],
                             "estado" => $tareas[$i]['estado'],
-                            "tab_id" => $tareas[$i]['tab_id'],
                         ]);
                     }
                 }
@@ -156,5 +113,26 @@ class CTareaController extends Controller
         }
     }
 
+    public function deleteCTarea($id)
+    {
+        try {
+            $resp = DB::transaction(function () use ($id) {
+                // Encontrar el CTipoTarea por ID
+                $cTarea = CTipoTarea::findOrFail($id);
+
+                // Eliminar los DTipoTarea que contengan el id de CTipoTarea
+                DTipoTarea::where('ctt_id', $cTarea->id)->delete(); // Asegúrate que la relación en DTipoTarea sea por 'c_tipo_tarea_id' o el nombre correcto
+
+                // Eliminar el CTipoTarea
+                $cTarea->delete();
+
+                return $cTarea;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $resp));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 
 }

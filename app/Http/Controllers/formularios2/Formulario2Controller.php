@@ -540,4 +540,34 @@ class Formulario2Controller extends Controller
         }
     }
 
+    public function listFacturasPendientes($fechaInicio, $fechaFin)
+    {
+        try {
+            $data = DB::select('SELECT * FROM crm.fn_migracion_cartera_historica_pendiente(?, ?)', [$fechaInicio, $fechaFin]);
+
+            if (!$data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron facturas.', ''));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listFacturasProcesadas($fechaInicio, $fechaFin)
+    {
+        try {
+            $data = DB::select('SELECT * FROM crm.fn_migracion_cartera_historica_procesada(?, ?)', [$fechaInicio, $fechaFin]);
+
+            if (!$data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron facturas.', ''));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }
