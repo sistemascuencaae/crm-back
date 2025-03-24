@@ -33,7 +33,7 @@ class Formulario2UsuariosController extends Controller
     {
         try {
             $data = DB::transaction(function () use ($request) {
-
+    
                 // Primero, eliminamos los usuarios que están en el array usuariosEliminados
                 if (isset($request->usuariosEliminados) && count($request->usuariosEliminados) > 0) {
                     foreach ($request->usuariosEliminados as $usuarioEliminado) {
@@ -43,24 +43,31 @@ class Formulario2UsuariosController extends Controller
                             ->delete();
                     }
                 }
-
+    
                 // Luego, insertamos los usuarios nuevos que están en el array usuariosNuevos
                 if (isset($request->usuariosNuevos) && count($request->usuariosNuevos) > 0) {
                     foreach ($request->usuariosNuevos as $usuarioNuevo) {
-                        // Insertamos el nuevo usuario en la tabla 'formularios_usuarios'
-                        FormUser::create([
-                            'form_id' => $usuarioNuevo['form_id'],
-                            'user_id' => $usuarioNuevo['user_id'],
-                        ]);
+                        // Verificamos si el usuario ya existe en la tabla 'formularios_usuarios'
+                        $existingUser = FormUser::where('user_id', $usuarioNuevo['user_id'])
+                            ->where('form_id', $usuarioNuevo['form_id'])
+                            ->first();
+    
+                        // Si no existe, lo creamos
+                        if (!$existingUser) {
+                            FormUser::create([
+                                'form_id' => $usuarioNuevo['form_id'],
+                                'user_id' => $usuarioNuevo['user_id'],
+                            ]);
+                        }
                     }
                 }
-
+    
                 // Si todo va bien, obtenemos los formularios actualizados
                 return Form::where('id', '!=', 1)
                     ->with('formUser.usuario')
                     ->get();
             });
-
+    
             // Si la transacción fue exitosa, respondemos con un mensaje de éxito
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', $data));
         } catch (Exception $e) {
@@ -68,6 +75,7 @@ class Formulario2UsuariosController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+    
 
     public function listFormulariosByUsuId($user_id)
     {
