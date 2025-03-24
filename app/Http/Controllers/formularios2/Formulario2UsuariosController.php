@@ -96,7 +96,7 @@ class Formulario2UsuariosController extends Controller
 
             $data = json_decode($query->resultado, true);  // Convierto para que me devuelva el array de las respuestas, porque la funcion de LEO devuelve un string
 
-            if (count($data) > 0) {
+            if (is_array($data) && count($data) > 0) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Este formulario no tiene respuestas', ''));
@@ -113,7 +113,7 @@ class Formulario2UsuariosController extends Controller
             // 2 es el número de años que va a consultar
             $data = DB::select("SELECT * FROM public.af_cliente_dfactura2(?)", [$identificacion]);
 
-            if (count($data) > 0) {
+            if (is_array($data) && count($data) > 0) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'No existe facturas para este cliente.', ''));
