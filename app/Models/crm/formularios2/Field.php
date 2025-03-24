@@ -21,10 +21,11 @@ class Field extends Model
         "isactive",
         "opcion",
         "form_control_name",
-        "margin",
         "url",
         "seccion_id",
-        "group"
+        "group",
+        "margin_top",
+        "margin_bottom"
     ];
 
     public function setCreatedAtAttribute($value)
