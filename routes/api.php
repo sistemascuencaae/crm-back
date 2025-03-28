@@ -99,6 +99,7 @@ use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\openceo\TipoProductoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\WebSocketController;
+use App\Http\Controllers\configuracion\NotesController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -753,6 +754,12 @@ Route::group(["prefix" => "configuracion"], function ($router) {
     Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
     Route::delete('/deleteArchivos2/{id}', [Archivos2Controller::class, 'deleteArchivos2']);
 
+    // NOTAS
+
+    Route::post('/addNotes', [NotesController::class, 'addNotes']); // guardar
+    Route::get('/listNotes', [NotesController::class, 'listNotes']); // listar
+    Route::post('/editNotes/{id}', [NotesController::class, 'editNotes']); // Editar
+    Route::delete('/deleteNotes/{id}', [NotesController::class, 'deleteNotes']); // Eliminar
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------
