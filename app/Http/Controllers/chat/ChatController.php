@@ -48,7 +48,12 @@ class ChatController extends Controller
     public function usuariosParaChat()
     {
         try {
-            $data = User::where('estado', true)->where('usu_tipo', '<>', 1)->get();
+            // $data = User::where('estado', true)->where('usu_tipo', '<>', 1)->get();
+            $data = User::where('estado', true)
+                            ->where('usu_tipo', '<>', 1)
+                            ->selectRaw("*, CONCAT(usu_alias, ' - ', surname, ' ', name) as full_name") // Concatenamos y devolvemos todas las columnas
+                            ->get();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
@@ -62,12 +67,18 @@ class ChatController extends Controller
             inner join crm.chat_miembros_grupo cmg  on cmg.chatgrupo_id = cg.id
             inner join crm.users u on u.id = cmg.user_id
             where cg.id = $converId");
-            //$usuarios = User::where('estado', true)->where('usu_tipo', '<>', 1)->get();
-            $usuarios = DB::select("SELECT * FROM crm.users where estado = true and usu_tipo <> 1");
+            
+            // $usuarios = DB::select("SELECT * FROM crm.users where estado = true and usu_tipo <> 1");
+            $usuarios = User::where('estado', true)
+                                ->where('usu_tipo', '<>', 1)
+                                ->selectRaw("*, CONCAT(usu_alias, ' - ', surname, ' ', name) as full_name") // Concatenamos y devolvemos todas las columnas
+                                ->get();
+
             $data = (object) [
                 "usersGrupo" => $usersGrupo,
                 "usuarios" => $usuarios
             ];
+
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
