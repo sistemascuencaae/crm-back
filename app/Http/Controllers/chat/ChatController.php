@@ -174,7 +174,7 @@ class ChatController extends Controller
                 $currentDate = date('Y-m-d H:i:s');
                 DB::update("UPDATE crm.chat_mensajes SET read_at= '$currentDate'
                 WHERE id in (SELECT id from crm.chat_mensajes WHERE chatconve_id=$converId ORDER BY updated_at DESC LIMIT 15)
-                 and user_id <> $userCreadorId;");
+                    and user_id <> $userCreadorId;");
             }
             $data = $this->getMensajes($converId, $tipoConver, $perPage);
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
@@ -203,7 +203,7 @@ class ChatController extends Controller
                         'archivosImg.img',
                         'archivo',
                         'user' => function ($query) {
-                            $query->select(['id', 'name', 'email']);
+                            $query->select(['id', 'name', 'email', 'usu_alias']);
                         }
                     ]);
                 }
@@ -218,7 +218,7 @@ class ChatController extends Controller
                         'archivosImg.img',
                         'archivo',
                         'user' => function ($query) {
-                            $query->select(['id', 'name', 'email']);
+                            $query->select(['id', 'name', 'email', 'usu_alias']);
                         }
                     ]);
                 }
@@ -246,8 +246,8 @@ class ChatController extends Controller
                     m.user_id,
                     (select
                         CASE
-                         WHEN cc2.user_uno_id = ? THEN u2.name
-                         WHEN cc2.user_dos_id = ? THEN u1.name
+                         WHEN cc2.user_uno_id = ? THEN u2.usu_alias
+                         WHEN cc2.user_dos_id = ? THEN u1.usu_alias
                          ELSE 'Desconocido'
                         END AS remitente
                     from crm.chat_conversaciones cc2
