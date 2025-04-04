@@ -49,7 +49,7 @@ class StockProSerieController extends Controller
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
             $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id, bodega, sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from
-                                 av_stock_producto_bodega_sinregalos_v3 tt WHERE  bod_id not in ( 16,47,50,60,61,181,182,200,209,211, 225, 204, 231, 208) group by 1,2,3;");
+                                av_stock_producto_bodega_sinregalos_v3 tt WHERE  bod_id not in ( 16,47,50,60,61,181,182,200,209,211, 225, 204, 231, 208, 240, 241, 242, 243, 244) group by 1,2,3;");
 
             $data = (object) [
                 "productoSeries" => $datosSeries

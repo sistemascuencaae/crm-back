@@ -38,7 +38,8 @@ class Formulario2Controller extends Controller
                         // Ordena los campos dentro de cada sección por el atributo 'orden'
                         $query->orderBy('order', 'asc');
                     }
-                ])
+                    ])
+                    ->with('formUser.usuario')
                 ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
                 ->get();
 
@@ -379,7 +380,8 @@ class Formulario2Controller extends Controller
                 }
 
                 // Retornar los formularios guardados, excluyendo el formulario con id 1
-                return Form::where('id', '!=', 1)->with([
+                return Form::where('id', '!=', 1)
+                ->with([
                     'seccion' => function ($query) {
                         // Ordena las secciones por el atributo 'orden'
                         $query->orderBy('order', 'asc');
@@ -388,9 +390,10 @@ class Formulario2Controller extends Controller
                         // Ordena los campos dentro de cada sección por el atributo 'orden'
                         $query->orderBy('order', 'asc');
                     }
-                ])
-                    ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
-                    ->get();
+                    ])
+                    ->with('formUser.usuario')
+                ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
+                ->get();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));

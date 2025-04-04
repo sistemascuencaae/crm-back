@@ -52,6 +52,9 @@ class Caso extends Model
         "cpp_id",
         "form_id",
         "form_id2",
+        "cliente",
+        "identificacion",
+        "comprobante",
     ];
 
     public function userCreador()

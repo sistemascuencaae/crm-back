@@ -62,10 +62,21 @@ class Formulario2UsuariosController extends Controller
                     }
                 }
     
-                // Si todo va bien, obtenemos los formularios actualizados
+                // Retornar los formularios guardados, excluyendo el formulario con id 1
                 return Form::where('id', '!=', 1)
+                ->with([
+                    'seccion' => function ($query) {
+                        // Ordena las secciones por el atributo 'orden'
+                        $query->orderBy('order', 'asc');
+                    },
+                    'seccion.campo' => function ($query) {
+                        // Ordena los campos dentro de cada sección por el atributo 'orden'
+                        $query->orderBy('order', 'asc');
+                    }
+                    ])
                     ->with('formUser.usuario')
-                    ->get();
+                ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
+                ->get();
             });
     
             // Si la transacción fue exitosa, respondemos con un mensaje de éxito

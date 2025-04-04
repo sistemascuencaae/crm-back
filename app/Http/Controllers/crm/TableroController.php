@@ -42,7 +42,7 @@ class TableroController extends Controller
     public function usuariosTablero($tabId)
     {
         try {
-            $usuariosTablero = DB::select("SELECT u.* from crm.tablero_user tu
+            $usuariosTablero = DB::select("SELECT u.*, u.usu_alias || ' - ' || u.surname || ' ' || u.name as full_name from crm.tablero_user tu
             left join crm.users u on u.id = tu.user_id
             where tu.tab_id = ?", [$tabId]);
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuariosTablero));
