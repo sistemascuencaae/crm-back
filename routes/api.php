@@ -100,6 +100,7 @@ use App\Http\Controllers\openceo\TipoProductoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\WebSocketController;
 use App\Http\Controllers\configuracion\NotesController;
+use App\Http\Controllers\correo\CorreoController;
 use Illuminate\Support\Facades\Route;
 
 /*w
@@ -760,6 +761,11 @@ Route::group(["prefix" => "configuracion"], function ($router) {
     Route::get('/listNotes', [NotesController::class, 'listNotes']); // listar
     Route::post('/editNotes/{id}', [NotesController::class, 'editNotes']); // Editar
     Route::delete('/deleteNotes/{id}', [NotesController::class, 'deleteNotes']); // Eliminar
+
+    Route::post('/addCorreo', [CorreoController::class, 'addCorreo']); // guardar
+    Route::get('/listCorreos', [CorreoController::class, 'listCorreos']); // listar
+    Route::post('/editCorreo/{id}', [CorreoController::class, 'editCorreo']); // Editar
+    Route::delete('/deleteCorreo/{id}', [CorreoController::class, 'deleteCorreo']); // Eliminar
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------

@@ -28,10 +28,6 @@ class ReqCasoController extends Controller
         $reqCaso = $request->input('reqCaso');
         $inputReq = json_decode($reqCaso);
 
-
-
-
-
         $tipoArchivo = $request->input('tipoArchivo');
         $requerimiento = RequerimientoCaso::where('id', $inputReq->id)->first();
         if (!$requerimiento) {
@@ -275,13 +271,9 @@ class ReqCasoController extends Controller
                     $audit->caso_id = $requerimiento->caso_id;
                     $audit->save();
                     // END Auditoria
-
-
-
                 });
 
                 $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))
-                    ->orderBy('id', 'asc')
                     ->orderBy('id', 'asc')
                     ->get();
 
