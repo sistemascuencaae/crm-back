@@ -56,7 +56,7 @@ class EstadosFormulasController extends Controller
                 // Validar si ya existe un registro con el mismo est_id_actual y resp_id
                 $existingRecord = EstadosFormulas::where('est_id_actual', $request->est_id_actual)
                     ->where('resp_id', $request->resp_id)
-                    ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
+                    ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima', 'tipoCaso')
                     ->first();
 
                 if ($existingRecord) {
@@ -69,7 +69,7 @@ class EstadosFormulasController extends Controller
                     $respuestas = EstadosFormulas::create($request->all());
 
                     $resultado = EstadosFormulas::where('tab_id', $respuestas->tab_id)
-                        ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
+                        ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima','tipoCaso')
                         ->orderBy('id', 'DESC')
                         ->get();
 
@@ -119,7 +119,7 @@ class EstadosFormulasController extends Controller
                     $respuestas->update($request->all());
 
                     $resultado = EstadosFormulas::where('id', $respuestas->id)
-                        ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
+                        ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima','tipoCaso')
                         ->first();
 
                     $exitoso = $resultado;
