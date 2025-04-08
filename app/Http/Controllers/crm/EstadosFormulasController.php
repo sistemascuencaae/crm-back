@@ -37,11 +37,11 @@ class EstadosFormulasController extends Controller
     {
         try {
 
-            $data = DB::select("SELECT * FROM crm.tipo_caso WHERE tab_id = ?", [$tabId]);
+            $data = DB::select("SELECT * FROM crm.tipo_caso WHERE deleted_at is null AND tab_id = ?", [$tabId]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
         }
     }
 
