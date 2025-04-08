@@ -56,6 +56,7 @@ class EstadosFormulasController extends Controller
                 // Validar si ya existe un registro con el mismo est_id_actual y resp_id
                 $existingRecord = EstadosFormulas::where('est_id_actual', $request->est_id_actual)
                     ->where('resp_id', $request->resp_id)
+                    // ->where('tipo_caso_id', $request->tipo_caso_id)
                     ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima', 'tipoCaso')
                     ->first();
 

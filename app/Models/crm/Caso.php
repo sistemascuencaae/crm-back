@@ -170,4 +170,9 @@ class Caso extends Model
     {
         return $this->hasMany(FormValor::class, 'caso_id', 'id');
     }
+
+    public function tiempo_caso()
+    {
+        return $this->hasMany(ControlTiemposCaso::class, 'caso_id', 'id');
+    }
 }

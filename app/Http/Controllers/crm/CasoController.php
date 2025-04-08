@@ -833,7 +833,8 @@ class CasoController extends Controller
                 'tablero',
                 'fase.tablero',
                 'estadodos',
-                'tipocaso'
+                'tipocaso',
+                'tiempo_caso',
 
             ])->where('id', $casoId)->first();
         } catch (Exception $e) {

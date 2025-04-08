@@ -256,6 +256,7 @@ class FaseController extends Controller
                 'condicionFaseMover',
                 'caso.estadodos',
                 'caso.tipocaso',
+                'caso.tiempo_caso',
                 'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user) {
                     $query->whereBetween('fecha_vencimiento', [
                         Carbon::parse($fechaInicio)->startOfDay(),
