@@ -1531,6 +1531,30 @@ class CasoController extends Controller
         }
     }
 
+    public function listHistorialCasoAgrupadoTablero($caso_id)
+    {
+        $log = new Funciones();
+
+        try {
+            $data = ControlTiemposCaso::where('caso_id', $caso_id)
+                ->select(
+                    'tablero',
+                    DB::raw('SUM(tiempo_cambio) as tiempo_cambio')
+                )
+                ->groupBy('tablero')
+                ->orderBy('tablero', 'ASC')
+                ->get();
+
+            $log->logInfo(CasoController::class, 'Se listo con exito el historial del caso #' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar el historial del caso #' . $caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
     public function actualizarCaso(Request $request, $casoId, $tabId)
     {
         $log = new Funciones();
