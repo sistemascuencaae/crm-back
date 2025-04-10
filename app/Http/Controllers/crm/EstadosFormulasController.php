@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\EstadosFormulas;
+use App\Models\configuracion\TipoCasoTablero;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,11 +34,35 @@ class EstadosFormulasController extends Controller
         }
     }
 
+    public function listEstadosFormulasByTabIdByTipoCasoId($tab_id, $tipo_caso_id)
+    {
+        $log = new Funciones();
+        try {
+            // original
+            // $respuestas = EstadosFormulas::where('tab_id', $id)->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima','tipoCaso')->get();
+            
+            // nuevo cambio
+            $respuestas = TipoCasoTablero::where('tipo_caso_id', $tipo_caso_id)->where('tab_id', $tab_id)
+                ->with('estado_formula.estado_actual', 'estado_formula.fase_actual', 
+                        'estado_formula.respuesta_caso', 'estado_formula.estado_proximo', 
+                        'estado_formula.tablero_proximo', 'estado_formula.fase_proxima', 'estado_formula.tipoCaso')
+                ->get();
+
+            $log->logInfo(EstadosFormulasController::class, 'Se listo con exito los estados del tablero con el ID: ' . $tab_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuestas));
+        } catch (Exception $e) {
+            $log->logError(EstadosFormulasController::class, 'Error al listar los estados del tablero con el ID: ' . $tab_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function listarTiposCasoTablero($tabId)
     {
         try {
 
-            $data = DB::select("SELECT * FROM crm.tipo_caso WHERE deleted_at is null AND tab_id = ?", [$tabId]);
+            $data = DB::select("SELECT * FROM crm.tipo_caso WHERE tab_id = ?", [$tabId]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -56,13 +81,13 @@ class EstadosFormulasController extends Controller
                 // Validar si ya existe un registro con el mismo est_id_actual y resp_id
                 $existingRecord = EstadosFormulas::where('est_id_actual', $request->est_id_actual)
                     ->where('resp_id', $request->resp_id)
-                    // ->where('tipo_caso_id', $request->tipo_caso_id)
+                    ->where('tipo_caso_id', $request->tipo_caso_id)
                     ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima', 'tipoCaso')
                     ->first();
 
                 if ($existingRecord) {
                     // Si ya existe un registro con los mismos valores, devuelve un error
-                    $error = 'Ya EXISTE un registro con los valores estado actual: ' . $existingRecord->estado_actual->nombre . ' y respuesta: ' . $existingRecord->respuesta_caso->nombre;
+                    $error = 'Ya EXISTE un registro con los valores tipo caso: ' . $existingRecord->tipoCaso->nombre . ', estado actual: ' . $existingRecord->estado_actual->nombre . ' y respuesta: ' . $existingRecord->respuesta_caso->nombre;
                     return null;
                 } else {
 
@@ -108,12 +133,14 @@ class EstadosFormulasController extends Controller
                 // Validar si la actualización resultaría en valores duplicados
                 $existingRecord = EstadosFormulas::where('est_id_actual', $request->est_id_actual)
                     ->where('resp_id', $request->resp_id)
+                    ->where('tipo_caso_id', $request->tipo_caso_id)
                     ->where('id', '!=', $id) // Excluir el registro actual de la consulta
                     ->first();
 
                 if ($existingRecord) {
                     // Si la actualización resultaría en valores duplicados, devuelve un error
-                    $error = 'Ya EXISTE un registro con los valores estado actual: ' . $existingRecord->estado_actual->nombre . ' y respuesta: ' . $existingRecord->respuesta_caso->nombre;
+                    // $error = 'Ya EXISTE un registro con los valores estado actual: ' . $existingRecord->estado_actual->nombre . ' y respuesta: ' . $existingRecord->respuesta_caso->nombre;
+                    $error = 'Ya EXISTE un registro con los valores tipo caso: ' . $existingRecord->tipoCaso->nombre . ', estado actual: ' . $existingRecord->estado_actual->nombre . ' y respuesta: ' . $existingRecord->respuesta_caso->nombre;
                     return null;
                 } else {
 

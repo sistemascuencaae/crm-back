@@ -103,7 +103,7 @@ class CasoController extends Controller
             //--------------------
             $caso->estado_2 = $estadoInicial->id;
             $caso->nombre = 'CASO # ' . $caso->id;
-            //$caso->user_creador_id = $userLoginId;
+            $caso->user_creador_id = $request->user_creador_id;
             $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
             if ($caso->desc_json) {
             }
@@ -1586,6 +1586,27 @@ class CasoController extends Controller
                 $robot->addMiembro($data->user_id, $casoId, $tabId);
                 broadcast(new TableroEvent($data));
                 $log->logInfo(CasoController::class, 'Se actualizo con exito el caso #' . $casoId);
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                // Obtener el old_values (valor antiguo)
+                $valorAntiguo = $casoData;
+                $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
+
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = Caso::class;
+                $audit->auditable_id = $casoId;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'reasignarCaso';
+                $audit->caso_id = $casoId;
+                // Establecer old_values y new_values
+                $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
+                $audit->save();
+                // END Auditoria
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
             }

@@ -485,6 +485,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addTipoCaso', [TipoCasoController::class, 'addTipoCaso']); // guardar
     Route::get('listTipoCasoByIdTablero/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTablero']); // listar
+    Route::get('listAllTipoCaso', [TipoCasoController::class, 'listAllTipoCaso']); // listar
     Route::get('listTipoCasoByIdTableroEstadoActivo/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTableroEstadoActivo']); // listar
     Route::get('listTipoCasoByIdCasoId/{caso_id}', [TipoCasoController::class, 'listTipoCasoByIdCasoId']); // listar
     Route::get('listByIdTipoCasoActivo/{tc_id}', [TipoCasoController::class, 'listByIdTipoCasoActivo']); // listar
@@ -559,6 +560,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // EstadosFormulas
 
     Route::get('/listEstadosFormulasByTablero/{tab_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTablero']); // listar
+    Route::get('/listEstadosFormulasByTabIdByTipoCasoId/{tab_id}/{tipo_caso_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTabIdByTipoCasoId']); // listar
     Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
     Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
     Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
