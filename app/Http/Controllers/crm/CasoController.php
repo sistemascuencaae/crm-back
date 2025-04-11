@@ -116,7 +116,7 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
             }
-            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
 
             $soporteController = new SoporteController();
             $soporteController->addGaleriaArchivos($request, $caso->id);
@@ -288,7 +288,7 @@ class CasoController extends Controller
             );
             // end diferencia de tiempos en horas minutos y segundos
 
-            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
             $data = $this->getCaso($caso->id);
             broadcast(new TableroEvent($data));
 
@@ -625,7 +625,7 @@ class CasoController extends Controller
                 $casoEnProceso->fase_anterior_id = $fase_anterior_id;
                 $casoEnProceso->user_anterior_id = $user_anterior_id;
                 $casoEnProceso->save();
-                $this->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
+                $this->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id, $casoEnProceso->tc_id);
                 $emailController = new EmailController();
                 $emailController->send_emailCambioFase($caso_id, $casoEnProceso->fas_id);
                 //$this->enviarCorreoCliente($caso_id);
@@ -947,7 +947,7 @@ class CasoController extends Controller
         return response()->json($arrayTest);
     }
 
-    public function addRequerimientosFase($casoId, $faseId, $userCreadorId)
+    public function addRequerimientosFase($casoId, $faseId, $userCreadorId, $tipo_caso_id)
     {
 
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
@@ -975,12 +975,24 @@ class CasoController extends Controller
         $log = new Funciones();
 
         try {
+            // funcion orginal de felipao | JGSJ
+            // $reqFase = DB::select(
+            //     'SELECT rp.* from crm.requerimientos_predefinidos rp
+            //     left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+            //     WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden asc',
+            //     [$casoId, $faseId]
+            // );
             $reqFase = DB::select(
-                'SELECT rp.* from crm.requerimientos_predefinidos rp
-                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
-                WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden asc',
-                [$casoId, $faseId]
-            );
+                                'SELECT req_pre.* 
+                                    from crm.requerimientos_predefinidos req_pre
+                                left join crm.requerimientos_caso req_caso on req_caso.caso_id = ? 
+                                    and req_caso.titulo = req_pre.nombre
+                                WHERE req_caso.titulo IS null 
+                                    and req_pre.fase_id = ? 
+                                    and req_pre.tipo_caso_id = ? 
+                                order by req_pre.orden asc',
+                                [$casoId, $faseId, $tipo_caso_id]
+                                );
 
             for ($i = 0; $i < sizeof($reqFase); $i++) {
                 $reqCaso = new RequerimientoCaso();
