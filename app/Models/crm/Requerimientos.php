@@ -23,7 +23,8 @@ class Requerimientos extends Model
         "requerido",
         "orden",
         "acc_publico",
-        "desc_requerida"
+        "desc_requerida",
+        "tipo_caso_id",
     ];
 
     public function setCreatedAtAttribute($value)
@@ -42,6 +43,11 @@ class Requerimientos extends Model
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["deleted_at"] = Carbon::now();
+    }
+
+    public function tipo_caso()
+    {
+        return $this->belongsTo(TipoCaso::class, "tipo_caso_id");
     }
 
 }
