@@ -56,6 +56,7 @@ use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
+use App\Http\Controllers\openceo\EntidadDynamoController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
@@ -769,6 +770,16 @@ Route::group(["prefix" => "configuracion"], function ($router) {
     Route::get('/listCorreos', [CorreoController::class, 'listCorreos']); // listar
     Route::post('/editCorreo/{id}', [CorreoController::class, 'editCorreo']); // Editar
     Route::delete('/deleteCorreo/{id}', [CorreoController::class, 'deleteCorreo']); // Eliminar
+});
+
+Route::group(["prefix" => "openceo"], function ($router) {
+
+    // openceo
+
+    Route::get('/buscarEntidadEmpleado/{identificacion}', [EntidadDynamoController::class, 'buscarEntidadEmpleado']);
+    Route::get('/listAlmacenesPuntoVenta', [EntidadDynamoController::class, 'listAlmacenesPuntoVenta']);
+    Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
+
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------

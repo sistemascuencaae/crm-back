@@ -926,7 +926,7 @@ class CasoController extends Controller
             $reqCaso->requerido = $reqFase[$i]->requerido;
 
             if ($reqCaso->tipo_campo == 'lista') {
-                $array = explode(',', $reqCaso->valor_lista);
+                $array = explode(';', $reqCaso->valor_lista);
                 $nuevoArray = array();
 
                 foreach ($array as $item) {
@@ -1010,7 +1010,7 @@ class CasoController extends Controller
                 $reqCaso->desc_requerida = $reqFase[$i]->desc_requerida;
 
                 if ($reqCaso->tipo_campo == 'lista') {
-                    $array = explode(',', $reqCaso->valor_lista);
+                    $array = explode(';', $reqCaso->valor_lista);
                     $nuevoArray = array();
                     foreach ($array as $item) {
                         $objeto = array(
