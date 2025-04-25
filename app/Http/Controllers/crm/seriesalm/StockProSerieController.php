@@ -48,13 +48,34 @@ class StockProSerieController extends Controller
     {
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
-            $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id, bodega, sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from
-                                av_stock_producto_bodega_sinregalos_v3 tt WHERE  bod_id not in ( 16,47,50,60,61,181,182,200,209,211, 225, 204, 208, 240, 241, 242, 243, 244) group by 1,2,3;");
+            // $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id, bodega, sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from
+            //                     av_stock_producto_bodega_sinregalos_v3 tt WHERE  bod_id not in ( 16, 47, 50, 60, 61, 181, 182, 200, 209, 211, 225, 204, 208, 240, 241, 242, 243, 244) group by 1, 2, 3;");
+
+            $datosSeries = DB::select("SELECT 
+                                                    DISTINCT(tt.bodega), 
+                                                    bod_id, 
+                                                    bodega, 
+                                                    SUM(stock_actual) AS stock_productos, 
+                                                    SUM(stock_serie) AS stock_series, 
+                                                    SUM(stock_actual - stock_serie) AS diferencia,
+                                                    SUM(CASE WHEN (stock_actual - stock_serie) < 0 THEN (stock_actual - stock_serie) * -1 ELSE 0 END) AS excedente,
+                                                    SUM(CASE WHEN (stock_actual - stock_serie) > 0 THEN (stock_actual - stock_serie) ELSE 0 END) AS faltante,
+                                                    SUM(stock_actual) - 
+                                                    (
+                                                        SUM(CASE WHEN (stock_actual - stock_serie) < 0 THEN (stock_actual - stock_serie) ELSE 0 END) * -1 +
+                                                        SUM(CASE WHEN (stock_actual - stock_serie) > 0 THEN (stock_actual - stock_serie) ELSE 0 END)
+                                                    ) AS total_satisfactorio
+                                                FROM 
+                                                    av_stock_producto_bodega_sinregalos_v3 tt 
+                                                WHERE  
+                                                    bod_id NOT IN (16, 47, 50, 60, 61, 181, 182, 200, 209, 211, 225, 204, 208, 240, 241, 242, 243, 244) 
+                                                GROUP BY 
+                                                    1, 2, 3;
+                                                ");
 
             $data = (object) [
                 "productoSeries" => $datosSeries
             ];
-
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
