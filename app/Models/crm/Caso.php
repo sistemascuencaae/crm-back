@@ -55,6 +55,7 @@ class Caso extends Model
         "cliente",
         "identificacion",
         "comprobante",
+        "datos_formulario",
     ];
 
     public function userCreador()
