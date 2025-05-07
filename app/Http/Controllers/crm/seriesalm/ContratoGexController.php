@@ -25,6 +25,19 @@ class ContratoGexController extends Controller
     }
 
 
+    public function listarTodosContratosBodega()
+    {
+        try {
+            $data = ContratoGexCRM::orderBy('nom_almacen', 'asc')
+                    ->orderBy('numero', 'asc')
+                    ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+        }
+    }
+
     public function listarContratosBodega($bodId)
     {
         try {
