@@ -21,6 +21,7 @@ class Formulario2Controller extends Controller
 {
     public function __construct()
     {
+        // $this->middleware('auth:api', ['except' => ['listCliente_byIdentificacion']]);
     }
 
     public function listAll()
@@ -184,11 +185,12 @@ class Formulario2Controller extends Controller
         }
     }
 
-    // juan endPoint que se utiliza para la llamada del cliente en los formularios 2
+    // jgsj endPoint que se utiliza para la llamada del cliente en los formularios 2
     public function listCliente_byIdentificacion($identificacion)
     {
         try {
-            $data = DB::selectOne("SELECT cli_id, ent_id, ent_identificacion, ent_nombre_comercial, ent_nombre, ent_apellidos, direccion, calle_secundaria, numero_casa, telefono_domicilio, prv_nombre, ctn_nombre, ent_email FROM public.aav_migracion_cliente where ent_identificacion = '$identificacion'");
+            // $data = DB::selectOne("SELECT cli_id, ent_id, ent_identificacion, ent_nombre_comercial, ent_nombre, ent_apellidos, direccion, calle_secundaria, numero_casa, telefono_domicilio, prv_nombre, ctn_nombre, ent_email FROM public.aav_migracion_cliente where ent_identificacion = '$identificacion'");
+            $data = DB::selectOne("SELECT * FROM crm.av_cliente_completo where identificacion = '$identificacion'");
 
             if (!$data) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no existe con la identificación ' . $identificacion, ''));
@@ -546,7 +548,8 @@ class Formulario2Controller extends Controller
     public function listFacturasPendientes($fechaInicio, $fechaFin)
     {
         try {
-            $data = DB::select('SELECT * FROM crm.fn_migracion_cartera_historica_pendiente(?, ?) order by fecha asc', [$fechaInicio, $fechaFin]);
+            // $data = DB::select('SELECT * FROM crm.fn_migracion_cartera_historica_pendiente(?, ?) order by fecha asc', [$fechaInicio, $fechaFin]);
+            $data = DB::select('SELECT * FROM crm.fn_migracion_cartera_historica_pendiente_v2(?, ?) order by fecha asc', [$fechaInicio, $fechaFin]);
 
             if (!$data) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron facturas.', ''));
@@ -561,7 +564,8 @@ class Formulario2Controller extends Controller
     public function listFacturasProcesadas($fechaInicio, $fechaFin)
     {
         try {
-            $data = DB::select('SELECT * FROM crm.fn_migracion_cartera_historica_procesada(?, ?) order by cco_caso_id desc', [$fechaInicio, $fechaFin]);
+            // $data = DB::select('SELECT * FROM crm.fn_migracion_cartera_historica_procesada(?, ?) order by cco_caso_id desc', [$fechaInicio, $fechaFin]);
+            $data = DB::select('SELECT * FROM crm.fn_migracion_cartera_historica_procesada_v2(?, ?) order by cco_caso_id desc', [$fechaInicio, $fechaFin]);
 
             if (!$data) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron facturas.', ''));
