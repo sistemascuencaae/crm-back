@@ -113,12 +113,23 @@ class UserController extends Controller
             // Si no existe, crea el nuevo usuario
             $newUserData = User::create($request->all());
 
+            // if ($request->input('bod_id')) {
+            //     $bodConsigUser = DB::selectOne("SELECT
+            //     b2.bod_id as bod_add FROM crm.users u INNER JOIN public.bodega b ON b.bod_id = u.bod_id
+            //     LEFT JOIN public.bodega b2 ON CAST(b2.bod_codigo AS INTEGER) = (CAST(b.bod_codigo AS INTEGER) + 100)
+            //     WHERE b.bod_id IS NOT null and u.id = ? order by 1 asc limit 1;", [$newUserData->id]);
+            //     $newUserData->bod_id_dos = $bodConsigUser->bod_add;
+            //     $newUserData->save();
+            // }
+
             if ($request->input('bod_id')) {
                 $bodConsigUser = DB::selectOne("SELECT
-                b2.bod_id as bod_add FROM crm.users u INNER JOIN public.bodega b ON b.bod_id = u.bod_id
+                b2.bod_id as bod_add, b3.bod_id as bod_add2 FROM crm.users u INNER JOIN public.bodega b ON b.bod_id = u.bod_id
                 LEFT JOIN public.bodega b2 ON CAST(b2.bod_codigo AS INTEGER) = (CAST(b.bod_codigo AS INTEGER) + 100)
+                LEFT JOIN public.bodega b3 ON CAST(b3.bod_codigo AS INTEGER) = (CAST(b.bod_codigo AS INTEGER) + 200)
                 WHERE b.bod_id IS NOT null and u.id = ? order by 1 asc limit 1;", [$newUserData->id]);
                 $newUserData->bod_id_dos = $bodConsigUser->bod_add;
+                $newUserData->bod_id_tres = $bodConsigUser->bod_add2;
                 $newUserData->save();
             }
 
@@ -155,12 +166,23 @@ class UserController extends Controller
 
             $usuario->update($request->all());
 
+            // if ($request->input('bod_id')) {
+            //     $bodConsigUser = DB::selectOne("SELECT
+            //     b2.bod_id as bod_add FROM crm.users u INNER JOIN public.bodega b ON b.bod_id = u.bod_id
+            //     LEFT JOIN public.bodega b2 ON CAST(b2.bod_codigo AS INTEGER) = (CAST(b.bod_codigo AS INTEGER) + 100)
+            //     WHERE b.bod_id IS NOT null and u.id = ? order by 1 asc limit 1;", [$usuario->id]);
+            //     $usuario->bod_id_dos = $bodConsigUser->bod_add;
+            //     $usuario->save();
+            // }
+
             if ($request->input('bod_id')) {
                 $bodConsigUser = DB::selectOne("SELECT
-                b2.bod_id as bod_add FROM crm.users u INNER JOIN public.bodega b ON b.bod_id = u.bod_id
+                b2.bod_id as bod_add, b3.bod_id as bod_add2 FROM crm.users u INNER JOIN public.bodega b ON b.bod_id = u.bod_id
                 LEFT JOIN public.bodega b2 ON CAST(b2.bod_codigo AS INTEGER) = (CAST(b.bod_codigo AS INTEGER) + 100)
+                LEFT JOIN public.bodega b3 ON CAST(b3.bod_codigo AS INTEGER) = (CAST(b.bod_codigo AS INTEGER) + 200)
                 WHERE b.bod_id IS NOT null and u.id = ? order by 1 asc limit 1;", [$usuario->id]);
                 $usuario->bod_id_dos = $bodConsigUser->bod_add;
+                $usuario->bod_id_tres = $bodConsigUser->bod_add2;
                 $usuario->save();
             }
 

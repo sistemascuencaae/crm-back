@@ -240,7 +240,7 @@ class StockProSerieController extends Controller
                 $userId = Auth::id();
                 $bodIdUser = DB::selectOne("SELECT * from crm.users where id = ?;", [$userId]);
                 if ($bodIdUser) {
-                    if ($bodIdUser->bod_id == $serieExiste->bod_id || $bodIdUser->bod_id_dos == $serieExiste->bod_id) {
+                    if ($bodIdUser->bod_id == $serieExiste->bod_id || $bodIdUser->bod_id_dos == $serieExiste->bod_id || $bodIdUser->bod_id_tres == $serieExiste->bod_id) {
                         $data = DB::transaction(function () use ($serieExiste, $bodId) {
                             $this->validacionesBitacora('SALIDA SERIE', $serieExiste->serie, null);
                             DB::delete("DELETE FROM crm.stock_pro_serie WHERE id = ?;", [$serieExiste->id]);
@@ -295,7 +295,7 @@ class StockProSerieController extends Controller
     {
 
         $userId = Auth::id();
-        $bodUser = DB::selectOne("SELECT bod_id,bod_id_dos from crm.users where id = ?;", [$userId]);
+        $bodUser = DB::selectOne("SELECT bod_id, bod_id_dos, bod_id_tres from crm.users where id = ?;", [$userId]);
 
         $idBodegas = [];
 
@@ -304,6 +304,9 @@ class StockProSerieController extends Controller
         }
         if ($bodUser->bod_id_dos) {
             array_push($idBodegas, $bodUser->bod_id_dos);
+        }
+        if ($bodUser->bod_id_tres) {
+            array_push($idBodegas, $bodUser->bod_id_tres);
         }
 
         if (!empty($idBodegas)) {

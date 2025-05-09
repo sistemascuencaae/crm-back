@@ -132,7 +132,7 @@ class ContratoGexController extends Controller
                 $serie = $request->input("serie");
                 $almId = $request->input('alm_id');
                 $userId = Auth::id();
-                $bodUser = DB::selectOne("SELECT bod_id,bod_id_dos from crm.users where id = ?;", [$userId]);
+                $bodUser = DB::selectOne("SELECT bod_id, bod_id_dos, bod_id_tres from crm.users where id = ?;", [$userId]);
                 $ultimoFolio = DB::selectOne("SELECT * FROM gex.folios_contratos fc WHERE alm_id = ? ORDER BY folio DESC LIMIT 1;", [$almId]);
                 if (!$ultimoFolio) {
                     $ultimoFolio = FolioContratos::create([
@@ -238,7 +238,7 @@ class ContratoGexController extends Controller
     {
 
         $userId = Auth::id();
-        $bodUser = DB::selectOne("SELECT bod_id,bod_id_dos from crm.users where id = ?;", [$userId]);
+        $bodUser = DB::selectOne("SELECT bod_id, bod_id_dos, bod_id_tres from crm.users where id = ?;", [$userId]);
 
         $idBodegas = [];
 
@@ -247,6 +247,9 @@ class ContratoGexController extends Controller
         }
         if ($bodUser->bod_id_dos) {
             array_push($idBodegas, $bodUser->bod_id_dos);
+        }
+        if ($bodUser->bod_id_tres) {
+            array_push($idBodegas, $bodUser->bod_id_tres);
         }
 
         if (!empty($idBodegas)) {
