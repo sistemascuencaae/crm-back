@@ -56,6 +56,8 @@ class Caso extends Model
         "identificacion",
         "comprobante",
         "datos_formulario",
+        "categoria",
+        "fecha_inicio",
     ];
 
     public function userCreador()
