@@ -27,6 +27,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\ParametroController;
 use App\Http\Controllers\crm\seriesalm\SeriesAlm2Controller;
 use App\Http\Controllers\crm\seriesalm\SeriesAlmController;
 use App\Http\Controllers\crm\SeriesGeneradasController;
@@ -439,6 +440,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listHistoricoEstadoCaso/{caso_id}', [CasoController::class, 'listHistoricoEstadoCaso']); // listado/ historico de los estados del caso
     Route::get('/listHistorialCaso/{caso_id}', [CasoController::class, 'listHistorialCaso']); // listado/ historico de los estados del caso
     Route::get('/listHistorialCasoAgrupadoTablero/{caso_id}', [CasoController::class, 'listHistorialCasoAgrupadoTablero']); // listado/ historico de los estados del caso
+    Route::get('/listCasosByCliente/{identificacion}', [CasoController::class, 'listCasosByCliente']); // listado/ historico de los estados del caso
 
     // CTAREA
 
@@ -740,16 +742,17 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
     
     Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
-
+    
     Route::get('/listFormulaByIdForm/{form_id}', [Formulario2Controller::class, 'listFormulaByIdForm']);
-
+    
     Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
     Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
     Route::get('/listFormulariosByUsuId/{usu_id}', [Formulario2UsuariosController::class, 'listFormulariosByUsuId']); // Formularios Usuarios
     Route::get('/listRespuestasByFormId/{form_id}', [Formulario2UsuariosController::class, 'listRespuestasByFormId']); // Formularios Usuarios
     
     Route::get('/af_cliente_dfactura/{identificacion}', [Formulario2UsuariosController::class, 'af_cliente_dfactura']); // Formularios Usuarios
-
+    
+    Route::get('/listAllClientesDynamo', [Formulario2Controller::class, 'listAllClientesDynamo']); // lista de clientes para actividades caso
 });
 
 Route::group(["prefix" => "configuracion"], function ($router) {
@@ -781,6 +784,10 @@ Route::group(["prefix" => "openceo"], function ($router) {
     Route::get('/listAlmacenesPuntoVenta', [EntidadDynamoController::class, 'listAlmacenesPuntoVenta']);
     Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
 
+});
+
+Route::group(["prefix" => "parametro"], function ($router) {
+    Route::get('/listFormulaByParametro', [ParametroController::class, 'listFormulaByParametro']);
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------

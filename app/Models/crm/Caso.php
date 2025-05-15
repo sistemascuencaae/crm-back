@@ -52,12 +52,24 @@ class Caso extends Model
         "cpp_id",
         "form_id",
         "form_id2",
-        "cliente",
-        "identificacion",
-        "comprobante",
         "datos_formulario",
-        "categoria",
         "fecha_inicio",
+        "categoria",
+        "comprobante",
+
+        "tipo_identificacion",
+        "identificacion",
+        "cliente",
+        "estado_civil",
+        "email",
+        "sexo",
+        "pais",
+        "provincia",
+        "canton",
+        "parroquia",
+        "direccion",
+        "telefono_domicilio",
+        "celulares"
     ];
 
     public function userCreador()

@@ -21,7 +21,7 @@ class Formulario2Controller extends Controller
 {
     public function __construct()
     {
-        // $this->middleware('auth:api', ['except' => ['listCliente_byIdentificacion']]);
+        // $this->middleware('auth:api', ['except' => ['listAllClientesDynamo']]);
     }
 
     public function listAll()
@@ -577,4 +577,22 @@ class Formulario2Controller extends Controller
         }
     }
 
+    // lista de clientes de dynamo
+    // endPoint para las actividades de un caso
+    public function listAllClientesDynamo()
+    {
+        try {
+            $data = DB::table('crm.av_cliente')
+                            ->orderBy('cliente', 'asc')
+                            ->get();
+
+            if (!$data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No hay clientes', ''));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 }

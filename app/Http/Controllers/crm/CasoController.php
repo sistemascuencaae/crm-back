@@ -47,8 +47,7 @@ class CasoController extends Controller
                 [
                     'add',
                     //'addCasoOPMICreativa'
-                    'getCasoFormulario'
-
+                    'getCasoFormulario',
                 ]
         ]);
     }
@@ -1776,5 +1775,48 @@ class CasoController extends Controller
                 // $data = FormCampoValor::create([]);
             }
         });
+    }
+
+    // end point para listar todos los casos categoria 2 del cliente (1 Caso, 2 Actividad)
+    public function listCasosByCliente($identificacion)
+    {
+        try {
+            // $data = Caso::where('identificacion', $identificacion)
+            //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
+            //     ->get();
+
+$tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('identificacion', $identificacion)
+                    ->with([
+                        'user',
+                        'userCreador',
+                        'clienteCrm',
+                        'resumen',
+                        // 'tareas' => function ($query) use ($tabId) {
+                        //     $query->where('tab_id', $tabId->id);
+                        // },
+                        'tareas' => function ($query) use ($tabId) {
+                            $query->where('tab_id', $tabId);
+                        },
+                        'actividad',
+                        'Etiqueta',
+                        'miembros.usuario.departamento',
+                        'Galeria',
+                        'Archivo',
+                        'req_caso' => function ($query) {
+                            $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                        },
+                        'tablero',
+                        'fase.tablero',
+                        'estadodos',
+                        'tipocaso',
+                        'tiempo_caso',
+                    ])->orderBy('id','desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
     }
 }
