@@ -515,6 +515,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // USUARIOS
 
     Route::get('allUsers', [UserController::class, 'allUsers']); // by caso_id
+    Route::get('listUsers', [UserController::class, 'listUsers']); // lista de usuario para el calendario
     Route::post('/addUser', [UserController::class, 'addUser']); // guardar
     Route::post('/editUser/{id}', [UserController::class, 'editUser']); // Editar
     Route::delete('/deleteUser/{id}', [UserController::class, 'deleteUser']); // Eliminar

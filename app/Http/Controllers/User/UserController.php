@@ -9,6 +9,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rules\NotIn;
 
 class UserController extends Controller
 {
@@ -277,6 +278,20 @@ class UserController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listUsers()
+    {
+        try {
+            $usuarios = User::selectRaw("*, CONCAT(usu_alias, ' - ', name, ' ', surname) as usuario_completo")
+                ->where('usu_alias', 'not like', 'USUARIOGENERAL%')
+                ->orderBy("name", "asc")
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuarios));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 }
