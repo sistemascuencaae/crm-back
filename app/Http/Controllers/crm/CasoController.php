@@ -1819,4 +1819,65 @@ $tabId = 230; // esta variable tengo que revisar que hace
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    // LISTA PARA EL CALENDARIO CASOS CATEGORIA 2 (1 CASOS, 2 ACTIVIDAD)
+    public function listActividadesCategoria2ByUserId($user_id)
+    {
+        try {
+        //    $tabId = 230; // esta variable tengo que revisar que hace
+            
+            $data = Caso::where('user_id', $user_id)->where('categoria', 2)
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'PENDIENTE');
+                })
+                ->with([
+                    'user',
+                    'userCreador',
+                    'clienteCrm',
+                    'resumen',
+                    'actividad',
+                    'Etiqueta',
+                    'miembros.usuario.departamento',
+                    'Galeria',
+                    'Archivo',
+                    'req_caso' => function ($query) {
+                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    },
+                    'tablero',
+                    'fase.tablero',
+                    'estadodos' => function ($query) {
+                        $query->where('nombre', 'PENDIENTE');
+                    },
+                    'tipocaso',
+                    'tiempo_caso',
+                ])
+                ->orderBy('id', 'desc')
+                ->get();
+                
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    
+    // end point para actualizar la fecha de inicio y fecha de vencimiento del caso categoria 2 desde el calendario actividades clientes
+    public function editDuracionCaso(Request $request)
+    {
+        try {
+            $caso = Caso::findOrFail($request->caso_id);
+
+            DB::transaction(function () use ($caso, $request) {
+                $caso->update([
+                    "fecha_inicio" => Carbon::parse($request->fecha_inicio)->setTimezone('America/Guayaquil'),
+                    "fecha_vencimiento" => Carbon::parse($request->fecha_vencimiento)->setTimezone('America/Guayaquil')
+                ]);
+            });
+
+            $data = $this->getCaso($request->caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 }

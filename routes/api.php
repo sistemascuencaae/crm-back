@@ -441,6 +441,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listHistorialCaso/{caso_id}', [CasoController::class, 'listHistorialCaso']); // listado/ historico de los estados del caso
     Route::get('/listHistorialCasoAgrupadoTablero/{caso_id}', [CasoController::class, 'listHistorialCasoAgrupadoTablero']); // listado/ historico de los estados del caso
     Route::get('/listCasosByCliente/{identificacion}', [CasoController::class, 'listCasosByCliente']); // listado/ historico de los estados del caso
+    Route::get('/listActividadesCategoria2ByUserId/{user_id}', [CasoController::class, 'listActividadesCategoria2ByUserId']); // listado/ historico de los estados del caso
+    Route::post('/editDuracionCaso', [CasoController::class, 'editDuracionCaso']); // Editar la observación del caso
 
     // CTAREA
 
