@@ -1828,8 +1828,8 @@ $tabId = 230; // esta variable tengo que revisar que hace
             
             $data = Caso::where('user_id', $user_id)
                 ->where(function ($query) {
-                    $query->where('categoria', 2)
-                    ->orWhere('categoria', 3);
+                    $query->where('categoria', 2) // categoria 2 = ACTIVIDAD
+                    ->orWhere('categoria', 3); // categoria 3 = RECORDATORIO
                 })
                 ->whereHas('estadodos', function ($query) {
                     $query->where('nombre', 'PENDIENTE');
