@@ -19,7 +19,7 @@ class TipoCaso extends Model
 
     protected $table = 'crm.tipo_caso';
 
-    protected $fillable = ["nombre", "estado", "form_id", "tab"];
+    protected $fillable = ["nombre", "estado", "form_id", "tab", "categoria_caso", "tiempo_vencimiento"];
 
     public function setCreatedAtAttribute($value)
     {

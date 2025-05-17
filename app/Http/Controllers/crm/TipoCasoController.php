@@ -57,6 +57,13 @@ class TipoCasoController extends Controller
 
 
                 $exitoso = TipoCaso::with('form', 'tipo_caso_tablero.tablero', 'tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
+                            ->select('*', DB::raw("
+                                CASE 
+                                    WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                    WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                    ELSE 'TABLERO'
+                                END as categoria_caso_nombre
+                            "))
                             ->orderBy('id', 'ASC')
                             ->get();
 
@@ -77,12 +84,14 @@ class TipoCasoController extends Controller
     public function listAllTipoCaso()
     {
         try {
-            // $resultado = TipoCasoTablero::with('tablero', 'tipo_caso.form', 'tipo_caso.tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
-            //     ->orderBy('id', 'ASC')
-            //     ->get();
-
-
             $resultado = TipoCaso::with('form', 'tipo_caso_tablero.tablero', 'tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
+                            ->select('*', DB::raw("
+                                CASE 
+                                    WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                    WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                    ELSE 'TABLERO'
+                                END as categoria_caso_nombre
+                            "))
                             ->orderBy('id', 'ASC')
                             ->get();
 
@@ -195,8 +204,15 @@ class TipoCasoController extends Controller
             $tipoCaso->update($request->all());
 
             return TipoCaso::with('form', 'tipo_caso_tablero.tablero', 'tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
-            ->orderBy('id', 'ASC')
-            ->get();
+                        ->select('*', DB::raw("
+                                CASE 
+                                    WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                    WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                    ELSE 'TABLERO'
+                                END as categoria_caso_nombre
+                            "))
+                        ->orderBy('id', 'ASC')
+                        ->get();
         });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $respuesta));
