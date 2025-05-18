@@ -1777,7 +1777,14 @@ class CasoController extends Controller
         });
     }
 
-    // end point para listar todos los casos categoria 2 del cliente (1 Caso, 2 Actividad)
+
+
+
+    // *************************************************
+    // JGSJ CALENDARIO CLIENTES - ACTIVIDADES CLIENTES
+    // *************************************************
+
+    // end point para listar todos los casos del cliente (1 Caso, 2 Actividad, 3 Recordatorio)
     public function listCasosByCliente($identificacion)
     {
         try {
@@ -1820,17 +1827,17 @@ $tabId = 230; // esta variable tengo que revisar que hace
         }
     }
 
-    // LISTA PARA EL CALENDARIO CASOS CATEGORIA 2 (1 CASOS, 2 ACTIVIDAD)
+    // LISTA PARA EL CALENDARIO CASOS CATEGORIA 2 y 3 (1 CASOS, 2 ACTIVIDAD, 3 RECORDATORIO)
     public function listActividadesCategoria2ByUserId($user_id)
     {
         try {
         //    $tabId = 230; // esta variable tengo que revisar que hace
             
             $data = Caso::where('user_id', $user_id)
-                ->where(function ($query) {
-                    $query->where('categoria', 2) // categoria 2 = ACTIVIDAD
-                    ->orWhere('categoria', 3); // categoria 3 = RECORDATORIO
-                })
+                ->whereHas('tipocaso', function ($q) {
+                        $q->where('categoria_caso', 2)
+                        ->orWhere('categoria_caso', 3);
+                    })
                 ->whereHas('estadodos', function ($query) {
                     $query->where('nombre', 'PENDIENTE');
                 })

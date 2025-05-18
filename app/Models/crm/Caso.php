@@ -54,7 +54,7 @@ class Caso extends Model
         "form_id2",
         "datos_formulario",
         "fecha_inicio",
-        "categoria",
+        // "categoria",
         "comprobante",
 
         "tipo_identificacion",
