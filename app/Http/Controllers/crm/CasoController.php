@@ -47,8 +47,7 @@ class CasoController extends Controller
                 [
                     'add',
                     //'addCasoOPMICreativa'
-                    'getCasoFormulario'
-
+                    'getCasoFormulario',
                 ]
         ]);
     }
@@ -103,7 +102,7 @@ class CasoController extends Controller
             //--------------------
             $caso->estado_2 = $estadoInicial->id;
             $caso->nombre = 'CASO # ' . $caso->id;
-            //$caso->user_creador_id = $userLoginId;
+            $caso->user_creador_id = $request->user_creador_id;
             $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
             if ($caso->desc_json) {
             }
@@ -116,7 +115,7 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
             }
-            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
 
             $soporteController = new SoporteController();
             $soporteController->addGaleriaArchivos($request, $caso->id);
@@ -288,7 +287,7 @@ class CasoController extends Controller
             );
             // end diferencia de tiempos en horas minutos y segundos
 
-            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
             $data = $this->getCaso($caso->id);
             broadcast(new TableroEvent($data));
 
@@ -625,7 +624,7 @@ class CasoController extends Controller
                 $casoEnProceso->fase_anterior_id = $fase_anterior_id;
                 $casoEnProceso->user_anterior_id = $user_anterior_id;
                 $casoEnProceso->save();
-                $this->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
+                $this->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id, $casoEnProceso->tc_id);
                 $emailController = new EmailController();
                 $emailController->send_emailCambioFase($caso_id, $casoEnProceso->fas_id);
                 //$this->enviarCorreoCliente($caso_id);
@@ -833,7 +832,8 @@ class CasoController extends Controller
                 'tablero',
                 'fase.tablero',
                 'estadodos',
-                'tipocaso'
+                'tipocaso',
+                'tiempo_caso',
 
             ])->where('id', $casoId)->first();
         } catch (Exception $e) {
@@ -925,7 +925,7 @@ class CasoController extends Controller
             $reqCaso->requerido = $reqFase[$i]->requerido;
 
             if ($reqCaso->tipo_campo == 'lista') {
-                $array = explode(',', $reqCaso->valor_lista);
+                $array = explode(';', $reqCaso->valor_lista);
                 $nuevoArray = array();
 
                 foreach ($array as $item) {
@@ -946,7 +946,7 @@ class CasoController extends Controller
         return response()->json($arrayTest);
     }
 
-    public function addRequerimientosFase($casoId, $faseId, $userCreadorId)
+    public function addRequerimientosFase($casoId, $faseId, $userCreadorId, $tipo_caso_id)
     {
 
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
@@ -974,12 +974,24 @@ class CasoController extends Controller
         $log = new Funciones();
 
         try {
+            // funcion orginal de felipao | JGSJ
+            // $reqFase = DB::select(
+            //     'SELECT rp.* from crm.requerimientos_predefinidos rp
+            //     left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+            //     WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden asc',
+            //     [$casoId, $faseId]
+            // );
             $reqFase = DB::select(
-                'SELECT rp.* from crm.requerimientos_predefinidos rp
-                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
-                WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden asc',
-                [$casoId, $faseId]
-            );
+                                'SELECT req_pre.* 
+                                    from crm.requerimientos_predefinidos req_pre
+                                left join crm.requerimientos_caso req_caso on req_caso.caso_id = ? 
+                                    and req_caso.titulo = req_pre.nombre
+                                WHERE req_caso.titulo IS null 
+                                    and req_pre.fase_id = ? 
+                                    and req_pre.tipo_caso_id = ? 
+                                order by req_pre.orden asc',
+                                [$casoId, $faseId, $tipo_caso_id]
+                                );
 
             for ($i = 0; $i < sizeof($reqFase); $i++) {
                 $reqCaso = new RequerimientoCaso();
@@ -997,7 +1009,7 @@ class CasoController extends Controller
                 $reqCaso->desc_requerida = $reqFase[$i]->desc_requerida;
 
                 if ($reqCaso->tipo_campo == 'lista') {
-                    $array = explode(',', $reqCaso->valor_lista);
+                    $array = explode(';', $reqCaso->valor_lista);
                     $nuevoArray = array();
                     foreach ($array as $item) {
                         $objeto = array(
@@ -1530,6 +1542,30 @@ class CasoController extends Controller
         }
     }
 
+    public function listHistorialCasoAgrupadoTablero($caso_id)
+    {
+        $log = new Funciones();
+
+        try {
+            $data = ControlTiemposCaso::where('caso_id', $caso_id)
+                ->select(
+                    'tablero',
+                    DB::raw('SUM(tiempo_cambio) as tiempo_cambio')
+                )
+                ->groupBy('tablero')
+                ->orderBy('tablero', 'ASC')
+                ->get();
+
+            $log->logInfo(CasoController::class, 'Se listo con exito el historial del caso #' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar el historial del caso #' . $caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
     public function actualizarCaso(Request $request, $casoId, $tabId)
     {
         $log = new Funciones();
@@ -1561,6 +1597,27 @@ class CasoController extends Controller
                 $robot->addMiembro($data->user_id, $casoId, $tabId);
                 broadcast(new TableroEvent($data));
                 $log->logInfo(CasoController::class, 'Se actualizo con exito el caso #' . $casoId);
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                // Obtener el old_values (valor antiguo)
+                $valorAntiguo = $casoData;
+                $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
+
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = Caso::class;
+                $audit->auditable_id = $casoId;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'reasignarCaso';
+                $audit->caso_id = $casoId;
+                // Establecer old_values y new_values
+                $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
+                $audit->save();
+                // END Auditoria
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
             }
@@ -1718,5 +1775,120 @@ class CasoController extends Controller
                 // $data = FormCampoValor::create([]);
             }
         });
+    }
+
+
+
+
+    // *************************************************
+    // JGSJ CALENDARIO CLIENTES - ACTIVIDADES CLIENTES
+    // *************************************************
+
+    // end point para listar todos los casos del cliente (1 Caso, 2 Actividad, 3 Recordatorio)
+    public function listCasosByCliente($identificacion)
+    {
+        try {
+            // $data = Caso::where('identificacion', $identificacion)
+            //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
+            //     ->get();
+
+$tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('identificacion', $identificacion)
+                    ->with([
+                        'user',
+                        'userCreador',
+                        'clienteCrm',
+                        'resumen',
+                        // 'tareas' => function ($query) use ($tabId) {
+                        //     $query->where('tab_id', $tabId->id);
+                        // },
+                        'tareas' => function ($query) use ($tabId) {
+                            $query->where('tab_id', $tabId);
+                        },
+                        'actividad',
+                        'Etiqueta',
+                        'miembros.usuario.departamento',
+                        'Galeria',
+                        'Archivo',
+                        'req_caso' => function ($query) {
+                            $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                        },
+                        'tablero',
+                        'fase.tablero',
+                        'estadodos',
+                        'tipocaso',
+                        'tiempo_caso',
+                    ])->orderBy('id','desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    // LISTA PARA EL CALENDARIO CASOS CATEGORIA 2 y 3 (1 CASOS, 2 ACTIVIDAD, 3 RECORDATORIO)
+    public function listActividadesCategoria2ByUserId($user_id)
+    {
+        try {
+        //    $tabId = 230; // esta variable tengo que revisar que hace
+            
+            $data = Caso::where('user_id', $user_id)
+                ->whereHas('tipocaso', function ($q) {
+                        $q->where('categoria_caso', 2)
+                        ->orWhere('categoria_caso', 3);
+                    })
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'PENDIENTE');
+                })
+                ->with([
+                    'user',
+                    'userCreador',
+                    'clienteCrm',
+                    'resumen',
+                    'actividad',
+                    'Etiqueta',
+                    'miembros.usuario.departamento',
+                    'Galeria',
+                    'Archivo',
+                    'req_caso' => function ($query) {
+                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    },
+                    'tablero',
+                    'fase.tablero',
+                    'estadodos' => function ($query) {
+                        $query->where('nombre', 'PENDIENTE');
+                    },
+                    'tipocaso',
+                    'tiempo_caso',
+                ])
+                ->orderBy('id', 'desc')
+                ->get();
+                
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    
+    // end point para actualizar la fecha de inicio y fecha de vencimiento del caso categoria 2 desde el calendario actividades clientes
+    public function editDuracionCaso(Request $request)
+    {
+        try {
+            $caso = Caso::findOrFail($request->caso_id);
+
+            DB::transaction(function () use ($caso, $request) {
+                $caso->update([
+                    "fecha_inicio" => Carbon::parse($request->fecha_inicio)->setTimezone('America/Guayaquil'),
+                    "fecha_vencimiento" => Carbon::parse($request->fecha_vencimiento)->setTimezone('America/Guayaquil')
+                ]);
+            });
+
+            $data = $this->getCaso($request->caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
     }
 }

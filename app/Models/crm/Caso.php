@@ -52,9 +52,24 @@ class Caso extends Model
         "cpp_id",
         "form_id",
         "form_id2",
-        "cliente",
-        "identificacion",
+        "datos_formulario",
+        "fecha_inicio",
+        // "categoria",
         "comprobante",
+
+        "tipo_identificacion",
+        "identificacion",
+        "cliente",
+        "estado_civil",
+        "email",
+        "sexo",
+        "pais",
+        "provincia",
+        "canton",
+        "parroquia",
+        "direccion",
+        "telefono_domicilio",
+        "celulares"
     ];
 
     public function userCreador()
@@ -169,5 +184,10 @@ class Caso extends Model
     public function formValores()
     {
         return $this->hasMany(FormValor::class, 'caso_id', 'id');
+    }
+
+    public function tiempo_caso()
+    {
+        return $this->hasMany(ControlTiemposCaso::class, 'caso_id', 'id');
     }
 }

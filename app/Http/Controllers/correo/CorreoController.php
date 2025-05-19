@@ -27,15 +27,15 @@ class CorreoController extends Controller
 
                 $data = Correo::orderBy('id', 'desc')->get();
 
-                // Especificar las propiedades que representan fechas en tu objeto Correo
-                $dateFields = ['created_at', 'updated_at'];
-                // Utilizar la función map para transformar y obtener una nueva colección
-                $data->map(function ($item) use ($dateFields) {
-                    // $this->formatoFechaItem($item, $dateFields);
-                    $funciones = new Funciones();
-                    $funciones->formatoFechaItem($item, $dateFields);
-                    return $item;
-                });
+                // // Especificar las propiedades que representan fechas en tu objeto Correo
+                // $dateFields = ['created_at', 'updated_at'];
+                // // Utilizar la función map para transformar y obtener una nueva colección
+                // $data->map(function ($item) use ($dateFields) {
+                //     // $this->formatoFechaItem($item, $dateFields);
+                //     $funciones = new Funciones();
+                //     $funciones->formatoFechaItem($item, $dateFields);
+                //     return $item;
+                // });
 
                 return $data;
             });
@@ -75,10 +75,10 @@ class CorreoController extends Controller
 
                 $correo->update($request->all());
 
-                // Especificar las propiedades que representan fechas en tu objeto correo
-                $dateFields = ['created_at', 'updated_at'];
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($correo, $dateFields);
+                // // Especificar las propiedades que representan fechas en tu objeto correo
+                // $dateFields = ['created_at', 'updated_at'];
+                // $funciones = new Funciones();
+                // $funciones->formatoFechaItem($correo, $dateFields);
 
                 return $correo;
             });

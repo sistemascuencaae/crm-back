@@ -14,6 +14,7 @@ class Formulario2UsuariosController extends Controller
 {
     public function __construct()
     {
+        // $this->middleware('auth:api', ['except' => ['af_cliente_dfactura']]);
     }
 
     public function listFormulariosUsuarios()
@@ -129,8 +130,8 @@ class Formulario2UsuariosController extends Controller
     public function af_cliente_dfactura($identificacion)
     {
         try {
-            // 2 es el número de años que va a consultar
-            $data = DB::select("SELECT * FROM public.af_cliente_dfactura2(?)", [$identificacion]);
+            //         $data = DB::select("SELECT * FROM public.af_cliente_dfactura2(?)", [$identificacion]);
+            $data = DB::select("SELECT * FROM crm.af_cliente_dfactura_v3(?)", [$identificacion]);
 
             if (is_array($data) && count($data) > 0) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));

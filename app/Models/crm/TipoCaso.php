@@ -10,33 +10,27 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use App\Models\configuracion\TipoCasoTablero;
 
 class TipoCaso extends Model
 {
 
     use HasFactory;
 
-    use SoftDeletes;
-
     protected $table = 'crm.tipo_caso';
 
-    protected $fillable = ["nombre", "estado", "tab_id", "form_id", "tab"];
+    protected $fillable = ["nombre", "estado", "form_id", "tab", "categoria_caso", "tiempo_vencimiento"];
 
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["created_at"] = Carbon::now();
     }
+
     public function setUpdatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
-    }
-
-    public function setDeletedAtAttribute($value)
-    {
-        date_default_timezone_set("America/Guayaquil");
-        $this->attributes["deleted_at"] = Carbon::now();
     }
 
     // public function cTipoTarea()
@@ -57,6 +51,11 @@ class TipoCaso extends Model
     public function form()
     {
         return $this->belongsTo(Form::class, 'form_id', 'id');
+    }
+
+    public function tipo_caso_tablero()
+    {
+        return $this->hasMany(TipoCasoTablero::class, 'tipo_caso_id');
     }
 
 }

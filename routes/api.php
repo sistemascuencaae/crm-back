@@ -27,6 +27,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\ParametroController;
 use App\Http\Controllers\crm\seriesalm\SeriesAlm2Controller;
 use App\Http\Controllers\crm\seriesalm\SeriesAlmController;
 use App\Http\Controllers\crm\SeriesGeneradasController;
@@ -56,6 +57,7 @@ use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
+use App\Http\Controllers\openceo\EntidadDynamoController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
@@ -437,6 +439,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editObservacion/{id}', [CasoController::class, 'editObservacion']); // Editar la observación del caso
     Route::get('/listHistoricoEstadoCaso/{caso_id}', [CasoController::class, 'listHistoricoEstadoCaso']); // listado/ historico de los estados del caso
     Route::get('/listHistorialCaso/{caso_id}', [CasoController::class, 'listHistorialCaso']); // listado/ historico de los estados del caso
+    Route::get('/listHistorialCasoAgrupadoTablero/{caso_id}', [CasoController::class, 'listHistorialCasoAgrupadoTablero']); // listado/ historico de los estados del caso
+    Route::get('/listCasosByCliente/{identificacion}', [CasoController::class, 'listCasosByCliente']); // listado/ historico de los estados del caso
+    Route::get('/listActividadesCategoria2ByUserId/{user_id}', [CasoController::class, 'listActividadesCategoria2ByUserId']); // listado/ historico de los estados del caso
+    Route::post('/editDuracionCaso', [CasoController::class, 'editDuracionCaso']); // Editar la observación del caso
 
     // CTAREA
 
@@ -484,14 +490,15 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addTipoCaso', [TipoCasoController::class, 'addTipoCaso']); // guardar
     Route::get('listTipoCasoByIdTablero/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTablero']); // listar
+    Route::get('listAllTipoCaso', [TipoCasoController::class, 'listAllTipoCaso']); // listar
     Route::get('listTipoCasoByIdTableroEstadoActivo/{tab_id}', [TipoCasoController::class, 'listTipoCasoByIdTableroEstadoActivo']); // listar
     Route::get('listTipoCasoByIdCasoId/{caso_id}', [TipoCasoController::class, 'listTipoCasoByIdCasoId']); // listar
     Route::get('listByIdTipoCasoActivo/{tc_id}', [TipoCasoController::class, 'listByIdTipoCasoActivo']); // listar
     Route::post('/editTipoCaso/{id}', [TipoCasoController::class, 'editTipoCaso']); // Edita la actividad
     Route::delete('/deleteTipoCaso/{id}', [TipoCasoController::class, 'deleteTipoCaso']); // getByTipoCasIdFormu
     Route::get('/getByTipoCasIdFormu/{tcId}', [TipoCasoController::class, 'getByTipoCasIdFormu']); //
-
-
+    Route::get('/getFormulaByTipoCasoId/{tcId}', [TipoCasoController::class, 'getFormulaByTipoCasoId']); // trae la formula del tipo de caso
+    Route::get('/listTipoCasoByCategoria/{num_categoria}', [TipoCasoController::class, 'listTipoCasoByCategoria']); // trae los tipos de caso por categoria_caso
 
     // TAREAS INDIVIDUALES
 
@@ -508,6 +515,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // USUARIOS
 
     Route::get('allUsers', [UserController::class, 'allUsers']); // by caso_id
+    Route::get('listUsers', [UserController::class, 'listUsers']); // lista de usuario para el calendario
     Route::post('/addUser', [UserController::class, 'addUser']); // guardar
     Route::post('/editUser/{id}', [UserController::class, 'editUser']); // Editar
     Route::delete('/deleteUser/{id}', [UserController::class, 'deleteUser']); // Eliminar
@@ -558,6 +566,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // EstadosFormulas
 
     Route::get('/listEstadosFormulasByTablero/{tab_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTablero']); // listar
+    Route::get('/listEstadosFormulasByTabIdByTipoCasoId/{tab_id}/{tipo_caso_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTabIdByTipoCasoId']); // listar
     Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
     Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
     Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
@@ -677,6 +686,7 @@ Route::group(["prefix" => "gex-contrato"], function ($router) {
     Route::post('/generarContratoCRM', [ContratoGexController::class, 'generarContratoCRM']);
     Route::post('/validarSerieContrato', [ContratoGexController::class, 'validarSerieContrato']); //
     Route::get('/listarContratosBodega/{bod_id}', [ContratoGexController::class, 'listarContratosBodega']);
+    Route::get('/listarTodosContratosBodega', [ContratoGexController::class, 'listarTodosContratosBodega']);
     Route::delete('/eliminarContratoId/{id}', [ContratoGexController::class, 'eliminarContratoId']);
     Route::get('/getContratoGexCrmId/{id}', [ContratoGexController::class, 'getContratoGexCrmId']);
 });
@@ -735,16 +745,17 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
     
     Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
-
+    
     Route::get('/listFormulaByIdForm/{form_id}', [Formulario2Controller::class, 'listFormulaByIdForm']);
-
+    
     Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
     Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
     Route::get('/listFormulariosByUsuId/{usu_id}', [Formulario2UsuariosController::class, 'listFormulariosByUsuId']); // Formularios Usuarios
     Route::get('/listRespuestasByFormId/{form_id}', [Formulario2UsuariosController::class, 'listRespuestasByFormId']); // Formularios Usuarios
     
     Route::get('/af_cliente_dfactura/{identificacion}', [Formulario2UsuariosController::class, 'af_cliente_dfactura']); // Formularios Usuarios
-
+    
+    Route::get('/listAllClientesDynamo', [Formulario2Controller::class, 'listAllClientesDynamo']); // lista de clientes para actividades caso
 });
 
 Route::group(["prefix" => "configuracion"], function ($router) {
@@ -766,6 +777,20 @@ Route::group(["prefix" => "configuracion"], function ($router) {
     Route::get('/listCorreos', [CorreoController::class, 'listCorreos']); // listar
     Route::post('/editCorreo/{id}', [CorreoController::class, 'editCorreo']); // Editar
     Route::delete('/deleteCorreo/{id}', [CorreoController::class, 'deleteCorreo']); // Eliminar
+});
+
+Route::group(["prefix" => "openceo"], function ($router) {
+
+    // openceo
+
+    Route::get('/buscarEntidadEmpleado/{identificacion}', [EntidadDynamoController::class, 'buscarEntidadEmpleado']);
+    Route::get('/listAlmacenesPuntoVenta', [EntidadDynamoController::class, 'listAlmacenesPuntoVenta']);
+    Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
+
+});
+
+Route::group(["prefix" => "parametro"], function ($router) {
+    Route::get('/listFormulaByParametro', [ParametroController::class, 'listFormulaByParametro']);
 });
 
 //----------------------- END RUTAS JUAN  ----------------------------------------------

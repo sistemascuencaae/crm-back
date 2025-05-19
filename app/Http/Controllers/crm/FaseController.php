@@ -231,10 +231,9 @@ class FaseController extends Controller
 
         return $data;
     }
+
     public function listarfases($tabId, $fechaInicio, $fechaFin, $tipoTablero = null)
     {
-
-
         $userLogin = Auth::id();
         $user = DB::selectOne("SELECT usu_tipo FROM crm.users where id = ?",[$userLogin]);
 
@@ -256,15 +255,32 @@ class FaseController extends Controller
                 'condicionFaseMover',
                 'caso.estadodos',
                 'caso.tipocaso',
+                'caso.tiempo_caso',
                 'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user) {
                     $query->whereBetween('fecha_vencimiento', [
                         Carbon::parse($fechaInicio)->startOfDay(),
                         Carbon::parse($fechaFin)->endOfDay(),
                     ]);
+
+                    // listado para usuarios comunes (usu_tipo = 4)
                     if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 4) {
+                        // JGSJ Solo incluir casos con categoria_caso = 1
+                        $query->whereHas('tipocaso', function ($q) {
+                            $q->where('categoria_caso', 1);
+                        });
                         // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
                         $query->whereDoesntHave('estadodos', function ($subquery) {
                             $subquery->where('nombre', 'TERMINADO');
+                        });
+                    }
+
+
+
+                    // listado para administradores (USU_TIPO = 2)
+                    if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 2) {
+                        // JGSJ incluir casos con categoria_caso = 1
+                        $query->whereHas('tipocaso', function ($q) {
+                            $q->where('categoria_caso', 1);
                         });
                     }
                 },

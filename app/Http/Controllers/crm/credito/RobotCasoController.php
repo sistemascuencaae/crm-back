@@ -176,7 +176,7 @@ class RobotCasoController extends Controller
         // END Auditoria
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
         $casoController = new CasoController();
-        $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
+        $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id, $casoEnProceso->tc_id);
         //0.-  si el caso esta en la bandeja de entrada con el usuario general
         if ($formula->tablero_id == $tableroActualId) {
             $casoBandejaEntrada = DB::selectOne("SELECT fa.nombre, fa.orden, u.name from crm.caso ca

@@ -48,13 +48,35 @@ class StockProSerieController extends Controller
     {
         //(select count(serie) from crm.stock_pro_serie ss where ss.pro_id = sbo.pro_id and ss.bod_id = sbo.bod_id )
         try {
-            $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id, bodega, sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from
-                                av_stock_producto_bodega_sinregalos_v3 tt WHERE  bod_id not in ( 16,47,50,60,61,181,182,200,209,211, 225, 204, 231, 208, 240, 241, 242, 243, 244) group by 1,2,3;");
+            // $datosSeries = DB::select("SELECT distinct(tt.bodega),bod_id, bodega, sum(stock_actual) as stock_productos, sum(stock_serie) as stock_series from
+            //                     av_stock_producto_bodega_sinregalos_v3 tt WHERE  bod_id not in ( 16, 47, 50, 60, 61, 181, 182, 200, 209, 211, 225, 204, 208, 240, 241, 242, 243, 244) group by 1, 2, 3;");
+
+            $datosSeries = DB::select("SELECT 
+                                                    DISTINCT(tt.bodega), 
+                                                    bod_id, 
+                                                    bodega, 
+                                                    SUM(stock_actual) AS stock_productos, 
+                                                    SUM(stock_serie) AS stock_series, 
+                                                    SUM(stock_actual - stock_serie) AS diferencia,
+                                                    CAST(SUM(CASE WHEN (stock_actual - stock_serie) < 0 THEN (stock_actual - stock_serie) * -1 ELSE 0 END) AS INTEGER) AS excedente,
+                                                    CAST(SUM(CASE WHEN (stock_actual - stock_serie) > 0 THEN (stock_actual - stock_serie) ELSE 0 END) AS INTEGER) AS faltante,
+                                                    CAST(SUM(stock_actual) - 
+                                                    (
+                                                        SUM(CASE WHEN (stock_actual - stock_serie) < 0 THEN (stock_actual - stock_serie) ELSE 0 END) * -1 +
+                                                        SUM(CASE WHEN (stock_actual - stock_serie) > 0 THEN (stock_actual - stock_serie) ELSE 0 END)
+                                                    ) AS INTEGER) AS total_satisfactorio
+                                                FROM 
+                                                    av_stock_producto_bodega_sinregalos_v3 tt 
+                                                WHERE  
+                                                    bod_id NOT IN (16, 47, 50, 60, 61, 181, 182, 200, 209, 211, 225, 204, 208, 240, 241, 242, 243, 244, 210) 
+                                                GROUP BY 
+                                                    1, 2, 3
+                                                ORDER BY bodega ASC;
+                                                ");
 
             $data = (object) [
                 "productoSeries" => $datosSeries
             ];
-
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
@@ -218,7 +240,7 @@ class StockProSerieController extends Controller
                 $userId = Auth::id();
                 $bodIdUser = DB::selectOne("SELECT * from crm.users where id = ?;", [$userId]);
                 if ($bodIdUser) {
-                    if ($bodIdUser->bod_id == $serieExiste->bod_id || $bodIdUser->bod_id_dos == $serieExiste->bod_id) {
+                    if ($bodIdUser->bod_id == $serieExiste->bod_id || $bodIdUser->bod_id_dos == $serieExiste->bod_id || $bodIdUser->bod_id_tres == $serieExiste->bod_id) {
                         $data = DB::transaction(function () use ($serieExiste, $bodId) {
                             $this->validacionesBitacora('SALIDA SERIE', $serieExiste->serie, null);
                             DB::delete("DELETE FROM crm.stock_pro_serie WHERE id = ?;", [$serieExiste->id]);
@@ -273,7 +295,7 @@ class StockProSerieController extends Controller
     {
 
         $userId = Auth::id();
-        $bodUser = DB::selectOne("SELECT bod_id,bod_id_dos from crm.users where id = ?;", [$userId]);
+        $bodUser = DB::selectOne("SELECT bod_id, bod_id_dos, bod_id_tres from crm.users where id = ?;", [$userId]);
 
         $idBodegas = [];
 
@@ -283,11 +305,14 @@ class StockProSerieController extends Controller
         if ($bodUser->bod_id_dos) {
             array_push($idBodegas, $bodUser->bod_id_dos);
         }
+        if ($bodUser->bod_id_tres) {
+            array_push($idBodegas, $bodUser->bod_id_tres);
+        }
 
         if (!empty($idBodegas)) {
             // Construye la lista de IDs separada por comas
             $placeholders = implode(',', array_fill(0, count($idBodegas), '?'));
-            $datosSeries = DB::select("SELECT * FROM av_stock_producto_bodega_sinregalos_v3 WHERE BOD_ID IN ($placeholders)", $idBodegas);
+            $datosSeries = DB::select("SELECT * FROM av_stock_producto_bodega_sinregalos_v3 WHERE BOD_ID IN ($placeholders) order by pro_codigo ASC", $idBodegas);
             //tt ORDER BY tt.stock_actual DESC
         } else {
             $datosSeries = []; // Si no hay bodegas, retorna un array vacío
@@ -300,7 +325,8 @@ class StockProSerieController extends Controller
     public function reportePorBodegaId($bodId)
     {
         try {
-            $datosSeries = DB::select("SELECT * FROM av_stock_producto_bodega_sinregalos_v3 WHERE  bod_id = ? order by  stock_actual desc", [$bodId]);
+            // $datosSeries = DB::select("SELECT * FROM av_stock_producto_bodega_sinregalos_v3 WHERE  bod_id = ? order by stock_actual desc", [$bodId]);
+            $datosSeries = DB::select("SELECT * FROM av_stock_producto_bodega_sinregalos_v3 WHERE  bod_id = ? order by pro_codigo ASC", [$bodId]);
             $bodega = DB::selectOne("SELECT bod_id, bod_nombre, ubi_nombre from public.bodega b
             left join public.ubicacion u on u.ubi_id = b.ubi_id where bod_id = ? limit 1;", [$bodId]);
             $data = (object) [

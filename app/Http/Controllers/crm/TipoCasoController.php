@@ -5,7 +5,9 @@ namespace App\Http\Controllers\crm;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Models\crm\TipoCaso;
+use App\Models\configuracion\TipoCasoTablero;
 use App\Models\crm\TipoCasoCTipoTarea;
+use App\Models\crm\TipoCasoFormulas;
 use App\Models\Formulario\FormSeccion;
 use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormularioTipoCaso;
@@ -27,51 +29,45 @@ class TipoCasoController extends Controller
             // Validar si ya existe un registro con el mismo ctt_id
             DB::transaction(function () use ($request, &$error, &$exitoso) {
                 $ctipo_tarea_id = $request->input('ctipo_tarea_id');
-                // Obtener y transformar el array 'tab' en una cadena con el delimitador 'ൠ'
-                // $tabs = $request->input('tab');  // Array de tab
-                // $tabString = implode('ൠ', array_map(function ($item) {
-                //     return $item['nombre']; // Extraer el nombre de cada tab
-                // }, $tabs));
 
                 // Añadir la cadena transformada al request
                 $request->merge(['tab' => json_encode($request->tab)]);
 
-                // $request->merge(['tab' => json_encode($request->tab)]); // Convierte el array en una cadena JSON
-
                 // Si no existe, crea un nuevo registro
                 $tipoCaso = TipoCaso::create($request->all());
 
-                // Obtener el resultado después de la creación
-                // $exitoso = TipoCaso::where('tab_id', $tipoCaso->tab_id)->with('tipoCasoCTipoTarea.dTipoTarea')->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
-
                 // Inserción en la tabla 'tipo_caso_ctipo_tarea'
                 if ($ctipo_tarea_id) {
-                    // DB::table('crm.tipo_caso_ctipo_tarea')->insert([
-                    //     'tipo_caso_id' => $tipoCaso->id,
-                    //     'ctipo_tarea_id' => $ctipo_tarea_id,
-                    // ]);
-
                     TipoCasoCTipoTarea::create([
                         'tipo_caso_id' => $tipoCaso->id,
                         'ctipo_tarea_id' => $ctipo_tarea_id,
                     ]);
                 }
 
-                $exitoso = TipoCaso::where('tab_id', $tipoCaso->tab_id)
-                ->with('tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
-                ->orderBy('estado', 'DESC')
-                ->orderBy('id', 'DESC')
-                ->get();
+
+                // Verificar que el array de tab_id esté presente
+                if ($request->has('tab_id') && is_array($request->tab_id) && $tipoCaso->id) {
+                    // Iteramos sobre el array de tab_id y creamos las relaciones en la tabla tipo_caso_tablero
+                    foreach ($request->tab_id as $tabId) {
+                        TipoCasoTablero::create([
+                            'tipo_caso_id' => $tipoCaso->id, // Asegúrate de usar el ID de tipoCaso correspondiente
+                            'tab_id' => $tabId,
+                        ]);
+                    }
+                }
 
 
-                // // Convertir 'tab' en array para cada resultado
-                // $exitoso->each(function ($tipoCaso) {
-                //     if (!empty($tipoCaso->tab)) {
-                //         // Convertir la cadena de 'tab' a un array utilizando el delimitador 'ൠ'
-                //         $tipoCaso->tab = explode('ൠ', $tipoCaso->tab);
-                //     }
-                // });
-                
+                $exitoso = TipoCaso::with('form', 'tipo_caso_tablero.tablero', 'tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
+                            ->select('*', DB::raw("
+                                CASE 
+                                    WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                    WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                    ELSE 'TABLERO'
+                                END as categoria_caso_nombre
+                            "))
+                            ->orderBy('id', 'ASC')
+                            ->get();
+
                 return null;
             });
 
@@ -86,34 +82,40 @@ class TipoCasoController extends Controller
         }
     }
 
+    public function listAllTipoCaso()
+    {
+        try {
+            $resultado = TipoCaso::with('form', 'tipo_caso_tablero.tablero', 'tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
+                            ->select('*', DB::raw("
+                                CASE 
+                                    WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                    WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                    ELSE 'TABLERO'
+                                END as categoria_caso_nombre
+                            "))
+                            ->orderBy('id', 'ASC')
+                            ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $resultado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
     public function listTipoCasoByIdTablero($tab_id)
     {
         try {
-            // Obtener los resultados de la base de datos
             // $resultado = TipoCaso::where('tab_id', $tab_id)
-            //     ->with(
-            //         'tipoCasoCTipoTarea.dTipoTarea',
-            //         'formTipoCaso.formulario'
-            //     )
+            //     ->with('tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
             //     ->orderBy('estado', 'DESC')
             //     ->orderBy('id', 'DESC')
             //     ->get();
+    
+            $resultado = TipoCasoTablero::where('tab_id', $tab_id)
+                            ->with('tipo_caso')
+                            ->orderBy('id', 'ASC')
+                            ->get();
 
-            $resultado = TipoCaso::where('tab_id', $tab_id)
-                ->with('tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
-                ->orderBy('estado', 'DESC')
-                ->orderBy('id', 'DESC')
-                ->get();
-
-            // // Convertir 'tab' a un array después de obtener los resultados
-            // $resultado->each(function ($tipoCaso) {
-            //     if (!empty($tipoCaso->tab)) {
-            //         // Convertir la cadena de 'tab' a un array utilizando el delimitador 'ൠ'
-            //         $tipoCaso->tab = explode('ൠ', $tipoCaso->tab);
-            //     }
-            // });
-
-            // Retornar los resultados con el atributo 'tab' convertido en array
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $resultado));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
@@ -136,7 +138,13 @@ class TipoCasoController extends Controller
     {
         try {
             // $resultado = TipoCaso::where('tab_id', $tab_id)->with('cTipoTarea.dTipoTarea')->where('estado', true)->orderBy('id', 'DESC')->get();
-            $resultado = TipoCaso::where('tab_id', $tab_id)->where('estado', true)->orderBy('id', 'DESC')->get();
+            // $resultado = TipoCaso::where('tab_id', $tab_id)->where('estado', true)->orderBy('id', 'DESC')->get();
+
+            $resultado = TipoCasoTablero::where('tab_id', $tab_id)
+            ->with('tipo_caso')
+            ->orderBy('id', 'DESC')
+            ->get();
+
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $resultado));
         } catch (Exception $e) {
@@ -147,36 +155,68 @@ class TipoCasoController extends Controller
     public function editTipoCaso(Request $request, $id)
     {
         try {
+            $respuesta = DB::transaction(function () use ($request, $id) {
             $tipoCaso = TipoCaso::findOrFail($id);
 
             // Eliminar la relación si 'ctipo_tarea_id_eliminar' está presente
             if ($request->has('ctipo_tarea_id_eliminar') && $request->ctipo_tarea_id_eliminar != null) {
-                $ctipoTareaIdEliminar = $request->input('ctipo_tarea_id_eliminar');
                 // Eliminar la relación de la tabla intermedia si existe
                 DB::table('crm.tipo_caso_ctipo_tarea')
                     ->where('tipo_caso_id', $tipoCaso->id)
-                    ->where('ctipo_tarea_id', $ctipoTareaIdEliminar)
+                    ->where('ctipo_tarea_id', $request->ctipo_tarea_id_eliminar)
                     ->delete();
             }
 
             // Crear o actualizar la relación 'ctipo_tarea_id' si está presente
             if ($request->has('ctipo_tarea_id') && $request->ctipo_tarea_id != null) {
-                $ctipoTareaId = $request->input('ctipo_tarea_id');
                 // Verificar si ya existe una relación con este tipo de tarea, si no, insertarla
                 DB::table('crm.tipo_caso_ctipo_tarea')->updateOrInsert(
-                    ['tipo_caso_id' => $tipoCaso->id, 'ctipo_tarea_id' => $ctipoTareaId] // Aquí puedes agregar otros campos si es necesario
+                    ['tipo_caso_id' => $tipoCaso->id, 'ctipo_tarea_id' => $request->ctipo_tarea_id] // Aquí puedes agregar otros campos si es necesario
                 );
+            }
+
+
+            // Eliminar la relación si 'tab_id_eliminar' está presente
+            if ($request->has('tab_id_eliminar') && $request->tab_id_eliminar != null) {
+                // Eliminar la relación de la tabla intermedia si existe
+                foreach ($request->tab_id_eliminar as $tab_eliminar) {
+                    DB::table('crm.tipo_caso_tablero')
+                    ->where('tipo_caso_id', $tipoCaso->id)
+                    ->where('tab_id', $tab_eliminar)
+                    ->delete();
+                }
+            }
+
+   
+
+            // Verificar que el array de tab_id esté presente
+            if ($request->has('tab_id') && is_array($request->tab_id) && $tipoCaso->id) {
+                // Iteramos sobre el array de tab_id y creamos las relaciones en la tabla tipo_caso_tablero
+                foreach ($request->tab_id as $tabId) {
+                    TipoCasoTablero::create([
+                        'tipo_caso_id' => $tipoCaso->id, // Asegúrate de usar el ID de tipoCaso correspondiente
+                        'tab_id' => $tabId,
+                    ]);
+                }
             }
 
             $request->merge(['tab' => json_encode($request->tab)]);
 
             $tipoCaso->update($request->all());
 
-            $resultado = TipoCaso::where('id', $tipoCaso->id)
-            ->with('tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
-            ->first();
+            return TipoCaso::with('form', 'tipo_caso_tablero.tablero', 'tipoCasoCTipoTarea.cTipoTarea.dTipoTarea')
+                        ->select('*', DB::raw("
+                                CASE 
+                                    WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                    WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                    ELSE 'TABLERO'
+                                END as categoria_caso_nombre
+                            "))
+                        ->orderBy('id', 'ASC')
+                        ->get();
+        });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $resultado));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $respuesta));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -185,13 +225,17 @@ class TipoCasoController extends Controller
     public function deleteTipoCaso($id)
     {
         try {
-            $resultado = TipoCaso::findOrFail($id);
+            $respuesta = DB::transaction(function () use ($id) {
+                $resultado = TipoCaso::findOrFail($id);
 
-            $resultado->delete();
+                $resultado->delete();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $resultado));
+                return $resultado;
+            });
+            
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $respuesta));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
         }
     }
 
@@ -274,5 +318,25 @@ class TipoCasoController extends Controller
         // } catch (\Throwable $th) {
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
         // }
+    }
+
+    public function getFormulaByTipoCasoId($tcId){
+        try {
+            $data = TipoCasoFormulas::where('tc_id', $tcId)->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTipoCasoByCategoria($num_categoria){
+        try {
+            $data = TipoCaso::where('categoria_caso', $num_categoria)->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 }
