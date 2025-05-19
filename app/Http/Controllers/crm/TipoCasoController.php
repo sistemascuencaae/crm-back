@@ -7,6 +7,7 @@ use App\Http\Resources\crm\Funciones;
 use App\Models\crm\TipoCaso;
 use App\Models\configuracion\TipoCasoTablero;
 use App\Models\crm\TipoCasoCTipoTarea;
+use App\Models\crm\TipoCasoFormulas;
 use App\Models\Formulario\FormSeccion;
 use App\Models\Formulario\Formulario;
 use App\Models\Formulario\FormularioTipoCaso;
@@ -317,5 +318,25 @@ class TipoCasoController extends Controller
         // } catch (\Throwable $th) {
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
         // }
+    }
+
+    public function getFormulaByTipoCasoId($tcId){
+        try {
+            $data = TipoCasoFormulas::where('tc_id', $tcId)->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTipoCasoByCategoria($num_categoria){
+        try {
+            $data = TipoCaso::where('categoria_caso', $num_categoria)->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 }

@@ -497,8 +497,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editTipoCaso/{id}', [TipoCasoController::class, 'editTipoCaso']); // Edita la actividad
     Route::delete('/deleteTipoCaso/{id}', [TipoCasoController::class, 'deleteTipoCaso']); // getByTipoCasIdFormu
     Route::get('/getByTipoCasIdFormu/{tcId}', [TipoCasoController::class, 'getByTipoCasIdFormu']); //
-
-
+    Route::get('/getFormulaByTipoCasoId/{tcId}', [TipoCasoController::class, 'getFormulaByTipoCasoId']); // trae la formula del tipo de caso
+    Route::get('/listTipoCasoByCategoria/{num_categoria}', [TipoCasoController::class, 'listTipoCasoByCategoria']); // trae los tipos de caso por categoria_caso
 
     // TAREAS INDIVIDUALES
 
