@@ -1838,6 +1838,7 @@ $tabId = 230; // esta variable tengo que revisar que hace
                         $q->where('categoria_caso', 2)
                         ->orWhere('categoria_caso', 3);
                     })
+                
                 ->whereHas('estadodos', function ($query) {
                     $query->where('nombre', 'PENDIENTE');
                 })
@@ -1859,7 +1860,14 @@ $tabId = 230; // esta variable tengo que revisar que hace
                     'estadodos' => function ($query) {
                         $query->where('nombre', 'PENDIENTE');
                     },
-                    'tipocaso',
+                    'tipocaso' => function ($query) {
+                        $query->select('*', DB::raw("
+                            CASE 
+                                WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                ELSE 'TABLERO'
+                            END as categoria_caso_nombre"));
+                    },
                     'tiempo_caso',
                 ])
                 ->orderBy('id', 'desc')
@@ -1889,6 +1897,55 @@ $tabId = 230; // esta variable tengo que revisar que hace
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+
+
+    // listado de actividades y recordatorios
+    public function listAllActividadesByUserId($user_id)
+    {
+        try {
+        //    $tabId = 230; // esta variable tengo que revisar que hace
+            
+            $data = Caso::where('user_id', $user_id)
+                ->whereHas('tipocaso', function ($q) {
+                        $q->where('categoria_caso', 2)
+                        ->orWhere('categoria_caso', 3);
+                    })
+                ->with([
+                    'user',
+                    'userCreador',
+                    'clienteCrm',
+                    'resumen',
+                    'actividad',
+                    'Etiqueta',
+                    'miembros.usuario.departamento',
+                    'Galeria',
+                    'Archivo',
+                    'req_caso' => function ($query) {
+                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    },
+                    'tablero',
+                    'fase.tablero',
+                    'estadodos',
+                    'tipocaso' => function ($query) {
+                        $query->select('*', DB::raw("
+                            CASE 
+                                WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                ELSE 'TABLERO'
+                            END as categoria_caso_nombre"));
+                    },
+                    'tiempo_caso',
+                ])
+                ->orderBy('id', 'desc')
+                ->get();
+                
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 }
