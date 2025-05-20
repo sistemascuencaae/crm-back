@@ -832,7 +832,14 @@ class CasoController extends Controller
                 'tablero',
                 'fase.tablero',
                 'estadodos',
-                'tipocaso',
+                'tipocaso' => function ($query) {
+                        $query->select('*', DB::raw("
+                            CASE 
+                                WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                ELSE 'TABLERO'
+                            END as categoria_caso_nombre"));
+                },
                 'tiempo_caso',
 
             ])->where('id', $casoId)->first();
