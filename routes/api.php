@@ -414,6 +414,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listTableroByDepId/{dep_id}', [TableroController::class, 'listTableroByDepId']); // listar
 
     Route::get('/permisoTableroUsuario/{tab_id}/{user_id}', [TableroController::class, 'permisoTableroUsuario']); // pemiso del usuario tablero
+    Route::get('/listTablerosByUserId/{user_id}', [TableroController::class, 'listTablerosByUserId']); // lista de tableros por user_id
 
     // DEPARTAMENTO
 
@@ -621,6 +622,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     // SERIES GENERADAS
 
     Route::post('/addSeriesGeneradas', [SeriesGeneradasController::class, 'addSeriesGeneradas']);
+
+    // FASES
+    Route::get('/listFasesByTableroId', [FaseController::class, 'listFasesByTableroId']);
+
 });
 
 Route::group([], function ($router) {
@@ -1050,4 +1055,5 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_acuerdos_de_pago', [MigracionController::class, 'aav_acuerdos_de_pago']);
     Route::get('/aav_migracion_productos_facturados/{factura}', [MigracionController::class, 'aav_migracion_productos_facturados']);
     Route::get('/historica_byComprobante/{factura}/{historicaInteger}', [MigracionController::class, 'historica_byComprobante']);
+    Route::get('/av_producto_tipoproducto_stock', [MigracionController::class, 'av_producto_tipoproducto_stock']);
 });

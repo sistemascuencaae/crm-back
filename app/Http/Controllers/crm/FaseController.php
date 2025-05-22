@@ -17,7 +17,10 @@ class FaseController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
+        $this->middleware('auth:api', ['except' =>
+        [
+            'listFasesByTableroId',
+        ]]);
     }
 
     public function list(Request $request)
@@ -290,5 +293,46 @@ class FaseController extends Controller
         $data = $query->orderBy('orden', 'asc')->get();
 
         return $data;
+    }
+
+    public function listFasesByTableroId(Request $request)
+    {
+        try {
+            $query = Fase::query()
+                ->with([
+                    'caso.user',
+                    'caso.userCreador',
+                    'caso.clienteCrm',
+                    'caso.resumen',
+                    'caso.tareas' => function ($query) use ($request) {
+                        $query->where('tab_id', $request->tabId);
+                    },
+                    'caso.actividad',
+                    'caso.miembros.usuario.departamento',
+                    'caso.Etiqueta',
+                    'caso.req_caso' => function ($query) {
+                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    },
+                    'condicionFaseMover',
+                    'caso.estadodos',
+                    'caso.tipocaso',
+                    'caso.tiempo_caso',
+                    'caso' => function ($query) use ($request) {
+                        $query->whereBetween('fecha_vencimiento', [
+                            Carbon::parse($request->fechaInicio)->startOfDay(),
+                            Carbon::parse($request->fechaFin)->endOfDay(),
+                        ]);
+                    },
+                ])
+                ->where('tab_id', $request->tabId);
+
+            $data = $query->orderBy('orden', 'asc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+
+        }
     }
 }

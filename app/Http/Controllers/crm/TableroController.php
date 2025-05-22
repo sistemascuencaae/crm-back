@@ -20,7 +20,10 @@ class TableroController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
+        $this->middleware('auth:api', ['except' =>
+        [
+            'listTablerosByUserId',
+        ]]);
     }
 
     public function listAllTablerosWithFases()
@@ -420,6 +423,27 @@ class TableroController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
 
+    }
+
+    public function listTablerosByUserId($user_id)
+    {
+        try {
+            $tablerosUsuario = TableroUsuario::where('user_id', $user_id)
+                                ->with('tableros')->get();
+
+            // array que va a guardar los tableros del usuario
+            $todosLosTableros = [];
+
+            foreach ($tablerosUsuario as $tu) {
+                foreach ($tu->tableros as $tablero) {
+                    $todosLosTableros[] = $tablero;
+                }
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $todosLosTableros));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
     }
 
 }
