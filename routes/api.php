@@ -57,6 +57,7 @@ use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
+use App\Http\Controllers\openceo\BodegaController;
 use App\Http\Controllers\openceo\EntidadDynamoController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
@@ -792,6 +793,7 @@ Route::group(["prefix" => "openceo"], function ($router) {
     Route::get('/buscarEntidadEmpleado/{identificacion}', [EntidadDynamoController::class, 'buscarEntidadEmpleado']);
     Route::get('/listAlmacenesPuntoVenta', [EntidadDynamoController::class, 'listAlmacenesPuntoVenta']);
     Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
+    Route::get('/listBodegas', [BodegaController::class, 'listBodegas']);
 
 });
 
@@ -1056,4 +1058,5 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_migracion_productos_facturados/{factura}', [MigracionController::class, 'aav_migracion_productos_facturados']);
     Route::get('/historica_byComprobante/{factura}/{historicaInteger}', [MigracionController::class, 'historica_byComprobante']);
     Route::get('/av_producto_tipoproducto_stock', [MigracionController::class, 'av_producto_tipoproducto_stock']);
+    Route::get('/aav_migracion_productos_facturados_detalle/{factura}', [MigracionController::class, 'aav_migracion_productos_facturados_detalle']);
 });

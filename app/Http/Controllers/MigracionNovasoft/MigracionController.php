@@ -473,4 +473,15 @@ class MigracionController extends Controller
         }
     }
 
+    public function aav_migracion_productos_facturados_detalle($factura)
+    {
+        try {
+            $data = DB::select("SELECT * FROM public.aav_migracion_productos_facturados WHERE cod_comprobante_fp = '$factura'");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }

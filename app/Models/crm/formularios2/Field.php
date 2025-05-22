@@ -25,7 +25,8 @@ class Field extends Model
         "seccion_id",
         "group",
         "margin_top",
-        "margin_bottom"
+        "margin_bottom",
+        "visible"
     ];
 
     public function setCreatedAtAttribute($value)
