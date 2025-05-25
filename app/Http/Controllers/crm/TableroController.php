@@ -12,6 +12,7 @@ use App\Models\crm\Estados;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\crm\VistaMisCasos;
+use App\Models\crm\VistaTodosLosCasos;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -443,6 +444,29 @@ class TableroController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $todosLosTableros));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listTodosLosCasosByTabId($tab_id)
+    {
+        try {
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+            ->with([
+                'estadodos'
+            ])->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
