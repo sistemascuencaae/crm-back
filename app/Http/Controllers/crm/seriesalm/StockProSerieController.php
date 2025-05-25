@@ -68,7 +68,7 @@ class StockProSerieController extends Controller
                                                 FROM 
                                                     av_stock_producto_bodega_sinregalos_v3 tt 
                                                 WHERE  
-                                                    bod_id NOT IN (16, 47, 50, 60, 61, 181, 182, 200, 209, 211, 225, 204, 208, 240, 241, 242, 243, 244, 210) 
+                                                    bod_id NOT IN (16, 50, 60, 61, 181, 200, 209, 211, 225, 204, 208, 240, 241, 242, 243, 244, 210) 
                                                 GROUP BY 
                                                     1, 2, 3
                                                 ORDER BY bodega ASC;
