@@ -23,7 +23,7 @@ class TableroController extends Controller
     {
         $this->middleware('auth:api', ['except' =>
         [
-            'listTablerosByUserId',
+            // 'listTablerosByUserId',
         ]]);
     }
 
@@ -430,7 +430,9 @@ class TableroController extends Controller
     {
         try {
             $tablerosUsuario = TableroUsuario::where('user_id', $user_id)
-                                ->with('tableros')->get();
+                ->with(['tableros' => function ($query) {
+                    $query->where('estado', true);
+                }])->get();
 
             // array que va a guardar los tableros del usuario
             $todosLosTableros = [];
