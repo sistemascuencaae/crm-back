@@ -403,7 +403,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addTablero', [TableroController::class, 'addTablero']); // guardar
     Route::get('/listTableroByUser/{user_id}', [TableroController::class, 'listTableroByUser']); // listar
-    Route::get('/listTableroMisCasos/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
+    // Route::get('/listTableroMisCasos/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
     Route::post('/editTablero/{id}', [TableroController::class, 'editTablero']); // Editar
     Route::get('/listAllTableros', [TableroController::class, 'listAll']); // listar tablero mis casos
     Route::get('/listAllTablerosActivos', [TableroController::class, 'listAllTablerosActivos']); // listar tableros inactivos
@@ -418,6 +418,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listTablerosByUserId/{user_id}', [TableroController::class, 'listTablerosByUserId']); // lista de tableros por user_id
     
     Route::get('/listTodosLosCasos/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasos']); // listar tablero todos los casos
+    Route::get('/listTableroMisCasos/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
 
     // DEPARTAMENTO
 

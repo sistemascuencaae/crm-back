@@ -348,35 +348,35 @@ class TableroController extends Controller
         }
     }
 
-    public function listTableroMisCasos($user_id)
-    {
-        $log = new Funciones();
-        try {
-            $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
-            ->whereOr('user_creador_id', $user_id)
-            ->with([
-                'miembros.usuario.departamento',
-                'estadodos'
-            ])->get();
+    // public function listTableroMisCasos($user_id)
+    // {
+    //     $log = new Funciones();
+    //     try {
+    //         $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
+    //         ->whereOr('user_creador_id', $user_id)
+    //         ->with([
+    //             'miembros.usuario.departamento',
+    //             'estadodos'
+    //         ])->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+    //         // Especificar las propiedades que representan fechas en tu objeto
+    //         $dateFields = ['created_at'];
+    //         // Utilizar la función map para transformar y obtener una nueva colección
+    //         $data->map(function ($item) use ($dateFields) {
+    //             $funciones = new Funciones();
+    //             $funciones->formatoFechaItem($item, $dateFields);
+    //             return $item;
+    //         });
 
-            $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
+    //         $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
-        } catch (Exception $e) {
-            $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos, con el user_id: ' . $user_id, $e);
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+    //     } catch (Exception $e) {
+    //         $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos, con el user_id: ' . $user_id, $e);
 
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
-    }
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
 
     public function editMiembrosByTableroId($id)
     {
@@ -477,4 +477,39 @@ class TableroController extends Controller
         }
     }
 
+    public function listTableroMisCasos($fechaInicio, $fechaFin, $user_id)
+    {
+        $log = new Funciones();
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
+                            ->whereOr('user_creador_id', $user_id)
+                            ->with([
+                                'miembros.usuario.departamento',
+                                'estadodos'
+                            ])
+                            ->where('created_at', '>=', $fechaInicio)
+                            ->where('fecha_vencimiento', '<=', $fechaFin)
+                            ->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos, con el user_id: ' . $user_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }
