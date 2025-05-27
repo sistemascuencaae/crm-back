@@ -13,6 +13,7 @@ use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\crm\VistaMisCasos;
 use App\Models\crm\VistaTodosLosCasos;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +24,7 @@ class TableroController extends Controller
     {
         $this->middleware('auth:api', ['except' =>
         [
-            // 'listTablerosByUserId',
+            // 'listTodosLosCasos',
         ]]);
     }
 
@@ -449,13 +450,17 @@ class TableroController extends Controller
         }
     }
 
-    public function listTodosLosCasosByTabId($tab_id)
+    public function listTodosLosCasos($fechaInicio, $fechaFin)
     {
         try {
-            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-            ->with([
-                'estadodos'
-            ])->get();
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('created_at', '>=', $fechaInicio)
+                ->where('fecha_vencimiento', '<=', $fechaFin)
+                ->with([
+                    'estadodos'
+                ])->get();
 
             // Especificar las propiedades que representan fechas en tu objeto
             $dateFields = ['created_at'];

@@ -417,7 +417,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/permisoTableroUsuario/{tab_id}/{user_id}', [TableroController::class, 'permisoTableroUsuario']); // pemiso del usuario tablero
     Route::get('/listTablerosByUserId/{user_id}', [TableroController::class, 'listTablerosByUserId']); // lista de tableros por user_id
     
-    Route::get('/listTodosLosCasosByTabId/{tab_id}', [TableroController::class, 'listTodosLosCasosByTabId']); // listar tablero todos los casos
+    Route::get('/listTodosLosCasos/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasos']); // listar tablero todos los casos
 
     // DEPARTAMENTO
 
