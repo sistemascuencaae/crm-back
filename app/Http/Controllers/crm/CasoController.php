@@ -22,6 +22,7 @@ use App\Models\crm\Notificaciones;
 use App\Models\crm\ReferenciasCliente;
 use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tablero;
+use App\Models\crm\TableroUsuario;
 use App\Models\crm\Tareas;
 use App\Models\crm\TelefonosCliente;
 use App\Models\crm\TelefonosReferencias;
@@ -1788,7 +1789,7 @@ class CasoController extends Controller
 
 
     // *************************************************
-    // JGSJ CALENDARIO CLIENTES - ACTIVIDADES CLIENTES
+    // JGSJ START CALENDARIO CLIENTES - ACTIVIDADES CLIENTES
     // *************************************************
 
     // end point para listar todos los casos del cliente (1 Caso, 2 Actividad, 3 Recordatorio)
@@ -1907,9 +1908,6 @@ $tabId = 230; // esta variable tengo que revisar que hace
         }
     }
 
-
-
-
     // listado de actividades y recordatorios
     public function listAllActividadesByUserId($user_id)
     {
@@ -1955,4 +1953,98 @@ $tabId = 230; // esta variable tengo que revisar que hace
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    // *************************************************
+    // JGSJ END CALENDARIO CLIENTES - ACTIVIDADES CLIENTES
+    // *************************************************
+
+
+    public function reasignarCasosMasivo(Request $request)
+    {
+        $log = new Funciones();
+        $error = null;
+        $exitoso = null;
+
+        try {
+            DB::transaction(function () use ($request, $log, &$error, &$exitoso) {
+                $items = $request->all(); // obtenemos el array del cuerpo
+
+                    foreach ($items as $item) {
+                        $casoAudit = $this->getCaso($item['caso_id']);
+                        $caso = Caso::find($item['caso_id']);
+
+                        // Auditoría
+                        $audit = new Audits();
+                        $audit->old_values = json_encode($casoAudit);
+
+                        if ($caso) {
+                            // Agrega usuarios que no estén en el tablero
+                            $tabl = TableroUsuario::where('tab_id', $item['tab_id'])
+                                ->where('user_id', $item['user_id'])
+                                ->first();
+
+                            if (!$tabl) {
+                                DB::insert(
+                                    'INSERT INTO crm.tablero_user (user_id, tab_id, permisos) VALUES (?, ?, ?)',
+                                    [$item['user_id'], $item['tab_id'], false]
+                                );
+                            }
+
+                            // Actualiza el caso
+                            $caso->update([
+                                'user_anterior_id' => $caso->user_id,
+                                'user_id' => $item['user_id'],
+                            ]);
+
+                            $tipo = 1;
+
+                            $this->calcularTiemposCaso(
+                                $caso,
+                                $caso->id,
+                                $caso->estado_2,
+                                $caso->fas_id,
+                                $tipo,
+                                $caso->user_id
+                            );
+
+                            $data = $this->getCaso($item['caso_id']);
+                            $robot = new RobotCasoController();
+                            $robot->addMiembro($data->user_id, $item['caso_id'], $item['tab_id']);
+                            broadcast(new TableroEvent($data));
+
+                            $log->logInfo(CasoController::class, 'Se actualizó con éxito el caso #' . $item['caso_id']);
+                            
+                            $audit->user_id = Auth::id();
+                            $audit->event = 'updated';
+                            $audit->auditable_type = Caso::class;
+                            $audit->auditable_id = $item['caso_id'];
+                            $audit->user_type = User::class;
+                            $audit->ip_address = $request->ip();
+                            $audit->url = $request->fullUrl();
+                            $audit->user_agent = $request->header('User-Agent');
+                            $audit->accion = 'reasignarCaso';
+                            $audit->caso_id = $item['caso_id'];
+                            $audit->new_values = json_encode($data);
+                            $audit->save();
+
+                            // Guardamos el último caso procesado exitosamente
+                            $exitoso = $data;
+                        } else {
+                            $log->logError(CasoController::class, 'El caso #' . $item['caso_id'] . ' no existe');
+                            $error = 'El caso #' . $item['caso_id'] . ' no existe';
+                        }
+                    }
+                });
+
+                if ($error) {
+                    return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+                } else {
+                    return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $exitoso));
+                }
+            } catch (Exception $e) {
+                $log->logError(CasoController::class, 'Error al actualizar los casos masivamente', $e);
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }

@@ -38,7 +38,10 @@ class UserController extends Controller
     public function listUsuariosActivos()
     {
         try {
-            $usuarios = User::orderBy("id", "asc")->where('estado', true)->with('Departamento', 'perfil_analista', 'perfil', 'almacen')->get();
+            $usuarios = User::selectRaw("*, CONCAT(usu_alias, ' - ', name, ' ', surname) as full_name")
+                ->orderBy("id", "asc")
+                ->where('estado', true)
+                ->with('Departamento', 'perfil_analista', 'perfil', 'almacen')->get();
 
             // mapeado mapeo
             // return response()->json(RespuestaApi::returnResultado('success', 'Lista de usuarios activos', [
