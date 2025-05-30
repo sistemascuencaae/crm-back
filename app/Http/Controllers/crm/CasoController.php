@@ -815,7 +815,8 @@ class CasoController extends Controller
             //$userLogin = Auth::id();
             //$user = DB::selectOne("SELECT usu_tipo FROM crm.users where id = ?", [$userLogin]);
 
-            return Caso::with([
+            return Caso::selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                ->with([
                 'user',
                 'userCreador',
                 'clienteCrm',
@@ -1801,10 +1802,11 @@ class CasoController extends Controller
             //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
             //     ->get();
 
-$tabId = 230; // esta variable tengo que revisar que hace
+// $tabId = 230; // esta variable tengo que revisar que hace
 
             $data = Caso::where('identificacion', $identificacion)
-                    ->with([
+                        ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                        ->with([
                         'user',
                         'userCreador',
                         'clienteCrm',
@@ -1812,9 +1814,47 @@ $tabId = 230; // esta variable tengo que revisar que hace
                         // 'tareas' => function ($query) use ($tabId) {
                         //     $query->where('tab_id', $tabId->id);
                         // },
-                        'tareas' => function ($query) use ($tabId) {
-                            $query->where('tab_id', $tabId);
+                        'actividad',
+                        'Etiqueta',
+                        'miembros.usuario.departamento',
+                        'Galeria',
+                        'Archivo',
+                        'req_caso' => function ($query) {
+                            $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
                         },
+                        'tablero',
+                        'fase.tablero',
+                        'estadodos',
+                        'tipocaso',
+                        'tiempo_caso',
+                    ])->orderBy('id','desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+public function listUsuarioComunCasosByCliente($identificacion)
+    {
+        try {
+            // $data = Caso::where('identificacion', $identificacion)
+            //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
+            //     ->get();
+
+// $tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('identificacion', $identificacion)
+                        ->where('acc_publico', false)
+                        ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                        ->with([
+                        'user',
+                        'userCreador',
+                        'clienteCrm',
+                        'resumen',
+                        // 'tareas' => function ($query) use ($tabId) {
+                        //     $query->where('tab_id', $tabId->id);
+                        // },
                         'actividad',
                         'Etiqueta',
                         'miembros.usuario.departamento',
@@ -2072,6 +2112,25 @@ $tabId = 230; // esta variable tengo que revisar que hace
                 $funciones->formatoFechaItem($item, $dateFields);
                 return $item;
             });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function editAccesoPublicoActividadCliente(Request $request, $caso_id)
+    {
+        try {
+            $caso = Caso::findOrFail($caso_id);
+
+            DB::transaction(function () use ($caso, $request) {
+                $caso->update([
+                    "acc_publico" => $request->acc_publico
+                ]);
+            });
+
+            $data = $this->getCaso($caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {

@@ -448,11 +448,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listHistorialCaso/{caso_id}', [CasoController::class, 'listHistorialCaso']); // listado/ historico de los estados del caso
     Route::get('/listHistorialCasoAgrupadoTablero/{caso_id}', [CasoController::class, 'listHistorialCasoAgrupadoTablero']); // listado/ historico de los estados del caso
     Route::get('/listCasosByCliente/{identificacion}', [CasoController::class, 'listCasosByCliente']); // listado/ historico de los estados del caso
+    Route::get('/listUsuarioComunCasosByCliente/{identificacion}', [CasoController::class, 'listUsuarioComunCasosByCliente']); // listado/ historico de los estados del caso
     Route::get('/listActividadesCategoria2ByUserId/{user_id}', [CasoController::class, 'listActividadesCategoria2ByUserId']); // listado/ historico de los estados del caso
     Route::post('/editDuracionCaso', [CasoController::class, 'editDuracionCaso']); // Editar la observación del caso
     Route::get('/listAllActividadesByUserId/{user_id}', [CasoController::class, 'listAllActividadesByUserId']); // listado/ historico de los estados del caso
     Route::post('/reasignarCasosMasivo', [CasoController::class, 'reasignarCasosMasivo']); // Editar la observación del caso
     Route::post('/editAccesoPublico/{caso_id}', [CasoController::class, 'editAccesoPublico']); // Editar la observación del caso
+    Route::post('/editAccesoPublicoActividadCliente/{caso_id}', [CasoController::class, 'editAccesoPublicoActividadCliente']); // Editar la observación del caso
 
     // CTAREA
 
