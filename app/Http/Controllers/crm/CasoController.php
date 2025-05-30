@@ -28,6 +28,7 @@ use App\Models\crm\TelefonosCliente;
 use App\Models\crm\TelefonosReferencias;
 use App\Models\crm\TipoCaso;
 use App\Models\crm\Fase;
+use App\Models\crm\VistaTodosLosCasos;
 use App\Models\Formulario\FormCampoValor;
 use App\Models\Formulario\FormValor;
 use App\Models\openceo\CPedidoProforma;
@@ -2043,6 +2044,37 @@ $tabId = 230; // esta variable tengo que revisar que hace
                 }
             } catch (Exception $e) {
                 $log->logError(CasoController::class, 'Error al actualizar los casos masivamente', $e);
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function editAccesoPublico(Request $request, $caso_id)
+    {
+        try {
+            $caso = Caso::findOrFail($caso_id);
+
+            DB::transaction(function () use ($caso, $request) {
+                $caso->update([
+                    "acc_publico" => $request->acc_publico
+                ]);
+            });
+
+            $data = VistaTodosLosCasos::where('caso_id', $caso_id)
+                ->with([
+                    'estadodos'
+                ])->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }

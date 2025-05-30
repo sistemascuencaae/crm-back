@@ -419,6 +419,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     
     Route::get('/listTodosLosCasos/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasos']); // listar tablero todos los casos
     Route::get('/listTableroMisCasos/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
+    Route::get('/listAdministradorCasosByTabId/{tab_id}/{fechaInicio}/{fechaFin}', [TableroController::class, 'listAdministradorCasosByTabId']); // listar tablero mis casos
+    Route::get('/listUsuarioComunCasosByTabId/{tab_id}/{fechaInicio}/{fechaFin}', [TableroController::class, 'listUsuarioComunCasosByTabId']); // listar tablero mis casos
 
     // DEPARTAMENTO
 
@@ -450,6 +452,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editDuracionCaso', [CasoController::class, 'editDuracionCaso']); // Editar la observación del caso
     Route::get('/listAllActividadesByUserId/{user_id}', [CasoController::class, 'listAllActividadesByUserId']); // listado/ historico de los estados del caso
     Route::post('/reasignarCasosMasivo', [CasoController::class, 'reasignarCasosMasivo']); // Editar la observación del caso
+    Route::post('/editAccesoPublico/{caso_id}', [CasoController::class, 'editAccesoPublico']); // Editar la observación del caso
 
     // CTAREA
 
