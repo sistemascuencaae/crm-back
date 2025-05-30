@@ -595,4 +595,21 @@ class Formulario2Controller extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    public function listClienteDynamoByIdentificacion($identificacion)
+    {
+        try {
+            $data = DB::table('crm.av_cliente')
+                            ->where('identificacion', $identificacion)
+                            ->first();
+
+            if (!$data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No existe el cliente', ''));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 }

@@ -772,6 +772,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::get('/af_cliente_dfactura/{identificacion}', [Formulario2UsuariosController::class, 'af_cliente_dfactura']); // Formularios Usuarios
     
     Route::get('/listAllClientesDynamo', [Formulario2Controller::class, 'listAllClientesDynamo']); // lista de clientes para actividades caso
+    Route::get('/listClienteDynamoByIdentificacion/{identificacion}', [Formulario2Controller::class, 'listClienteDynamoByIdentificacion']); // lista de clientes para actividades caso
 });
 
 Route::group(["prefix" => "configuracion"], function ($router) {
