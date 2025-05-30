@@ -32,6 +32,7 @@ class VistaMisCasos extends Model
         "datos_formulario",
         "tipo_caso",
         "nombre_categoria_caso",
+        "acc_publico",
     ];
 
     public function miembros(){
