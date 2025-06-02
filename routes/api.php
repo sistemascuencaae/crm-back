@@ -57,6 +57,7 @@ use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
+use App\Http\Controllers\openceo\BodegaController;
 use App\Http\Controllers\openceo\EntidadDynamoController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
@@ -402,7 +403,7 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     Route::post('/addTablero', [TableroController::class, 'addTablero']); // guardar
     Route::get('/listTableroByUser/{user_id}', [TableroController::class, 'listTableroByUser']); // listar
-    Route::get('/listTableroMisCasos/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
+    // Route::get('/listTableroMisCasos/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
     Route::post('/editTablero/{id}', [TableroController::class, 'editTablero']); // Editar
     Route::get('/listAllTableros', [TableroController::class, 'listAll']); // listar tablero mis casos
     Route::get('/listAllTablerosActivos', [TableroController::class, 'listAllTablerosActivos']); // listar tableros inactivos
@@ -412,8 +413,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/editMiembrosByTableroId/{id}', [TableroController::class, 'editMiembrosByTableroId']); // Editar los miembros del tablero
     Route::get('/usuariosTablero/{tabId}', [TableroController::class, 'usuariosTablero']); // usuariosTablero
     Route::get('/listTableroByDepId/{dep_id}', [TableroController::class, 'listTableroByDepId']); // listar
-
+    
     Route::get('/permisoTableroUsuario/{tab_id}/{user_id}', [TableroController::class, 'permisoTableroUsuario']); // pemiso del usuario tablero
+    Route::get('/listTablerosByUserId/{user_id}', [TableroController::class, 'listTablerosByUserId']); // lista de tableros por user_id
+    
+    Route::get('/listTodosLosCasos/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasos']); // listar tablero todos los casos
+    Route::get('/listTableroMisCasos/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
+    Route::get('/listAdministradorCasosByTabId/{tab_id}/{fechaInicio}/{fechaFin}', [TableroController::class, 'listAdministradorCasosByTabId']); // listar tablero mis casos
+    Route::get('/listUsuarioComunCasosByTabId/{tab_id}/{fechaInicio}/{fechaFin}', [TableroController::class, 'listUsuarioComunCasosByTabId']); // listar tablero mis casos
 
     // DEPARTAMENTO
 
@@ -441,8 +448,13 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listHistorialCaso/{caso_id}', [CasoController::class, 'listHistorialCaso']); // listado/ historico de los estados del caso
     Route::get('/listHistorialCasoAgrupadoTablero/{caso_id}', [CasoController::class, 'listHistorialCasoAgrupadoTablero']); // listado/ historico de los estados del caso
     Route::get('/listCasosByCliente/{identificacion}', [CasoController::class, 'listCasosByCliente']); // listado/ historico de los estados del caso
+    Route::get('/listUsuarioComunCasosByCliente/{identificacion}', [CasoController::class, 'listUsuarioComunCasosByCliente']); // listado/ historico de los estados del caso
     Route::get('/listActividadesCategoria2ByUserId/{user_id}', [CasoController::class, 'listActividadesCategoria2ByUserId']); // listado/ historico de los estados del caso
     Route::post('/editDuracionCaso', [CasoController::class, 'editDuracionCaso']); // Editar la observación del caso
+    Route::get('/listAllActividadesByUserId/{user_id}', [CasoController::class, 'listAllActividadesByUserId']); // listado/ historico de los estados del caso
+    Route::post('/reasignarCasosMasivo', [CasoController::class, 'reasignarCasosMasivo']); // Editar la observación del caso
+    Route::post('/editAccesoPublico/{caso_id}', [CasoController::class, 'editAccesoPublico']); // Editar la observación del caso
+    Route::post('/editAccesoPublicoActividadCliente/{caso_id}', [CasoController::class, 'editAccesoPublicoActividadCliente']); // Editar la observación del caso
 
     // CTAREA
 
@@ -620,6 +632,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     // SERIES GENERADAS
 
     Route::post('/addSeriesGeneradas', [SeriesGeneradasController::class, 'addSeriesGeneradas']);
+
+    // FASES
+    Route::get('/listFasesByTableroId', [FaseController::class, 'listFasesByTableroId']);
+
 });
 
 Route::group([], function ($router) {
@@ -756,6 +772,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::get('/af_cliente_dfactura/{identificacion}', [Formulario2UsuariosController::class, 'af_cliente_dfactura']); // Formularios Usuarios
     
     Route::get('/listAllClientesDynamo', [Formulario2Controller::class, 'listAllClientesDynamo']); // lista de clientes para actividades caso
+    Route::get('/listClienteDynamoByIdentificacion/{identificacion}', [Formulario2Controller::class, 'listClienteDynamoByIdentificacion']); // lista de clientes para actividades caso
 });
 
 Route::group(["prefix" => "configuracion"], function ($router) {
@@ -786,6 +803,7 @@ Route::group(["prefix" => "openceo"], function ($router) {
     Route::get('/buscarEntidadEmpleado/{identificacion}', [EntidadDynamoController::class, 'buscarEntidadEmpleado']);
     Route::get('/listAlmacenesPuntoVenta', [EntidadDynamoController::class, 'listAlmacenesPuntoVenta']);
     Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
+    Route::get('/listBodegas', [BodegaController::class, 'listBodegas']);
 
 });
 
@@ -1049,4 +1067,7 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_acuerdos_de_pago', [MigracionController::class, 'aav_acuerdos_de_pago']);
     Route::get('/aav_migracion_productos_facturados/{factura}', [MigracionController::class, 'aav_migracion_productos_facturados']);
     Route::get('/historica_byComprobante/{factura}/{historicaInteger}', [MigracionController::class, 'historica_byComprobante']);
+    Route::get('/av_producto_tipoproducto_stock', [MigracionController::class, 'av_producto_tipoproducto_stock']);
+    Route::get('/aav_migracion_productos_facturados_detalle/{factura}', [MigracionController::class, 'aav_migracion_productos_facturados_detalle']);
+    Route::get('/aav_migracion_cuotas_gratis', [MigracionController::class, 'aav_migracion_cuotas_gratis']);
 });

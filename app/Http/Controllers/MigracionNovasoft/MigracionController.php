@@ -5,10 +5,12 @@ namespace App\Http\Controllers\MigracionNovasoft;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Models\openceo\Aav_migracion_cabecera_productos_facturados;
+use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use App\Http\Resources\RespuestaApi;
 use Illuminate\Support\Facades\Storage;
+use Request;
 
 class MigracionController extends Controller
 {
@@ -453,6 +455,39 @@ class MigracionController extends Controller
                     'xcuotas_xcobros' => $xcuotas_xcobros,
                 ];
             }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function av_producto_tipoproducto_stock()
+    {
+        try {
+            $data = DB::select("SELECT * FROM public.av_producto_tipoproducto_stock");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function aav_migracion_productos_facturados_detalle($factura)
+    {
+        try {
+            $data = DB::select("SELECT * FROM public.aav_migracion_productos_facturados WHERE cod_comprobante_fp = '$factura'");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function aav_migracion_cuotas_gratis()
+    {
+        try {
+            $data = DB::select("SELECT * FROM public.aav_migracion_cuotas_gratis");
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {

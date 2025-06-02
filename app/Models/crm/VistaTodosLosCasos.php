@@ -3,17 +3,14 @@
 namespace App\Models\crm;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class VistaMisCasos extends Model
+class VistaTodosLosCasos extends Model
 {
 
-    protected $table = 'crm.av_mis_casos';
+    protected $table = 'crm.av_todos_los_casos';
 
     protected $fillable = [
-        "id_usuario_miembro",
-        "usuario_miembro",
         "dueno_caso",
         "nombre",
         "caso_id",
@@ -35,22 +32,21 @@ class VistaMisCasos extends Model
         "acc_publico",
     ];
 
-    public function miembros(){
-        return $this->hasMany(Miembros::class, "caso_id", "caso_id");
-    }
-    public function estadodos()
-    {
-        return $this->belongsTo(Estados::class, "estado_2", "id");
-    }
-
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["created_at"] = Carbon::now();
     }
+
     public function setUpdatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
+
+        public function estadodos()
+    {
+        return $this->belongsTo(Estados::class, "estado_2", "id");
+    }
+
 }

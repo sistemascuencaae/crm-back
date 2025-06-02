@@ -69,7 +69,8 @@ class Caso extends Model
         "parroquia",
         "direccion",
         "telefono_domicilio",
-        "celulares"
+        "celulares",
+        "acc_publico",
     ];
 
     public function userCreador()

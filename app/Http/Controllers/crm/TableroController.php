@@ -12,6 +12,8 @@ use App\Models\crm\Estados;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\crm\VistaMisCasos;
+use App\Models\crm\VistaTodosLosCasos;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +22,11 @@ class TableroController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
+        $this->middleware('auth:api', ['except' =>
+        [
+            'listAdministradorCasosByTabId',
+            'listUsuarioComunCasosByTabId',
+        ]]);
     }
 
     public function listAllTablerosWithFases()
@@ -343,35 +349,35 @@ class TableroController extends Controller
         }
     }
 
-    public function listTableroMisCasos($user_id)
-    {
-        $log = new Funciones();
-        try {
-            $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
-            ->whereOr('user_creador_id', $user_id)
-            ->with([
-                'miembros.usuario.departamento',
-                'estadodos'
-            ])->get();
+    // public function listTableroMisCasos($user_id)
+    // {
+    //     $log = new Funciones();
+    //     try {
+    //         $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
+    //         ->whereOr('user_creador_id', $user_id)
+    //         ->with([
+    //             'miembros.usuario.departamento',
+    //             'estadodos'
+    //         ])->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+    //         // Especificar las propiedades que representan fechas en tu objeto
+    //         $dateFields = ['created_at'];
+    //         // Utilizar la función map para transformar y obtener una nueva colección
+    //         $data->map(function ($item) use ($dateFields) {
+    //             $funciones = new Funciones();
+    //             $funciones->formatoFechaItem($item, $dateFields);
+    //             return $item;
+    //         });
 
-            $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
+    //         $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
-        } catch (Exception $e) {
-            $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos, con el user_id: ' . $user_id, $e);
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+    //     } catch (Exception $e) {
+    //         $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos, con el user_id: ' . $user_id, $e);
 
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
-    }
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
 
     public function editMiembrosByTableroId($id)
     {
@@ -422,4 +428,149 @@ class TableroController extends Controller
 
     }
 
+    public function listTablerosByUserId($user_id)
+    {
+        try {
+            $tablerosUsuario = TableroUsuario::where('user_id', $user_id)
+                ->with(['tableros' => function ($query) {
+                    $query->where('estado', true);
+                }])->get();
+
+            // array que va a guardar los tableros del usuario
+            $todosLosTableros = [];
+
+            foreach ($tablerosUsuario as $tu) {
+                foreach ($tu->tableros as $tablero) {
+                    $todosLosTableros[] = $tablero;
+                }
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $todosLosTableros));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listTableroMisCasos($fechaInicio, $fechaFin, $user_id)
+    {
+        $log = new Funciones();
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
+                            ->whereOr('user_creador_id', $user_id)
+                            ->with([
+                                'miembros.usuario.departamento',
+                                'estadodos'
+                            ])
+                            ->where('created_at', '>=', $fechaInicio)
+                            ->where('fecha_vencimiento', '<=', $fechaFin)
+                            ->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos, con el user_id: ' . $user_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // es para superUsuario reasignacion de casos
+    public function listTodosLosCasos($fechaInicio, $fechaFin)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('created_at', '>=', $fechaInicio)
+                ->where('fecha_vencimiento', '<=', $fechaFin)
+                ->with([
+                    'estadodos'
+                ])->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // es para administrador reasignacion de casos
+    public function listAdministradorCasosByTabId($tab_id, $fechaInicio, $fechaFin)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where('created_at', '>=', $fechaInicio)
+                ->where('fecha_vencimiento', '<=', $fechaFin)
+                ->with([
+                    'estadodos'
+                ])->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // es para usuario comun reasignacion de casos
+    public function listUsuarioComunCasosByTabId($tab_id, $fechaInicio, $fechaFin)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where('created_at', '>=', $fechaInicio)
+                ->where('fecha_vencimiento', '<=', $fechaFin)
+                ->where('acc_publico', false)
+                ->with([
+                    'estadodos'
+                ])->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }

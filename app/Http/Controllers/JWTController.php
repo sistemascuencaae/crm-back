@@ -168,7 +168,7 @@ class JWTController extends Controller
             'accesos' => $accesos,
             'user' => [
                 "id" => auth('api')->user()->id,
-                "full_name" => auth('api')->user()->usu_alias . ' - ' . auth('api')->user()->surname . ' ' . auth('api')->user()->name,
+                "full_name" => auth('api')->user()->usu_alias . ' - ' . auth('api')->user()->name . ' ' . auth('api')->user()->surname,
                 "name" => auth('api')->user()->name,
                 "surname" => auth('api')->user()->surname,
                 "email" => auth('api')->user()->email,
