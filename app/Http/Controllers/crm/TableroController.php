@@ -24,8 +24,7 @@ class TableroController extends Controller
     {
         $this->middleware('auth:api', ['except' =>
         [
-            'listAdministradorCasosByTabId',
-            'listUsuarioComunCasosByTabId',
+            // 'listTableroByUser',
         ]]);
     }
 
