@@ -86,6 +86,7 @@ class JWTController extends Controller
 
         $usuario->update([
             "en_linea" => true,
+            'ult_inicio_sesion' => now(), // ⬅️ Esta línea guarda el último login
         ]);
 
         return $this->respondWithToken($token);
