@@ -495,4 +495,15 @@ class MigracionController extends Controller
         }
     }
 
+    public function aav_migracion_rec_anulados()
+    {
+        try {
+            $data = DB::select("SELECT * FROM public.aav_migracion_rec_anulados");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }

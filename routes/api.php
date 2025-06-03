@@ -1070,4 +1070,5 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/av_producto_tipoproducto_stock', [MigracionController::class, 'av_producto_tipoproducto_stock']);
     Route::get('/aav_migracion_productos_facturados_detalle/{factura}', [MigracionController::class, 'aav_migracion_productos_facturados_detalle']);
     Route::get('/aav_migracion_cuotas_gratis', [MigracionController::class, 'aav_migracion_cuotas_gratis']);
+    Route::get('/aav_migracion_rec_anulados', [MigracionController::class, 'aav_migracion_rec_anulados']);
 });
