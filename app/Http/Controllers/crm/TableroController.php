@@ -457,15 +457,23 @@ class TableroController extends Controller
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
-                            ->whereOr('user_creador_id', $user_id)
-                            ->with([
-                                'miembros.usuario.departamento',
-                                'estadodos'
-                            ])
-                            ->where('created_at', '>=', $fechaInicio)
-                            ->where('fecha_vencimiento', '<=', $fechaFin)
-                            ->get();
+            // $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
+            //                 ->whereOr('user_creador_id', $user_id)
+            //                 ->with([
+            //                     'miembros.usuario.departamento',
+            //                     'estadodos'
+            //                 ])
+            //                 ->where('created_at', '>=', $fechaInicio)
+            //                 ->where('created_at', '<=', $fechaFin)
+            //                 ->get();
+
+            $data = VistaMisCasos::where(function ($query) use ($user_id) {
+                $query->where('id_usuario_miembro', $user_id)
+                        ->orWhere('user_creador_id', $user_id);
+                    })
+                    ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                    ->with(['miembros.usuario.departamento', 'estadodos'])
+                    ->get();
 
             // Especificar las propiedades que representan fechas en tu objeto
             $dateFields = ['created_at'];
@@ -493,8 +501,13 @@ class TableroController extends Controller
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaTodosLosCasos::where('created_at', '>=', $fechaInicio)
-                ->where('fecha_vencimiento', '<=', $fechaFin)
+            // $data = VistaTodosLosCasos::where('created_at', '>=', $fechaInicio)
+            //     ->where('fecha_vencimiento', '<=', $fechaFin)
+            //     ->with([
+            //         'estadodos'
+            //     ])->get();
+
+            $data = VistaTodosLosCasos::whereBetween('created_at', [$fechaInicio, $fechaFin])
                 ->with([
                     'estadodos'
                 ])->get();
@@ -522,8 +535,9 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                ->where('created_at', '>=', $fechaInicio)
-                ->where('fecha_vencimiento', '<=', $fechaFin)
+                // ->where('created_at', '>=', $fechaInicio)
+                // ->where('fecha_vencimiento', '<=', $fechaFin)
+                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
                 ->with([
                     'estadodos'
                 ])->get();
@@ -550,9 +564,16 @@ class TableroController extends Controller
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
+            // $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+            //     ->where('created_at', '>=', $fechaInicio)
+            //     ->where('fecha_vencimiento', '<=', $fechaFin)
+            //     ->where('acc_publico', false)
+            //     ->with([
+            //         'estadodos'
+            //     ])->get();
+
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                ->where('created_at', '>=', $fechaInicio)
-                ->where('fecha_vencimiento', '<=', $fechaFin)
+                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
                 ->where('acc_publico', false)
                 ->with([
                     'estadodos'
