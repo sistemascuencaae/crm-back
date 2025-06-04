@@ -1795,16 +1795,105 @@ class CasoController extends Controller
     // *************************************************
 
     // end point para listar todos los casos del cliente (1 Caso, 2 Actividad, 3 Recordatorio)
-    public function listCasosByCliente($identificacion)
+    public function listCasosPendientesByCliente($identificacion)
     {
         try {
             // $data = Caso::where('identificacion', $identificacion)
             //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
             //     ->get();
 
-// $tabId = 230; // esta variable tengo que revisar que hace
+            // $tabId = 230; // esta variable tengo que revisar que hace
 
             $data = Caso::where('identificacion', $identificacion)
+                        ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                        ->with([
+                        'user',
+                        'userCreador',
+                        'clienteCrm',
+                        'resumen',
+                        // 'tareas' => function ($query) use ($tabId) {
+                        //     $query->where('tab_id', $tabId->id);
+                        // },
+                        'actividad',
+                        'Etiqueta',
+                        'miembros.usuario.departamento',
+                        'Galeria',
+                        'Archivo',
+                        'req_caso' => function ($query) {
+                            $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                        },
+                        'tablero',
+                        'fase.tablero',
+                        'estadodos',
+                        'tipocaso',
+                        'tiempo_caso',
+                        ])
+                        ->whereHas('estadodos', function ($query) {
+                        $query->where('nombre', '!=', 'TERMINADO');
+                        })
+                        ->orderBy('id','desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listCasosTerminadosByCliente($identificacion)
+    {
+        try {
+            // $data = Caso::where('identificacion', $identificacion)
+            //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
+            //     ->get();
+
+            // $tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('identificacion', $identificacion)
+                        ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                        ->with([
+                        'user',
+                        'userCreador',
+                        'clienteCrm',
+                        'resumen',
+                        // 'tareas' => function ($query) use ($tabId) {
+                        //     $query->where('tab_id', $tabId->id);
+                        // },
+                        'actividad',
+                        'Etiqueta',
+                        'miembros.usuario.departamento',
+                        'Galeria',
+                        'Archivo',
+                        'req_caso' => function ($query) {
+                            $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                        },
+                        'tablero',
+                        'fase.tablero',
+                        'estadodos',
+                        'tipocaso',
+                        'tiempo_caso',
+                        ])
+                        ->whereHas('estadodos', function ($query) {
+                        $query->where('nombre', 'TERMINADO');
+                        })
+                        ->orderBy('id','desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listUsuarioComunCasosPendienteByCliente($identificacion)
+    {
+        try {
+            // $data = Caso::where('identificacion', $identificacion)
+            //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
+            //     ->get();
+
+            // $tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('identificacion', $identificacion)
+                        ->where('acc_publico', false)
                         ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
                         ->with([
                         'user',
@@ -1835,14 +1924,14 @@ class CasoController extends Controller
         }
     }
 
-public function listUsuarioComunCasosByCliente($identificacion)
+    public function listUsuarioComunCasosTerminadosByCliente($identificacion)
     {
         try {
             // $data = Caso::where('identificacion', $identificacion)
             //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
             //     ->get();
 
-// $tabId = 230; // esta variable tengo que revisar que hace
+            // $tabId = 230; // esta variable tengo que revisar que hace
 
             $data = Caso::where('identificacion', $identificacion)
                         ->where('acc_publico', false)

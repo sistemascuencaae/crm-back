@@ -447,8 +447,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listHistoricoEstadoCaso/{caso_id}', [CasoController::class, 'listHistoricoEstadoCaso']); // listado/ historico de los estados del caso
     Route::get('/listHistorialCaso/{caso_id}', [CasoController::class, 'listHistorialCaso']); // listado/ historico de los estados del caso
     Route::get('/listHistorialCasoAgrupadoTablero/{caso_id}', [CasoController::class, 'listHistorialCasoAgrupadoTablero']); // listado/ historico de los estados del caso
-    Route::get('/listCasosByCliente/{identificacion}', [CasoController::class, 'listCasosByCliente']); // listado/ historico de los estados del caso
-    Route::get('/listUsuarioComunCasosByCliente/{identificacion}', [CasoController::class, 'listUsuarioComunCasosByCliente']); // listado/ historico de los estados del caso
+    Route::get('/listCasosPendientesByCliente/{identificacion}', [CasoController::class, 'listCasosPendientesByCliente']); // listado/ historico de los estados del caso
+    Route::get('/listCasosTerminadosByCliente/{identificacion}', [CasoController::class, 'listCasosTerminadosByCliente']); // listado/ historico de los estados del caso
+    Route::get('/listUsuarioComunCasosPendienteByCliente/{identificacion}', [CasoController::class, 'listUsuarioComunCasosPendienteByCliente']); // listado/ historico de los estados del caso
+    Route::get('/listUsuarioComunCasosTerminadosByCliente/{identificacion}', [CasoController::class, 'listUsuarioComunCasosTerminadosByCliente']); // listado/ historico de los estados del caso
     Route::get('/listActividadesCategoria2ByUserId/{user_id}', [CasoController::class, 'listActividadesCategoria2ByUserId']); // listado/ historico de los estados del caso
     Route::post('/editDuracionCaso', [CasoController::class, 'editDuracionCaso']); // Editar la observación del caso
     Route::get('/listAllActividadesByUserId/{user_id}', [CasoController::class, 'listAllActividadesByUserId']); // listado/ historico de los estados del caso
