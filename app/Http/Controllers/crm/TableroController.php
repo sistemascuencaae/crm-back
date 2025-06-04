@@ -450,30 +450,60 @@ class TableroController extends Controller
         }
     }
 
-    public function listTableroMisCasos($fechaInicio, $fechaFin, $user_id)
+    public function listTableroMisCasosPendientes($fechaInicio, $fechaFin, $user_id)
     {
         $log = new Funciones();
         try {
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            // $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
-            //                 ->whereOr('user_creador_id', $user_id)
-            //                 ->with([
-            //                     'miembros.usuario.departamento',
-            //                     'estadodos'
-            //                 ])
-            //                 ->where('created_at', '>=', $fechaInicio)
-            //                 ->where('created_at', '<=', $fechaFin)
-            //                 ->get();
+            $data = VistaMisCasos::where(function ($query) use ($user_id) {
+                                        $query->where('id_usuario_miembro', $user_id)
+                                                ->orWhere('user_creador_id', $user_id);
+                                    })
+                                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                ->with(['miembros.usuario.departamento', 'estadodos'])
+                                ->whereHas('estadodos', function ($query) {
+                                    $query->where('nombre', '!=', 'TERMINADO');
+                                    })
+                                ->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos, con el user_id: ' . $user_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTableroMisCasosTerminados($fechaInicio, $fechaFin, $user_id)
+    {
+        $log = new Funciones();
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaMisCasos::where(function ($query) use ($user_id) {
-                $query->where('id_usuario_miembro', $user_id)
-                        ->orWhere('user_creador_id', $user_id);
-                    })
-                    ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-                    ->with(['miembros.usuario.departamento', 'estadodos'])
-                    ->get();
+                                        $query->where('id_usuario_miembro', $user_id)
+                                                ->orWhere('user_creador_id', $user_id);
+                                    })
+                                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                ->with(['miembros.usuario.departamento', 'estadodos'])
+                                ->whereHas('estadodos', function ($query) {
+                                    $query->where('nombre', 'TERMINADO');
+                                    })
+                                ->get();
 
             // Especificar las propiedades que representan fechas en tu objeto
             $dateFields = ['created_at'];

@@ -418,7 +418,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listTablerosByUserId/{user_id}', [TableroController::class, 'listTablerosByUserId']); // lista de tableros por user_id
     
     Route::get('/listTodosLosCasos/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasos']); // listar tablero todos los casos
-    Route::get('/listTableroMisCasos/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasos']); // listar tablero mis casos
+    Route::get('/listTableroMisCasosPendientes/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosPendientes']); // listar tablero mis casos
+    Route::get('/listTableroMisCasosTerminados/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosTerminados']); // listar tablero mis casos
     Route::get('/listAdministradorCasosByTabId/{tab_id}/{fechaInicio}/{fechaFin}', [TableroController::class, 'listAdministradorCasosByTabId']); // listar tablero mis casos
     Route::get('/listUsuarioComunCasosByTabId/{tab_id}/{fechaInicio}/{fechaFin}', [TableroController::class, 'listUsuarioComunCasosByTabId']); // listar tablero mis casos
 
