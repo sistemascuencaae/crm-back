@@ -428,9 +428,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listTodosLosCasosPendientesUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesUsuarioComun']);
     Route::get('/listTodosLosCasosTerminadosUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosUsuarioComun']);
 
-
-
-    Route::get('/listUsuarioComunCasosByTabId/{tab_id}/{fechaInicio}/{fechaFin}', [TableroController::class, 'listUsuarioComunCasosByTabId']);
+    Route::get('/listReasignarCasosPendientesSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listReasignarCasosPendientesSuperUsuario']);
+    Route::get('/listReasignarCasosPendientesAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listReasignarCasosPendientesAdministrador']);
+    Route::get('/listReasignarCasosPendientesUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}/{user_id}', [TableroController::class, 'listReasignarCasosPendientesUsuarioComun']);
 
     // DEPARTAMENTO
 

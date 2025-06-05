@@ -11,6 +11,7 @@ class VistaTodosLosCasos extends Model
     protected $table = 'crm.av_todos_los_casos';
 
     protected $fillable = [
+        "user_id",
         "dueno_caso",
         "nombre",
         "caso_id",
