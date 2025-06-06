@@ -34,7 +34,14 @@ class VentasxAgencia extends Model
         'almacen',
         'pve_numero',
         'factura_afectada',
-        'pve_nombre'
+        'pve_nombre',
+        'fecha_factura_afectada',
+        'cfa_concepto',
+        'cli_id',
+        'ent_id',
+        'ent_telefono_principal',
+        'cfa_id',
+        'cuotas',
     ];
 
 }
