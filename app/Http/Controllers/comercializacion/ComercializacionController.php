@@ -269,6 +269,64 @@ class ComercializacionController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+    public function ventasZonales(Request $request)
+    {
+        try {
+            $query = VentasxAgencia::where('periodo', $request->periodo)
+                ->select(
+                    'politica',
+                    'agente_factura',
+                    'cti_sigla',
+                    'fecha',
+                    'comprobante',
+                    'factura_afectada',
+                    'subtotal_descuentos_interes',
+                    'tipo_nota',
+                    'periodo',
+                    'fecha',
+                    'total',
+                    'subtotal_descuentos',
+                    'id_agente_factura',
+                    'emp_abreviacion',
+                    'interes',
+                    'politica2',
+                    'ent_identificacion',
+                    'cliente',
+                    'alm_codigo',
+                    'almacen',
+                    'pve_numero',
+                    'cfa_concepto',
+                    'pve_nombre',
+                    'fecha_factura_afectada',
+                    'cfa_concepto',
+                    'cli_id',
+                    'ent_id',
+                    'ent_telefono_principal',
+                    'cfa_id',
+                    'cuotas'
+                )
+                ->where('periodo', $request->periodo);
+            // Si no es porteo, aplica los filtros adicionales
+            if ($request->porteo === false) {
+                $query->where('pve_numero', 501);
+            } else {
+                $query->where('pve_nombre', 'LIKE', "%PUERTEO%");
+            }
+
+            $data = $query->whereMonth('fecha', $request->mes) // Filtra por el mes de la fecha
+                ->orderBy('politica')
+                ->orderBy('agente_factura')
+                ->orderBy('cti_sigla')
+                ->orderBy('fecha', 'desc')
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
 
 
