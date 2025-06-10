@@ -71,6 +71,8 @@ class Caso extends Model
         "telefono_domicilio",
         "celulares",
         "acc_publico",
+
+        "edit_fecha_inicio"
     ];
 
     public function userCreador()
