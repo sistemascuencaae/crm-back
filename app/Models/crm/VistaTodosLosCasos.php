@@ -16,7 +16,7 @@ class VistaTodosLosCasos extends Model
         "nombre",
         "caso_id",
         "fecha_vencimiento",
-        "created_at",
+        "fecha_inicio",
         "ent_id",
         "cliente",
         "fase_nombre",

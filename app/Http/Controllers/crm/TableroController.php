@@ -462,21 +462,21 @@ class TableroController extends Controller
                                         $query->where('id_usuario_miembro', $user_id)
                                                 ->orWhere('user_creador_id', $user_id);
                                     })
-                                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                 ->with(['miembros.usuario.departamento', 'estadodos'])
                                 ->whereHas('estadodos', function ($query) {
                                     $query->where('nombre', '!=', 'TERMINADO');
                                     })
                                 ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
 
@@ -499,21 +499,21 @@ class TableroController extends Controller
                                         $query->where('id_usuario_miembro', $user_id)
                                                 ->orWhere('user_creador_id', $user_id);
                                     })
-                                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                 ->with(['miembros.usuario.departamento', 'estadodos'])
                                 ->whereHas('estadodos', function ($query) {
                                     $query->where('nombre', 'TERMINADO');
                                     })
                                 ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
 
@@ -537,7 +537,7 @@ class TableroController extends Controller
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaTodosLosCasos::whereBetween('created_at', [$fechaInicio, $fechaFin])
+            $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                         ->with([
                                             'estadodos'
                                         ])
@@ -546,14 +546,14 @@ class TableroController extends Controller
                                         })
                                         ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -568,7 +568,7 @@ class TableroController extends Controller
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaTodosLosCasos::whereBetween('created_at', [$fechaInicio, $fechaFin])
+            $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                         ->with([
                                             'estadodos'
                                         ])
@@ -577,14 +577,14 @@ class TableroController extends Controller
                                         })
                                         ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -601,7 +601,7 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                                        ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                         ->with([
                                             'estadodos'
                                         ])
@@ -610,14 +610,14 @@ class TableroController extends Controller
                                         })
                                         ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -633,7 +633,7 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                                        ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                         ->with([
                                             'estadodos'
                                         ])
@@ -642,14 +642,14 @@ class TableroController extends Controller
                                         })
                                         ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -667,7 +667,7 @@ class TableroController extends Controller
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
                                         ->where('acc_publico', false)
-                                        ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                         ->with([
                                             'estadodos'
                                         ])
@@ -676,14 +676,14 @@ class TableroController extends Controller
                                         })
                                         ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -700,7 +700,7 @@ class TableroController extends Controller
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
                                         ->where('acc_publico', false)
-                                        ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                         ->with([
                                             'estadodos'
                                         ])
@@ -709,14 +709,14 @@ class TableroController extends Controller
                                         })
                                         ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -735,7 +735,7 @@ class TableroController extends Controller
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaTodosLosCasos::whereBetween('created_at', [$fechaInicio, $fechaFin])
+            $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                         ->with([
                                             'estadodos'
                                         ])
@@ -744,14 +744,14 @@ class TableroController extends Controller
                                         })
                                         ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -767,7 +767,7 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                                        ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                         ->with([
                                             'estadodos'
                                         ])
@@ -776,14 +776,14 @@ class TableroController extends Controller
                                         })
                                         ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -800,7 +800,7 @@ class TableroController extends Controller
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
                                         ->where('user_id', $user_id)
-                                        ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
                                         ->with([
                                             'estadodos'
                                         ])
@@ -809,14 +809,14 @@ class TableroController extends Controller
                                         })
                                         ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
