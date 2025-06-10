@@ -7,6 +7,7 @@ use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\crm\ActividadesFormulasController;
+use App\Http\Controllers\crm\AlmacenController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
 use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadClienteController;
@@ -625,6 +626,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTipoCasoFormulas', [TipoCasoFormulasController::class, 'addTipoCasoFormulas']); // guardar
     Route::post('/editTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
     Route::delete('/deleteTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
+    Route::get('/listFormulariosExternos', [TipoCasoFormulasController::class, 'listFormulariosExternos']); // eliminar
 
     // TUTORIALES
 
@@ -647,6 +649,9 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // FASES
     Route::get('/listFasesByTableroId', [FaseController::class, 'listFasesByTableroId']);
+    
+    // ALMACENES-ZONAS CRM
+    Route::get('/listAlmacenCrm', [AlmacenController::class, 'listAlmacenCrm']);
 
 });
 

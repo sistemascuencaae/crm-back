@@ -12,8 +12,11 @@ use Illuminate\Support\Facades\DB;
 class TipoCasoFormulasController extends Controller
 {
     public function __construct()
-    {
-        $this->middleware('auth:api');
+    {        
+        $this->middleware('auth:api', ['except' =>
+        [
+            'listFormulariosExternos',
+        ]]);
     }
 
     public function listTpoCasoFormulasById($tab_id, $tc_id)
@@ -174,4 +177,16 @@ class TipoCasoFormulasController extends Controller
         }
     }
 
+    public function listFormulariosExternos(){
+        try {
+            $data = DB::SELECT("SELECT c3.name, 'http://crm.almacenesespana.ec/formularioExterno/' ||c3.id as url from crm.tipo_caso_formulas c
+                                join crm.tipo_caso c2 on c.tc_id = c2.id
+                                join crm.form c3 on c3.id = c2.form_id
+                                where c3.id not in (1);");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e){
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 }
