@@ -60,6 +60,7 @@ use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
 use App\Http\Controllers\openceo\BodegaController;
 use App\Http\Controllers\openceo\EntidadDynamoController;
+use App\Http\Controllers\reportes\ReporteLinkController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\JWTController;
 use App\Http\Controllers\MenuController;
@@ -652,6 +653,14 @@ Route::group(["prefix" => "crm"], function ($router) {
     
     // ALMACENES-ZONAS CRM
     Route::get('/listAlmacenCrm', [AlmacenController::class, 'listAlmacenCrm']);
+
+    // REPORTES LINK
+
+    Route::get('/listAllReporteLink', [ReporteLinkController::class, 'listAllReporteLink']); // listar
+    Route::post('/addReporteLink', [ReporteLinkController::class, 'addReporteLink']); // guardar
+    Route::post('/editReporteLink/{id}', [ReporteLinkController::class, 'editReporteLink']); // Editar
+    Route::delete('/deleteReporteLink/{id}', [ReporteLinkController::class, 'deleteReporteLink']); // Eliminar
+
 
 });
 
