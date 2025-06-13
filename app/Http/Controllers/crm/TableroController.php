@@ -450,31 +450,33 @@ class TableroController extends Controller
         }
     }
 
-    public function listTableroMisCasos($fechaInicio, $fechaFin, $user_id)
+    // !START EndPoint para la tabla o pantalla de MIS CASOS
+    public function listTableroMisCasosPendientes($fechaInicio, $fechaFin, $user_id)
     {
         $log = new Funciones();
         try {
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaMisCasos::where('id_usuario_miembro', $user_id)
-                            ->whereOr('user_creador_id', $user_id)
-                            ->with([
-                                'miembros.usuario.departamento',
-                                'estadodos'
-                            ])
-                            ->where('created_at', '>=', $fechaInicio)
-                            ->where('fecha_vencimiento', '<=', $fechaFin)
-                            ->get();
+            $data = VistaMisCasos::where(function ($query) use ($user_id) {
+                                        $query->where('id_usuario_miembro', $user_id)
+                                                ->orWhere('user_creador_id', $user_id);
+                                    })
+                                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                ->with(['miembros.usuario.departamento', 'estadodos'])
+                                ->whereHas('estadodos', function ($query) {
+                                    $query->where('nombre', '!=', 'TERMINADO');
+                                    })
+                                ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
 
@@ -486,27 +488,72 @@ class TableroController extends Controller
         }
     }
 
-    // es para superUsuario reasignacion de casos
-    public function listTodosLosCasos($fechaInicio, $fechaFin)
+    public function listTableroMisCasosTerminados($fechaInicio, $fechaFin, $user_id)
+    {
+        $log = new Funciones();
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaMisCasos::where(function ($query) use ($user_id) {
+                                        $query->where('id_usuario_miembro', $user_id)
+                                                ->orWhere('user_creador_id', $user_id);
+                                    })
+                                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                ->with(['miembros.usuario.departamento', 'estadodos'])
+                                ->whereHas('estadodos', function ($query) {
+                                    $query->where('nombre', 'TERMINADO');
+                                    })
+                                ->get();
+
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
+
+            $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos, con el user_id: ' . $user_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos, con el user_id: ' . $user_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    // !END EndPoint para la tabla o pantalla de MIS CASOS
+    //
+
+    //
+    // !START EndPoint para la tabla o pantalla de TODOS LOS CASOS
+
+    // Para SuperUsuario Pendientes
+    public function listTodosLosCasosPendientesSuperUsuario($fechaInicio, $fechaFin)
     {
         try {
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaTodosLosCasos::where('created_at', '>=', $fechaInicio)
-                ->where('fecha_vencimiento', '<=', $fechaFin)
-                ->with([
-                    'estadodos'
-                ])->get();
+            $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                        ->with([
+                                            'estadodos'
+                                        ])
+                                        ->whereHas('estadodos', function ($query) {
+                                            $query->where('nombre', '!=', 'TERMINADO');
+                                        })
+                                        ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -514,28 +561,63 @@ class TableroController extends Controller
         }
     }
 
-    // es para administrador reasignacion de casos
-    public function listAdministradorCasosByTabId($tab_id, $fechaInicio, $fechaFin)
+    // Para SuperUsuario Terminados
+    public function listTodosLosCasosTerminadosSuperUsuario($fechaInicio, $fechaFin)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                        ->with([
+                                            'estadodos'
+                                        ])
+                                        ->whereHas('estadodos', function ($query) {
+                                            $query->where('nombre', 'TERMINADO');
+                                        })
+                                        ->get();
+
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
+    // Para Administrador Pendientes
+    public function listTodosLosCasosPendientesAdministrador($fechaInicio, $fechaFin, $tab_id)
     {
         try {
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                ->where('created_at', '>=', $fechaInicio)
-                ->where('fecha_vencimiento', '<=', $fechaFin)
-                ->with([
-                    'estadodos'
-                ])->get();
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                        ->with([
+                                            'estadodos'
+                                        ])
+                                        ->whereHas('estadodos', function ($query) {
+                                            $query->where('nombre', '!=', 'TERMINADO');
+                                        })
+                                        ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -543,33 +625,203 @@ class TableroController extends Controller
         }
     }
 
-    // es para usuario comun reasignacion de casos
-    public function listUsuarioComunCasosByTabId($tab_id, $fechaInicio, $fechaFin)
+    // Para Administrador Terminados
+    public function listTodosLosCasosTerminadosAdministrador($fechaInicio, $fechaFin, $tab_id)
     {
         try {
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                ->where('created_at', '>=', $fechaInicio)
-                ->where('fecha_vencimiento', '<=', $fechaFin)
-                ->where('acc_publico', false)
-                ->with([
-                    'estadodos'
-                ])->get();
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                        ->with([
+                                            'estadodos'
+                                        ])
+                                        ->whereHas('estadodos', function ($query) {
+                                            $query->where('nombre', 'TERMINADO');
+                                        })
+                                        ->get();
 
-            // Especificar las propiedades que representan fechas en tu objeto
-            $dateFields = ['created_at'];
-            // Utilizar la función map para transformar y obtener una nueva colección
-            $data->map(function ($item) use ($dateFields) {
-                $funciones = new Funciones();
-                $funciones->formatoFechaItem($item, $dateFields);
-                return $item;
-            });
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+
+    // Para Usuario Comun Pendientes
+    public function listTodosLosCasosPendientesUsuarioComun($fechaInicio, $fechaFin, $tab_id)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                                        ->where('acc_publico', false)
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                        ->with([
+                                            'estadodos'
+                                        ])
+                                        ->whereHas('estadodos', function ($query) {
+                                            $query->where('nombre', '!=', 'TERMINADO');
+                                        })
+                                        ->get();
+
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // Para Usuario Comun Terminados
+    public function listTodosLosCasosTerminadosUsuarioComun($fechaInicio, $fechaFin, $tab_id)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                                        ->where('acc_publico', false)
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                        ->with([
+                                            'estadodos'
+                                        ])
+                                        ->whereHas('estadodos', function ($query) {
+                                            $query->where('nombre', 'TERMINADO');
+                                        })
+                                        ->get();
+
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    // !START EndPoint para la tabla o pantalla de TODOS LOS CASOS
+    //
+
+    //
+    // !START EndPoint para la tabla o pantalla de REASIGNAR CASOS
+    // Para SuperUsuario Pendientes
+    public function listReasignarCasosPendientesSuperUsuario($fechaInicio, $fechaFin)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                        ->with([
+                                            'estadodos'
+                                        ])
+                                        ->whereHas('estadodos', function ($query) {
+                                            $query->where('nombre', '!=', 'TERMINADO');
+                                        })
+                                        ->get();
+
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // Para administrador reasignacion de casos pendientes
+    public function listReasignarCasosPendientesAdministrador($fechaInicio, $fechaFin, $tab_id)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                        ->with([
+                                            'estadodos'
+                                        ])
+                                        ->whereHas('estadodos', function ($query) {
+                                            $query->where('nombre', '!=', 'TERMINADO');
+                                        })
+                                        ->get();
+
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // Para usuario comun reasignacion de casos pendientes
+    public function listReasignarCasosPendientesUsuarioComun($fechaInicio, $fechaFin, $tab_id, $user_id)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                                        ->where('user_id', $user_id)
+                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                        ->with([
+                                            'estadodos'
+                                        ])
+                                        ->whereHas('estadodos', function ($query) {
+                                            $query->where('nombre', '!=', 'TERMINADO');
+                                        })
+                                        ->get();
+
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    // !END EndPoint para la tabla o pantalla de REASIGNAR CASOS
 }
