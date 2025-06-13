@@ -30,28 +30,6 @@ class ReporteLinkUsuariosController extends Controller
         }
     }
 
-
-
-
-    // public function listUsuariosActivos()
-    // {
-    //     try {
-    //         $usuarios = User::selectRaw("*, CONCAT(usu_alias, ' - ', name, ' ', surname) as full_name")
-    //             ->orderBy("id", "asc")
-    //             ->where('estado', true)
-    //             ->with('Departamento', 'perfil_analista', 'perfil', 'almacen')->get();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuarios));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
-
-
-
-
-
-
     public function addEditReporteLinkUsuarios(Request $request)
     {
         try {

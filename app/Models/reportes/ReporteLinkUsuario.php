@@ -33,4 +33,9 @@ class ReporteLinkUsuario extends Model
         return $this->belongsTo(User::class, "user_id", "id");
     }
 
+    public function reporteLink()
+    {
+        return $this->belongsTo(ReporteLink::class, "reporte_link_id", "id");
+    }
+
 }

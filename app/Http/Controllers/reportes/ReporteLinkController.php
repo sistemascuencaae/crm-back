@@ -5,6 +5,7 @@ namespace App\Http\Controllers\reportes;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\reportes\ReporteLink;
+use App\Models\reportes\ReporteLinkUsuario;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Exception;
@@ -82,6 +83,20 @@ class ReporteLinkController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // listado de reportes al que tiene permiso el usuario
+    public function listReporteLinkByUserId($id)
+    {
+        try {
+            $data = ReporteLinkUsuario::where('user_id', $id)
+                                    ->with('reporteLink')
+                                    ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
     }
 

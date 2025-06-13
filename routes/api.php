@@ -664,7 +664,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     
     Route::get('/listUsuariosByReporteId/{id}', [ReporteLinkUsuariosController::class, 'listUsuariosByReporteId']); // listar
     Route::post('/addEditReporteLinkUsuarios', [ReporteLinkUsuariosController::class, 'addEditReporteLinkUsuarios']); // guardar
-
+    
+    Route::get('/listReporteLinkByUserId/{id}', [ReporteLinkController::class, 'listReporteLinkByUserId']); // listar
 });
 
 Route::group([], function ($router) {
