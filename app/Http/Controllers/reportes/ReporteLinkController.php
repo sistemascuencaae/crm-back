@@ -21,7 +21,8 @@ class ReporteLinkController extends Controller
     {
         try {
             $data = ReporteLink::selectRaw("*, (CASE WHEN crm.reporte_link.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado_reporte")
-            ->orderBy('id', 'desc')->get();
+                            ->with('departamento')
+                            ->orderBy('id', 'desc')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
@@ -36,6 +37,7 @@ class ReporteLinkController extends Controller
                 ReporteLink::create($request->all());
 
                 $resp = ReporteLink::selectRaw("*, (CASE WHEN crm.reporte_link.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado_reporte")
+                                ->with('departamento')
                                 ->orderBy('id', 'desc')->get();
                 return $resp;
             });
@@ -55,7 +57,8 @@ class ReporteLinkController extends Controller
                 $reporte->update($request->all());
 
                 $resp = ReporteLink::selectRaw("*, (CASE WHEN crm.reporte_link.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado_reporte")
-                                        ->orderBy('id', 'desc')->get();
+                                ->with('departamento')
+                                ->orderBy('id', 'desc')->get();
 
                 return $resp;
             });
@@ -75,7 +78,8 @@ class ReporteLinkController extends Controller
                 $reporte->delete();
 
                 $resp = ReporteLink::selectRaw("*, (CASE WHEN crm.reporte_link.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado_reporte")
-                                        ->orderBy('id', 'desc')->get();
+                                ->with('departamento')
+                                ->orderBy('id', 'desc')->get();
 
                 return $resp;
             });
@@ -91,8 +95,12 @@ class ReporteLinkController extends Controller
     {
         try {
             $data = ReporteLinkUsuario::where('user_id', $id)
-                                    ->with('reporteLink')
-                                    ->get();
+                ->whereHas('reporteLink', function ($query) {
+                    $query->where('estado', true);
+                })
+                ->with('reporteLink.departamento')
+                ->get();
+
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
