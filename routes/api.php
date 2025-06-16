@@ -55,6 +55,7 @@ use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
+use App\Http\Controllers\directorio\DirectorioController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
@@ -655,6 +656,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     // ALMACENES-ZONAS CRM
     Route::get('/listAlmacenCrm', [AlmacenController::class, 'listAlmacenCrm']);
 
+    Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
+    Route::post('/addDirectorio', [DirectorioController::class, 'addDirectorio']); // guardar
+    Route::post('/editDirectorio/{id}', [DirectorioController::class, 'editDirectorio']); // Editar
+    Route::delete('/deleteDirectorio/{id}', [DirectorioController::class, 'deleteDirectorio']); // Eliminar
+    
     // REPORTES LINK
 
     Route::get('/listAllReporteLink', [ReporteLinkController::class, 'listAllReporteLink']); // listar
