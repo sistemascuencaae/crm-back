@@ -55,6 +55,7 @@ use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
+use App\Http\Controllers\crm\TutorialUsuarioController;
 use App\Http\Controllers\directorio\DirectorioController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
@@ -637,6 +638,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTutorial', [TutorialController::class, 'addTutorial']);
     Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
     Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
+
+    Route::get('/listTutorialesByUserId/{user_id}', [TutorialUsuarioController::class, 'listTutorialesByUserId']);
+    Route::post('/addEditTutorialUsuarios', [TutorialUsuarioController::class, 'addEditTutorialUsuarios']);
+    Route::post('/listUsuariosByArchivoGaleriaId', [TutorialUsuarioController::class, 'listUsuariosByArchivoGaleriaId']);
 
     // RENEGOCIACION
     Route::post('/validarFacturaRenegociacion', [DdocumentoController::class, 'validarFacturaRenegociacion']);
