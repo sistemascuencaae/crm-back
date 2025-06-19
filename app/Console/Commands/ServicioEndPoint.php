@@ -17,7 +17,7 @@ class ServicioEndPoint extends Command
 
         try {
             $response = Http::get('http://192.168.1.142:8009/api/crm/addCasoOscarBravo'); // desarrollo
-            // $response = Http::get('http://api.almacenesespana.ec/api/crm/listDirectorioCrm'); // produccion
+            // $response = Http::get('http://api.almacenesespana.ec/api/crm/addCasoOscarBravo'); // produccion
             $this->info("Respuesta... " . $response->body());
         } catch (\Exception $e) {
             $this->error("Error al llamar el endpoint: " . $e->getMessage());
