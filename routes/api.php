@@ -56,6 +56,7 @@ use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\crm\TutorialUsuarioController;
+use App\Http\Controllers\crm\UltimoIdController;
 use App\Http\Controllers\directorio\DirectorioController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
@@ -665,7 +666,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addDirectorio', [DirectorioController::class, 'addDirectorio']); // guardar
     Route::post('/editDirectorio/{id}', [DirectorioController::class, 'editDirectorio']); // Editar
     Route::delete('/deleteDirectorio/{id}', [DirectorioController::class, 'deleteDirectorio']); // Eliminar
-    
+
     // REPORTES LINK
 
     Route::get('/listAllReporteLink', [ReporteLinkController::class, 'listAllReporteLink']); // listar
@@ -677,6 +678,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addEditReporteLinkUsuarios', [ReporteLinkUsuariosController::class, 'addEditReporteLinkUsuarios']); // guardar
     
     Route::get('/listReporteLinkByUserId/{id}', [ReporteLinkController::class, 'listReporteLinkByUserId']); // listar
+
+    // ULTIMO ID
+
+    Route::get('/addCasoOscarBravo', [UltimoIdController::class, 'addCasoOscarBravo']);
+
 });
 
 Route::group([], function ($router) {
