@@ -43,6 +43,7 @@ class UltimoIdController extends Controller
                                                         FROM cfactura c
                                                         WHERE c.cfa_id > ?
                                                         ORDER BY c.cfa_id ASC
+                                                        LIMIT 1
                                                     ", [$ultimo_id]);
 
                 $tipoCaso = TipoCaso::with([
