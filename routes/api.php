@@ -32,6 +32,7 @@ use App\Http\Controllers\crm\ParametroController;
 use App\Http\Controllers\crm\seriesalm\SeriesAlm2Controller;
 use App\Http\Controllers\crm\seriesalm\SeriesAlmController;
 use App\Http\Controllers\crm\SeriesGeneradasController;
+use App\Http\Controllers\crm\Tareas2Controller;
 use App\Http\Controllers\crm\TipoCasoFormulasController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
@@ -682,6 +683,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     // ULTIMO ID
 
     Route::get('/addCasoOscarBravo', [UltimoIdController::class, 'addCasoOscarBravo']);
+    
+    // TAREAS 2
+    
+    Route::get('/listTareasByTipoCasoId/{tipo_caso_id}/{caso_id}', [Tareas2Controller::class, 'listTareasByTipoCasoId']);
+    Route::post('/editTareas2/{tarea_id}', [Tareas2Controller::class, 'editTareas2']);
 
 });
 
