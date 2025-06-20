@@ -117,6 +117,7 @@ class UltimoIdController extends Controller
                         "datos_formulario" => $datosConcatenados,
                         "fecha_inicio" => now(),
                         "orden" => 1,
+                        "descripcion" => 'GENERADO AUTOMATICAMENTE',
                     ];
 
                     // Crear el caso usando el controlador
@@ -124,15 +125,21 @@ class UltimoIdController extends Controller
                     $requestSimulado = new Request((array)$objeto_nuevo_caso);
                     $respuestaCaso = $casoController->add($requestSimulado);
 
-                    // if (isset($respuestaCaso->original['estado']) && $respuestaCaso->original['estado'] === 'error') {
-                    //     throw new Exception("Error al crear el caso: " . $respuestaCaso->original['mensaje']);
-                    // }
+                    if (isset($respuestaCaso->original['status']) && $respuestaCaso->original['status'] != 'success') {
+                        throw new Exception("Error al crear el caso: " . $respuestaCaso->original['message']);
+                    }
 
                     $id_externo_mas_alto = collect($queryResultados)->max('cfa_id');
 
                     UltimoId::where('id', 1)->update([
                         'id_externo' => $id_externo_mas_alto
                     ]);
+
+                    // agrego esto manualmente porque como el server los ejecuta automatico no me esta guardando ningun usuario creador para la bitacora
+                    // por eso le mando el usuario que se ponga en la formula para la creación del caso
+                    $usu_creador_addCaso = DB::SELECT("UPDATE crm.audits
+                                                                SET user_id = $formulaCaso->user_id
+                                                                WHERE caso_id = ? and accion = 'addCaso';", [$respuestaCaso->original['data']->id]);
                 }
             });
 
