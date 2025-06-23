@@ -31,12 +31,19 @@ class Kernel extends ConsoleKernel
         // comando para ejecutar el ServicioEndPoint         php artisan schedule:work    
         // JGSJ Ejecutar cada 1 minuto
         // $schedule->command('servicioEndPoint')->everyMinute(); // Podemos ejecutar esta linea corta si no necesitamos guardar la respuesta del endPoint en un log
-        $schedule->command('servicioEndPoint')->everyMinute()->withoutOverlapping()->sendOutputTo(storage_path('logs/scheduler.log')); // es para que se guarde la respuesta del endPoint en este archivo scheduler
+        $schedule->command('servicioEndPoint')->cron('0 */2 * * *')->withoutOverlapping()->sendOutputTo(storage_path('logs/scheduler.log')); // es para que se guarde la respuesta del endPoint en este archivo scheduler
         // Comandos de tiempo
             // ->hourly()
             // ->everyFiveMinutes()
             // ->daily()
             // ->cron('*/30 * * * *') // cada 30 minutos exactos
+
+
+            // JGSJ CONFIG CRON
+            // ->cron('0 */2 * * *') // Cada 2 horas en punto: 00:00, 02:00, 04:00, etc.
+            // Minuto   Hora   DíaMes   Mes   DíaSemana
+            //   0       */2     *       *        *
+
     }
 
     /**
