@@ -25,9 +25,9 @@ class TipoCasoCTipoTarea extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    // public function dTipoTarea()
+    // public function tipoCaso()
     // {
-    //     return $this->hasMany(DTipoTarea::class, "ctt_id", "ctipo_tarea_id");
+    //     return $this->belongsTo(TipoCaso::class, "tipo_caso_id", "id");
     // }
 
     public function cTipoTarea()

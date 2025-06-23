@@ -821,9 +821,10 @@ class CasoController extends Controller
                 'userCreador',
                 'clienteCrm',
                 'resumen',
-                'tareas' => function ($query) use ($tabId) {
-                    $query->where('tab_id', $tabId->id);
-                },
+                // 'tareas' => function ($query) use ($tabId) {
+                //     $query->where('tab_id', $tabId->id);
+                // },
+                'tareas2',
                 'actividad',
                 'Etiqueta',
                 'miembros.usuario.departamento',
@@ -1686,6 +1687,7 @@ class CasoController extends Controller
                 $delete_archivos = DB::delete("DELETE FROM crm.archivos where caso_id = ?", [$caso_id]);
                 $delete_notificaciones = DB::delete("DELETE FROM crm.notificaciones where caso_id = ?", [$caso_id]);
                 $delete_tareas = DB::delete("DELETE FROM crm.tareas where caso_id = ?", [$caso_id]);
+                $delete_tareas = DB::delete("DELETE FROM crm.tareas2 where caso_id = ?", [$caso_id]);
                 $delete_miembros = DB::delete("DELETE FROM crm.miembros where caso_id = ?", [$caso_id]);
                 $delete_comentarios = DB::delete("DELETE FROM crm.comentarios where caso_id = ?", [$caso_id]);
                 $delete_etiquetas = DB::delete("DELETE FROM crm.etiquetas where caso_id = ?", [$caso_id]);

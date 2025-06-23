@@ -246,9 +246,10 @@ class FaseController extends Controller
                 'caso.userCreador',
                 'caso.clienteCrm',
                 'caso.resumen',
-                'caso.tareas' => function ($query) use ($tabId) {
-                    $query->where('tab_id', $tabId);
-                },
+                // 'caso.tareas' => function ($query) use ($tabId) {
+                //     $query->where('tab_id', $tabId);
+                // },
+                'caso.tareas2',
                 'caso.actividad',
                 'caso.miembros.usuario.departamento',
                 'caso.Etiqueta',

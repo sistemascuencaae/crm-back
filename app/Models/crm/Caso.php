@@ -193,4 +193,9 @@ class Caso extends Model
     {
         return $this->hasMany(ControlTiemposCaso::class, 'caso_id', 'id');
     }
+
+    public function tareas2()
+    {
+        return $this->hasMany(Tareas2::class, "caso_id");
+    }
 }

@@ -39,18 +39,16 @@ class UltimoIdController extends Controller
                     throw new Exception("No se encontró la fórmula del caso.");
                 }
 
-                $queryResultados = DB::SELECT("SELECT c.cfa_id, c.cfa_concepto, c.cfa_fecha
-                                                        FROM cfactura c
-                                                        WHERE c.cfa_id > ?
-                                                        ORDER BY c.cfa_id ASC
-                                                        LIMIT 1
+                $queryResultados = DB::SELECT("SELECT * from public.av_facturas_coninstalacion
+                                                        WHERE ccm_id > ?
                                                     ", [$ultimo_id]);
+                                                        // LIMIT 1
 
                 $tipoCaso = TipoCaso::with([
                     'form' => fn($q) => $q->where('isactive', true),
                     'form.seccion' => fn($q) => $q->where('isactive', true)->orderBy('order'),
                     'form.seccion.campo' => fn($q) => $q->where('isactive', true)->orderBy('order')
-                ])->find(146);
+                ])->find(147);
 
                 if (!$tipoCaso || !$tipoCaso->form) {
                     throw new Exception("No se encontró el tipo de caso o formulario.");
@@ -129,7 +127,7 @@ class UltimoIdController extends Controller
                         throw new Exception("Error al crear el caso: " . $respuestaCaso->original['message']);
                     }
 
-                    $id_externo_mas_alto = collect($queryResultados)->max('cfa_id');
+                    $id_externo_mas_alto = collect($queryResultados)->max('ccm_id');
 
                     UltimoId::where('id', 1)->update([
                         'id_externo' => $id_externo_mas_alto

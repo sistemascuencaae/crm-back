@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\crm;
 
+use App\Models\crm\Caso;
 use App\Models\crm\TipoCasoCTipoTarea;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
@@ -19,32 +20,38 @@ class Tareas2Controller extends Controller
         try {
             $data = DB::transaction(function () use ($tipo_caso_id, $caso_id) {
 
+                $caso = Caso::where('id', $caso_id)->first();
+
                 $tareas = TipoCasoCTipoTarea::where('tipo_caso_id', $tipo_caso_id)
                     ->with(['cTipoTarea.dTipoTarea' => function ($query) {
                         $query->orderBy('id', 'asc');
                     }])
                     ->first();
 
-                if ($tareas && $tareas->cTipoTarea && $tareas->cTipoTarea->dTipoTarea) {
-                    foreach ($tareas->cTipoTarea->dTipoTarea as $tarea) {
-
-                        // Verificamos si ya existe en tareas2 con la llave compuesta
-                        $existe = Tareas2::where('dtt_id', $tarea->id)
+                // Validacion para que no agregue tareas, en los casos que fueron creados antes
+                if ($caso->created_at >= $tareas->cTipoTarea->updated_at) {
+                    
+                    if ($tareas && $tareas->cTipoTarea && $tareas->cTipoTarea->dTipoTarea) {
+                        foreach ($tareas->cTipoTarea->dTipoTarea as $tarea) {
+                            // Verificamos si ya existe en tareas2 con la llave compuesta
+                            $existe = Tareas2::where('dtt_id', $tarea->id)
                             ->where('caso_id', $caso_id)
                             ->exists();
-
-                        if (!$existe) {
-                            // Insertamos la tarea en tareas2
-                            Tareas2::create([
-                                "caso_id"   => $caso_id,
-                                "ctt_id"    => $tarea->ctt_id,
-                                "dtt_id"    => $tarea->id,
-                                "nombre"    => $tarea->nombre,
-                                "requerido" => $tarea->requerido,
-                                "marcado"   => $tarea->marcado,
-                            ]);
+                            
+                            if (!$existe) {
+                                // Insertamos la tarea en tareas2
+                                Tareas2::create([
+                                    "caso_id"   => $caso_id,
+                                    "ctt_id"    => $tarea->ctt_id,
+                                    "dtt_id"    => $tarea->id,
+                                    "nombre"    => $tarea->nombre,
+                                    "requerido" => $tarea->requerido,
+                                    "marcado"   => $tarea->marcado,
+                                ]);
+                            }
                         }
                     }
+
                 }
 
                 return Tareas2::where('caso_id', $caso_id)->orderBy('id', 'asc')->get();
