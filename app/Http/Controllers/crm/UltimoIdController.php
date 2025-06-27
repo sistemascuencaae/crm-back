@@ -42,7 +42,7 @@ class UltimoIdController extends Controller
                 $queryResultados = DB::SELECT("SELECT * from public.av_facturas_coninstalacion
                                                         WHERE ccm_id > ?
                                                     ", [$ultimo_id]);
-                                                        // LIMIT 1
+                                                        // LIMIT 5
 
                 $tipoCaso = TipoCaso::with([
                     'form' => fn($q) => $q->where('isactive', true),
@@ -111,7 +111,7 @@ class UltimoIdController extends Controller
                         "fase_anterior_id_reasigna" => $formulaCaso->fase_id,
                         "miembros" => [$formulaCaso->user_id],
                         "form_id2" => $cform->id, // se vincula con el CForm recién creado
-                        "ent_id" => 999,
+                        "ent_id" => $row->ent_id,
                         "datos_formulario" => $datosConcatenados,
                         "fecha_inicio" => now(),
                         "orden" => 1,
