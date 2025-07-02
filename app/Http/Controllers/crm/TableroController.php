@@ -459,15 +459,15 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaMisCasos::where(function ($query) use ($user_id) {
-                                        $query->where('id_usuario_miembro', $user_id)
-                                                ->orWhere('user_creador_id', $user_id);
+                                        $query->where('id_usuario_miembro', $user_id);
                                     })
-                                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                ->with(['miembros.usuario.departamento', 'estadodos'])
-                                ->whereHas('estadodos', function ($query) {
-                                    $query->where('nombre', '!=', 'TERMINADO');
+                                    ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                    ->with(['miembros.usuario.departamento', 'estadodos'])
+                                    ->whereHas('estadodos', function ($query) {
+                                        $query->where('nombre', '!=', 'TERMINADO');
                                     })
-                                ->get();
+                                    ->get();
+                                    //->orWhere('user_creador_id', $user_id);
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -496,15 +496,15 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaMisCasos::where(function ($query) use ($user_id) {
-                                        $query->where('id_usuario_miembro', $user_id)
-                                                ->orWhere('user_creador_id', $user_id);
+                                        $query->where('id_usuario_miembro', $user_id);
                                     })
-                                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                ->with(['miembros.usuario.departamento', 'estadodos'])
-                                ->whereHas('estadodos', function ($query) {
-                                    $query->where('nombre', 'TERMINADO');
+                                    ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                                    ->with(['miembros.usuario.departamento', 'estadodos'])
+                                    ->whereHas('estadodos', function ($query) {
+                                        $query->where('nombre', 'TERMINADO');
                                     })
-                                ->get();
+                                    ->get();
+                                    // ->orWhere('user_creador_id', $user_id);
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];

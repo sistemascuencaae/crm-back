@@ -105,7 +105,12 @@ class CasoController extends Controller
             $caso->estado_2 = $estadoInicial->id;
             $caso->nombre = 'CASO # ' . $caso->id;
             $caso->user_creador_id = $request->user_creador_id;
-            $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+            if ($caso->cliente_id) {
+                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+            } else {
+                $caso->ent_id = 999; // ID del cliente default de dynamo
+                $caso->cliente_id = 86; // ID del cliente default del crm
+            }
             if ($caso->desc_json) {
             }
             $caso->save();
