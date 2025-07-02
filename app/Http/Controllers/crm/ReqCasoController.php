@@ -319,7 +319,7 @@ class ReqCasoController extends Controller
     public function listReqCasoId($casoId)
     {
         try {
-            $data = RequerimientoCaso::where('caso_id', $casoId)->orderBy('orden', 'asc')->get();
+            $data = RequerimientoCaso::where('caso_id', $casoId)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));

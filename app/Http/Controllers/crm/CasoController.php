@@ -105,7 +105,12 @@ class CasoController extends Controller
             $caso->estado_2 = $estadoInicial->id;
             $caso->nombre = 'CASO # ' . $caso->id;
             $caso->user_creador_id = $request->user_creador_id;
-            $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+            if ($caso->cliente_id) {
+                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+            } else {
+                $caso->ent_id = 999; // ID del cliente default de dynamo
+                $caso->cliente_id = 86; // ID del cliente default del crm
+            }
             if ($caso->desc_json) {
             }
             $caso->save();
@@ -821,9 +826,10 @@ class CasoController extends Controller
                 'userCreador',
                 'clienteCrm',
                 'resumen',
-                'tareas' => function ($query) use ($tabId) {
-                    $query->where('tab_id', $tabId->id);
-                },
+                // 'tareas' => function ($query) use ($tabId) {
+                //     $query->where('tab_id', $tabId->id);
+                // },
+                'tareas2',
                 'actividad',
                 'Etiqueta',
                 'miembros.usuario.departamento',
@@ -1674,6 +1680,11 @@ class CasoController extends Controller
             $dataCaso = $this->getCaso($caso_id);
 
             $data = DB::transaction(function () use ($caso_id) {
+                // eliminar respuestas del formulario del caso
+                $formId2 = DB::table('crm.caso')
+                    ->where('id', $caso_id)
+                    ->value('form_id2');
+
                 $delete_solicitud_credito = DB::delete("DELETE FROM crm.solicitud_credito where caso_id = ?", [$caso_id]);
                 $delete_cliente_enrolamiento = DB::delete("DELETE FROM crm.cliente_enrolamiento where caso_id = ?", [$caso_id]);
                 $delete_requerimientos_caso = DB::delete("DELETE FROM crm.requerimientos_caso where caso_id = ?", [$caso_id]);
@@ -1681,6 +1692,7 @@ class CasoController extends Controller
                 $delete_archivos = DB::delete("DELETE FROM crm.archivos where caso_id = ?", [$caso_id]);
                 $delete_notificaciones = DB::delete("DELETE FROM crm.notificaciones where caso_id = ?", [$caso_id]);
                 $delete_tareas = DB::delete("DELETE FROM crm.tareas where caso_id = ?", [$caso_id]);
+                $delete_tareas = DB::delete("DELETE FROM crm.tareas2 where caso_id = ?", [$caso_id]);
                 $delete_miembros = DB::delete("DELETE FROM crm.miembros where caso_id = ?", [$caso_id]);
                 $delete_comentarios = DB::delete("DELETE FROM crm.comentarios where caso_id = ?", [$caso_id]);
                 $delete_etiquetas = DB::delete("DELETE FROM crm.etiquetas where caso_id = ?", [$caso_id]);
@@ -1688,6 +1700,16 @@ class CasoController extends Controller
                 $delete_caso = DB::delete("DELETE FROM crm.caso where id = ?", [$caso_id]);
                 $delete_audits = DB::delete("DELETE FROM crm.audits where caso_id = ?", [$caso_id]);
                 $delete_control_tiempos_caso = DB::delete("DELETE FROM crm.control_tiempos_caso where caso_id = ?", [$caso_id]);
+
+                // Validar que form_id2 no sea nulo y no sea un ID protegido (ej. 1)
+                if ($formId2 && $formId2 != 1) {
+                    // Eliminar primero las respuestas (dform)
+                    DB::table('crm.dform')->where('cform_id', $formId2)->delete();
+                
+                    // Luego eliminar el formulario (cform)
+                    DB::table('crm.cform')->where('id', $formId2)->delete();
+                }
+
                 return 'ok';
             });
 

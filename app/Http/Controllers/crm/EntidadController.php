@@ -18,7 +18,7 @@ class EntidadController extends Controller
     {
         $log = new Funciones();
         try {
-            $data = Entidad::with('cliente', 'direccion', 'clientefae', 'referenanexo')->where('ent_id', $id)->first();
+            $data = Entidad::with( 'clientefae')->where('ent_id', $id)->first();
 
             $log->logInfo(EntidadController::class, 'Se listo con exito la entidad con el ID: ' . $id);
 

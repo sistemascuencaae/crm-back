@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Events\TableroEvent;
+use App\Events\UsuarioEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\CasoController;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Almacen;
 use App\Models\User;
@@ -275,6 +278,20 @@ class UserController extends Controller
                     "en_linea" => $request->en_linea,
                 ]);
 
+                // buscar todos mis casos en los que el usuario este
+                $query = DB::select(
+                    'SELECT caso.id FROM crm.users usuario 
+                            JOIN crm.caso caso 
+                                ON caso.user_id = usuario.id
+                            WHERE usuario.id = ?', [$usuario->id]
+                );
+
+                foreach ($query as $key => $value) {
+                    $caso = new CasoController();
+                    $data = $caso->getCaso($value->id);
+                    broadcast(new TableroEvent($data));
+                }
+                
                 return User::where('id', $usuario->id)->first();
             });
 

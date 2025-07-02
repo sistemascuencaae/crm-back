@@ -32,6 +32,7 @@ use App\Http\Controllers\crm\ParametroController;
 use App\Http\Controllers\crm\seriesalm\SeriesAlm2Controller;
 use App\Http\Controllers\crm\seriesalm\SeriesAlmController;
 use App\Http\Controllers\crm\SeriesGeneradasController;
+use App\Http\Controllers\crm\Tareas2Controller;
 use App\Http\Controllers\crm\TipoCasoFormulasController;
 use App\Http\Controllers\crm\TipoTelefonoController;
 use App\Http\Controllers\crm\CrmController;
@@ -55,6 +56,9 @@ use App\Http\Controllers\crm\TableroController;
 use App\Http\Controllers\crm\TareaController;
 use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
+use App\Http\Controllers\crm\TutorialUsuarioController;
+use App\Http\Controllers\crm\UltimoIdController;
+use App\Http\Controllers\directorio\DirectorioController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
@@ -637,6 +641,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
     Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
 
+    Route::get('/listTutorialesByUserId/{user_id}', [TutorialUsuarioController::class, 'listTutorialesByUserId']);
+    Route::post('/addEditTutorialUsuarios', [TutorialUsuarioController::class, 'addEditTutorialUsuarios']);
+    Route::post('/listUsuariosByArchivoGaleriaId', [TutorialUsuarioController::class, 'listUsuariosByArchivoGaleriaId']);
+
     // RENEGOCIACION
     Route::post('/validarFacturaRenegociacion', [DdocumentoController::class, 'validarFacturaRenegociacion']);
 
@@ -655,6 +663,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     // ALMACENES-ZONAS CRM
     Route::get('/listAlmacenCrm', [AlmacenController::class, 'listAlmacenCrm']);
 
+    Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
+    Route::post('/addDirectorio', [DirectorioController::class, 'addDirectorio']); // guardar
+    Route::post('/editDirectorio/{id}', [DirectorioController::class, 'editDirectorio']); // Editar
+    Route::delete('/deleteDirectorio/{id}', [DirectorioController::class, 'deleteDirectorio']); // Eliminar
+
     // REPORTES LINK
 
     Route::get('/listAllReporteLink', [ReporteLinkController::class, 'listAllReporteLink']); // listar
@@ -666,6 +679,16 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addEditReporteLinkUsuarios', [ReporteLinkUsuariosController::class, 'addEditReporteLinkUsuarios']); // guardar
     
     Route::get('/listReporteLinkByUserId/{id}', [ReporteLinkController::class, 'listReporteLinkByUserId']); // listar
+
+    // ULTIMO ID
+
+    Route::get('/addCasoOscarBravo', [UltimoIdController::class, 'addCasoOscarBravo']);
+    
+    // TAREAS 2
+    
+    Route::get('/listTareasByTipoCasoId/{tipo_caso_id}/{caso_id}', [Tareas2Controller::class, 'listTareasByTipoCasoId']);
+    Route::post('/editTareas2/{tarea_id}', [Tareas2Controller::class, 'editTareas2']);
+
 });
 
 Route::group([], function ($router) {

@@ -2,31 +2,33 @@
 
 namespace App\Models\crm;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
-class CTipoTarea extends Model
+
+class Tareas2 extends Model
 {
-    use HasFactory;
 
-    protected $table = 'crm.ctipo_tarea';
+    protected $table = 'crm.tareas2';
 
-    protected $fillable = ["nombre", "estado",];
-//  "tab_id"
+    protected $fillable = [
+        "caso_id",
+        "ctt_id",
+        "dtt_id",
+        "nombre",
+        "requerido",
+        "marcado",
+    ];
 
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["created_at"] = Carbon::now();
     }
+
     public function setUpdatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function dTipoTarea()
-    {
-        return $this->hasMany(DTipoTarea::class, "ctt_id");
-    }
 }
