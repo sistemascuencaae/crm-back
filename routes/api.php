@@ -198,6 +198,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     //------------------------------------------------------------------>CASO
     Route::put('/editCasoFase', [CasoController::class, 'editFase']);
     Route::post('/addCaso', [CasoController::class, 'add']);
+    Route::post('/addCaso2', [CasoController::class, 'addCaso2']);
     Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);

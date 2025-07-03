@@ -105,12 +105,9 @@ class CasoController extends Controller
             $caso->estado_2 = $estadoInicial->id;
             $caso->nombre = 'CASO # ' . $caso->id;
             $caso->user_creador_id = $request->user_creador_id;
-            if ($caso->cliente_id) {
-                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
-            } else {
-                $caso->ent_id = 999; // ID del cliente default de dynamo
-                $caso->cliente_id = 86; // ID del cliente default del crm
-            }
+            
+            $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+
             if ($caso->desc_json) {
             }
             $caso->save();
@@ -2247,6 +2244,103 @@ class CasoController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
+    }
+
+    public function addCaso2(Request $request)
+    {
+        $log = new Funciones();
+
+        $casoInput = $request->all();
+        // $miembros = $request->input('miembros');
+        $miembros2 = $request->input('miembros');
+        //datos formulario estatico creacion de usuario
+        $dataFormStatic = $request->input('form_estatico');
+        // Verificar si $miembros2 es un string
+        if (is_string($miembros2)) {
+            // Convertir la cadena en un array usando la coma como delimitador
+            $miembros = array_map('intval', explode(',', $miembros2));
+        } else {
+            $miembros = $miembros2;
+        }
+        //try {
+        $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request, $dataFormStatic) {
+
+            $caso = new Caso($casoInput);
+            $caso->save();
+            if ($dataFormStatic) {
+                $this->crearFormularioStatico($dataFormStatic, $caso->id);
+            }
+
+            $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
+            //--------------------
+            $caso->estado_2 = $estadoInicial->id;
+            $caso->nombre = 'CASO # ' . $caso->id;
+            $caso->user_creador_id = $request->user_creador_id;
+            
+            if ($caso->cliente_id) {
+                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+            } else {
+                $caso->cliente_id = 86; // ID del cliente default del crm
+                $caso->ent_id = 999; // ID del cliente default de dynamo
+            }
+
+            if ($caso->desc_json) {
+            }
+            $caso->save();
+            for ($i = 0; $i < sizeof($miembros); $i++) {
+                $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
+                if (!$mieExixte) {
+                    $miembro = new Miembros();
+                    $miembro->user_id = $miembros[$i];
+                    $caso->miembros()->save($miembro);
+                }
+            }
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
+
+            $soporteController = new SoporteController();
+            $soporteController->addGaleriaArchivos($request, $caso->id);
+
+
+            $ccm_id_input = $request->input('ccm_id');
+            if ($ccm_id_input) {
+                CasoComprobante::create([
+                    'caso_id' => $caso->id,
+                    'ccm_id' => $ccm_id_input,
+                ]);
+            }
+
+            return $this->getCaso($caso->id);
+        });
+        $dataFormSopo = $request->input('valoresFormulario');
+        if ($dataFormSopo) {
+            $this->formularioSoporte($request, $casoCreado['id']);
+        }
+        // START Bloque de código que genera un registro de auditoría manualmente
+        $audit = new Audits();
+        $audit->user_id = Auth::id();
+        $audit->event = 'created';
+        $audit->auditable_type = Caso::class;
+        $audit->auditable_id = $casoCreado->id;
+        $audit->user_type = User::class;
+        $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+        $audit->url = $request->fullUrl();
+        // Establecer old_values y new_values
+        $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
+        $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
+        $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+        $audit->estado_caso = $casoCreado->estadodos->nombre;
+        $audit->estado_caso_id = $casoCreado->estado_2;
+        $audit->accion = 'addCaso';
+        $audit->caso_id = $casoCreado->id;
+        $audit->save();
+        // END Auditoria
+
+        // le mando uno porque es la primera vez q se crea el caso
+        $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+        $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
+        $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
+        broadcast(new TableroEvent($casoCreado));
+        return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
     }
 
 }
