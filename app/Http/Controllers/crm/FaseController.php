@@ -261,13 +261,16 @@ class FaseController extends Controller
                 'caso.tipocaso',
                 'caso.tiempo_caso',
                 'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user) {
-                    $query->whereBetween('fecha_vencimiento', [
-                        Carbon::parse($fechaInicio)->startOfDay(),
-                        Carbon::parse($fechaFin)->endOfDay(),
-                    ]);
+                    // $query->whereBetween('fecha_vencimiento', [
+                    //     Carbon::parse($fechaInicio)->startOfDay(),
+                    //     Carbon::parse($fechaFin)->endOfDay(),
+                    // ]);
+                    
+                    $query->whereBetween('fecha_inicio', [Carbon::parse($fechaInicio)->startOfDay(), Carbon::parse($fechaFin)->endOfDay()]);
+                    
 
                     // listado para usuarios comunes (usu_tipo = 4)
-                    if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 4) {
+                    if ($tipoTablero === 'KANBAN') {
                         // JGSJ Solo incluir casos con categoria_caso = 1
                         $query->whereHas('tipocaso', function ($q) {
                             $q->where('categoria_caso', 1);
@@ -277,16 +280,27 @@ class FaseController extends Controller
                             $subquery->where('nombre', 'TERMINADO');
                         });
                     }
+                    // // listado para usuarios comunes (usu_tipo = 4)
+                    // if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 4) {
+                    //     // JGSJ Solo incluir casos con categoria_caso = 1
+                    //     $query->whereHas('tipocaso', function ($q) {
+                    //         $q->where('categoria_caso', 1);
+                    //     });
+                    //     // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
+                    //     $query->whereDoesntHave('estadodos', function ($subquery) {
+                    //         $subquery->where('nombre', 'TERMINADO');
+                    //     });
+                    // }
 
 
 
-                    // listado para administradores (USU_TIPO = 2)
-                    if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 2) {
-                        // JGSJ incluir casos con categoria_caso = 1
-                        $query->whereHas('tipocaso', function ($q) {
-                            $q->where('categoria_caso', 1);
-                        });
-                    }
+                    // // listado para administradores (USU_TIPO = 2)
+                    // if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 2) {
+                    //     // JGSJ incluir casos con categoria_caso = 1
+                    //     $query->whereHas('tipocaso', function ($q) {
+                    //         $q->where('categoria_caso', 1);
+                    //     });
+                    // }
                 },
             ])
             ->where('tab_id', $tabId);
@@ -319,10 +333,12 @@ class FaseController extends Controller
                     'caso.tipocaso',
                     'caso.tiempo_caso',
                     'caso' => function ($query) use ($request) {
-                        $query->whereBetween('fecha_vencimiento', [
-                            Carbon::parse($request->fechaInicio)->startOfDay(),
-                            Carbon::parse($request->fechaFin)->endOfDay(),
-                        ]);
+                        // $query->whereBetween('fecha_vencimiento', [
+                        //     Carbon::parse($request->fechaInicio)->startOfDay(),
+                        //     Carbon::parse($request->fechaFin)->endOfDay(),
+                        // ]);
+
+                        $query->whereBetween('fecha_inicio', [Carbon::parse($request->fechaInicio)->startOfDay(), Carbon::parse($request->fechaFin)->endOfDay()]);
                     },
                 ])
                 ->where('tab_id', $request->tabId);
