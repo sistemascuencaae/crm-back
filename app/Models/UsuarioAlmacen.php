@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\configuracion\Agencia;
 use App\Models\openceo\Almacen;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,9 +34,9 @@ class UsuarioAlmacen extends Model
         return $this->belongsTo(User::class, "user_id", "id");
     }
 
-    public function almacen()
+    public function agencia()
     {
-        return $this->belongsTo(Almacen::class, "alm_id", "alm_id");
+        return $this->belongsTo(Agencia::class, "alm_id", "codigo");
     }
 
 }

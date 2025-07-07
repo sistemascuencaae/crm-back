@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\configuracion\Agencia;
 use App\Models\crm\Almacen;
 use App\Models\crm\PerfilAnalistas;
 use App\Models\crm\Tablero;
@@ -141,6 +142,11 @@ class User extends Authenticatable implements JWTSubject
     public function almacen()
     {
         return $this->belongsTo(Almacen::class, "alm_id", "alm_id");
+    }
+
+    public function agencia()
+    {
+        return $this->belongsTo(Agencia::class, "alm_id", "codigo");
     }
 
 }

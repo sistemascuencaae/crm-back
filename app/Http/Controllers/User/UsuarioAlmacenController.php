@@ -20,7 +20,7 @@ class UsuarioAlmacenController extends Controller
     {
         try {
             $data = UsuarioAlmacen::where('user_id', $id)
-                        ->with( 'almacen')->get();
+                        ->with( 'agencia')->get();
     
             // Si la transacción fue exitosa, respondemos con un mensaje de éxito
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));

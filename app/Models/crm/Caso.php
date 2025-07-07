@@ -72,7 +72,9 @@ class Caso extends Model
         "celulares",
         "acc_publico",
 
-        "edit_fecha_inicio"
+        "edit_fecha_inicio",
+
+        "codigo_agencia",
     ];
 
     public function userCreador()

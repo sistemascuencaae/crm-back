@@ -861,10 +861,12 @@ Route::group(["prefix" => "configuracion"], function ($router) {
 
     // AGENCIA
 
+    Route::get('/listAgenciasActivas', [AgenciaController::class, 'listAgenciasActivas']); // listar
     Route::get('/listAllAgencias', [AgenciaController::class, 'listAllAgencias']); // listar
     Route::post('/addAgencia', [AgenciaController::class, 'addAgencia']); // guardar
     Route::post('/editAgencia/{id}', [AgenciaController::class, 'editAgencia']); // Editar
     Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
+    Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
 });
 
 Route::group(["prefix" => "openceo"], function ($router) {

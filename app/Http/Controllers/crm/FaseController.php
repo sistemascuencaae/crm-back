@@ -260,14 +260,27 @@ class FaseController extends Controller
                 'caso.estadodos',
                 'caso.tipocaso',
                 'caso.tiempo_caso',
-                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user) {
+                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user, $userLogin) {
                     // $query->whereBetween('fecha_vencimiento', [
                     //     Carbon::parse($fechaInicio)->startOfDay(),
                     //     Carbon::parse($fechaFin)->endOfDay(),
                     // ]);
                     
+                    $permisosAgencias = DB::SELECT("SELECT a.alm_id 
+                                                            FROM crm.usuario_almacen a
+                                                            WHERE a.user_id = ?", 
+                                                            [$userLogin]
+                                                            );
+
+                    $stringAlmIdAgencias = collect($permisosAgencias)->pluck('alm_id')->toArray();
+
+
                     $query->whereBetween('fecha_inicio', [Carbon::parse($fechaInicio)->startOfDay(), Carbon::parse($fechaFin)->endOfDay()]);
                     
+                    // Filtro por permisos/agencias
+                    if (!empty($stringAlmIdAgencias)) {
+                        $query->whereIn('codigo_agencia', $stringAlmIdAgencias);
+                    }
 
                     // listado para usuarios comunes (usu_tipo = 4)
                     if ($tipoTablero === 'KANBAN') {
