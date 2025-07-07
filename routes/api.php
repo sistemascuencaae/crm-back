@@ -5,6 +5,7 @@ use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\AlmacenController;
@@ -838,7 +839,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
 Route::group(["prefix" => "configuracion"], function ($router) {
 
-    // configuracion
+    // CONFIGURACION
 
     Route::get('/listAllArchivos2', [Archivos2Controller::class, 'listAllArchivos2']);
     Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
@@ -851,10 +852,19 @@ Route::group(["prefix" => "configuracion"], function ($router) {
     Route::post('/editNotes/{id}', [NotesController::class, 'editNotes']); // Editar
     Route::delete('/deleteNotes/{id}', [NotesController::class, 'deleteNotes']); // Eliminar
 
+    // CORREOS
+
     Route::post('/addCorreo', [CorreoController::class, 'addCorreo']); // guardar
     Route::get('/listCorreos', [CorreoController::class, 'listCorreos']); // listar
     Route::post('/editCorreo/{id}', [CorreoController::class, 'editCorreo']); // Editar
     Route::delete('/deleteCorreo/{id}', [CorreoController::class, 'deleteCorreo']); // Eliminar
+
+    // AGENCIA
+
+    Route::get('/listAllAgencias', [AgenciaController::class, 'listAllAgencias']); // listar
+    Route::post('/addAgencia', [AgenciaController::class, 'addAgencia']); // guardar
+    Route::post('/editAgencia/{id}', [AgenciaController::class, 'editAgencia']); // Editar
+    Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
 });
 
 Route::group(["prefix" => "openceo"], function ($router) {
