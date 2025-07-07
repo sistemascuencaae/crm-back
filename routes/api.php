@@ -108,6 +108,7 @@ use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\openceo\TipoProductoController;
 use App\Http\Controllers\ParametrosController;
+use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\WebSocketController;
 use App\Http\Controllers\configuracion\NotesController;
 use App\Http\Controllers\correo\CorreoController;
@@ -555,6 +556,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
 
     Route::get('/listAlmacenes', [UserController::class, 'listAlmacenes']); // listar almacenes
+    Route::get('/listAlmacenes2', [UserController::class, 'listAlmacenes2']); // listar almacenes
 
     Route::post('/editEnLineaUser/{user_id}', [UserController::class, 'editEnLineaUser']); // editar en linea del usuario
 
@@ -689,6 +691,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     
     Route::get('/listTareasByTipoCasoId/{tipo_caso_id}/{caso_id}', [Tareas2Controller::class, 'listTareasByTipoCasoId']);
     Route::post('/editTareas2/{tarea_id}', [Tareas2Controller::class, 'editTareas2']);
+
+    // UsuarioAlmacenes
+
+    Route::get('/listAlmacenesByUserId/{id}', [UsuarioAlmacenController::class, 'listAlmacenesByUserId']); // listar
+    Route::post('/addEditUsuarioAlmacenes', [UsuarioAlmacenController::class, 'addEditUsuarioAlmacenes']); // guardar
 
 });
 
