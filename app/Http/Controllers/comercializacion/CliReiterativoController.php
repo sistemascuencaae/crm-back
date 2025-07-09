@@ -335,4 +335,31 @@ class CliReiterativoController extends Controller
 
                 return $data;
     }
+
+
+
+
+    // CRM CLIENTE REITERATIVO V2
+    public function getClienteReiterativoByIdentificacion($identificacion)
+    {
+        try {
+            $cliente = DB::select("SELECT cliente, forma_pago, fecha, ultima_fecha_cobro, fecha, comprobante, plazo_pagare, dias_atraso,
+                                                estado, acuerdo
+                                                FROM av_cartera_historica_agrupada_diasatraso_xsigla
+                                                WHERE identificacion = ?",
+                                        [$identificacion]);
+
+            if (!empty($cliente)) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $cliente));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no existe', $cliente));
+            }
+
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
+        }
+    }
+
+    
+
 }
