@@ -352,7 +352,7 @@ class CliReiterativoController extends Controller
             if (!empty($cliente)) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $cliente));
             } else {
-                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no existe', $cliente));
+                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no cuenta con historial crediticio.', $cliente));
             }
 
         } catch (\Throwable $th) {
@@ -360,6 +360,42 @@ class CliReiterativoController extends Controller
         }
     }
 
-    
+    public function getInfoCuotasByComprobante($comprobante)
+    {
+        try {
+            $data = DB::select("SELECT * FROM aav_migracion_cartera_historica_xcuotas
+                                            WHERE cod_comprobante_fp = ?",
+                                        [$comprobante]);
 
+            if (!empty($data)) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'No existe datos con este comprobante: ' . $comprobante, $data));
+            }
+
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
+        }
+    }
+
+    public function getInfoCobrosByComprobante($comprobante, $cuota)
+    {
+        try {
+            $data = DB::select("SELECT *
+                                        FROM aav_migracion_cartera_historica_xcuotas_xcobros_masconcepto
+                                        WHERE cod_comprobante_fp = ?
+                                        AND secuencia_fp = ?",
+                                        [$comprobante, $cuota]);
+
+            if (!empty($data)) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'No existe datos con este comprobante: ' . $comprobante, $data));
+            }
+
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
+        }
+    }
+    
 }
