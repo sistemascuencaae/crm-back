@@ -131,17 +131,80 @@ class JWTController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
+
+
+    // Metodo original
+    // public function respondWithToken($token)
+    // {
+
+
+    //     $alm = DB::selectOne('SELECT alm.alm_nombre, alm.alm_codigo, alm.alm_id from crm.users u
+    //     inner join public.almacen alm on alm.alm_id = u.alm_id where u.id = ?', [auth('api')->user()->id]);
+
+    //     $alm_id = null;
+    //     $alm_nombre = '';
+    //     $alm_codigo = 0;
+
+
+    //     $accesos = DB::select("SELECT u.id as user_id, me.name, me.url from crm.users u
+    //     inner join crm.profiles p on p.id = u.profile_id
+    //     inner join crm.access acc on acc.profile_id = p.id and acc.ejecutar = 1
+    //     inner join crm.menu me on me.id = acc.menu_id
+    //     where u.id = ?;",[auth('api')->user()->id]);
+
+    //     if ($alm) {
+    //         $alm_nombre = $alm->alm_nombre;
+    //         $alm_id = $alm->alm_id;
+    //         $alm_codigo = $alm->alm_codigo;
+    //     }
+
+    //     $usuario = User::findOrFail(auth('api')->user()->id);
+
+    //     $usuario->update([
+    //         "en_linea" => true,
+    //     ]);
+
+    //     // echo (json_encode($alm_nombre[0]->alm_nombre));
+    //     return response()->json([
+    //         'access_token' => $token,
+    //         'token_type' => 'bearer',
+    //         'expires_in' => auth()->factory()->getTTL(),
+    //         'accesos' => $accesos,
+    //         'user' => [
+    //             "id" => auth('api')->user()->id,
+    //             "en_linea" => $usuario->en_linea,
+    //             "full_name" => auth('api')->user()->usu_alias . ' - ' . auth('api')->user()->name . ' ' . auth('api')->user()->surname,
+    //             "name" => auth('api')->user()->name,
+    //             "surname" => auth('api')->user()->surname,
+    //             "email" => auth('api')->user()->email,
+    //             "usu_tipo_analista" => auth('api')->user()->usu_tipo_analista,
+    //             "usu_tipo" => auth('api')->user()->usu_tipo,
+    //             "usu_alias" => auth('api')->user()->usu_alias,
+    //             "dep_id" => auth('api')->user()->dep_id,
+    //             "profile_id" => auth('api')->user()->profile_id,
+    //             "bod_id" => auth('api')->user()->bod_id,
+    //             "alm_nombre" => $alm_nombre,
+    //             "alm_id" => $alm_id,
+    //             "alm_codigo" => $alm_codigo,
+    //         ]
+    //     ]);
+
+
+
+    // }
+
+
+
     public function respondWithToken($token)
     {
-
-
-        $alm = DB::selectOne('SELECT alm.alm_nombre, alm.alm_codigo, alm.alm_id from crm.users u
-        inner join public.almacen alm on alm.alm_id = u.alm_id where u.id = ?', [auth('api')->user()->id]);
+        // NO PUEDO SACAR EL ALM_CODIGO PORQUE EN MI TABLA AGENCIA NO EXISTE, POR LO TANTO LOS REPORTES DE VENTAS YA NO VAN A SERVIR
+        $alm = DB::selectOne('SELECT a.nombre AS alm_nombre, a.codigo AS alm_id 
+                                        FROM crm.users u
+                                    INNER JOIN crm.agencia a ON a.codigo = CAST(u.alm_id AS VARCHAR) 
+                                    WHERE u.id = ?', [auth('api')->user()->id]);
 
         $alm_id = null;
         $alm_nombre = '';
-        $alm_codigo = 0;
-
 
         $accesos = DB::select("SELECT u.id as user_id, me.name, me.url from crm.users u
         inner join crm.profiles p on p.id = u.profile_id
@@ -152,7 +215,6 @@ class JWTController extends Controller
         if ($alm) {
             $alm_nombre = $alm->alm_nombre;
             $alm_id = $alm->alm_id;
-            $alm_codigo = $alm->alm_codigo;
         }
 
         $usuario = User::findOrFail(auth('api')->user()->id);
@@ -161,7 +223,6 @@ class JWTController extends Controller
             "en_linea" => true,
         ]);
 
-        // echo (json_encode($alm_nombre[0]->alm_nombre));
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
@@ -182,11 +243,9 @@ class JWTController extends Controller
                 "bod_id" => auth('api')->user()->bod_id,
                 "alm_nombre" => $alm_nombre,
                 "alm_id" => $alm_id,
-                "alm_codigo" => $alm_codigo,
             ]
         ]);
-
-
-
     }
+
+
 }

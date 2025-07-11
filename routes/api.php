@@ -5,6 +5,7 @@ use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\AlmacenController;
@@ -108,6 +109,7 @@ use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\openceo\TipoProductoController;
 use App\Http\Controllers\ParametrosController;
+use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\WebSocketController;
 use App\Http\Controllers\configuracion\NotesController;
 use App\Http\Controllers\correo\CorreoController;
@@ -198,6 +200,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     //------------------------------------------------------------------>CASO
     Route::put('/editCasoFase', [CasoController::class, 'editFase']);
     Route::post('/addCaso', [CasoController::class, 'add']);
+    Route::post('/addCaso2', [CasoController::class, 'addCaso2']);
     Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
@@ -554,6 +557,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
 
     Route::get('/listAlmacenes', [UserController::class, 'listAlmacenes']); // listar almacenes
+    Route::get('/listAlmacenes2', [UserController::class, 'listAlmacenes2']); // listar almacenes
 
     Route::post('/editEnLineaUser/{user_id}', [UserController::class, 'editEnLineaUser']); // editar en linea del usuario
 
@@ -688,6 +692,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     
     Route::get('/listTareasByTipoCasoId/{tipo_caso_id}/{caso_id}', [Tareas2Controller::class, 'listTareasByTipoCasoId']);
     Route::post('/editTareas2/{tarea_id}', [Tareas2Controller::class, 'editTareas2']);
+
+    // UsuarioAlmacenes
+
+    Route::get('/listAlmacenesByUserId/{id}', [UsuarioAlmacenController::class, 'listAlmacenesByUserId']); // listar
+    Route::post('/addEditUsuarioAlmacenes', [UsuarioAlmacenController::class, 'addEditUsuarioAlmacenes']); // guardar
 
 });
 
@@ -830,7 +839,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
 Route::group(["prefix" => "configuracion"], function ($router) {
 
-    // configuracion
+    // CONFIGURACION
 
     Route::get('/listAllArchivos2', [Archivos2Controller::class, 'listAllArchivos2']);
     Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
@@ -843,10 +852,21 @@ Route::group(["prefix" => "configuracion"], function ($router) {
     Route::post('/editNotes/{id}', [NotesController::class, 'editNotes']); // Editar
     Route::delete('/deleteNotes/{id}', [NotesController::class, 'deleteNotes']); // Eliminar
 
+    // CORREOS
+
     Route::post('/addCorreo', [CorreoController::class, 'addCorreo']); // guardar
     Route::get('/listCorreos', [CorreoController::class, 'listCorreos']); // listar
     Route::post('/editCorreo/{id}', [CorreoController::class, 'editCorreo']); // Editar
     Route::delete('/deleteCorreo/{id}', [CorreoController::class, 'deleteCorreo']); // Eliminar
+
+    // AGENCIA
+
+    Route::get('/listAgenciasActivas', [AgenciaController::class, 'listAgenciasActivas']); // listar
+    Route::get('/listAllAgencias', [AgenciaController::class, 'listAllAgencias']); // listar
+    Route::post('/addAgencia', [AgenciaController::class, 'addAgencia']); // guardar
+    Route::post('/editAgencia/{id}', [AgenciaController::class, 'editAgencia']); // Editar
+    Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
+    Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
 });
 
 Route::group(["prefix" => "openceo"], function ($router) {

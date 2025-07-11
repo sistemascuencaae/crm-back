@@ -50,4 +50,10 @@ Route::group([
     Route::get('/getTiposComprobantesAlmacenes', [ComercializacionController::class, 'getTiposComprobantesAlmacenes']);
     Route::get('/getComprobantes/{ctiId}/{almId}', [ComercializacionController::class, 'getComprobantes']);
 
+
+    // CLIENTE REITERATIVO V2 
+    Route::get('/getClienteReiterativoByIdentificacion/{identificacion}', [CliReiterativoController::class, 'getClienteReiterativoByIdentificacion']);
+    Route::get('/getInfoCuotasByComprobante/{comprobante}', [CliReiterativoController::class, 'getInfoCuotasByComprobante']);
+    Route::get('/getInfoCobrosByComprobante/{comprobante}/{cuota}', [CliReiterativoController::class, 'getInfoCobrosByComprobante']);
+
 });
