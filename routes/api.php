@@ -155,7 +155,9 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAlmacenCrm', [AlmacenController::class, 'listAlmacenCrm']);
 
     Route::get('/listAnalistas/{tableroId}', [UserController::class, 'listAnalistas']);
+    Route::post('/addCaso', [CasoController::class, 'add']);
     Route::post('/addCaso2', [CasoController::class, 'addCaso2']);
+    Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
 });
 
 Route::group(["prefix" => "formulario"], function ($router) {
@@ -539,7 +541,6 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']]
 
     //------------------------------------------------------------------>CASO
     Route::put('/editCasoFase', [CasoController::class, 'editFase']);
-    Route::post('/addCaso', [CasoController::class, 'add']);
     Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
@@ -585,7 +586,6 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']]
     /************************  PEDIDO MOVIL OPENCEO   ****************** */
     Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
     Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
-    Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
 
     
     // ----------------------------------------------------------------------------------------------------------------------
