@@ -18,7 +18,6 @@ use App\Http\Controllers\crm\CFormularioController;
 use App\Http\Controllers\crm\ClienteCrmController;
 use App\Http\Controllers\crm\ClienteOpenceoController;
 use App\Http\Controllers\crm\ComentariosController;
-use App\Http\Controllers\crm\CondicionesController;
 use App\Http\Controllers\crm\credito\ArchivoController;
 use App\Http\Controllers\crm\credito\ClienteEnrolamientoController;
 use App\Http\Controllers\crm\credito\EtiquetaController;
@@ -45,7 +44,6 @@ use App\Http\Controllers\crm\EntidadController;
 use App\Http\Controllers\crm\EstadosController;
 use App\Http\Controllers\crm\EstadosFormulasController;
 use App\Http\Controllers\crm\FaseController;
-use App\Http\Controllers\crm\FlujoController;
 use App\Http\Controllers\crm\NotaController;
 use App\Http\Controllers\crm\NotificacionesController;
 use App\Http\Controllers\crm\PerfilAnalistasController;
@@ -107,261 +105,80 @@ use App\Http\Controllers\formulario\FormAuthDatosCliController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\openceo\DdocumentoController;
-use App\Http\Controllers\openceo\TipoProductoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
-use App\Http\Controllers\WebSocketController;
 use App\Http\Controllers\configuracion\NotesController;
 use App\Http\Controllers\correo\CorreoController;
 use Illuminate\Support\Facades\Route;
 
-/*w
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
-
-// Route::middleware('auth:api')->get('/user', function (Request $request) {
-//     return $request->user();
-// });
-
 
 Route::group(['middleware' => 'api'], function ($router) {
-    //Route::get('/websocket/active-channels-count', [WebSocketController::class, 'getActiveChannelsCount']);
-
     Route::post('/register', [JWTController::class, 'register']);
     Route::post('/login', [JWTController::class, 'login']);
     Route::post('/profile', [JWTController::class, 'profile']);
-
-
-
-
-
-    //Route::post('/register', "JWTController@register");
-    //Route::post('/login', "JWTController@login");
-    // Route::post('/logout', "JWTController@logout");
-    // Route::post('/refresh', "JWTController@refresh");
-    // Route::post('/profile', "JWTController@profile");
 });
-
-// Route::group(['prefix'=>'users'].function($router) {
-//     Route::post('/profile-user','JWTController@profile');
-// });
-
 
 Route::group(['middleware' => 'api', 'prefix' => 'users'], function ($router) {
     Route::post('/profile-user', [ProfileUserController::class, 'profile_user']);
     Route::put('/profile', [ProfileUserController::class, 'profile_user']);
 });
 
-
-
 //app react native--------------------------------
 Route::group(['middleware' => 'api', "prefix" => "reactapp"], function ($router) {
     Route::get('/getCoordenadasAlm/{almId}', [ReactNativeMaps::class, 'getCoordenadasAlm']);
-});
-
-
-
-
-
-//----------------------- RUTAS FELIPE ----------------------------------------------
-//----------------------- RUTAS FELIPE ----------------------------------------------
-Route::group(["prefix" => "crm"], function ($router) {
-    //CRM CONTROLLER PRINCIPAL
-    Route::get('/crmTablero/{id}', [CrmController::class, 'list']);
-    //notificaciones
-    Route::post('/addNotificacion', [NotificacionesController::class, 'add']);
-
-    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
-
-
-    Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
-    Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
-    Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
-
-
-
-
-    //------------------------------------------------------------------>FASE
-    Route::post('/listFase', [FaseController::class, 'list']);
-    Route::post('/addFase', [FaseController::class, 'add']);
-    Route::put('/editFase', [FaseController::class, 'edit']);
-    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']); //actualizarOrdenFases
-    Route::post('/actualizarOrdenFases', [FaseController::class, 'actualizarOrdenFases']); //
-    // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
-    // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
-
-    //------------------------------------------------------------------>CASO
-    Route::put('/editCasoFase', [CasoController::class, 'editFase']);
-    Route::post('/addCaso', [CasoController::class, 'add']);
-    Route::post('/addCaso2', [CasoController::class, 'addCaso2']);
-    Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
-    Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
-    Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
-    Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
-    Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
-    Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
-    Route::put('/actualizarCaso/{casoId}/{tabId}', [CasoController::class, 'actualizarCaso']); //
-    Route::put('/asignarmeCaso/{casoId}/{userId}', [CasoController::class, 'asignarmeCaso']); //
-    Route::post('/crearFormularioSoporte', [CasoController::class, 'crearFormularioSoporte']);
-
-    Route::get('/getCasoFormulario', [CasoController::class, 'getCasoFormulario']); //
-
-
-    //---------------------------------------------------------------->PRUEBAS
-    Route::get('/actualizarReqCaso/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
-    /************************  FORMULARIOS   *********************** */
-    Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
-    Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
-    /************************  REQUERIMIENTOS CASO   *********************** */
-    Route::post('/addSolicitudCreditoReqCaso', [ReqCasoController::class, 'addSolicitudCreditoReqCaso']); // Guardar
-    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll']);
-    Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']);
-    Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
-    Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']); //
-    Route::get('/listReqCasoId/{casoId}', [ReqCasoController::class, 'listReqCasoId']);
-
-    Route::post('/addTarea', [TareaController::class, 'add']);
-    Route::get('/listTareas', [TareaController::class, 'list']);
-    Route::get('/byCedula/{cedula}', [EntidadController::class, 'byCedula']); // Listar
-
-
-
-
-    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
-    Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
-
-    Route::get('/listAnalistas/{tableroId}', [UserController::class, 'listAnalistas']);
-    Route::get('/listUsuariosActivos', [UserController::class, 'listUsuariosActivos']);
-
-    Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']); //list
-
-    /************************  OPENCEO   *********************** */
-
-
-    Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
-    Route::get('/listClientes/{parametro}', [ClienteOpenceoController::class, 'list']);
-    Route::get('/clienteCasoList/{depId}', [ClienteOpenceoController::class, 'clienteCasoList']);
-    Route::get('/solicitudByEntId/{entIdentificacion}/{userId}', [solicitudCreditoController::class, 'solicitudByEntId']);
-
-    /************************  PEDIDO MOVIL OPENCEO   ****************** */
-    Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
-    Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
-    Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
-});
-
-
-/************************  CHAT   ****************** */
-Route::group(["prefix" => "chat"], function ($router) {
-    Route::get('/listConversaciones/{userId}', [ChatController::class, 'listConversaciones']);
-    Route::get('/listarMensajes/{converId}/{tipoConver}/{numeroPagina}', [ChatController::class, 'listarMensajes']);
-    Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']); //
-    Route::delete('/eliminarMensaje/{mensajeId}/{converId}/{tipoConver}', [ChatController::class, 'eliminarMensaje']); //
-    Route::put('/actualizarMensaje/{converId}/{tipoConver}/{accion}', [ChatController::class, 'actualizarMensaje']); //
-    Route::get('/usuariosParaChat', [ChatController::class, 'usuariosParaChat']); //
-    Route::post('/iniciarChatNormal', [ChatController::class, 'iniciarChatNormal']);
-    Route::post('/iniciarChatGrupal', [ChatController::class, 'iniciarChatGrupal']); //
-    Route::get('/getImagenesSmg', [ChatController::class, 'getImagenesSmg']); //
-    Route::get('/getMensaje/{id}', [ChatController::class, 'getMensaje']); //
-    Route::get('/listarMensajesNoLeidos', [ChatController::class, 'listarMensajesNoLeidos']);
-    Route::get('/usersGrupoChat/{converId}', [ChatController::class, 'usersGrupoChat']); //
-    Route::post('/actualizarGrupo', [ChatController::class, 'actualizarGrupo']); //
-    // ARCHIVOS E IMAGENES PARA EL CHAT
-    Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
-    Route::get('/listarArchivosConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarArchivosConver']);
-    Route::get('/listarGaleriaConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarGaleriaConver']);
-});
-// FORMULARIO AUTORIZACION TRATAMIENTO DE DATOS
-
-Route::group(["prefix" => "autorizaciones"], function ($router) {
-    Route::post('/add', [FormAuthDatosCliController::class, 'add']);
-    Route::get('/getAlmacenId/{id}', [FormAuthDatosCliController::class, 'getAlmacenId']);
-    Route::get('/listAlmacenes', [FormAuthDatosCliController::class, 'listAlmacenes']);
-    Route::get('/store', [FormAuthDatosCliController::class, 'store']);
-    Route::get('/validarAutoTratDatos/{id}', [FormAuthDatosCliController::class, 'validarAutoTratDatos']);
-});
-
-Route::group(["prefix" => "crm/audi"], function ($router) {
-    Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
-});
-Route::group(["prefix" => "crm/robot"], function ($router) {
-    Route::get('/reasignarCaso/{estadoFormId}/{casoId}/{tableroActualId}/{banMostrarVistaCreditoAprobado?}', [RobotCasoController::class, 'reasignarCaso']);
 });
 
 Route::group([], function ($router) {
     Route::post('/token', [EquifaxController::class, 'loginEquifax']);
 });
 
-// FORMULARIOS FELIPE
-Route::group(["prefix" => "form"], function ($router) {
-    Route::get('/list', [FormController::class, 'list']);
-    Route::get('/storeA/{formId}', [FormController::class, 'storeA']);
-    Route::get('/storeB/{formId}/{userId}', [FormController::class, 'storeB']);
-    Route::get('/storeC/{casoId}', [FormController::class, 'storeC']);
-    Route::get('/cargarFormulario/{formId}', [FormController::class, 'cargarFormulario']);
-    Route::get('/listByDepar/{depId}/{userId}', [FormController::class, 'listByDepar']); //
-    Route::get('/formUser/{depId}/{userId}', [FormController::class, 'formUser']); //formUser
-    Route::get('/byId/{formId}', [FormController::class, 'byId']); //formUser
-    Route::get('/listAll', [FormController::class, 'listAll']); //
-    Route::get('/listAnonimos', [FormController::class, 'listAnonimos']);
-    Route::get('/impresion/{formId}/{userId}', [FormController::class, 'impresion']); //impresion
-    Route::put('/edit/{id}', [FormController::class, 'edit']); //
-    Route::post('/addFormulario', [FormController::class, 'addFormulario']); //
-    Route::get('listFormByIdTablero/{tab_id}', [FormController::class, 'listFormByIdTablero']); //
-    Route::get('/storeCasoForm/{casoId}', [FormController::class, 'storeCasoForm']);
-
-    Route::post('/guardarFormularioValores', [FormController::class, 'guardarFormularioValores']);
-    Route::get('/cargarFormularioAyuda/{casoId}', [FormController::class, 'cargarFormularioAyuda']);
-    Route::get('/getByTipoCasIdFormu/{formId}/{casoId}', [FormController::class, 'getByTipoCasIdFormu']);
-});
-Route::group(['prefix' => 'form/campo'], function ($router) {
-    Route::get('/store', [CampoController::class, 'store']);
-    Route::get('/full/{id}', [CampoController::class, 'full']);
-    Route::get('/list', [CampoController::class, 'list']);
-    Route::get('/listAll', [CampoController::class, 'listAll']);
-    Route::get('/byId/{id}', [CampoController::class, 'byId']);
-    Route::get('/deleted', [CampoController::class, 'deleted']);
-    Route::get('/restoreById/{id}', [CampoController::class, 'restoreById']);
-    Route::put('/edit/{id}', [CampoController::class, 'edit']);
-    Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
-    Route::post('/add', [CampoController::class, 'add']); //addCampoValor
-    //Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']); //addCampoValor
-    //----------------------------------------------------------------CAMPOS COMPONENTES FORMULARIO DINAMICO
-    Route::get('/loadInitialData', [ComponentsController::class, 'loadInitialData']);
-    Route::post('/listarEntidades', [ComponentsController::class, 'listarEntidades']);
-});
-Route::group(['prefix' => 'form/seccion'], function ($router) {
-    Route::get('/store', [FormSeccionController::class, 'store']);
-    Route::post('/add', [FormSeccionController::class, 'add']);
-    Route::put('/edit/{id}', [FormSeccionController::class, 'edit']);
-});
-//----------------------- PARAMETROS DIRECCION ----------------------------------------------
-Route::group(['prefix' => 'parametros'], function ($router) {
-    Route::get('/direccion', [ParametrosController::class, 'direccion']); //
-    Route::get('/direccionParroquias/{cantonId}', [ParametrosController::class, 'direccionParroquias']); //direccionParroquias
+Route::group([], function ($router) {
+    Route::post('/getDocuments/{caso_id}', [EquifaxController::class, 'getDocuments']);
 });
 
-//parametrosDireccion
-
-//----------------------- FIN RUTAS FELIPE ----------------------------------------------
-//----------------------- FIN RUTAS FELIPE ----------------------------------------------
-//----------------------- FIN RUTAS FELIPE ----------------------------------------------
 
 
 
-// ----------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------
-//----------------------- START RUTAS JUAN  ----------------------------------------------
+
+// --------------- START RUTAS SIN TOKEN -----------
+// --------------- START RUTAS SIN TOKEN -----------
+// --------------- START RUTAS SIN TOKEN -----------
+
+Route::group(["prefix" => "crm"], function ($router) {    
+    // DIRECTORIO
+    Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
+
+    // FORMULARIOS EXTERNOS
+    Route::get('/listFormulariosExternos', [TipoCasoFormulasController::class, 'listFormulariosExternos']);
+
+    // ALMACENES-ZONAS CRM
+    Route::get('/listAlmacenCrm', [AlmacenController::class, 'listAlmacenCrm']);
+
+    Route::get('/listAnalistas/{tableroId}', [UserController::class, 'listAnalistas']);
+    Route::post('/addCaso2', [CasoController::class, 'addCaso2']);
+});
+
+Route::group(["prefix" => "formulario"], function ($router) {
+    Route::post('/addCDFormulario', [Formulario2Controller::class, 'addCDFormulario']);
+    Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
+    Route::get('/listFormulaByIdForm/{form_id}', [Formulario2Controller::class, 'listFormulaByIdForm']);
+});
+
+// ----------------- END RUTAS SIN TOKEN -------------
+// ----------------- END RUTAS SIN TOKEN -------------
+// ----------------- END RUTAS SIN TOKEN -------------
 
 
-Route::group(["prefix" => "crm"], function ($router) {
 
+
+
+
+
+// ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
+// ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
+// ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
+
+Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
     // GALERIA
 
     Route::post('/addGaleria/{caso_id}', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
@@ -636,7 +453,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addTipoCasoFormulas', [TipoCasoFormulasController::class, 'addTipoCasoFormulas']); // guardar
     Route::post('/editTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'editTipoCasoFormulas']); // editar
     Route::delete('/deleteTipoCasoFormulas/{id}', [TipoCasoFormulasController::class, 'deleteTipoCasoFormulas']); // eliminar
-    Route::get('/listFormulariosExternos', [TipoCasoFormulasController::class, 'listFormulariosExternos']); // eliminar
 
     // TUTORIALES
 
@@ -664,10 +480,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     // FASES
     Route::get('/listFasesByTableroId', [FaseController::class, 'listFasesByTableroId']);
     
-    // ALMACENES-ZONAS CRM
-    Route::get('/listAlmacenCrm', [AlmacenController::class, 'listAlmacenCrm']);
-
-    Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
+    // Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
     Route::post('/addDirectorio', [DirectorioController::class, 'addDirectorio']); // guardar
     Route::post('/editDirectorio/{id}', [DirectorioController::class, 'editDirectorio']); // Editar
     Route::delete('/deleteDirectorio/{id}', [DirectorioController::class, 'deleteDirectorio']); // Eliminar
@@ -698,204 +511,95 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAlmacenesByUserId/{id}', [UsuarioAlmacenController::class, 'listAlmacenesByUserId']); // listar
     Route::post('/addEditUsuarioAlmacenes', [UsuarioAlmacenController::class, 'addEditUsuarioAlmacenes']); // guardar
 
-});
-
-Route::group([], function ($router) {
-    Route::post('/getDocuments/{caso_id}', [EquifaxController::class, 'getDocuments']);
-});
-
-Route::group(["prefix" => "credito"], function ($router) {
-
-    // SOLICITUD CREDITO
-    Route::post('/editSolicitudCredito/{id}', [solicitudCreditoController::class, 'editSolicitudCredito']); // Editar
-    Route::get('/listSolicitudCreditoByEntidadId/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoByEntidadId']); // Listar por entidad ID
-    Route::get('/listSolicitudCreditoByRucCedula/{cedula}', [solicitudCreditoController::class, 'listSolicitudCreditoByRucCedula']); // Listar por cedula
-    Route::get('/solicitudByIdentificacion/{cedula}/{id_user_creador}', [solicitudCreditoController::class, 'solicitudByIdentificacion2']); // Listar por cedula
-    Route::get('/listSolicitudCreditoByClienteId/{cliente_id}', [solicitudCreditoController::class, 'listSolicitudCreditoByClienteId']); // Listar por cedula
-
-    // EQUIFAX / CLIENTE ENROLAMIENTO
-
-    Route::post('/addClienteEnrolamiento', [ClienteEnrolamientoController::class, 'addClienteEnrolamiento']); // Guardar la imagen de equifax
-    Route::get('/clienteEnroladoById/{id}', [ClienteEnrolamientoController::class, 'clienteEnroladoById']); // listar datos cliente enrolado por caso_id
-    Route::post('/validarReqCasoCliente', [ClienteEnrolamientoController::class, 'validarReqCasoCliente']); // Guardar la imagen de equifax addClienteEnrolByCliente
-    Route::post('/addArchivosFirmadosEnrolamiento', [ClienteEnrolamientoController::class, 'addArchivosFirmadosEnrolamiento']); // guardar los archivos firmados
-    Route::get('/listEnrolamientosById/{cli_id}/{caso_id}', [ClienteEnrolamientoController::class, 'listEnrolamientosById']); // lista todos los enrolamientos del cliente
-
-    // CLIENTE CRM
-
-    Route::get('/listClienteCrmById/{id}', [ClienteCrmController::class, 'listClienteCrmById']); // lista
-    Route::post('/addClienteCrm', [ClienteCrmController::class, 'addClienteCrm']); // Guardar
-    Route::post('/editClienteCrm/{ent_id}', [ClienteCrmController::class, 'editClienteCrm']); // Editar
-
-    // Referencias CRM
-
-    Route::post('/addReferenciasCliente', [ReferenciasClienteController::class, 'addReferenciasCliente']); // Guardar
-    Route::post('/editReferenciasCliente/{id}', [ReferenciasClienteController::class, 'editReferenciasCliente']); // Editar
-    Route::post('/editReferenciaObservacion/{id}', [ReferenciasClienteController::class, 'editReferenciaObservacion']); // Editar
-    Route::post('/editReferenciaValida/{id}', [ReferenciasClienteController::class, 'editReferenciaValida']); // Editar
-    Route::delete('/deleteReferenciasCliente/{id}', [ReferenciasClienteController::class, 'deleteReferenciasCliente']); // Eliminar
-    Route::get('/listReferenciasByClienteId/{cli_id}', [ReferenciasClienteController::class, 'listReferenciasByClienteId']); // lista
-
-    // parentesco CRM
-
-    Route::get('/listParentesco', [ParentescoController::class, 'listParentesco']); // listar
-
-    // Tipo Telefono CRM
-
-    Route::get('/listTipoTelefono', [TipoTelefonoController::class, 'listTipoTelefono']); // listar
-
-    // Email - correo electronico
-
-    Route::post('/send_emailCambioFase/{caso_id}/{fase_id}', [EmailController::class, 'send_emailCambioFase']); // Envia un correo cuando cambia de fase
-    Route::post('/send_emailLinkEnrolamiento', [EmailController::class, 'send_emailLinkEnrolamiento']); // Envia un correo con el link del enrolamiento
-
-    Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
-    Route::post('/addEmail', [EmailController::class, 'addEmail']);
-    Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
-
-    // FILTRAR CASOS RECHAZADOS Y TERMINADOS PARA QUE VEAN TODAS LAS ANALISTAS, ASI NO HAYA PARTICIPADO EN EL CASO
-
-    Route::get('/listCasosRechazadosTerminados/{fechaInicio}/{fechaFin}/{tableroId}', [CasoController::class, 'listCasosRechazadosTerminados']);
-});
-
-//contratos gex felipe
-Route::group(["prefix" => "gex-contrato"], function ($router) {
-    Route::get('/loadInitialData/{almId}', [ContratoGexController::class, 'loadInitialData']);
-    Route::post('/generarContratoCRM', [ContratoGexController::class, 'generarContratoCRM']);
-    Route::post('/validarSerieContrato', [ContratoGexController::class, 'validarSerieContrato']); //
-    Route::get('/listarContratosBodega/{bod_id}', [ContratoGexController::class, 'listarContratosBodega']);
-    Route::get('/listarTodosContratosBodega', [ContratoGexController::class, 'listarTodosContratosBodega']);
-    Route::delete('/eliminarContratoId/{id}', [ContratoGexController::class, 'eliminarContratoId']);
-    Route::get('/getContratoGexCrmId/{id}', [ContratoGexController::class, 'getContratoGexCrmId']);
-});
-
-Route::group(["prefix" => "gex"], function ($router) {
-
-    // SERIES ALM
-
-    Route::delete('/borrarInventarioCompleto/{numero_inventario}', [SeriesAlmController::class, 'borrarInventarioCompleto']); // Borrar un inventario completo que no tenga despachos ni contratos
-    Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
-    Route::get('/inventariosByBod_id/{bod_id}', [SeriesAlmController::class, 'inventariosByBod_id']); // listar todas las bodegas
-    Route::delete('/borrarItemInventario/{numero_inventario}/{bod_id}/{pro_id}/{serie}/{tipo}', [SeriesAlmController::class, 'borrarItemInventario']); // Borrar un inventario completo que no tenga despachos ni contratos
-
-    Route::get('/listNotasCreditoDespachos', [SeriesAlm2Controller::class, 'listNotasCreditoDespachos']); // listar los despachos que tengan notas de credito
-    Route::post('/saldoProSeries', [SeriesAlmController::class, 'saldoProSeries']); // listar todas las bodegas
-
-    Route::get('/dataSerieEliminar/{serie}', [SeriesAlmController::class, 'dataSerieEliminar']); // listar todas las bodegas
-
-    Route::delete('/eliminarSerieContrato/{alm_id}/{numero}', [SeriesAlmController::class, 'eliminarSerieContrato']);
-    Route::delete('/eliminarSerieDespacho/{numeroDes}/{serie}/{bodId}', [SeriesAlmController::class, 'eliminarSerieDespacho']);
-    Route::delete('/eliminarSerieInventario/{numeroInv}/{serie}/{pro_id}/{tipo}/{ssBodId}', [SeriesAlmController::class, 'eliminarSerieInventario']);
-    Route::delete('/eliminarSeriePreIngreso/{numeroInv}/{serie}/{pro_id}/{tipo}/{ssBodId}', [SeriesAlmController::class, 'eliminarSeriePreIngreso']);
 
 
-    //toma de iinventario
-    Route::get('/loadInitialData/{bodId}', [StockProSerieController::class, 'loadInitialData']); // listar los despachos que tengan notas de credito
-
-    Route::get('/listSeries/{pro_id}/{bod_id}', [StockProSerieController::class, 'listSeries']);
-    Route::post('/addSeriesInv', [StockProSerieController::class, 'addSeriesInv']);
-
-    Route::get('/getReporteBodegas', [StockProSerieController::class, 'getReporteBodegas']);
-    Route::get('/getSerieDesCliente/{serie}/{bodId}', [StockProSerieController::class, 'getSerieDesCliente']);
-    Route::get('/getSerie/{serie}', [StockProSerieController::class, 'getSerie']);
-    Route::get('/despacharSerie/{serie}/{bodId}', [StockProSerieController::class, 'despacharSerie']);
-    Route::get('/reportePorBodegaId/{bodId}', [StockProSerieController::class, 'reportePorBodegaId']);
-    Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
-});
-
-Route::group(["prefix" => "formulario"], function ($router) {
-
-    // FORMULARIOS2
-
-    Route::get('/listAll', [Formulario2Controller::class, 'listAll']);
-    Route::get('/listFormByTipoCaso/{tipoCaso_id}', [Formulario2Controller::class, 'listFormByTipoCaso']);
-
-    Route::post('/addEditFormulario', [Formulario2Controller::class, 'addEditFormulario']);
-    Route::delete('/deleteFormulario/{id}', [Formulario2Controller::class, 'deleteFormulario']);
-    Route::get('/listAllSinRelacion', [Formulario2Controller::class, 'listAllSinRelacion']);
-    Route::post('/addCDFormulario', [Formulario2Controller::class, 'addCDFormulario']);
-
-    Route::get('/listCFormulario/{cForm_id}', [Formulario2Controller::class, 'listCFormulario']);
-    Route::post('/editValorRespuesta/{id}', [Formulario2Controller::class, 'editValorRespuesta']); // Editar
+    // ----------------------------------------------------------------------------------------------------------------------
+    // ----------------------------------- START RUTAS FELIPAO --------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------------------------------------
     
-    Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
-    Route::get('/listFacturasPendientes/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasPendientes']); // lista de facturas
-    Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
+    //CRM CONTROLLER PRINCIPAL
+    Route::get('/crmTablero/{id}', [CrmController::class, 'list']);
+    //notificaciones
+    Route::post('/addNotificacion', [NotificacionesController::class, 'add']);
+
+    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
+
+    Route::post('/actualizarTarea', [TareaController::class, 'actualizarTarea']);
+    Route::post('/actualizarTareas', [TareaController::class, 'actualizarTareas']);
+    Route::get('/buscarTarea/{id}', [TareaController::class, 'buscarTarea']);
+
+    //------------------------------------------------------------------>FASE
+    Route::post('/listFase', [FaseController::class, 'list']);
+    Route::post('/addFase', [FaseController::class, 'add']);
+    Route::put('/editFase', [FaseController::class, 'edit']);
+    Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']); //actualizarOrdenFases
+    Route::post('/actualizarOrdenFases', [FaseController::class, 'actualizarOrdenFases']); //
+    // Route::put('/update-flujos', [FlujoController::class, 'updateFlujos']);
+    // Route::delete('/delete-flujo/{id}', [FlujoController::class, 'delete']);
+
+    //------------------------------------------------------------------>CASO
+    Route::put('/editCasoFase', [CasoController::class, 'editFase']);
+    Route::post('/addCaso', [CasoController::class, 'add']);
+    Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
+    Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
+    Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
+    Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
+    Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
+    Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
+    Route::put('/actualizarCaso/{casoId}/{tabId}', [CasoController::class, 'actualizarCaso']); //
+    Route::put('/asignarmeCaso/{casoId}/{userId}', [CasoController::class, 'asignarmeCaso']); //
+    Route::post('/crearFormularioSoporte', [CasoController::class, 'crearFormularioSoporte']);
+
+    Route::get('/getCasoFormulario', [CasoController::class, 'getCasoFormulario']); //
+
+    //---------------------------------------------------------------->PRUEBAS
+    Route::get('/actualizarReqCaso/{entId}', [CasoController::class, 'validarClienteSolicitudCredito']); //
+    /************************  FORMULARIOS   *********************** */
+    Route::get('/listAllForm', [CFormularioController::class, 'listAll']); //
+    Route::get('/getFormById/{id}', [CFormularioController::class, 'getFormById']); //
+    /************************  REQUERIMIENTOS CASO   *********************** */
+    Route::post('/addSolicitudCreditoReqCaso', [ReqCasoController::class, 'addSolicitudCreditoReqCaso']); // Guardar
+    Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll']);
+    Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']);
+    Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
+    Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']); //
+    Route::get('/listReqCasoId/{casoId}', [ReqCasoController::class, 'listReqCasoId']);
+
+    Route::post('/addTarea', [TareaController::class, 'add']);
+    Route::get('/listTareas', [TareaController::class, 'list']);
+    Route::get('/byCedula/{cedula}', [EntidadController::class, 'byCedula']); // Listar
+
+    Route::post('/listaComentarios', [ComentariosController::class, 'listaComentarios']);
+    Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
+
+    Route::get('/listUsuariosActivos', [UserController::class, 'listUsuariosActivos']);
+
+    Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']); //list
+
+    /************************  OPENCEO   *********************** */
+    Route::get('/clienteByCedula/{cedula}', [ClienteOpenceoController::class, 'byCedula']);
+    Route::get('/listClientes/{parametro}', [ClienteOpenceoController::class, 'list']);
+    Route::get('/clienteCasoList/{depId}', [ClienteOpenceoController::class, 'clienteCasoList']);
+    Route::get('/solicitudByEntId/{entIdentificacion}/{userId}', [solicitudCreditoController::class, 'solicitudByEntId']);
+
+    /************************  PEDIDO MOVIL OPENCEO   ****************** */
+    Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
+    Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
+    Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
+
     
-    Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
-    
-    Route::get('/listFormulaByIdForm/{form_id}', [Formulario2Controller::class, 'listFormulaByIdForm']);
-    
-    Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
-    Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
-    Route::get('/listFormulariosByUsuId/{usu_id}', [Formulario2UsuariosController::class, 'listFormulariosByUsuId']); // Formularios Usuarios
-    Route::get('/listRespuestasByFormId/{form_id}', [Formulario2UsuariosController::class, 'listRespuestasByFormId']); // Formularios Usuarios
-    
-    Route::get('/af_cliente_dfactura/{identificacion}', [Formulario2UsuariosController::class, 'af_cliente_dfactura']); // Formularios Usuarios
-    
-    Route::get('/listAllClientesDynamo', [Formulario2Controller::class, 'listAllClientesDynamo']); // lista de clientes para actividades caso
-    Route::get('/listClienteDynamoByIdentificacion/{identificacion}', [Formulario2Controller::class, 'listClienteDynamoByIdentificacion']); // lista de clientes para actividades caso
-});
-
-Route::group(["prefix" => "configuracion"], function ($router) {
-
-    // CONFIGURACION
-
-    Route::get('/listAllArchivos2', [Archivos2Controller::class, 'listAllArchivos2']);
-    Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
-    Route::delete('/deleteArchivos2/{id}', [Archivos2Controller::class, 'deleteArchivos2']);
-
-    // NOTAS
-
-    Route::post('/addNotes', [NotesController::class, 'addNotes']); // guardar
-    Route::get('/listNotes', [NotesController::class, 'listNotes']); // listar
-    Route::post('/editNotes/{id}', [NotesController::class, 'editNotes']); // Editar
-    Route::delete('/deleteNotes/{id}', [NotesController::class, 'deleteNotes']); // Eliminar
-
-    // CORREOS
-
-    Route::post('/addCorreo', [CorreoController::class, 'addCorreo']); // guardar
-    Route::get('/listCorreos', [CorreoController::class, 'listCorreos']); // listar
-    Route::post('/editCorreo/{id}', [CorreoController::class, 'editCorreo']); // Editar
-    Route::delete('/deleteCorreo/{id}', [CorreoController::class, 'deleteCorreo']); // Eliminar
-
-    // AGENCIA
-
-    Route::get('/listAgenciasActivas', [AgenciaController::class, 'listAgenciasActivas']); // listar
-    Route::get('/listAllAgencias', [AgenciaController::class, 'listAllAgencias']); // listar
-    Route::post('/addAgencia', [AgenciaController::class, 'addAgencia']); // guardar
-    Route::post('/editAgencia/{id}', [AgenciaController::class, 'editAgencia']); // Editar
-    Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
-    Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
-});
-
-Route::group(["prefix" => "openceo"], function ($router) {
-
-    // openceo
-
-    Route::get('/buscarEntidadEmpleado/{identificacion}', [EntidadDynamoController::class, 'buscarEntidadEmpleado']);
-    Route::get('/listAlmacenesPuntoVenta', [EntidadDynamoController::class, 'listAlmacenesPuntoVenta']);
-    Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
-    Route::get('/listBodegas', [BodegaController::class, 'listBodegas']);
-
-});
-
-Route::group(["prefix" => "parametro"], function ($router) {
-    Route::get('/listFormulaByParametro', [ParametroController::class, 'listFormulaByParametro']);
-});
-
-//----------------------- END RUTAS JUAN  ----------------------------------------------
-// ----------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------------------------------------
+    // ------------------------------------ END RUTAS FELIPAO ---------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------------------------------------
 
 
 
-// ----------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------
-//----------------------- START RUTAS JAIRO  ----------------------------------------------
 
 
-Route::group(["prefix" => "crm"], function ($router) {
+    // ----------------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------
+    // ----------------------- START RUTAS JAIRO  ----------------------------------------------
+
     //Partes
     Route::get('/listado', [PartesController::class, 'listado']);
     Route::get('/byParte/{parte}', [PartesController::class, 'byParte']);
@@ -1080,18 +784,281 @@ Route::group(["prefix" => "crm"], function ($router) {
     //API GEX
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
     Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
+
+    // ----------------------- END RUTAS JAIRO  ----------------------------------------------
+    // ----------------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------
+
 });
 
+Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
 
-//----------------------- END RUTAS JAIRO  ----------------------------------------------
-// ----------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------
+    // FORMULARIOS2
+
+    Route::get('/listAll', [Formulario2Controller::class, 'listAll']);
+    Route::get('/listFormByTipoCaso/{tipoCaso_id}', [Formulario2Controller::class, 'listFormByTipoCaso']);
+
+    Route::post('/addEditFormulario', [Formulario2Controller::class, 'addEditFormulario']);
+    Route::delete('/deleteFormulario/{id}', [Formulario2Controller::class, 'deleteFormulario']);
+    Route::get('/listAllSinRelacion', [Formulario2Controller::class, 'listAllSinRelacion']);
+
+    Route::get('/listCFormulario/{cForm_id}', [Formulario2Controller::class, 'listCFormulario']);
+    Route::post('/editValorRespuesta/{id}', [Formulario2Controller::class, 'editValorRespuesta']); // Editar
+    
+    Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
+    Route::get('/listFacturasPendientes/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasPendientes']); // lista de facturas
+    Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
+        
+    Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
+    Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
+    Route::get('/listFormulariosByUsuId/{usu_id}', [Formulario2UsuariosController::class, 'listFormulariosByUsuId']); // Formularios Usuarios
+    Route::get('/listRespuestasByFormId/{form_id}', [Formulario2UsuariosController::class, 'listRespuestasByFormId']); // Formularios Usuarios
+    
+    Route::get('/af_cliente_dfactura/{identificacion}', [Formulario2UsuariosController::class, 'af_cliente_dfactura']); // Formularios Usuarios
+    
+    Route::get('/listAllClientesDynamo', [Formulario2Controller::class, 'listAllClientesDynamo']); // lista de clientes para actividades caso
+    Route::get('/listClienteDynamoByIdentificacion/{identificacion}', [Formulario2Controller::class, 'listClienteDynamoByIdentificacion']); // lista de clientes para actividades caso
+});
+
+/************************  CHAT   ****************** */
+Route::group(["prefix" => "chat", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::get('/listConversaciones/{userId}', [ChatController::class, 'listConversaciones']);
+    Route::get('/listarMensajes/{converId}/{tipoConver}/{numeroPagina}', [ChatController::class, 'listarMensajes']);
+    Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']); //
+    Route::delete('/eliminarMensaje/{mensajeId}/{converId}/{tipoConver}', [ChatController::class, 'eliminarMensaje']); //
+    Route::put('/actualizarMensaje/{converId}/{tipoConver}/{accion}', [ChatController::class, 'actualizarMensaje']); //
+    Route::get('/usuariosParaChat', [ChatController::class, 'usuariosParaChat']); //
+    Route::post('/iniciarChatNormal', [ChatController::class, 'iniciarChatNormal']);
+    Route::post('/iniciarChatGrupal', [ChatController::class, 'iniciarChatGrupal']); //
+    Route::get('/getImagenesSmg', [ChatController::class, 'getImagenesSmg']); //
+    Route::get('/getMensaje/{id}', [ChatController::class, 'getMensaje']); //
+    Route::get('/listarMensajesNoLeidos', [ChatController::class, 'listarMensajesNoLeidos']);
+    Route::get('/usersGrupoChat/{converId}', [ChatController::class, 'usersGrupoChat']); //
+    Route::post('/actualizarGrupo', [ChatController::class, 'actualizarGrupo']); //
+    // ARCHIVOS E IMAGENES PARA EL CHAT
+    Route::post('/addGaleriaArchivosChat', [ChatController::class, 'addGaleriaArchivosChat']);
+    Route::get('/listarArchivosConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarArchivosConver']);
+    Route::get('/listarGaleriaConver/{converId}/{tipoChat}', [ChatArchivosController::class, 'listarGaleriaConver']);
+});
+// FORMULARIO AUTORIZACION TRATAMIENTO DE DATOS
+
+Route::group(["prefix" => "autorizaciones", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::post('/add', [FormAuthDatosCliController::class, 'add']);
+    Route::get('/getAlmacenId/{id}', [FormAuthDatosCliController::class, 'getAlmacenId']);
+    Route::get('/listAlmacenes', [FormAuthDatosCliController::class, 'listAlmacenes']);
+    Route::get('/store', [FormAuthDatosCliController::class, 'store']);
+    Route::get('/validarAutoTratDatos/{id}', [FormAuthDatosCliController::class, 'validarAutoTratDatos']);
+});
+
+Route::group(["prefix" => "crm/audi", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
+});
+
+Route::group(["prefix" => "crm/robot", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::get('/reasignarCaso/{estadoFormId}/{casoId}/{tableroActualId}/{banMostrarVistaCreditoAprobado?}', [RobotCasoController::class, 'reasignarCaso']);
+});
+
+// FORMULARIOS FELIPE
+Route::group(["prefix" => "form", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::get('/list', [FormController::class, 'list']);
+    Route::get('/storeA/{formId}', [FormController::class, 'storeA']);
+    Route::get('/storeB/{formId}/{userId}', [FormController::class, 'storeB']);
+    Route::get('/storeC/{casoId}', [FormController::class, 'storeC']);
+    Route::get('/cargarFormulario/{formId}', [FormController::class, 'cargarFormulario']);
+    Route::get('/listByDepar/{depId}/{userId}', [FormController::class, 'listByDepar']); //
+    Route::get('/formUser/{depId}/{userId}', [FormController::class, 'formUser']); //formUser
+    Route::get('/byId/{formId}', [FormController::class, 'byId']); //formUser
+    Route::get('/listAll', [FormController::class, 'listAll']); //
+    Route::get('/listAnonimos', [FormController::class, 'listAnonimos']);
+    Route::get('/impresion/{formId}/{userId}', [FormController::class, 'impresion']); //impresion
+    Route::put('/edit/{id}', [FormController::class, 'edit']); //
+    Route::post('/addFormulario', [FormController::class, 'addFormulario']); //
+    Route::get('listFormByIdTablero/{tab_id}', [FormController::class, 'listFormByIdTablero']); //
+    Route::get('/storeCasoForm/{casoId}', [FormController::class, 'storeCasoForm']);
+
+    Route::post('/guardarFormularioValores', [FormController::class, 'guardarFormularioValores']);
+    Route::get('/cargarFormularioAyuda/{casoId}', [FormController::class, 'cargarFormularioAyuda']);
+    Route::get('/getByTipoCasIdFormu/{formId}/{casoId}', [FormController::class, 'getByTipoCasIdFormu']);
+});
+
+Route::group(['prefix' => 'form/campo', 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::get('/store', [CampoController::class, 'store']);
+    Route::get('/full/{id}', [CampoController::class, 'full']);
+    Route::get('/list', [CampoController::class, 'list']);
+    Route::get('/listAll', [CampoController::class, 'listAll']);
+    Route::get('/byId/{id}', [CampoController::class, 'byId']);
+    Route::get('/deleted', [CampoController::class, 'deleted']);
+    Route::get('/restoreById/{id}', [CampoController::class, 'restoreById']);
+    Route::put('/edit/{id}', [CampoController::class, 'edit']);
+    Route::delete('/deleteById/{id}', [CampoController::class, 'deleteById']);
+    Route::post('/add', [CampoController::class, 'add']); //addCampoValor
+    //Route::post('/addCampoValor', [CampoController::class, 'addCampoValor']); //addCampoValor
+    //----------------------------------------------------------------CAMPOS COMPONENTES FORMULARIO DINAMICO
+    Route::get('/loadInitialData', [ComponentsController::class, 'loadInitialData']);
+    Route::post('/listarEntidades', [ComponentsController::class, 'listarEntidades']);
+});
+
+Route::group(['prefix' => 'form/seccion', 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::get('/store', [FormSeccionController::class, 'store']);
+    Route::post('/add', [FormSeccionController::class, 'add']);
+    Route::put('/edit/{id}', [FormSeccionController::class, 'edit']);
+});
+
+//----------------------- PARAMETROS DIRECCION ----------------------------------------------
+Route::group(['prefix' => 'parametros', 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::get('/direccion', [ParametrosController::class, 'direccion']); //
+    Route::get('/direccionParroquias/{cantonId}', [ParametrosController::class, 'direccionParroquias']); //direccionParroquias
+});
+
+Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+
+    // SOLICITUD CREDITO
+    Route::post('/editSolicitudCredito/{id}', [solicitudCreditoController::class, 'editSolicitudCredito']); // Editar
+    Route::get('/listSolicitudCreditoByEntidadId/{id}', [solicitudCreditoController::class, 'listSolicitudCreditoByEntidadId']); // Listar por entidad ID
+    Route::get('/listSolicitudCreditoByRucCedula/{cedula}', [solicitudCreditoController::class, 'listSolicitudCreditoByRucCedula']); // Listar por cedula
+    Route::get('/solicitudByIdentificacion/{cedula}/{id_user_creador}', [solicitudCreditoController::class, 'solicitudByIdentificacion2']); // Listar por cedula
+    Route::get('/listSolicitudCreditoByClienteId/{cliente_id}', [solicitudCreditoController::class, 'listSolicitudCreditoByClienteId']); // Listar por cedula
+
+    // EQUIFAX / CLIENTE ENROLAMIENTO
+
+    Route::post('/addClienteEnrolamiento', [ClienteEnrolamientoController::class, 'addClienteEnrolamiento']); // Guardar la imagen de equifax
+    Route::get('/clienteEnroladoById/{id}', [ClienteEnrolamientoController::class, 'clienteEnroladoById']); // listar datos cliente enrolado por caso_id
+    Route::post('/validarReqCasoCliente', [ClienteEnrolamientoController::class, 'validarReqCasoCliente']); // Guardar la imagen de equifax addClienteEnrolByCliente
+    Route::post('/addArchivosFirmadosEnrolamiento', [ClienteEnrolamientoController::class, 'addArchivosFirmadosEnrolamiento']); // guardar los archivos firmados
+    Route::get('/listEnrolamientosById/{cli_id}/{caso_id}', [ClienteEnrolamientoController::class, 'listEnrolamientosById']); // lista todos los enrolamientos del cliente
+
+    // CLIENTE CRM
+
+    Route::get('/listClienteCrmById/{id}', [ClienteCrmController::class, 'listClienteCrmById']); // lista
+    Route::post('/addClienteCrm', [ClienteCrmController::class, 'addClienteCrm']); // Guardar
+    Route::post('/editClienteCrm/{ent_id}', [ClienteCrmController::class, 'editClienteCrm']); // Editar
+
+    // Referencias CRM
+
+    Route::post('/addReferenciasCliente', [ReferenciasClienteController::class, 'addReferenciasCliente']); // Guardar
+    Route::post('/editReferenciasCliente/{id}', [ReferenciasClienteController::class, 'editReferenciasCliente']); // Editar
+    Route::post('/editReferenciaObservacion/{id}', [ReferenciasClienteController::class, 'editReferenciaObservacion']); // Editar
+    Route::post('/editReferenciaValida/{id}', [ReferenciasClienteController::class, 'editReferenciaValida']); // Editar
+    Route::delete('/deleteReferenciasCliente/{id}', [ReferenciasClienteController::class, 'deleteReferenciasCliente']); // Eliminar
+    Route::get('/listReferenciasByClienteId/{cli_id}', [ReferenciasClienteController::class, 'listReferenciasByClienteId']); // lista
+
+    // parentesco CRM
+
+    Route::get('/listParentesco', [ParentescoController::class, 'listParentesco']); // listar
+
+    // Tipo Telefono CRM
+
+    Route::get('/listTipoTelefono', [TipoTelefonoController::class, 'listTipoTelefono']); // listar
+
+    // Email - correo electronico
+
+    Route::post('/send_emailCambioFase/{caso_id}/{fase_id}', [EmailController::class, 'send_emailCambioFase']); // Envia un correo cuando cambia de fase
+    Route::post('/send_emailLinkEnrolamiento', [EmailController::class, 'send_emailLinkEnrolamiento']); // Envia un correo con el link del enrolamiento
+
+    Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
+    Route::post('/addEmail', [EmailController::class, 'addEmail']);
+    Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
+
+    // FILTRAR CASOS RECHAZADOS Y TERMINADOS PARA QUE VEAN TODAS LAS ANALISTAS, ASI NO HAYA PARTICIPADO EN EL CASO
+
+    Route::get('/listCasosRechazadosTerminados/{fechaInicio}/{fechaFin}/{tableroId}', [CasoController::class, 'listCasosRechazadosTerminados']);
+});
+
+//contratos gex felipe
+Route::group(["prefix" => "gex-contrato", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::get('/loadInitialData/{almId}', [ContratoGexController::class, 'loadInitialData']);
+    Route::post('/generarContratoCRM', [ContratoGexController::class, 'generarContratoCRM']);
+    Route::post('/validarSerieContrato', [ContratoGexController::class, 'validarSerieContrato']); //
+    Route::get('/listarContratosBodega/{bod_id}', [ContratoGexController::class, 'listarContratosBodega']);
+    Route::get('/listarTodosContratosBodega', [ContratoGexController::class, 'listarTodosContratosBodega']);
+    Route::delete('/eliminarContratoId/{id}', [ContratoGexController::class, 'eliminarContratoId']);
+    Route::get('/getContratoGexCrmId/{id}', [ContratoGexController::class, 'getContratoGexCrmId']);
+});
+
+Route::group(["prefix" => "gex", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+
+    // SERIES ALM
+
+    Route::delete('/borrarInventarioCompleto/{numero_inventario}', [SeriesAlmController::class, 'borrarInventarioCompleto']); // Borrar un inventario completo que no tenga despachos ni contratos
+    Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
+    Route::get('/inventariosByBod_id/{bod_id}', [SeriesAlmController::class, 'inventariosByBod_id']); // listar todas las bodegas
+    Route::delete('/borrarItemInventario/{numero_inventario}/{bod_id}/{pro_id}/{serie}/{tipo}', [SeriesAlmController::class, 'borrarItemInventario']); // Borrar un inventario completo que no tenga despachos ni contratos
+
+    Route::get('/listNotasCreditoDespachos', [SeriesAlm2Controller::class, 'listNotasCreditoDespachos']); // listar los despachos que tengan notas de credito
+    Route::post('/saldoProSeries', [SeriesAlmController::class, 'saldoProSeries']); // listar todas las bodegas
+
+    Route::get('/dataSerieEliminar/{serie}', [SeriesAlmController::class, 'dataSerieEliminar']); // listar todas las bodegas
+
+    Route::delete('/eliminarSerieContrato/{alm_id}/{numero}', [SeriesAlmController::class, 'eliminarSerieContrato']);
+    Route::delete('/eliminarSerieDespacho/{numeroDes}/{serie}/{bodId}', [SeriesAlmController::class, 'eliminarSerieDespacho']);
+    Route::delete('/eliminarSerieInventario/{numeroInv}/{serie}/{pro_id}/{tipo}/{ssBodId}', [SeriesAlmController::class, 'eliminarSerieInventario']);
+    Route::delete('/eliminarSeriePreIngreso/{numeroInv}/{serie}/{pro_id}/{tipo}/{ssBodId}', [SeriesAlmController::class, 'eliminarSeriePreIngreso']);
 
 
+    //toma de iinventario
+    Route::get('/loadInitialData/{bodId}', [StockProSerieController::class, 'loadInitialData']); // listar los despachos que tengan notas de credito
+
+    Route::get('/listSeries/{pro_id}/{bod_id}', [StockProSerieController::class, 'listSeries']);
+    Route::post('/addSeriesInv', [StockProSerieController::class, 'addSeriesInv']);
+
+    Route::get('/getReporteBodegas', [StockProSerieController::class, 'getReporteBodegas']);
+    Route::get('/getSerieDesCliente/{serie}/{bodId}', [StockProSerieController::class, 'getSerieDesCliente']);
+    Route::get('/getSerie/{serie}', [StockProSerieController::class, 'getSerie']);
+    Route::get('/despacharSerie/{serie}/{bodId}', [StockProSerieController::class, 'despacharSerie']);
+    Route::get('/reportePorBodegaId/{bodId}', [StockProSerieController::class, 'reportePorBodegaId']);
+    Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
+});
+
+Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+
+    // CONFIGURACION
+
+    Route::get('/listAllArchivos2', [Archivos2Controller::class, 'listAllArchivos2']);
+    Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
+    Route::delete('/deleteArchivos2/{id}', [Archivos2Controller::class, 'deleteArchivos2']);
+
+    // NOTAS
+
+    Route::post('/addNotes', [NotesController::class, 'addNotes']); // guardar
+    Route::get('/listNotes', [NotesController::class, 'listNotes']); // listar
+    Route::post('/editNotes/{id}', [NotesController::class, 'editNotes']); // Editar
+    Route::delete('/deleteNotes/{id}', [NotesController::class, 'deleteNotes']); // Eliminar
+
+    // CORREOS
+
+    Route::post('/addCorreo', [CorreoController::class, 'addCorreo']); // guardar
+    Route::get('/listCorreos', [CorreoController::class, 'listCorreos']); // listar
+    Route::post('/editCorreo/{id}', [CorreoController::class, 'editCorreo']); // Editar
+    Route::delete('/deleteCorreo/{id}', [CorreoController::class, 'deleteCorreo']); // Eliminar
+
+    // AGENCIA
+
+    Route::get('/listAgenciasActivas', [AgenciaController::class, 'listAgenciasActivas']); // listar
+    Route::get('/listAllAgencias', [AgenciaController::class, 'listAllAgencias']); // listar
+    Route::post('/addAgencia', [AgenciaController::class, 'addAgencia']); // guardar
+    Route::post('/editAgencia/{id}', [AgenciaController::class, 'editAgencia']); // Editar
+    Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
+    Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
+});
+
+Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+
+    // openceo
+
+    Route::get('/buscarEntidadEmpleado/{identificacion}', [EntidadDynamoController::class, 'buscarEntidadEmpleado']);
+    Route::get('/listAlmacenesPuntoVenta', [EntidadDynamoController::class, 'listAlmacenesPuntoVenta']);
+    Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
+    Route::get('/listBodegas', [BodegaController::class, 'listBodegas']);
+
+});
+
+Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+    Route::get('/listFormulaByParametro', [ParametroController::class, 'listFormulaByParametro']);
+});
 
 // PERFILES, MENU, ACCESOS
 
-Route::group(['prefix' => 'profile'], function () {
+Route::group(['prefix' => 'profile', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
     Route::get('all', [ProfileController::class, 'all']);
     Route::get('list', [ProfileController::class, 'list']);
     Route::get('list/{id}', [ProfileController::class, 'findById']);
@@ -1102,17 +1069,17 @@ Route::group(['prefix' => 'profile'], function () {
     Route::get('buscarAccesosByProfileId/{id}', [ProfileController::class, 'buscarAccesosByProfileId']);
 });
 
-Route::group(['prefix' => 'access'], function () {
+Route::group(['prefix' => 'access', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
     Route::get('program/{profile}/{program}', [ProfileController::class, 'findByProgram']);
     Route::get('menu/{userid}', [ProfileController::class, 'findByUser']);
 });
 
-Route::group(['prefix' => 'company'], function () {
+Route::group(['prefix' => 'company', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
     Route::get('lista/{id}', [CompanyController::class, 'findById']);
     Route::put('editar/{id}', [CompanyController::class, 'edit']);
 });
 
-Route::group(['prefix' => 'menu'], function () {
+Route::group(['prefix' => 'menu', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
     Route::get('list', [MenuController::class, 'list']);
     Route::get('list/{id}', [MenuController::class, 'findById']);
 
@@ -1122,8 +1089,31 @@ Route::group(['prefix' => 'menu'], function () {
 });
 
 
+// ------------------------------ END RUTAS PROTEGIDAS ------------------------------------------------------
+// ------------------------------ END RUTAS PROTEGIDAS ------------------------------------------------------
+// ------------------------------ END RUTAS PROTEGIDAS ------------------------------------------------------
 
-// ---------- SISTEMAS HERNAN NOVASOFT----------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ---------- SISTEMA NOVASOFT----------
+// ---------- SISTEMA NOVASOFT----------
+// ---------- SISTEMA NOVASOFT----------
 
 Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/n8tt-aa1v-7g0a-m2ig-b7fq-c3ar-r1nc', [MigracionController::class, 'aav_migracion_cartera']);

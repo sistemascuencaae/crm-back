@@ -48,6 +48,7 @@ class CasoController extends Controller
             'except' =>
                 [
                     'add',
+                    'addCaso2',
                     //'addCasoOPMICreativa'
                     'getCasoFormulario',
                 ]
