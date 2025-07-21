@@ -7,6 +7,7 @@ use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
+use App\Http\Controllers\configuracion\HorarioController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\AlmacenController;
 use App\Http\Controllers\crm\auditoria\ClienteAditoriaController;
@@ -181,6 +182,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+
     // GALERIA
 
     Route::post('/addGaleria/{caso_id}', [GaleriaController::class, 'addGaleria']); // Guardar la imagen
@@ -1039,6 +1041,19 @@ Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario
     Route::post('/editAgencia/{id}', [AgenciaController::class, 'editAgencia']); // Editar
     Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
     Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
+    
+    // HORARIOS
+    
+    Route::get('/listAllHorarios', [HorarioController::class, 'listAllHorarios']);
+    Route::get('/listDhorarioById/{id}', [HorarioController::class, 'listDhorarioById']);
+    Route::post('/addCDHorario', [HorarioController::class, 'addCDHorario']);
+    Route::post('/editCDHorario/{id}', [HorarioController::class, 'editCDHorario']);
+    Route::delete('/deleteCDHorario/{id}', [HorarioController::class, 'deleteCDHorario']);
+
+    Route::get('/listHorariosActivos', [HorarioController::class, 'listHorariosActivos']);
+    Route::get('/getHorarioUsuario/{user_id}', [HorarioController::class, 'getHorarioUsuario']);
+    Route::post('/editUserHorario', [HorarioController::class, 'editUserHorario']);
+
 });
 
 Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
