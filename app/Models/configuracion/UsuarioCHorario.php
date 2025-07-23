@@ -28,4 +28,8 @@ class UsuarioCHorario extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
+    public function chorario()
+    {
+        return $this->belongsTo(CHorario::class, "chorario_id","id");
+    }
 }

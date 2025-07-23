@@ -7,6 +7,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\configuracion\CHorario;
 use App\Models\configuracion\DHorario;
 use App\Models\configuracion\UsuarioCHorario;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Exception;
@@ -208,31 +209,40 @@ class HorarioController extends Controller
     }
 
     public function editUserHorario(Request $request)
-{
-    try {
-        return DB::transaction(function () use ($request) {
-            $usu_existe = UsuarioCHorario::where('user_id', $request->user_id)
-                ->first();
+    {
+        try {
+            return DB::transaction(function () use ($request) {
+                $usu_existe = UsuarioCHorario::where('user_id', $request->user_id)
+                    ->first();
 
-            if ($usu_existe) {
-                $usu_existe->update([
-                    'chorario_id' => $request->chorario_id,
-                ]);
+                if ($usu_existe) {
+                    $usu_existe->update([
+                        'chorario_id' => $request->chorario_id,
+                    ]);
 
-                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $usu_existe));
-            } else {
-                $nuevo = UsuarioCHorario::create([
-                    'user_id' => $request->user_id,
-                    'chorario_id' => $request->chorario_id,
-                ]);
+                    $data = User::where('id', $request->user_id)
+                    ->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')
+                    ->first();
 
-                return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $nuevo));
-            }
-        });
-    } catch (Exception $e) {
-        return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
+                    return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+                } else {
+                    $nuevo = UsuarioCHorario::create([
+                        'user_id' => $request->user_id,
+                        'chorario_id' => $request->chorario_id,
+                    ]);
+
+                    $data = User::where('id', $request->user_id)
+                    ->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')
+                    ->first();
+
+                    return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
+                }
+
+            });
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
+        }
     }
-}
 
 
 }

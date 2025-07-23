@@ -65,7 +65,7 @@ class UserController extends Controller
     public function allUsers()
     {
         try {
-            $usuarios = User::orderBy("id", "asc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia')->get();
+            $usuarios = User::orderBy("id", "asc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuarios));
         } catch (Exception $e) {
@@ -140,8 +140,7 @@ class UserController extends Controller
                 $newUserData->save();
             }
 
-
-            $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia')->get();
+            $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $usuarios));
         } catch (Exception $e) {
@@ -193,11 +192,9 @@ class UserController extends Controller
                 $usuario->save();
             }
 
-            $data = User::where('id', $usuario->id)->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia')->first();
-
-
-
-
+            $data = User::where('id', $usuario->id)
+                        ->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')
+                        ->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
         } catch (Exception $e) {
