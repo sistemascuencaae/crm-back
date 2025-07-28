@@ -61,6 +61,7 @@ use App\Http\Controllers\crm\UltimoIdController;
 use App\Http\Controllers\directorio\DirectorioController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
+use App\Http\Controllers\gestiones\GestionController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
 use App\Http\Controllers\openceo\BodegaController;
 use App\Http\Controllers\openceo\EntidadDynamoController;
@@ -182,6 +183,9 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+
+    // GESTIONES
+    Route::get('/listGestionByIdentificacion/{factura}', [GestionController::class, 'listGestionByIdentificacion']);
 
     // GALERIA
 
