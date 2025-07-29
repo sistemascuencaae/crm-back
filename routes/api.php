@@ -186,6 +186,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']]
 
     // GESTIONES
     Route::get('/listGestionByIdentificacion/{factura}', [GestionController::class, 'listGestionByIdentificacion']);
+    Route::get('/listGestionesByIdAgencia', [GestionController::class, 'listGestionesByIdAgencia']);
+    Route::post('/addGestion', [GestionController::class, 'addGestion']);
+    Route::get('/listAllGestiones', [GestionController::class, 'listAllGestiones']);
 
     // GALERIA
 

@@ -1,21 +1,18 @@
 <?php
 
-namespace App\Models\crm\formularios2;
+namespace App\Models\gestiones;
 
+use App\Models\crm\Caso;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class DForm extends Model
+class GestionCaso extends Model
 {
-    use HasFactory;
+    protected $table = 'crm.gestion_caso';
 
-    protected $table = 'crm.dform';
     protected $fillable = [
-        "cform_id",
-        "field_id",
-        "value",
-        "seccion_id",
+        'gestion_id',
+        'caso_id',
     ];
 
     public function setCreatedAtAttribute($value)
@@ -28,9 +25,9 @@ class DForm extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-    
-    public function field(){
-    return $this->belongsTo(Field::class, 'field_id');
-}
+
+    public function caso(){
+        return $this->belongsTo(Caso::class, 'caso_id');
+    }
 
 }

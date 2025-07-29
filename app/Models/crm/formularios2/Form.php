@@ -42,4 +42,8 @@ class Form extends Model
     {
         return $this->hasMany(FormUser::class, "form_id", "id");
     }
+
+    public function field(){
+        return $this->hasMany(Field::class, 'form_id');
+    }
 }
