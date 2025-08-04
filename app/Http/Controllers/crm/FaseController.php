@@ -274,7 +274,6 @@ class FaseController extends Controller
 
                     $stringAlmIdAgencias = collect($permisosAgencias)->pluck('alm_id')->toArray();
 
-
                     $query->whereBetween('fecha_inicio', [Carbon::parse($fechaInicio)->startOfDay(), Carbon::parse($fechaFin)->endOfDay()]);
                     
                     // Filtro por permisos/agencias
@@ -282,8 +281,21 @@ class FaseController extends Controller
                         $query->whereIn('codigo_agencia', $stringAlmIdAgencias);
                     }
 
-                    // listado para usuarios comunes (usu_tipo = 4)
-                    if ($tipoTablero === 'KANBAN') {
+                    // listado para usuarios SUPER USUARIO (usu_tipo = 3)
+                    if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 3) {
+                        // // JGSJ Solo incluir todos los casos de la diferentes categoria_caso
+                        // $query->whereHas('tipocaso', function ($q) {
+                        //     $q->where('categoria_caso', 1)->orWhere('categoria_caso', 2)->orWhere('categoria_caso', 3);
+                        // });
+                        // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
+                        $query->whereDoesntHave('estadodos', function ($subquery) {
+                            $subquery->where('nombre', 'TERMINADO');
+                        });
+                    }
+
+
+                    // listado para usuarios USUARIO COMUN (usu_tipo = 4)
+                    if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 4) {
                         // JGSJ Solo incluir casos con categoria_caso = 1
                         $query->whereHas('tipocaso', function ($q) {
                             $q->where('categoria_caso', 1);
@@ -293,27 +305,20 @@ class FaseController extends Controller
                             $subquery->where('nombre', 'TERMINADO');
                         });
                     }
-                    // // listado para usuarios comunes (usu_tipo = 4)
-                    // if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 4) {
-                    //     // JGSJ Solo incluir casos con categoria_caso = 1
-                    //     $query->whereHas('tipocaso', function ($q) {
-                    //         $q->where('categoria_caso', 1);
-                    //     });
-                    //     // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
-                    //     $query->whereDoesntHave('estadodos', function ($subquery) {
-                    //         $subquery->where('nombre', 'TERMINADO');
-                    //     });
-                    // }
 
 
 
-                    // // listado para administradores (USU_TIPO = 2)
-                    // if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 2) {
-                    //     // JGSJ incluir casos con categoria_caso = 1
-                    //     $query->whereHas('tipocaso', function ($q) {
-                    //         $q->where('categoria_caso', 1);
-                    //     });
-                    // }
+                    // listado para usaurios USUARIO ADMINISTRADOR (USU_TIPO = 2)
+                    if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 2) {
+                        // JGSJ Solo incluir casos con categoria_caso = 1
+                        $query->whereHas('tipocaso', function ($q) {
+                            $q->where('categoria_caso', 1);
+                        });
+                        // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
+                        $query->whereDoesntHave('estadodos', function ($subquery) {
+                            $subquery->where('nombre', 'TERMINADO');
+                        });
+                    }
                 },
             ])
             ->where('tab_id', $tabId);

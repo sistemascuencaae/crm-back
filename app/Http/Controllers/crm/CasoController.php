@@ -48,6 +48,7 @@ class CasoController extends Controller
             'except' =>
                 [
                     'add',
+                    'addCaso2',
                     //'addCasoOPMICreativa'
                     'getCasoFormulario',
                 ]
@@ -2251,6 +2252,30 @@ class CasoController extends Controller
         $log = new Funciones();
 
         $casoInput = $request->all();
+
+        // ESTO SE EJECUTA CUANDO DEL FRONT VIENE EN NULL, ES PORQUE NO TIENE PERMISOS DE ACCESS.CREATE EN EL TABLERO KANBAN
+        if ($casoInput['fecha_inicio'] === null && $casoInput['fecha_vencimiento'] === null) {
+        
+            $fechaActual = now();
+            $casoInput['fecha_inicio'] = $fechaActual;
+        
+            $tipo_caso = TipoCaso::find($casoInput['tc_id']);
+        
+            if ($tipo_caso && $tipo_caso->tiempo_vencimiento) {
+                // Separar la hora, minutos y segundos
+                list($horas, $minutos, $segundos) = explode(':', $tipo_caso->tiempo_vencimiento);
+            
+                // Clonar la fecha actual y sumarle el tiempo
+                $fechaVencimiento = $fechaActual
+                    ->copy()
+                    ->addHours((int)$horas)
+                    ->addMinutes((int)$minutos)
+                    ->addSeconds((int)$segundos);
+            
+                $casoInput['fecha_vencimiento'] = $fechaVencimiento;
+            }
+        }
+
         // $miembros = $request->input('miembros');
         $miembros2 = $request->input('miembros');
         //datos formulario estatico creacion de usuario
@@ -2263,15 +2288,18 @@ class CasoController extends Controller
             $miembros = $miembros2;
         }
         //try {
+
         $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request, $dataFormStatic) {
 
             $caso = new Caso($casoInput);
             $caso->save();
+            
             if ($dataFormStatic) {
                 $this->crearFormularioStatico($dataFormStatic, $caso->id);
             }
 
             $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
+            
             //--------------------
             $caso->estado_2 = $estadoInicial->id;
             $caso->nombre = 'CASO # ' . $caso->id;
@@ -2284,9 +2312,8 @@ class CasoController extends Controller
                 $caso->ent_id = 999; // ID del cliente default de dynamo
             }
 
-            if ($caso->desc_json) {
-            }
             $caso->save();
+            
             for ($i = 0; $i < sizeof($miembros); $i++) {
                 $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
                 if (!$mieExixte) {
@@ -2295,11 +2322,11 @@ class CasoController extends Controller
                     $caso->miembros()->save($miembro);
                 }
             }
+
             $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
 
             $soporteController = new SoporteController();
             $soporteController->addGaleriaArchivos($request, $caso->id);
-
 
             $ccm_id_input = $request->input('ccm_id');
             if ($ccm_id_input) {
@@ -2311,10 +2338,12 @@ class CasoController extends Controller
 
             return $this->getCaso($caso->id);
         });
+
         $dataFormSopo = $request->input('valoresFormulario');
         if ($dataFormSopo) {
             $this->formularioSoporte($request, $casoCreado['id']);
         }
+
         // START Bloque de código que genera un registro de auditoría manualmente
         $audit = new Audits();
         $audit->user_id = Auth::id();
@@ -2337,9 +2366,13 @@ class CasoController extends Controller
 
         // le mando uno porque es la primera vez q se crea el caso
         $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+        
         $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
+        
         $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
+        
         broadcast(new TableroEvent($casoCreado));
+        
         return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
     }
 

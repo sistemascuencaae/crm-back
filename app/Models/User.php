@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\configuracion\Agencia;
+use App\Models\configuracion\UsuarioCHorario;
 use App\Models\crm\Almacen;
 use App\Models\crm\PerfilAnalistas;
 use App\Models\crm\Tablero;
@@ -149,4 +150,8 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Agencia::class, "alm_id", "codigo");
     }
 
+    public function horario()
+    {
+        return $this->belongsTo(UsuarioCHorario::class, "id","user_id");
+    }
 }

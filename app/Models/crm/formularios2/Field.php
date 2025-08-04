@@ -26,7 +26,8 @@ class Field extends Model
         "group",
         "margin_top",
         "margin_bottom",
-        "visible"
+        "visible",
+        "editable",
     ];
 
     public function setCreatedAtAttribute($value)

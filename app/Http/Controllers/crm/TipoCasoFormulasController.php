@@ -179,6 +179,7 @@ class TipoCasoFormulasController extends Controller
 
     public function listFormulariosExternos(){
         try {
+            // $data = DB::SELECT("SELECT c3.name, 'http://192.168.1.142:4201/formularioExterno/' ||c3.id as url from crm.tipo_caso_formulas c
             $data = DB::SELECT("SELECT c3.name, 'http://crm.almacenesespana.ec/formularioExterno/' ||c3.id as url from crm.tipo_caso_formulas c
                                 join crm.tipo_caso c2 on c.tc_id = c2.id
                                 join crm.form c3 on c3.id = c2.form_id

@@ -36,4 +36,8 @@ class CForm extends Model
         return $this->belongsTo(Form::class, "form_id", "id");
     }
 
+    public function form2()
+    {
+        return $this->belongsTo(Form::class, "form_id");
+    }
 }
