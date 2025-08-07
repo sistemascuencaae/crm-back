@@ -395,7 +395,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']]
     Route::get('/listByDepartamento/{id}', [NotificacionesController::class, 'listByDepartamento']);
     Route::post('/editLeidoNotificacion/{id}', [NotificacionesController::class, 'editLeidoNotificacion']);
     Route::post('/editLeidoAllNotificaciones/{id}', [NotificacionesController::class, 'editLeidoAllNotificaciones']);
-
+    Route::get('/listNotificacionesCasoByUser_id', [NotificacionesController::class, 'listNotificacionesCasoByUser_id']);
+    
     // REQUERIMIENTOS
 
     Route::get('listRequerimientosByFaseId/{fase_id}', [RequerimientoController::class, 'listRequerimientosByFaseId']); // by caso_id
