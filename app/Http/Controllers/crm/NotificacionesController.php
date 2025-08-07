@@ -31,6 +31,7 @@ class NotificacionesController extends Controller
         }
     }
 
+    // Este metodo ya no se ocupa porque se cambio este listNotificacionesCasoByUser_id
     // public function listByDepartamento($dep_id)
     // {
     //     $log = new Funciones();
@@ -49,13 +50,6 @@ class NotificacionesController extends Controller
     //     }
     // }
 
-    
-    
-    
-    
-    
-    
-    
     // hay que cambiar esto de las notificaciones a por user_id
     public function allByDepartamento($dep_id)
     {
@@ -72,6 +66,24 @@ class NotificacionesController extends Controller
 
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         // }
+
+        try {
+           // JGSJ usuario desde el backEnd
+            $user = Auth::user();
+
+            $notificacion = Notificaciones::with('caso.req_caso', 'caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen',
+                                                    'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria',
+                                                    'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'tablero', 'user_destino')
+                                            ->whereHas('caso.miembros', function ($query) use ($user) {
+                                                $query->where('user_id', $user->id);
+                                            })
+                                            ->orderBy('id', 'DESC')
+                                            ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notificacion));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
     }
 
     public function editLeidoNotificacion(Request $request, $notificacion_id)
@@ -132,22 +144,6 @@ class NotificacionesController extends Controller
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     public function listNotificacionesCasoByUser_id()
     {
         try {
@@ -169,23 +165,5 @@ class NotificacionesController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }
