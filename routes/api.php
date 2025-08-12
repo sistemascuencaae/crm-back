@@ -951,6 +951,7 @@ Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::post('/editReferenciaValida/{id}', [ReferenciasClienteController::class, 'editReferenciaValida']); // Editar
     Route::delete('/deleteReferenciasCliente/{id}', [ReferenciasClienteController::class, 'deleteReferenciasCliente']); // Eliminar
     Route::get('/listReferenciasByClienteId/{cli_id}', [ReferenciasClienteController::class, 'listReferenciasByClienteId']); // lista
+    Route::get('/listReferenciasByIdentificacion/{identificacion}', [ReferenciasClienteController::class, 'listReferenciasByIdentificacion']); // lista
 
     // parentesco CRM
 
