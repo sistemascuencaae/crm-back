@@ -73,7 +73,7 @@ class NotificacionesController extends Controller
 
             $notificacion = Notificaciones::with('caso.req_caso', 'caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen',
                                                     'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria',
-                                                    'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'tablero', 'user_destino')
+                                                    'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'caso.agencia', 'tablero', 'user_destino')
                                             ->whereHas('caso.miembros', function ($query) use ($user) {
                                                 $query->where('user_id', $user->id);
                                             })
@@ -101,7 +101,7 @@ class NotificacionesController extends Controller
                 ]);
 
                 return Notificaciones::where('id', $notificacion->id)
-                    ->with('caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'tablero', 'user_destino')
+                    ->with('caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'caso.agencia', 'tablero', 'user_destino')
                     ->orderBy('id', 'DESC')->first();
             });
 
@@ -126,7 +126,7 @@ class NotificacionesController extends Controller
                     "leido" => $leido,
                 ]);
 
-                $notificacionesActualizadas = Notificaciones::with('caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'tablero', 'user_destino')
+                $notificacionesActualizadas = Notificaciones::with('caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'caso.agencia', 'tablero', 'user_destino')
                     ->where('dep_id', $dep_id)
                     ->orderBy('id', 'DESC')
                     ->get();
@@ -152,7 +152,7 @@ class NotificacionesController extends Controller
 
             $notificacion = Notificaciones::with('caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen',
                                                     'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria',
-                                                    'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'tablero', 'user_destino')
+                                                    'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'caso.agencia', 'tablero', 'user_destino')
                                             ->whereHas('caso.miembros', function ($query) use ($user) {
                                                 $query->where('user_id', $user->id);
                                             })

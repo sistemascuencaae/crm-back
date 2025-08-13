@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\configuracion\Agencia;
 use App\Models\crm\CTipoTarea;
 use App\Models\crm\Fase;
 use App\Models\crm\formularios2\CForm;
@@ -203,19 +204,14 @@ class Caso extends Model
         return $this->hasMany(Tareas2::class, "caso_id");
     }
 
+    // sacar las respuestas del formulario
+    public function cform() {
+        return $this->belongsTo(CForm::class, 'form_id2');
+    }
 
-
-
-
-
-// sacar las respuestas del formulario
-public function cform() {
-    return $this->belongsTo(CForm::class, 'form_id2');
-}
-
-
-
-
-
+    public function agencia()
+    {
+        return $this->belongsTo(Agencia::class, "codigo_agencia", "id");
+    }
 
 }
