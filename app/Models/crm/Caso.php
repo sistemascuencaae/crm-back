@@ -211,7 +211,7 @@ class Caso extends Model
 
     public function agencia()
     {
-        return $this->belongsTo(Agencia::class, "codigo_agencia", "id");
+        return $this->belongsTo(Agencia::class, "codigo_agencia", "codigo");
     }
 
 }
