@@ -395,7 +395,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']]
     Route::get('/listByDepartamento/{id}', [NotificacionesController::class, 'listByDepartamento']);
     Route::post('/editLeidoNotificacion/{id}', [NotificacionesController::class, 'editLeidoNotificacion']);
     Route::post('/editLeidoAllNotificaciones/{id}', [NotificacionesController::class, 'editLeidoAllNotificaciones']);
-
+    Route::get('/listNotificacionesCasoByUser_id', [NotificacionesController::class, 'listNotificacionesCasoByUser_id']);
+    
     // REQUERIMIENTOS
 
     Route::get('listRequerimientosByFaseId/{fase_id}', [RequerimientoController::class, 'listRequerimientosByFaseId']); // by caso_id
@@ -950,6 +951,7 @@ Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::post('/editReferenciaValida/{id}', [ReferenciasClienteController::class, 'editReferenciaValida']); // Editar
     Route::delete('/deleteReferenciasCliente/{id}', [ReferenciasClienteController::class, 'deleteReferenciasCliente']); // Eliminar
     Route::get('/listReferenciasByClienteId/{cli_id}', [ReferenciasClienteController::class, 'listReferenciasByClienteId']); // lista
+    Route::get('/listReferenciasByIdentificacion/{identificacion}', [ReferenciasClienteController::class, 'listReferenciasByIdentificacion']); // lista
 
     // parentesco CRM
 

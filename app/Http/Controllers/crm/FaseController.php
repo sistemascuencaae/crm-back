@@ -214,6 +214,7 @@ class FaseController extends Controller
             },
             'condicionFaseMover',
             'caso.tipocaso',
+            'caso.agencia',
             //'caso.estadodos',
             'caso.estadodos' => function ($query) use ($tipoTablero) {
                 if ($tipoTablero == 'KANBAN') {
@@ -260,6 +261,7 @@ class FaseController extends Controller
                 'caso.estadodos',
                 'caso.tipocaso',
                 'caso.tiempo_caso',
+                'caso.agencia',
                 'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user, $userLogin) {
                     // $query->whereBetween('fecha_vencimiento', [
                     //     Carbon::parse($fechaInicio)->startOfDay(),
@@ -287,10 +289,10 @@ class FaseController extends Controller
                         // $query->whereHas('tipocaso', function ($q) {
                         //     $q->where('categoria_caso', 1)->orWhere('categoria_caso', 2)->orWhere('categoria_caso', 3);
                         // });
-                        // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
-                        $query->whereDoesntHave('estadodos', function ($subquery) {
-                            $subquery->where('nombre', 'TERMINADO');
-                        });
+                        // // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
+                        // $query->whereDoesntHave('estadodos', function ($subquery) {
+                        //     $subquery->where('nombre', 'TERMINADO');
+                        // });
                     }
 
 
@@ -350,6 +352,7 @@ class FaseController extends Controller
                     'caso.estadodos',
                     'caso.tipocaso',
                     'caso.tiempo_caso',
+                    'caso.agencia',
                     'caso' => function ($query) use ($request) {
                         // $query->whereBetween('fecha_vencimiento', [
                         //     Carbon::parse($request->fechaInicio)->startOfDay(),

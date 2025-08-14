@@ -31,7 +31,7 @@ class JWTController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|min:2|max:100',
             'email' => 'required|string|email|max:100|unique:users',
-            'password' => 'required|string|confirmed|min:6',
+            'password' => 'required|string|confirmed|min:4',
         ]);
 
         if ($validator->fails()) {
@@ -59,7 +59,7 @@ class JWTController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'usu_alias' => 'required|string|min:4',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:4',
         ]);
 
         if ($validator->fails()) {

@@ -258,4 +258,24 @@ class ReferenciasClienteController extends Controller
         }
     }
 
+
+    // referencias del cliente en el TAB REFERENCIAS
+    public function listReferenciasByIdentificacion($identificacion)
+    {
+        try {
+            $respuesta = DB::SELECT("SELECT
+		                                        refane.refane_nombre as nombre_completo,
+                                                refane.refane_numero_telefono as telefono1,
+		                                        refane.refane_descripcion as relacion,
+                                                refane.refane_direccion as direccion
+                                                from public.entidad ent
+                                                inner join public.referencias_anexo refane on refane.ent_id = ent.ent_id
+                                                where ent.ent_identificacion = ?",[$identificacion]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
 }
