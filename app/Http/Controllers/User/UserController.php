@@ -29,12 +29,35 @@ class UserController extends Controller
 
     public function listAnalistas($tableroId)
     {
-        //$data = User::with('UsuarioDynamo')->where('usu_tipo_analista', 1)->get();
-        $data = DB::select("SELECT u.*, (u.usu_alias || ' - ' || u.surname || ' ' || u.name || ' - ' || dep.dep_nombre) as user_dep from crm.tablero ta
-        inner join crm.tablero_user tu on tu.tab_id = ta.id
-        inner join crm.users u on u.id  = tu.user_id
-        inner join crm.departamento dep on dep.id = u.dep_id
-        where ta.id = " . $tableroId);
+        // $data = DB::select("SELECT u.*, (u.usu_alias || ' - ' || u.surname || ' ' || u.name || ' - ' || dep.dep_nombre) as user_dep from crm.tablero ta
+        //                                 inner join crm.tablero_user tu on tu.tab_id = ta.id
+        //                                 inner join crm.users u on u.id  = tu.user_id
+        //                                 inner join crm.departamento dep on dep.id = u.dep_id
+        //                             where ta.id = " . $tableroId);
+
+       $data = DB::select("SELECT 
+                                        u.*,
+                                        (u.usu_alias || ' - ' || u.surname || ' ' || u.name || ' - ' || dep.dep_nombre) AS user_dep,
+                                        COALESCE(array_to_json(array_agg(ua.alm_id)), '[]'::json) AS agencias_ids
+                                    FROM crm.tablero ta
+                                        INNER JOIN crm.tablero_user tu ON tu.tab_id = ta.id
+                                        INNER JOIN crm.users u ON u.id = tu.user_id
+                                        INNER JOIN crm.departamento dep ON dep.id = u.dep_id
+                                        LEFT JOIN crm.usuario_almacen ua ON ua.user_id = u.id
+                                    WHERE ta.id = ?
+                                    GROUP BY u.id, u.usu_alias, u.surname, u.name, dep.dep_nombre;", [$tableroId]);
+
+foreach ($data as &$item) {
+    // Convertir el string JSON a array
+    $item->agencias_ids = json_decode($item->agencias_ids, true);
+
+    // Si viene [null] o null, convertirlo en array vacío
+    if (!$item->agencias_ids || $item->agencias_ids === [null]) {
+        $item->agencias_ids = [];
+    }
+}
+
+
         return response()->json(RespuestaApi::returnResultado('success', 'Lista de usuarios analistas', $data));
     }
 
