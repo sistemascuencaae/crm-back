@@ -3,6 +3,7 @@
 use App\Http\Controllers\comercializacion\CliReiterativoController;
 use App\Http\Controllers\comercializacion\ComercializacionController;
 use App\Http\Controllers\openceo\TipoProductoController;
+use App\Http\Controllers\openceo\UserDynamoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OpenceoController;
@@ -55,5 +56,12 @@ Route::group([
     Route::get('/getClienteReiterativoByIdentificacion/{identificacion}', [CliReiterativoController::class, 'getClienteReiterativoByIdentificacion']);
     Route::get('/getInfoCuotasByComprobante/{comprobante}', [CliReiterativoController::class, 'getInfoCuotasByComprobante']);
     Route::get('/getInfoCobrosByComprobante/{comprobante}/{cuota}', [CliReiterativoController::class, 'getInfoCobrosByComprobante']);
+    
+    
+    
+    // USUARIOS OPENCEO
+    Route::get('/listAllUsuariosActivos', [UserDynamoController::class, 'listAllUsuariosActivos']);
+    Route::get('/listAlmacenesActivos', [UserDynamoController::class, 'listAlmacenesActivos']);
+    Route::post('/editUsuarioPuntoVenta', [UserDynamoController::class, 'editUsuarioPuntoVenta']);
 
 });
