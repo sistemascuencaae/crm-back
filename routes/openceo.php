@@ -73,4 +73,8 @@ Route::group([
     Route::get('/listBodegasDynamo', [BodegaController::class, 'listBodegasDynamo']);
     Route::get('/listUsuariosByBodIdDynamo/{bod_id}', [BodegaController::class, 'listUsuariosByBodIdDynamo']);
     Route::post('/editUsuBodegas', [BodegaController::class, 'editUsuBodegas']);
+    
+    Route::get('/listUsuariosBodegasDynamo', [BodegaController::class, 'listUsuariosBodegasDynamo']);
+    Route::get('/listBodegasByUsuIdDynamo/{usu_id}', [BodegaController::class, 'listBodegasByUsuIdDynamo']);
+    Route::post('/editBodUsuario', [BodegaController::class, 'editBodUsuario']);
 });

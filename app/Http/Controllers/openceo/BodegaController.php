@@ -23,17 +23,6 @@ class BodegaController extends Controller
         }
     }
 
-    public function listBodegasUsuarios()
-    {
-        try {
-            $data = Bodega::with('usuarios')->get();
-            
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-        }
-    }
-
     public function listAllUsuActivos(){
         try {
             $data = Usuario::where('usu_activo', true)->get();
@@ -45,11 +34,8 @@ class BodegaController extends Controller
     }
 
 
+    // Por Bodegas *************************************************************************************
 
-
-
-
-// PRUEBAS *************************************************************************************
     public function listBodegasDynamo()
     {
         try {
@@ -99,6 +85,57 @@ class BodegaController extends Controller
         }
     }
 
+    // Por Usuarios *************************************************************************************
 
+    public function listUsuariosBodegasDynamo()
+    {
+        try {
+            $data = Usuario::with('bodegas')->get();
+            
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 
+    public function listBodegasByUsuIdDynamo($usu_id)
+    {
+        try {
+            $data = DB::select("SELECT d.usu_id, b.bod_id, b.bod_nombre 
+                                        FROM daccesobod d 
+                                        JOIN bodega b ON b.bod_id = d.bod_id 
+                                        WHERE d.usu_id = ?;", [$usu_id]);
+            
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function editBodUsuario(Request $request)
+    {
+        try {
+            DB::transaction(function () use ($request) {
+
+                // Elimina los registros anteriores
+                DB::table('daccesobod')->where('usu_id', $request->usu_id)->delete();
+
+                // Inserta los nuevos
+                $bodegas = $request->input('bodegas', []);
+
+                foreach ($bodegas as $item) {
+                    DB::table('daccesobod')->insert([
+                        'usu_id' => $request->usu_id,
+                        'bod_id' => $item['bod_id'],
+                        'locked' => false,
+                    ]);
+                }
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito.', ''));
+
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
+        }
+    }
 }
