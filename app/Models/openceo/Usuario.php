@@ -37,4 +37,17 @@ class Usuario extends Model
         "usu_num_gestiones",
         "usu_tipo_analista",
     ];
+
+    protected $hidden = ['pivot'];
+
+    public function bodegas()
+    {
+        return $this->belongsToMany(
+            Bodega::class,        // Modelo relacionado
+            'daccesobod',         // Tabla intermedia
+            'usu_id',             // Clave foránea de Usuario en tabla intermedia
+            'bod_id'              // Clave foránea de Bodega en tabla intermedia
+        );
+    }
+
 }
