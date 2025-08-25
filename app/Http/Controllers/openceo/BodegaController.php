@@ -25,7 +25,7 @@ class BodegaController extends Controller
 
     public function listAllUsuActivos(){
         try {
-            $data = Usuario::where('usu_activo', true)->get();
+            $data = Usuario::where('usu_activo', true)->orderBy('usu_nombre', 'asc')->get();
             
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (Exception $e) {
