@@ -89,9 +89,9 @@ class ContratoGexController extends Controller
                         cg.num_meses as meses_gex,
                         cast(c.cfa_fecha + 366 * interval'1 day' as date) as fecha_desde,
                         cast((c.cfa_fecha + 366 * interval'1 day') + cg.num_meses * interval'1 month' as date) as fecha_hasta,
-                        (select pc.km_garantia from gex.producto_config pc where pc.pro_id = pr.pro_id) as km_garantia,
+                        (select pc.km_garantia from gex.producto_config pc where pc.pro_id = pr.pro_id limit 1) as km_garantia,
                         (2) as km_factor,
-                        (select pc.tipo_servicio from gex.producto_config pc where pc.pro_id = pr.pro_id) as tipo_servicio,
+                        (select pc.tipo_servicio from gex.producto_config pc where pc.pro_id = pr.pro_id limit 1) as tipo_servicio,
                         d.id_producto_gex
                 from cfactura c
 				                join crm.av_cfactura_cnotacre_lineal c4 on c4.cfa_id = c.cfa_id

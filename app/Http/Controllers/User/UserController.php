@@ -3,16 +3,15 @@
 namespace App\Http\Controllers\User;
 
 use App\Events\TableroEvent;
-use App\Events\UsuarioEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Resources\RespuestaApi;
+use App\Models\configuracion\UsuarioCHorario;
 use App\Models\crm\Almacen;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rules\NotIn;
 
 class UserController extends Controller
 {
@@ -29,13 +28,7 @@ class UserController extends Controller
 
     public function listAnalistas($tableroId)
     {
-        // $data = DB::select("SELECT u.*, (u.usu_alias || ' - ' || u.surname || ' ' || u.name || ' - ' || dep.dep_nombre) as user_dep from crm.tablero ta
-        //                                 inner join crm.tablero_user tu on tu.tab_id = ta.id
-        //                                 inner join crm.users u on u.id  = tu.user_id
-        //                                 inner join crm.departamento dep on dep.id = u.dep_id
-        //                             where ta.id = " . $tableroId);
-
-       $data = DB::select("SELECT 
+        $data = DB::select("SELECT 
                                         u.*,
                                         (u.usu_alias || ' - ' || u.surname || ' ' || u.name || ' - ' || dep.dep_nombre) AS user_dep,
                                         COALESCE(array_to_json(array_agg(ua.alm_id)), '[]'::json) AS agencias_ids
@@ -47,16 +40,15 @@ class UserController extends Controller
                                     WHERE ta.id = ?
                                     GROUP BY u.id, u.usu_alias, u.surname, u.name, dep.dep_nombre;", [$tableroId]);
 
-foreach ($data as &$item) {
-    // Convertir el string JSON a array
-    $item->agencias_ids = json_decode($item->agencias_ids, true);
-
-    // Si viene [null] o null, convertirlo en array vacío
-    if (!$item->agencias_ids || $item->agencias_ids === [null]) {
-        $item->agencias_ids = [];
-    }
-}
-
+        foreach ($data as &$item) {
+            // Convertir el string JSON a array
+            $item->agencias_ids = json_decode($item->agencias_ids, true);
+        
+            // Si viene [null] o null, convertirlo en array vacío
+            if (!$item->agencias_ids || $item->agencias_ids === [null]) {
+                $item->agencias_ids = [];
+            }
+        }
 
         return response()->json(RespuestaApi::returnResultado('success', 'Lista de usuarios analistas', $data));
     }
@@ -95,19 +87,6 @@ foreach ($data as &$item) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-    // public function addUser(Request $request)
-    // {
-    //     try {
-    //         User::create($request->all());
-
-    //         $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista')->get();
-
-    //         return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $usuarios));
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-    // }
 
     public function addUser(Request $request)
     {
@@ -163,6 +142,13 @@ foreach ($data as &$item) {
                 $newUserData->save();
             }
 
+            if ($newUserData->id) {
+                UsuarioCHorario::create([
+                        "user_id" => $newUserData->id,
+                        "chorario_id" => 3, // 3 es el ID del horario default en la tabla crm.chorario
+                ]);
+            }
+
             $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $usuarios));
@@ -213,6 +199,17 @@ foreach ($data as &$item) {
                 $usuario->bod_id_dos = $bodConsigUser->bod_add;
                 $usuario->bod_id_tres = $bodConsigUser->bod_add2;
                 $usuario->save();
+            }
+
+            if ($usuario->id) {
+                $existe = UsuarioCHorario::where('user_id', $user_id)->exists();
+
+                if (!$existe) {
+                    UsuarioCHorario::create([
+                        "user_id" => $usuario->id,
+                        "chorario_id" => 3, // 3 es el ID del horario default en la tabla crm.chorario
+                    ]);
+                }
             }
 
             $data = User::where('id', $usuario->id)
