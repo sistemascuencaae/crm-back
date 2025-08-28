@@ -309,7 +309,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']]
     // CTAREA
 
     Route::post('/addCTarea', [CTareaController::class, 'addCTarea']); // guardar
-    Route::get('/listTareas', [CTareaController::class, 'listTareas']); // guardar
+    Route::get('/listCTareas', [CTareaController::class, 'listCTareas']); // guardar
     Route::post('/editCTarea/{id}', [CTareaController::class, 'editCTarea']); // Edita la tarea
     Route::delete('/deleteCTarea/{id}', [CTareaController::class, 'deleteCTarea']); // Edita la tarea
 
