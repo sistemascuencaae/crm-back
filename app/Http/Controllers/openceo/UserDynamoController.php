@@ -71,48 +71,24 @@ class UserDynamoController extends Controller
                     // (fila3) 67 NOTAS DE CREDITO CLIENTES ELECTRONICAS		320 iNccvalores.jsf
                     // (fila4) 59 FACTURA ELECTRONICA							281 iFactPed.jsf
 
-                    $fila1 = DB::SelectOne("SELECT * FROM usuario_comprobante u
-                                            WHERE u.pve_id = ? 
-                                                AND u.usu_id = ?
-                                                AND u.cti_id = 59
-                                                AND u.prg_id = 184;", [$request->pve_id, $request->usu_id]);
+                    $reglas = [
+                        ['cti_id' => 59, 'prg_id' => 184],
+                        ['cti_id' => 67, 'prg_id' => 399],
+                        ['cti_id' => 67, 'prg_id' => 320],
+                        ['cti_id' => 59, 'prg_id' => 281],
+                    ];
 
-                    if (!$fila1) {
-                        DB::insert("INSERT INTO usuario_comprobante (pve_id, cti_id, usu_id,prg_id) 
-                                    VALUES (?,59,?,184);", [$request->pve_id, $request->usu_id]);
-                    }
-
-                    $fila2 = DB::SelectOne("SELECT * FROM usuario_comprobante u
-                                            WHERE u.pve_id = ? 
-                                                AND u.usu_id = ?
-                                                AND u.cti_id = 67
-                                                AND u.prg_id = 399;", [$request->pve_id, $request->usu_id]);
-
-                    if (!$fila2) {
-                        DB::insert("INSERT INTO usuario_comprobante (pve_id, cti_id, usu_id,prg_id) 
-                                    VALUES (?,67,?,399);", [$request->pve_id, $request->usu_id]);
-                    }
-
-                    $fila3 = DB::SelectOne("SELECT * FROM usuario_comprobante u
-                                            WHERE u.pve_id = ? 
-                                                AND u.usu_id = ?
-                                                AND u.cti_id = 67
-                                                AND u.prg_id = 320;", [$request->pve_id, $request->usu_id]);
-
-                    if (!$fila3) {
-                        DB::insert("INSERT INTO usuario_comprobante (pve_id, cti_id, usu_id,prg_id) 
-                                    VALUES (?,67,?,320);", [$request->pve_id, $request->usu_id]);
-                    }
-
-                    $fila4 = DB::SelectOne("SELECT * FROM usuario_comprobante u
-                                            WHERE u.pve_id = ? 
-                                                AND u.usu_id = ?
-                                                AND u.cti_id = 59
-                                                AND u.prg_id = 281;", [$request->pve_id, $request->usu_id]);
-
-                    if (!$fila4) {
-                        DB::insert("INSERT INTO usuario_comprobante (pve_id, cti_id, usu_id,prg_id) 
-                                    VALUES (?,59,?,281);", [$request->pve_id, $request->usu_id]);
+                    foreach ($reglas as $r) {
+                        DB::table('usuario_comprobante')->updateOrInsert(
+                            [
+                                'usu_id' => $request->usu_id,
+                                'cti_id' => $r['cti_id'],
+                                'prg_id' => $r['prg_id'],
+                            ],
+                            [
+                                'pve_id' => $request->pve_id,
+                            ]
+                        );
                     }
 
                     $exitoso = 'Se actualizó con éxito.';
