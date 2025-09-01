@@ -39,7 +39,7 @@ class UserDynamoController extends Controller
         try {
             $data = Almacen::where('alm_activo', true)
                 ->with(['puntoventa' => function ($query) {
-                    $query->selectRaw("*, CONCAT(pve_numero, ' - ', pve_nombre) as pve_nombre1")->orderBy('pve_nombre', 'asc');
+                    $query->selectRaw("*, CONCAT(pve_numero, ' - ', pve_nombre) as pve_nombre1")->where('pve_activo', true)->orderBy('pve_nombre', 'asc');
                 }])
                 ->get();
 
