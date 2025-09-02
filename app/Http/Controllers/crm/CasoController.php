@@ -2374,7 +2374,7 @@ class CasoController extends Controller
             if ($caso->cliente_id) {
                 $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
             } else {
-                $caso->cliente_id = 86; // ID del cliente default del crm
+                $caso->cliente_id = 29; // ID del cliente default del crm
                 $caso->ent_id = 999; // ID del cliente default de dynamo
             }
 

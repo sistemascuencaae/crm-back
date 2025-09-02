@@ -471,4 +471,19 @@ class FaseController extends Controller
 
         return $data;
     }
+
+    public function agenciasCrmUsuario(){
+        try {
+            $user = auth('api')->user();
+
+            $data = DB::SELECT("SELECT a.alm_id 
+                                            FROM crm.usuario_almacen a
+                                            WHERE a.user_id = ?", [$user->id]
+                                        );
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }
