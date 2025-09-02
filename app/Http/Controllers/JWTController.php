@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\TableroEvent;
+use App\Http\Controllers\crm\CasoController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,6 +87,19 @@ class JWTController extends Controller
             "en_linea" => true,
             'ult_inicio_sesion' => now(), // ⬅️ Esta línea guarda el último login
         ]);
+
+        // buscar todos mis casos en los que el usuario este
+        $query = DB::select(
+            'SELECT caso.id FROM crm.users usuario 
+                    JOIN crm.caso caso 
+                        ON caso.user_id = usuario.id
+                    WHERE usuario.id = ?', [$user->id]
+        );
+        foreach ($query as $key => $value) {
+            $caso = new CasoController();
+            $data = $caso->getCaso($value->id);
+            broadcast(new TableroEvent($data));
+        }
 
         return $this->respondWithToken($token);
     }

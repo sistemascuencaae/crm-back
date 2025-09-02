@@ -28,4 +28,17 @@ class Bodega extends Model
         "ubi_id",
         "alm_id",
     ];
+
+    protected $hidden = ['pivot'];
+
+    public function usuarios()
+    {
+        return $this->belongsToMany(
+            Usuario::class,
+            'daccesobod',
+            'bod_id',
+            'usu_id'
+        )->where('usu_activo', true);
+    }
+
 }

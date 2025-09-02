@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class CTareaController extends Controller
 {
-    public function listTareas()
+    public function listCTareas()
     {
         $log = new Funciones();
 

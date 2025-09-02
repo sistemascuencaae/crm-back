@@ -15,6 +15,7 @@ class VistaMisCasos extends Model
         "id_usuario_miembro",
         "usuario_miembro",
         "dueno_caso",
+        "creador_caso",
         "nombre",
         "caso_id",
         "fecha_vencimiento",

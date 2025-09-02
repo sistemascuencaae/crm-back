@@ -797,7 +797,69 @@ class CasoController extends Controller
         }
     }
 
-    public function getCaso($casoId)
+    // public function getCaso($casoId)
+    // {
+    //     $log = new Funciones();
+
+    //     try {
+
+
+    //         $tabId = DB::selectOne('SELECT t.id, t.nombre FROM crm.caso ca
+    //         inner join crm.fase fa on fa.id = ca.fas_id
+    //         inner join crm.tablero t on t.id = fa.tab_id
+    //             where ca.id = ?', [$casoId]);
+
+    //         //"nombre"	"cpp_id"	"cpp_estado"	"ecr_nombre"
+    //         //"CASO # 2664"	542	9	"APROBADO"
+
+    //         //VALIDAR CASO TERMINADO CUANDO TIENE UN CPEDIDO_PROFORMA DEL DYNAMO
+    //         $this->validarEstadoOPMdynamo($casoId);
+    //         $log->logInfo(CasoController::class, 'Se listo con exito el caso #' . $casoId);
+    //         //$userLogin = Auth::id();
+    //         //$user = DB::selectOne("SELECT usu_tipo FROM crm.users where id = ?", [$userLogin]);
+
+    //         return Caso::selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+    //             ->with([
+    //             'user',
+    //             'userCreador',
+    //             'clienteCrm',
+    //             'resumen',
+    //             // 'tareas' => function ($query) use ($tabId) {
+    //             //     $query->where('tab_id', $tabId->id);
+    //             // },
+    //             'tareas2',
+    //             'actividad',
+    //             'Etiqueta',
+    //             'miembros.usuario.departamento',
+    //             'Galeria',
+    //             'Archivo',
+    //             'req_caso' => function ($query) {
+    //                 $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+    //             },
+    //             'tablero',
+    //             'fase.tablero',
+    //             'estadodos',
+                
+    //             'tipocaso' => function ($query) {
+    //                     $query->select('*', DB::raw("
+    //                         CASE 
+    //                             WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+    //                             WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+    //                             ELSE 'TABLERO'
+    //                         END as categoria_caso_nombre"));
+    //             },
+    //             'tiempo_caso',
+    //             'agencia'
+
+    //         ])->where('id', $casoId)->first();
+    //     } catch (Exception $e) {
+    //         $log->logError(CasoController::class, 'Error al listar el caso #' . $casoId, $e);
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+    //     }
+    // }
+
+    
+        public function getCaso($casoId)
     {
         $log = new Funciones();
 
@@ -838,7 +900,10 @@ class CasoController extends Controller
                 },
                 'tablero',
                 'fase.tablero',
-                'estadodos',
+                // 'estadodos',
+                'estadodos' => function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                },
                 'tipocaso' => function ($query) {
                         $query->select('*', DB::raw("
                             CASE 
@@ -856,7 +921,7 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
+    
     public function validarEstadoOPMdynamo($casoId)
     {
         $cpedidoProforma = DB::selectOne("SELECT ca.nombre, cpp.cpp_id, cpp.cpp_estado, ec.ecr_nombre from crm.caso ca
@@ -2309,7 +2374,7 @@ class CasoController extends Controller
             if ($caso->cliente_id) {
                 $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
             } else {
-                $caso->cliente_id = 86; // ID del cliente default del crm
+                $caso->cliente_id = 29; // ID del cliente default del crm
                 $caso->ent_id = 999; // ID del cliente default de dynamo
             }
 

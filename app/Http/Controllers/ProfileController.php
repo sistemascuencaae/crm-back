@@ -119,7 +119,7 @@ class ProfileController extends Controller
     public function all()
     {
         try {
-            $data = Profile::orderBy('id', 'asc')->get();
+            $data = Profile::orderBy('name', 'asc')->get();
 
             // Especificar las propiedades que representan fechas en tu objeto
             $dateFields = ['created_at', 'updated_at'];

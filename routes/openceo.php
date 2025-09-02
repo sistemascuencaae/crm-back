@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\comercializacion\CliReiterativoController;
 use App\Http\Controllers\comercializacion\ComercializacionController;
+use App\Http\Controllers\openceo\BodegaController;
 use App\Http\Controllers\openceo\TipoProductoController;
+use App\Http\Controllers\openceo\UserDynamoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OpenceoController;
@@ -55,5 +57,24 @@ Route::group([
     Route::get('/getClienteReiterativoByIdentificacion/{identificacion}', [CliReiterativoController::class, 'getClienteReiterativoByIdentificacion']);
     Route::get('/getInfoCuotasByComprobante/{comprobante}', [CliReiterativoController::class, 'getInfoCuotasByComprobante']);
     Route::get('/getInfoCobrosByComprobante/{comprobante}/{cuota}', [CliReiterativoController::class, 'getInfoCobrosByComprobante']);
-
+    
+    
+    
+    // USUARIOS OPENCEO
+    Route::get('/listAllUsuariosActivos', [UserDynamoController::class, 'listAllUsuariosActivos']);
+    Route::get('/listAlmacenesActivos', [UserDynamoController::class, 'listAlmacenesActivos']);
+    Route::post('/editUsuarioPuntoVenta', [UserDynamoController::class, 'editUsuarioPuntoVenta']);
+    
+    
+    // BODEGAS USUARIOS
+    Route::get('/listBodegasUsuarios', [BodegaController::class, 'listBodegasUsuarios']);
+    Route::get('/listAllUsuActivos', [BodegaController::class, 'listAllUsuActivos']);
+    
+    Route::get('/listBodegasDynamo', [BodegaController::class, 'listBodegasDynamo']);
+    Route::get('/listUsuariosByBodIdDynamo/{bod_id}', [BodegaController::class, 'listUsuariosByBodIdDynamo']);
+    Route::post('/editUsuBodegas', [BodegaController::class, 'editUsuBodegas']);
+    
+    Route::get('/listUsuariosBodegasDynamo', [BodegaController::class, 'listUsuariosBodegasDynamo']);
+    Route::get('/listBodegasByUsuIdDynamo/{usu_id}', [BodegaController::class, 'listBodegasByUsuIdDynamo']);
+    Route::post('/editBodUsuario', [BodegaController::class, 'editBodUsuario']);
 });
