@@ -859,12 +859,11 @@ class CasoController extends Controller
     // }
 
     
-        public function getCaso($casoId)
+    public function getCaso($casoId)
     {
         $log = new Funciones();
 
         try {
-
 
             $tabId = DB::selectOne('SELECT t.id, t.nombre FROM crm.caso ca
             inner join crm.fase fa on fa.id = ca.fas_id
@@ -900,10 +899,10 @@ class CasoController extends Controller
                 },
                 'tablero',
                 'fase.tablero',
-                // 'estadodos',
-                'estadodos' => function ($query) {
-                    $query->where('nombre', '!=', 'TERMINADO');
-                },
+                'estadodos',
+                // 'estadodos' => function ($query) {
+                //     $query->where('nombre', '!=', 'TERMINADO');
+                // },
                 'tipocaso' => function ($query) {
                         $query->select('*', DB::raw("
                             CASE 
@@ -914,14 +913,14 @@ class CasoController extends Controller
                 },
                 'tiempo_caso',
                 'agencia'
-
             ])->where('id', $casoId)->first();
+
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al listar el caso #' . $casoId, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-    
+
     public function validarEstadoOPMdynamo($casoId)
     {
         $cpedidoProforma = DB::selectOne("SELECT ca.nombre, cpp.cpp_id, cpp.cpp_estado, ec.ecr_nombre from crm.caso ca

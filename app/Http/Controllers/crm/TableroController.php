@@ -32,7 +32,7 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
-            $tableros = Tablero::where('estado', true)->with('fase', 'estados')->orderBy('id', 'desc')->get();
+            $tableros = Tablero::where('estado', true)->with('fase', 'estados')->orderBy('nombre', 'asc')->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros con sus fases');
 
@@ -77,7 +77,7 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
-            $tableros = Tablero::with('tableroUsuario')->orderBy('id', 'desc')->get();
+            $tableros = Tablero::with('tableroUsuario')->orderBy('nombre', 'asc')->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros');
 
@@ -94,7 +94,7 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
-            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("id", "desc")->get();
+            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("nombre", "asc")->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros activos');
 
@@ -110,7 +110,7 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
-            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("id", "desc")->get();
+            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("nombre", "asc")->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros inactivos');
 
@@ -130,7 +130,7 @@ class TableroController extends Controller
             // $tableros = Tablero::where("tableroUsuario", $user_id)->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("id", "desc")->get();
             $tableros = Tablero::whereHas('tableroUsuario', function ($query) use ($user_id) {
                 $query->where('user_id', $user_id);
-            })->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy('id', 'desc')->get();
+            })->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy('nombre', 'asc')->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito los tableros por user_id: ' . $user_id);
 
