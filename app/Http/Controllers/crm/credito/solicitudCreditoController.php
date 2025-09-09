@@ -39,7 +39,7 @@ class solicitudCreditoController extends Controller
     {
         $log = new Funciones();
         try {
-            $solicitudCredito = solicitudCredito::findOrFail($id);
+            $solicitudCredito = SolicitudCredito::findOrFail($id);
 
             // Obtener el old_values (valor antiguo)
             $audit = new Audits();
@@ -51,7 +51,7 @@ class solicitudCreditoController extends Controller
             // START Bloque de código que genera un registro de auditoría manualmente
             $audit->user_id = Auth::id();
             $audit->event = 'updated';
-            $audit->auditable_type = solicitudCredito::class;
+            $audit->auditable_type = SolicitudCredito::class;
             $audit->auditable_id = $solicitudCredito->id;
             $audit->user_type = User::class;
             $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
@@ -78,7 +78,7 @@ class solicitudCreditoController extends Controller
     {
         $log = new Funciones();
         try {
-            $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ent_id', $ent_id)->get();
+            $solicitudesCredito = SolicitudCredito::orderBy("id", "asc")->where('ent_id', $ent_id)->get();
 
             $log->logInfo(solicitudCreditoController::class, 'Se listo con exito las solicitudes de credito por ent_id: ' . $ent_id);
 
@@ -94,7 +94,7 @@ class solicitudCreditoController extends Controller
     {
         $log = new Funciones();
         try {
-            $solicitudesCredito = solicitudCredito::orderBy("id", "asc")->where('ruc_cedula', $ruc_cedula)->get();
+            $solicitudesCredito = SolicitudCredito::orderBy("id", "asc")->where('ruc_cedula', $ruc_cedula)->get();
 
             // return response()->json([
             //     "solicitudesCredito" => $solicitudesCredito,

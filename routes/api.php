@@ -73,7 +73,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\openceo\ClienteDynamoController;
 use App\Http\Controllers\openceo\PedidoMovilController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\user\EquifaxController;
+use App\Http\Controllers\User\EquifaxController;
 use App\Http\Controllers\User\ProfileUserController;
 use App\Http\Controllers\crm\garantias\PartesController;
 use App\Http\Controllers\crm\garantias\ConfigItemsController;
