@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\comercializacion\CliReiterativoController;
 use App\Http\Controllers\comercializacion\ComercializacionController;
+use App\Http\Controllers\crm\auditoria\MaestroController;
 use App\Http\Controllers\openceo\BodegaController;
 use App\Http\Controllers\openceo\TipoProductoController;
 use App\Http\Controllers\openceo\UserDynamoController;
@@ -30,6 +31,9 @@ Route::group([
 Route::group([
     'prefix' => 'open',
 ], function () {
+    // MAESTRO AUDITORIA
+    Route::post('/maestroAuditoria', [MaestroController::class, 'maestroAuditoria']);
+
     Route::get('/getTiposProducto', [TipoProductoController::class, 'getTiposProducto']);
     Route::get('agencias', [OpenceoController::class, 'agencias']);
     Route::get('departamentos', [OpenceoController::class, 'departamentos']);
