@@ -31,7 +31,8 @@ class GaleriaController extends Controller
         try {
             if ($request->hasFile("imagen_file")) {
                 $imagen = $request->file("imagen_file");
-                $titulo = $imagen->getClientOriginalName();
+                // $titulo = $imagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
 
                 // Fecha actual
                 $fechaActual = Carbon::now();
@@ -194,7 +195,9 @@ class GaleriaController extends Controller
 
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
-                $titulo = $nuevaImagen->getClientOriginalName();
+                // $titulo = $nuevaImagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $nuevaImagen->getClientOriginalName()); // Reemplazar espacios por -
+
 
                 // Fecha actual
                 $fechaActual = Carbon::now();
@@ -346,7 +349,8 @@ class GaleriaController extends Controller
         try {
             if ($request->hasFile("imagen_file")) {
                 $imagen = $request->file("imagen_file");
-                $titulo = $imagen->getClientOriginalName();
+                // $titulo = $imagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
 
                 // Fecha actual
                 $fechaActual = Carbon::now();
@@ -402,7 +406,7 @@ class GaleriaController extends Controller
 
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
-                $titulo = $nuevaImagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-',$nuevaImagen->getClientOriginalName());
 
                 // Fecha actual
                 $fechaActual = Carbon::now();

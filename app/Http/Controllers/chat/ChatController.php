@@ -453,7 +453,8 @@ class ChatController extends Controller
                     // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
                     // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
                     $fecha_actual = str_replace(':', '-', $fechaActual);
-                    $nombreUnico = $fecha_actual . '-' . $archivoData->getClientOriginalName();
+                    // $nombreUnico = $fecha_actual . '-' . $archivoData->getClientOriginalName();
+                    $nombreUnico = $fecha_actual . '-' . str_replace(' ', '-', $archivoData->getClientOriginalName()); // Reemplazar espacios por -
                     $extension = $archivoData->getClientOriginalExtension();
                     if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'mov', 'MOV'])) {
                         if ($contMSg === false) {
@@ -506,7 +507,8 @@ class ChatController extends Controller
                             "chatconve_id" => $msjDataJSON->chatconve_id,
                             "chatgrupo_id" => $msjDataJSON->chatgrupo_id,
                             "user_id" => $msjDataJSON->user_id,
-                            "mensaje" => $archivoData->getClientOriginalName(),
+                            // "mensaje" => $archivoData->getClientOriginalName(),
+                            "mensaje" => str_replace(' ', '-', $archivoData->getClientOriginalName()), // Reemplazar espacios por -
                             "archivo_id" => $nuevoArchivo->id
                         ]);
                     }

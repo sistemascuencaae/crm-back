@@ -35,7 +35,8 @@ class ArchivoController extends Controller
                     ->first();
 
                 foreach ($archivos as $archivoData) {
-                    $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName(); // Obtener el nombre único del archivo
+                    // $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName(); // Obtener el nombre único del archivo
+                    $nombreUnico = $caso_id . '-' . str_replace(' ', '-', $archivoData->getClientOriginalName()); // Reemplazar espacios por -
 
                     if ($parametro->nas == true) {
                         $path = Storage::disk('nas')->putFileAs("casos/" . $caso_id . "/archivos", $archivoData, $nombreUnico); // Guardar el archivo
@@ -111,7 +112,8 @@ class ArchivoController extends Controller
             $archivos = DB::transaction(function () use ($request, $caso_id) {
 
                 $file = $request->file("archivo");
-                $titulo = $file->getClientOriginalName();
+                // $titulo = $file->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $file->getClientOriginalName()); // Reemplazar espacios por -
 
                 // $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
                 $parametro = DB::table('crm.parametro')
@@ -434,7 +436,8 @@ class ArchivoController extends Controller
                     ->first();
 
                 foreach ($archivos as $archivoData) {
-                    $nombreBase = $caso_id . '-' . $archivoData->getClientOriginalName(); // Nombre base del archivo
+                    // $nombreBase = $caso_id . '-' . $archivoData->getClientOriginalName(); // Nombre base del archivo
+                    $nombreBase = $caso_id . '-' . str_replace(' ', '-', $archivoData->getClientOriginalName()); // Reemplazar espacios por -
 
                     $path = $caso_id . "/archivos_sin_firma";
 
@@ -494,7 +497,8 @@ class ArchivoController extends Controller
 
                 if ($request->hasFile("archivo")) {
                     $file = $request->file("archivo");
-                    $originalTitulo = $file->getClientOriginalName();
+                    // $originalTitulo = $file->getClientOriginalName();
+                    $originalTitulo = str_replace(' ', '-', $file->getClientOriginalName()); // Reemplazar espacios por -
                     $nombreBase = $archivo->caso_id . '-' . $originalTitulo;
 
                     $path = $archivo->caso_id . "/archivos_sin_firma";

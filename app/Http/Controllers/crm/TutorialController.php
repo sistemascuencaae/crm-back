@@ -56,7 +56,8 @@ class TutorialController extends Controller
                     // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
                     $fecha_actual = str_replace(':', '-', $fechaActual);
 
-                    $nombreUnico = $archivoData->getClientOriginalName();
+                    // $nombreUnico = $archivoData->getClientOriginalName();
+                    $nombreUnico = str_replace(' ', '-', $archivoData->getClientOriginalName()); // Reemplazar espacios por -
                     $extension = $archivoData->getClientOriginalExtension();
 
                     if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'mov', 'MOV', 'mkv', 'MKV'])) {
@@ -149,7 +150,8 @@ class TutorialController extends Controller
 
                         // Obtener el nuevo archivo de imagen y su nombre original
                         $nuevaImagen = $request->file("imagen_file");
-                        $titulo = $nuevaImagen->getClientOriginalName();
+                        // $titulo = $nuevaImagen->getClientOriginalName();
+                        $titulo = str_replace(' ', '-', $nuevaImagen->getClientOriginalName()); // Reemplazar espacios por -
 
                         // $path = Storage::disk('nas')->putFileAs("tutoriales/galerias", $nuevaImagen, $fecha_actual . '-' . $titulo);
                         if ($parametro->nas == true) {
@@ -171,7 +173,8 @@ class TutorialController extends Controller
 
                     if ($request->hasFile("archivo")) {
                         $file = $request->file("archivo");
-                        $originalTitulo = $file->getClientOriginalName();
+                        // $originalTitulo = $file->getClientOriginalName();
+                        $originalTitulo = str_replace(' ', '-', $file->getClientOriginalName()); // Reemplazar espacios por -
                         $nombreBase = $originalTitulo;
 
                         $path = "tutoriales/archivos";
