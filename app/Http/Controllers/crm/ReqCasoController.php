@@ -45,7 +45,8 @@ class ReqCasoController extends Controller
                     // $path = Storage::putFile("galerias", $request->file("imagen_file"));
 
                     $imagen = $request->file("imagen_file");
-                    $titulo = $imagen->getClientOriginalName();
+                    // $titulo = $imagen->getClientOriginalName();
+                    $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
 
                     if ($parametro->nas == true) {
                         $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
@@ -132,7 +133,8 @@ class ReqCasoController extends Controller
                 if ($request->hasFile("archivo_file")) {
 
                     $file = $request->file("archivo_file");
-                    $titulo = $file->getClientOriginalName();
+                    // $titulo = $file->getClientOriginalName();
+                    $titulo = str_replace(' ', '-', $file->getClientOriginalName()); // Reemplazar espacios por -
 
 
                     if ($parametro->nas == true) {
