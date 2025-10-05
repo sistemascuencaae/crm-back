@@ -58,6 +58,11 @@ class RouteServiceProvider extends ServiceProvider
                 ->namespace($this->namespace)
                 ->group(base_path('routes/openceo.php'));
 
+                Route::prefix('demo')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/demo.php'));
+
         });
     }
 
