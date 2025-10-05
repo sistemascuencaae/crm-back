@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'api/broadcasting/auth', 'hcli/*', 'openceo/*'],
+    'paths' => ['api/*', 'api/broadcasting/auth', 'hcli/*', 'openceo/*', 'demo/*'],
 
     'allowed_methods' => ['*'],
 
