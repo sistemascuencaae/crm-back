@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\activos\ActivosController;
 use App\Http\Controllers\appreact\ReactNativeMaps;
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
@@ -1113,6 +1114,18 @@ Route::group(['prefix' => 'menu', 'middleware' => ['jwt.auth', 'usuario.activo']
     Route::delete('deleteMenu/{id}', [MenuController::class, 'deleteMenu']);
 });
 
+Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+
+    // ACTIVOS
+    
+    Route::get('/listAllActivos', [ActivosController::class, 'listAllActivos']);
+    Route::post('/addActivo', [ActivosController::class, 'addActivo']);
+
+    Route::get('/listTipoActivos', [ActivosController::class, 'listTipoActivos']);
+    Route::get('/listEstadoActivos', [ActivosController::class, 'listEstadoActivos']);
+    Route::get('/listMarca', [ActivosController::class, 'listMarca']);
+
+});
 
 // ------------------------------ END RUTAS PROTEGIDAS ------------------------------------------------------
 // ------------------------------ END RUTAS PROTEGIDAS ------------------------------------------------------
