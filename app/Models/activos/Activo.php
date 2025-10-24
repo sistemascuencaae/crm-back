@@ -53,12 +53,4 @@ class Activo extends Model
     {
         return $this->belongsTo(EstadoActivo::class, 'id_estado_activo', 'id');
     }
-
-
-
-    // public function estado_formula()
-    // {
-    //     return $this->hasMany(EstadosFormulas::class, 'tipo_caso_id', 'tipo_caso_id');
-    // }
-
 }

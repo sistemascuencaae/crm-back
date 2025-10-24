@@ -20,6 +20,8 @@ class ActivosController extends Controller
         $this->middleware('auth:api');
     }
 
+    // ACTIVOS
+
     public function listAllActivos()
     {
         try {
@@ -85,18 +87,6 @@ class ActivosController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
 
     public function listTipoActivos()
     {
