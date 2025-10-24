@@ -112,6 +112,7 @@ use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
 use App\Http\Controllers\correo\CorreoController;
+use App\Http\Controllers\crm\seriesalm\BodegaSeriesGeneradasController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -991,6 +992,7 @@ Route::group(["prefix" => "gex-contrato", 'middleware' => ['jwt.auth', 'usuario.
 Route::group(["prefix" => "gex", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
 
     // SERIES ALM
+    Route::get('/listBodegaSeriesGeneradas', [BodegaSeriesGeneradasController::class, 'listBodegaSeriesGeneradas']); // listar todas las bodegas
 
     Route::delete('/borrarInventarioCompleto/{numero_inventario}', [SeriesAlmController::class, 'borrarInventarioCompleto']); // Borrar un inventario completo que no tenga despachos ni contratos
     Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
