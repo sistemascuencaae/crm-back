@@ -7,6 +7,7 @@ use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\activos\Activo;
 use App\Models\activos\EstadoActivo;
+use App\Models\activos\Localidad;
 use App\Models\activos\Marca;
 use App\Models\activos\TipoActivo;
 use Exception;
@@ -25,15 +26,21 @@ class ActivosController extends Controller
     public function listAllActivos()
     {
         try {
-            $data = Activo::with('tipo_activo', 'marca', 'estado_activo')->orderBy('id', 'asc')->get();
+            $data = Activo::with('tipo_activo', 'marca', 'estado_activo', 'ultima_acta')->orderBy('id', 'asc')->get();
 
             // Especificar las propiedades que representan fechas en tu objeto Nota
             $dateFields = ['created_at', 'updated_at'];
             // Utilizar la función map para transformar y obtener una nueva colección
             $data->map(function ($item) use ($dateFields) {
-                // $this->formatoFechaItem($item, $dateFields);
                 $funciones = new Funciones();
+                // Formatear fechas del activo
                 $funciones->formatoFechaItem($item, $dateFields);
+
+                // Formatear fechas de la última acta si existe
+                if ($item->ultima_acta) {
+                    $funciones->formatoFechaItem($item->ultima_acta, $dateFields);
+                }
+
                 return $item;
             });
 
@@ -117,6 +124,18 @@ class ActivosController extends Controller
         try {
 
             $data = Marca::where('estado', true)->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
+        }
+    }
+
+    public function listLocalidades()
+    {
+        try {
+
+            $data = Localidad::where('estado', true)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {

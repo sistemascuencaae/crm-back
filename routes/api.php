@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\activos\ActasController;
 use App\Http\Controllers\activos\ActivosController;
 use App\Http\Controllers\appreact\ReactNativeMaps;
 use App\Http\Controllers\chat\ChatArchivosController;
@@ -1122,10 +1123,16 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
     
     Route::get('/listAllActivos', [ActivosController::class, 'listAllActivos']);
     Route::post('/addActivo', [ActivosController::class, 'addActivo']);
-
+    
     Route::get('/listTipoActivos', [ActivosController::class, 'listTipoActivos']);
     Route::get('/listEstadoActivos', [ActivosController::class, 'listEstadoActivos']);
     Route::get('/listMarca', [ActivosController::class, 'listMarca']);
+    Route::get('/listLocalidades', [ActivosController::class, 'listLocalidades']);
+    
+    // ACTAS 
+
+    Route::get('/listAllActas', [ActasController::class, 'listAllActas']);
+    Route::post('/addActa', [ActasController::class, 'addActa']);
 
 });
 
