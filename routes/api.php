@@ -1138,6 +1138,7 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::post('/addActa', [ActasController::class, 'addActa']);
     Route::post('/editActa/{numero}', [ActasController::class, 'editActa']);
     Route::post('/updateRecepcionFisica/{numero}', [ActasController::class, 'updateRecepcionFisica']);
+    Route::post('/updateRecibidoPor/{numero}', [ActasController::class, 'updateRecibidoPor']);
 
 });
 

@@ -256,4 +256,22 @@ class ActasController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
         }
     }
+
+    public function updateRecibidoPor(Request $request, $numero)
+    {
+        try {
+            DB::transaction(function () use ($request, $numero) {
+                $recibido_por = $request->input('recibido_por');
+
+                // Actualizar todas las actas con el mismo número
+                Acta::where('numero', $numero)->update([
+                    'recibido_por' => $recibido_por
+                ]);
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Campo actualizado con éxito', null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
+        }
+    }
 }
