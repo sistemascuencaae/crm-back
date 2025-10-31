@@ -238,4 +238,22 @@ class ActasController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
         }
     }
+
+    public function updateRecepcionFisica(Request $request, $numero)
+    {
+        try {
+            DB::transaction(function () use ($request, $numero) {
+                $recepcion_fisica = $request->input('recepcion_fisica_acta');
+
+                // Actualizar todas las actas con el mismo número
+                Acta::where('numero', $numero)->update([
+                    'recepcion_fisica_acta' => $recepcion_fisica
+                ]);
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Estado de recepción actualizado con éxito', null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
+        }
+    }
 }
