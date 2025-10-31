@@ -95,6 +95,65 @@ class ActivosController extends Controller
         }
     }
 
+    public function editActivo(Request $request, $id)
+    {
+        try {
+            $data = DB::transaction(function () use ($request, $id) {
+                // Buscar el activo
+                $activo = Activo::findOrFail($id);
+
+                // Obtener el parámetro IVA
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'IVA')
+                    ->first();
+
+                if ($parametro) {
+                    // Calcular IVA y total (redondeado a 2 decimales)
+                    $iva = round($request->costo * ($parametro->valor / 100), 2);
+                    $total = round($request->costo + $iva, 2);
+
+                    // Actualizar el activo con los nuevos valores
+                    $activo->update(array_merge($request->all(), [
+                        'iva' => $iva,
+                        'total' => $total
+                    ]));
+                } else {
+                    throw new Exception('No se encontró el parámetro IVA.');
+                }
+
+                // Retornar todos los activos con sus relaciones
+                $data = Activo::with('tipo_activo', 'marca', 'estado_activo')->orderBy('id', 'asc')->get();
+
+                // Formatear fechas
+                $dateFields = ['created_at', 'updated_at'];
+                $data->map(function ($item) use ($dateFields) {
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
+                    return $item;
+                });
+
+                return $data;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
+        }
+    }
+
+    public function deleteActivo($id)
+    {
+        try {
+            $data = Activo::findOrFail($id);
+
+            $data->delete();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
+        }
+    }
+
     public function listTipoActivos()
     {
         try {

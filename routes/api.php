@@ -1120,10 +1120,12 @@ Route::group(['prefix' => 'menu', 'middleware' => ['jwt.auth', 'usuario.activo']
 Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
 
     // ACTIVOS
-    
+
     Route::get('/listAllActivos', [ActivosController::class, 'listAllActivos']);
     Route::post('/addActivo', [ActivosController::class, 'addActivo']);
-    
+    Route::post('/editActivo/{id}', [ActivosController::class, 'editActivo']);
+    Route::delete('/deleteActivo/{id}', [ActivosController::class, 'deleteActivo']);
+
     Route::get('/listTipoActivos', [ActivosController::class, 'listTipoActivos']);
     Route::get('/listEstadoActivos', [ActivosController::class, 'listEstadoActivos']);
     Route::get('/listMarca', [ActivosController::class, 'listMarca']);
