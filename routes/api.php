@@ -1131,10 +1131,12 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/listMarca', [ActivosController::class, 'listMarca']);
     Route::get('/listLocalidades', [ActivosController::class, 'listLocalidades']);
     
-    // ACTAS 
+    // ACTAS
 
     Route::get('/listAllActas', [ActasController::class, 'listAllActas']);
+    Route::get('/getActasByNumero/{numero}', [ActasController::class, 'getActasByNumero']);
     Route::post('/addActa', [ActasController::class, 'addActa']);
+    Route::post('/editActa/{numero}', [ActasController::class, 'editActa']);
 
 });
 

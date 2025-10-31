@@ -112,4 +112,130 @@ class ActasController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
         }
     }
+
+    public function getActasByNumero($numero)
+    {
+        try {
+            $data = Acta::with('activo.tipo_activo','activo.marca','activo.estado_activo', 'user', 'localidad', 'departamento')
+                ->where('numero', $numero)
+                ->orderBy('secuencia', 'asc')
+                ->get();
+
+            if ($data->isEmpty()) {
+                throw new Exception('No se encontraron actas con el número especificado');
+            }
+
+            // Formatear fechas
+            $dateFields = ['created_at', 'updated_at'];
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
+        }
+    }
+
+    public function editActa(Request $request, $numero)
+    {
+        try {
+            $data = DB::transaction(function () use ($request, $numero) {
+                // Buscar todas las actas con ese número
+                $actas = Acta::where('numero', $numero)->lockForUpdate()->get();
+
+                if ($actas->isEmpty()) {
+                    throw new Exception('No se encontró el acta con el número especificado');
+                }
+
+                // Obtener los activos enviados en la petición
+                $activosNuevos = $request->input('activos', []);
+
+                if (empty($activosNuevos)) {
+                    throw new Exception('Debe enviar al menos un activo');
+                }
+
+                // Validar que no haya activos duplicados en la misma solicitud
+                $activosUnicos = array_unique($activosNuevos);
+                if (count($activosUnicos) !== count($activosNuevos)) {
+                    throw new Exception('No puede enviar el mismo activo duplicado en la misma acta');
+                }
+
+                // Obtener los IDs de activos actuales
+                $activosActuales = $actas->pluck('id_activo')->toArray();
+
+                // Determinar qué activos eliminar (están en actuales pero no en nuevos)
+                $activosAEliminar = array_diff($activosActuales, $activosNuevos);
+
+                // Determinar qué activos agregar (están en nuevos pero no en actuales)
+                $activosAAgregar = array_diff($activosNuevos, $activosActuales);
+
+                // Eliminar las actas de los activos que ya no están
+                if (!empty($activosAEliminar)) {
+                    Acta::where('numero', $numero)
+                        ->whereIn('id_activo', $activosAEliminar)
+                        ->delete();
+                }
+
+                // Actualizar los registros que permanecen
+                Acta::where('numero', $numero)->update([
+                    'id_user' => $request->input('id_user'),
+                    'id_localidad' => $request->input('id_localidad'),
+                    'id_departamento' => $request->input('id_departamento'),
+                ]);
+
+                // Agregar nuevas actas para los activos nuevos
+                if (!empty($activosAAgregar)) {
+                    // Obtener la última secuencia actual
+                    $ultimaSecuencia = Acta::where('numero', $numero)->max('secuencia') ?? 0;
+
+                    foreach ($activosAAgregar as $idActivo) {
+                        $ultimaSecuencia++;
+                        Acta::create([
+                            'id_activo' => $idActivo,
+                            'id_user' => $request->input('id_user'),
+                            'id_localidad' => $request->input('id_localidad'),
+                            'id_departamento' => $request->input('id_departamento'),
+                            'numero' => $numero,
+                            'secuencia' => $ultimaSecuencia,
+                            'recepcion_fisica_acta' => false
+                        ]);
+                    }
+                }
+
+                // Reorganizar las secuencias para que sean consecutivas
+                $actasActualizadas = Acta::where('numero', $numero)
+                    ->orderBy('secuencia', 'asc')
+                    ->get();
+
+                $secuencia = 1;
+                foreach ($actasActualizadas as $acta) {
+                    $acta->secuencia = $secuencia;
+                    $acta->save();
+                    $secuencia++;
+                }
+
+                // Obtener todas las actas actualizadas con sus relaciones
+                $data = Acta::with('activo.tipo_activo','activo.marca','activo.estado_activo', 'user', 'localidad', 'departamento')
+                    ->orderBy('numero', 'asc')
+                    ->get();
+
+                // Formatear fechas
+                $dateFields = ['created_at', 'updated_at'];
+                $data->map(function ($item) use ($dateFields) {
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
+                    return $item;
+                });
+
+                return $data;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
+        }
+    }
 }
