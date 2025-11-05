@@ -1137,8 +1137,8 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/getActasByNumero/{numero}', [ActasController::class, 'getActasByNumero']);
     Route::post('/addActa', [ActasController::class, 'addActa']);
     Route::post('/editActa/{numero}', [ActasController::class, 'editActa']);
-    Route::post('/updateRecepcionFisica/{numero}', [ActasController::class, 'updateRecepcionFisica']);
-    Route::post('/updateRecibidoPor/{numero}', [ActasController::class, 'updateRecibidoPor']);
+    Route::post('/editRecepcionFisica/{numero}', [ActasController::class, 'editRecepcionFisica']);
+    Route::post('/editRecibidoPor/{numero}', [ActasController::class, 'editRecibidoPor']);
 
 });
 

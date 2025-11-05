@@ -239,7 +239,7 @@ class ActasController extends Controller
         }
     }
 
-    public function updateRecepcionFisica(Request $request, $numero)
+    public function editRecepcionFisica(Request $request, $numero)
     {
         try {
             DB::transaction(function () use ($request, $numero) {
@@ -251,13 +251,13 @@ class ActasController extends Controller
                 ]);
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Estado de recepción actualizado con éxito', null));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', null));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
         }
     }
 
-    public function updateRecibidoPor(Request $request, $numero)
+    public function editRecibidoPor(Request $request, $numero)
     {
         try {
             DB::transaction(function () use ($request, $numero) {
@@ -269,7 +269,7 @@ class ActasController extends Controller
                 ]);
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Campo actualizado con éxito', null));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', null));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
         }
