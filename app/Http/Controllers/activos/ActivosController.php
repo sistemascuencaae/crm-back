@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\activos\Activo;
+use App\Models\activos\Dacta;
 use App\Models\activos\EstadoActivo;
 use App\Models\activos\Localidad;
 use App\Models\activos\Marca;
@@ -27,6 +28,33 @@ class ActivosController extends Controller
     {
         try {
             $data = Activo::with('tipo_activo', 'marca', 'estado_activo', 'ultima_acta')->orderBy('id', 'asc')->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                // Formatear fechas del activo
+                $funciones->formatoFechaItem($item, $dateFields);
+
+                // Formatear fechas de la última acta si existe
+                if ($item->ultima_acta) {
+                    $funciones->formatoFechaItem($item->ultima_acta, $dateFields);
+                }
+
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
+        }
+    }
+
+    public function listActivos()
+    {
+        try {
+            $data = Activo::with('tipo_activo', 'marca', 'estado_activo', 'ultima_acta')->where('estado', true)->orderBy('id', 'asc')->get();
 
             // Especificar las propiedades que representan fechas en tu objeto Nota
             $dateFields = ['created_at', 'updated_at'];
@@ -154,10 +182,42 @@ class ActivosController extends Controller
         }
     }
 
+    public function historyActivo($id_activo)
+    {
+        try {
+            // Obtener todos los detalles de acta (dacta) del activo con sus relaciones
+            $data = Dacta::with([
+                'cacta.user',
+                'cacta.localidad',
+                'cacta.departamento'
+            ])
+                ->where('id_activo', $id_activo)
+                ->orderBy('created_at', 'asc') // Ordenar por fecha de creación descendente (más reciente primero)
+                ->get();
+
+            // Formatear fechas
+            $dateFields = ['created_at', 'updated_at'];
+            $funciones = new Funciones();
+
+            // Formatear fechas del activo
+            $funciones->formatoFechaItem($data, $dateFields);
+
+            // Formatear fechas de cada registro del historial
+            $data->each(function ($item) use ($dateFields, $funciones) {
+                if (isset($item['cacta'])) {
+                    $funciones->formatoFechaItem($item['cacta'], $dateFields);
+                }
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
+        }
+    }
+
     public function listTipoActivos()
     {
         try {
-
             $data = TipoActivo::where('estado', true)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
@@ -169,7 +229,6 @@ class ActivosController extends Controller
     public function listEstadoActivos()
     {
         try {
-
             $data = EstadoActivo::where('estado', true)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
@@ -181,7 +240,6 @@ class ActivosController extends Controller
     public function listMarca()
     {
         try {
-
             $data = Marca::where('estado', true)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
@@ -193,7 +251,6 @@ class ActivosController extends Controller
     public function listLocalidades()
     {
         try {
-
             $data = Localidad::where('estado', true)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));

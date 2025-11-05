@@ -2,7 +2,6 @@
 
 namespace App\Models\activos;
 
-use App\Http\Resources\crm\Funciones;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -55,10 +54,23 @@ class Activo extends Model
         return $this->belongsTo(EstadoActivo::class, 'id_estado_activo', 'id');
     }
 
-    // La última acta del activo (más reciente por número)
+    // Relación con Dacta (detalles de acta)
+    public function detalles_acta()
+    {
+        return $this->hasMany(Dacta::class, 'id_activo', 'id');
+    }
+
+    // La última acta del activo (más reciente por número a través de cacta)
     public function ultima_acta()
     {
-        return $this->hasOne(Acta::class, 'id_activo', 'id')
+        return $this->hasOneThrough(
+            Cacta::class,      // Modelo final
+            Dacta::class,      // Modelo intermedio
+            'id_activo',       // Foreign key en dacta
+            'id',              // Foreign key en cacta
+            'id',              // Local key en activo
+            'id_cacta'         // Local key en dacta
+        )
             ->orderBy('numero', 'desc')
             ->with(['localidad', 'departamento', 'user']);
     }

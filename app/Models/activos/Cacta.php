@@ -8,22 +8,20 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Acta extends Model
+class Cacta extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.acta';
+    protected $table = 'crm.cacta';
 
     protected $fillable = [
-        "id_activo",
         "id_user",
         "id_localidad",
         "id_departamento",
         "numero",
-        "secuencia",
         "recepcion_fisica_acta",
-        "impresion",
         "recibido_por",
+        // "impresion",
         "estado",
     ];
 
@@ -39,23 +37,27 @@ class Acta extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function activo()
-    {
-        return $this->belongsTo(Activo::class, 'id_activo', 'id');
-    }
-
+    // Relación con User
     public function user()
     {
         return $this->belongsTo(User::class, 'id_user', 'id');
     }
 
+    // Relación con Localidad
     public function localidad()
     {
         return $this->belongsTo(Localidad::class, 'id_localidad', 'id');
     }
 
+    // Relación con Departamento
     public function departamento()
     {
         return $this->belongsTo(Departamento::class, 'id_departamento', 'id');
+    }
+
+    // Relación con Dacta (detalles)
+    public function detalles()
+    {
+        return $this->hasMany(Dacta::class, 'id_cacta', 'id')->orderBy('secuencia', 'asc');
     }
 }
