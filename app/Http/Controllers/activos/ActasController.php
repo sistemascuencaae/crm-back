@@ -21,11 +21,14 @@ class ActasController extends Controller
     public function listAllActas()
     {
         try {
-            $data = Cacta::with([
-                'user',
-                'localidad',
-                'departamento'
-            ])->orderBy('numero', 'asc')->get();
+            $data = Cacta::selectRaw("*, (CASE WHEN estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                ->with([
+                    'user',
+                    'localidad',
+                    'departamento'
+                ])
+                ->orderBy('numero', 'asc')
+                ->get();
 
             // Especificar las propiedades que representan fechas
             $dateFields = ['created_at', 'updated_at'];
@@ -94,11 +97,14 @@ class ActasController extends Controller
                 }
 
                 // Obtener todas las actas creadas con sus relaciones
-                $data = Cacta::with([
-                    'user',
-                    'localidad',
-                    'departamento'
-                ])->orderBy('numero', 'asc')->get();
+                $data = Cacta::selectRaw("*, (CASE WHEN estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                    ->with([
+                        'user',
+                        'localidad',
+                        'departamento'
+                    ])
+                    ->orderBy('numero', 'asc')
+                    ->get();
 
                 // Especificar las propiedades que representan fechas
                 $dateFields = ['created_at', 'updated_at'];
@@ -130,14 +136,15 @@ class ActasController extends Controller
     public function getActivosByNumeroActa($numero)
     {
         try {
-            $data = Cacta::with([
-                'user',
-                'localidad',
-                'departamento',
-                'detalles.activo.tipo_activo',
-                'detalles.activo.marca',
-                'detalles.activo.estado_activo'
-            ])
+            $data = Cacta::selectRaw("*, (CASE WHEN estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                ->with([
+                    'user',
+                    'localidad',
+                    'departamento',
+                    'detalles.activo.tipo_activo',
+                    'detalles.activo.marca',
+                    'detalles.activo.estado_activo'
+                ])
                 ->where('numero', $numero)
                 ->first();
 
@@ -210,6 +217,7 @@ class ActasController extends Controller
                     'id_user' => $request->input('id_user'),
                     'id_localidad' => $request->input('id_localidad'),
                     'id_departamento' => $request->input('id_departamento'),
+                    'estado' => $request->input('estado', true), // Actualizar el estado del acta
                 ]);
 
                 // Agregar nuevos detalles para los activos nuevos
@@ -240,11 +248,14 @@ class ActasController extends Controller
                 }
 
                 // Obtener todas las actas actualizadas con sus relaciones
-                $data = Cacta::with([
-                    'user',
-                    'localidad',
-                    'departamento'
-                ])->orderBy('numero', 'asc')->get();
+                $data = Cacta::selectRaw("*, (CASE WHEN estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                    ->with([
+                        'user',
+                        'localidad',
+                        'departamento'
+                    ])
+                    ->orderBy('numero', 'asc')
+                    ->get();
 
                 // Formatear fechas
                 $dateFields = ['created_at', 'updated_at'];

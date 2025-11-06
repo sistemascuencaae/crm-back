@@ -27,7 +27,8 @@ class ActivosController extends Controller
     public function listAllActivos()
     {
         try {
-            $data = Activo::with('tipo_activo', 'marca', 'estado_activo', 'ultima_acta')->orderBy('id', 'asc')->get();
+            $data = Activo::selectRaw("*, (CASE WHEN estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                ->with('tipo_activo', 'marca', 'estado_activo', 'ultima_acta')->orderBy('id', 'asc')->get();
 
             // Especificar las propiedades que representan fechas en tu objeto Nota
             $dateFields = ['created_at', 'updated_at'];
@@ -102,7 +103,8 @@ class ActivosController extends Controller
                     throw new Exception('No se encontró el parámetro IVA.');
                 }
 
-                $data = Activo::with('tipo_activo', 'marca', 'estado_activo')->orderBy('id', 'asc')->get();
+                $data = Activo::selectRaw("*, (CASE WHEN estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                    ->with('tipo_activo', 'marca', 'estado_activo', 'ultima_acta')->orderBy('id', 'asc')->get();
 
                 // Especificar las propiedades que representan fechas en tu objeto Nota
                 $dateFields = ['created_at', 'updated_at'];
@@ -150,7 +152,8 @@ class ActivosController extends Controller
                 }
 
                 // Retornar todos los activos con sus relaciones
-                $data = Activo::with('tipo_activo', 'marca', 'estado_activo')->orderBy('id', 'asc')->get();
+                $data = Activo::selectRaw("*, (CASE WHEN estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                    ->with('tipo_activo', 'marca', 'estado_activo', 'ultima_acta')->orderBy('id', 'asc')->get();
 
                 // Formatear fechas
                 $dateFields = ['created_at', 'updated_at'];
