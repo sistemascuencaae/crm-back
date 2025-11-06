@@ -12,12 +12,10 @@ class BodegaSeriesGeneradas extends Model
     protected $table = 'crm.aav_bodega_series';
 
     protected $fillable = [
-        "pro_codigo",
-        "pro_nombre",
+        "codigo",
+        "producto",
         "bod_id",
         "bodega",
-        "item_numero",
-        "serie_id",
         "serie",
         "serie_generada",
     ];
