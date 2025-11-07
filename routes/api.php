@@ -163,6 +163,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addCaso', [CasoController::class, 'add']);
     Route::post('/addCaso2', [CasoController::class, 'addCaso2']);
     Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
+    Route::get('/getEstadoActualCaso/{caso_id}', [CasoController::class, 'getEstadoActualCaso']);
 });
 
 Route::group(["prefix" => "formulario"], function ($router) {

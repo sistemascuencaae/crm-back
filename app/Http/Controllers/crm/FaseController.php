@@ -30,13 +30,27 @@ class FaseController extends Controller
         $fechaDesde = $request->input('filtroFechaDesde');
         $fechaHasta = $request->input('filtroFechaHasta');
         $tipoTablero = $request->input('tipoTablero');
+
         try {
+            // Validar que el usuario pertenece al tablero
+            $user = auth('api')->user();
 
-            $data = $this->listarfases($tabId, $fechaDesde, $fechaHasta, $tipoTablero);
+            $tableroUser = DB::selectOne("SELECT * FROM crm.tablero_user t
+                                            WHERE t.user_id = ? AND t.tab_id = ?", [$user->id, $tabId]);
 
-            $log->logInfo(FaseController::class, 'Se listo con exito las fases');
+            if (!$tableroUser) {
+                $log->logError(FaseController::class, 'Usuario sin acceso al tablero: ' . $tabId);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+                return response()->json(RespuestaApi::returnResultado('error', 'No tiene permisos para acceder a este tablero', null));
+            } else {
+
+                // Si tiene acceso, continuar con el listado normal
+                $data = $this->listarfases($tabId, $fechaDesde, $fechaHasta, $tipoTablero);
+
+                $log->logInfo(FaseController::class, 'Se listo con exito las fases');
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+            }
         } catch (\Throwable $e) {
             $log->logError(FaseController::class, 'Error al listar las fases', $e);
 
@@ -267,7 +281,7 @@ class FaseController extends Controller
     //                 //     Carbon::parse($fechaInicio)->startOfDay(),
     //                 //     Carbon::parse($fechaFin)->endOfDay(),
     //                 // ]);
-                    
+
     //                 $permisosAgencias = DB::SELECT("SELECT a.alm_id 
     //                                                         FROM crm.usuario_almacen a
     //                                                         WHERE a.user_id = ?", 
@@ -277,7 +291,7 @@ class FaseController extends Controller
     //                 $stringAlmIdAgencias = collect($permisosAgencias)->pluck('alm_id')->toArray();
 
     //                 $query->whereBetween('fecha_inicio', [Carbon::parse($fechaInicio)->startOfDay(), Carbon::parse($fechaFin)->endOfDay()]);
-                    
+
     //                 // Filtro por permisos/agencias
     //                 if (!empty($stringAlmIdAgencias)) {
     //                     $query->whereIn('codigo_agencia', $stringAlmIdAgencias);
@@ -330,7 +344,7 @@ class FaseController extends Controller
     //     return $data;
     // }
 
-    
+
     public function listFasesByTableroId(Request $request)
     {
         try {
@@ -368,10 +382,8 @@ class FaseController extends Controller
             $data = $query->orderBy('orden', 'asc')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-
         }
     }
 
@@ -380,10 +392,12 @@ class FaseController extends Controller
     {
         $user = auth('api')->user();
 
-        $permisosAgencias = DB::SELECT("SELECT a.alm_id 
+        $permisosAgencias = DB::SELECT(
+            "SELECT a.alm_id 
                                                 FROM crm.usuario_almacen a
-                                                WHERE a.user_id = ?", [$user->id]
-                                                );
+                                                WHERE a.user_id = ?",
+            [$user->id]
+        );
 
         $stringAlmIdAgencias = collect($permisosAgencias)->pluck('alm_id')->toArray();
 
@@ -406,7 +420,7 @@ class FaseController extends Controller
                 'caso.tiempo_caso',
                 'caso.agencia',
                 'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user, $stringAlmIdAgencias) {
-                    
+
                     // SI NO ES VACIO (Filtro por agencias asignadas)
                     if (!empty($stringAlmIdAgencias)) {
                         $query->whereBetween('fecha_inicio', [Carbon::parse($fechaInicio)->startOfDay(), Carbon::parse($fechaFin)->endOfDay()]);
@@ -457,12 +471,10 @@ class FaseController extends Controller
                                     break;
                             }
                         }
-
                     } else {
                         $query->whereRaw('1=0'); // condición siempre falsa, para que no me retorne ningun caso si no hay agencias asignadas
                         return;
                     }
-
                 },
             ])
             ->where('tab_id', $tabId);
@@ -472,14 +484,17 @@ class FaseController extends Controller
         return $data;
     }
 
-    public function agenciasCrmUsuario(){
+    public function agenciasCrmUsuario()
+    {
         try {
             $user = auth('api')->user();
 
-            $data = DB::SELECT("SELECT a.alm_id 
+            $data = DB::SELECT(
+                "SELECT a.alm_id 
                                             FROM crm.usuario_almacen a
-                                            WHERE a.user_id = ?", [$user->id]
-                                        );
+                                            WHERE a.user_id = ?",
+                [$user->id]
+            );
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (Exception $e) {
