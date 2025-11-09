@@ -443,7 +443,10 @@ class FaseController extends Controller
 
 
                                 case 3: // Super usuario
-
+                                    // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
+                                    $query->whereDoesntHave('estadodos', function ($subquery) {
+                                        $subquery->where('nombre', 'TERMINADO');
+                                    });
                                     break;
 
 

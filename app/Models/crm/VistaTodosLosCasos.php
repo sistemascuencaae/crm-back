@@ -31,6 +31,7 @@ class VistaTodosLosCasos extends Model
         "tipo_caso",
         "nombre_categoria_caso",
         "acc_publico",
+        "agencia",
     ];
 
     public function setCreatedAtAttribute($value)
