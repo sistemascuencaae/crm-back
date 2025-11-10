@@ -462,7 +462,8 @@ class TableroController extends Controller
                                         $query->where('id_usuario_miembro', $user_id);
                                     })
                                     ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                    ->with(['miembros.usuario.departamento', 'estadodos'])
+                                    // ->with(['miembros.usuario.departamento', 'estadodos'])
+                                    ->with(['estadodos'])
                                     ->whereHas('estadodos', function ($query) {
                                         $query->where('nombre', '!=', 'TERMINADO');
                                     })
@@ -499,7 +500,8 @@ class TableroController extends Controller
                                         $query->where('id_usuario_miembro', $user_id);
                                     })
                                     ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                    ->with(['miembros.usuario.departamento', 'estadodos'])
+                                    //->with(['miembros.usuario.departamento', 'estadodos'])
+                                    ->with(['estadodos'])
                                     ->whereHas('estadodos', function ($query) {
                                         $query->where('nombre', 'TERMINADO');
                                     })
