@@ -1084,6 +1084,7 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
 
 Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/listFormulaByParametro', [ParametroController::class, 'listFormulaByParametro']);
+    Route::get('/parametroFDias', [ParametroController::class, 'parametroFDias']);
 });
 
 // PERFILES, MENU, ACCESOS
