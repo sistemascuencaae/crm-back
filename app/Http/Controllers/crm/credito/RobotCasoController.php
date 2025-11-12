@@ -63,8 +63,13 @@ class RobotCasoController extends Controller
                 }
 
                 $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
-                $data = $casoController->getCaso($casoModificado->id);
 
+                // Desbloquear el caso
+                $casoModificado->bloqueado = false;
+                $casoModificado->bloqueado_user = '';
+                $casoModificado->save();
+
+                $data = $casoController->getCaso($casoModificado->id);
                 broadcast(new ReasignarCasoEvent($data));
 
                 // si existe la variable banMostrarVistaCreditoAprobado, se muestra la vista de caso creditoAprobado
@@ -290,7 +295,7 @@ class RobotCasoController extends Controller
                 inner join crm.users u on u.id = tu.user_id
                 where tu.tab_id = ? and u.usu_tipo in (2,3);', [$nuevoTabId]);
         $idsMiembros = DB::selectOne("SELECT array_to_string(array_agg(m.user_id), ','::text) AS ids from crm.miembros m
-        where caso_id = ? ",[$casoId]);
+        where caso_id = ? ", [$casoId]);
         $idsArray = explode(",", $idsMiembros->ids); // Convertir la cadena a un array
         foreach ($miembrosAdminTablero as $miembro) {
             if (!in_array($miembro->id, $idsArray)) { // Verificar si el ID está en el array
