@@ -41,7 +41,7 @@ class ParametroController extends Controller
             if (!$data) {
                 // Si no existe el parámetro, crear un objeto con valor por defecto
                 $data = (object) [
-                    'valor' => '1',
+                    'valor' => '0',
                 ];
             }
 

@@ -150,14 +150,21 @@ class NotificacionesController extends Controller
             // JGSJ usuario desde el backEnd
             $user = Auth::user();
 
-            $notificacion = Notificaciones::with('caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen',
-                                                    'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria',
-                                                    'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'caso.agencia', 'tablero', 'user_destino')
+            // $notificacion = Notificaciones::with('caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen',
+            //                                         'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria',
+            //                                         'caso.Archivo', 'caso.estadodos', 'caso.req_caso', 'caso.agencia', 'tablero', 'user_destino')
+            //                                 ->whereHas('caso.miembros', function ($query) use ($user) {
+            //                                     $query->where('user_id', $user->id);
+            //                                 })
+            //                                 ->orderBy('id', 'DESC')
+            //                                 ->latest()->take(20)->get();
+
+            $notificacion = Notificaciones::with('caso.miembros', 'tablero', 'user_destino')
                                             ->whereHas('caso.miembros', function ($query) use ($user) {
                                                 $query->where('user_id', $user->id);
                                             })
                                             ->orderBy('id', 'DESC')
-                                            ->latest()->take(20)->get();
+                                            ->latest()->take(10)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $notificacion));
         } catch (Exception $e) {

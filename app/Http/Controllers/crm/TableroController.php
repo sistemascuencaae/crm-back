@@ -94,7 +94,8 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
-            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("nombre", "asc")->get();
+            // $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("nombre", "asc")->get();
+            $tableros = Tablero::where('estado', true)->orderBy("nombre", "asc")->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros activos');
 
@@ -110,7 +111,8 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
-            $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("nombre", "asc")->get();
+            // $tableros = Tablero::with('tableroUsuario.usuario.departamento')->where('estado', false)->orderBy("nombre", "asc")->get();
+            $tableros = Tablero::where('estado', false)->orderBy("nombre", "asc")->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros inactivos');
 
@@ -127,10 +129,13 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
-            // $tableros = Tablero::where("tableroUsuario", $user_id)->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy("id", "desc")->get();
+            // $tableros = Tablero::whereHas('tableroUsuario', function ($query) use ($user_id) {
+            //     $query->where('user_id', $user_id);
+            // })->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy('nombre', 'asc')->get();
+
             $tableros = Tablero::whereHas('tableroUsuario', function ($query) use ($user_id) {
                 $query->where('user_id', $user_id);
-            })->with('tableroUsuario.usuario.departamento')->where('estado', true)->orderBy('nombre', 'asc')->get();
+            })->where('estado', true)->orderBy('nombre', 'asc')->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito los tableros por user_id: ' . $user_id);
 
@@ -333,12 +338,13 @@ class TableroController extends Controller
             // $dataRe = Tablero::with('tableroUsuario.usuario.departamento')->where('id', $tab['id'])->first();
 
             // Obtener el tablero con los usuarios y sus permisos
-            $dataRe = Tablero::with([
-                'tableroUsuario.usuario' => function ($query) {
-                    $query->leftJoin('crm.tablero_user', 'users.id', '=', 'tablero_user.user_id');
-                },
-                'tableroUsuario.usuario.departamento'
-            ])->where('id', $tab['id'])->first();
+            // $dataRe = Tablero::with([
+            //     'tableroUsuario.usuario' => function ($query) {
+            //         $query->leftJoin('crm.tablero_user', 'users.id', '=', 'tablero_user.user_id');
+            //     },
+            //     'tableroUsuario.usuario.departamento'
+            // ])->where('id', $tab['id'])->first();
+            $dataRe = Tablero::where('id', $tab['id'])->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $dataRe));
         } catch (Exception $e) {
@@ -424,7 +430,6 @@ class TableroController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
-
     }
 
     public function listTablerosByUserId($user_id)
@@ -459,16 +464,16 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaMisCasos::where(function ($query) use ($user_id) {
-                                        $query->where('id_usuario_miembro', $user_id);
-                                    })
-                                    ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                    // ->with(['miembros.usuario.departamento', 'estadodos'])
-                                    ->with(['estadodos'])
-                                    ->whereHas('estadodos', function ($query) {
-                                        $query->where('nombre', '!=', 'TERMINADO');
-                                    })
-                                    ->get();
-                                    //->orWhere('user_creador_id', $user_id);
+                $query->where('id_usuario_miembro', $user_id);
+            })
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                // ->with(['miembros.usuario.departamento', 'estadodos'])
+                ->with(['estadodos'])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                })
+                ->get();
+            //->orWhere('user_creador_id', $user_id);
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -497,16 +502,16 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaMisCasos::where(function ($query) use ($user_id) {
-                                        $query->where('id_usuario_miembro', $user_id);
-                                    })
-                                    ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                    //->with(['miembros.usuario.departamento', 'estadodos'])
-                                    ->with(['estadodos'])
-                                    ->whereHas('estadodos', function ($query) {
-                                        $query->where('nombre', 'TERMINADO');
-                                    })
-                                    ->get();
-                                    // ->orWhere('user_creador_id', $user_id);
+                $query->where('id_usuario_miembro', $user_id);
+            })
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                //->with(['miembros.usuario.departamento', 'estadodos'])
+                ->with(['estadodos'])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'TERMINADO');
+                })
+                ->get();
+            // ->orWhere('user_creador_id', $user_id);
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -540,13 +545,13 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                        ->with([
-                                            'estadodos'
-                                        ])
-                                        ->whereHas('estadodos', function ($query) {
-                                            $query->where('nombre', '!=', 'TERMINADO');
-                                        })
-                                        ->get();
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                })
+                ->get();
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -571,13 +576,13 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                        ->with([
-                                            'estadodos'
-                                        ])
-                                        ->whereHas('estadodos', function ($query) {
-                                            $query->where('nombre', 'TERMINADO');
-                                        })
-                                        ->get();
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'TERMINADO');
+                })
+                ->get();
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -603,14 +608,14 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                        ->with([
-                                            'estadodos'
-                                        ])
-                                        ->whereHas('estadodos', function ($query) {
-                                            $query->where('nombre', '!=', 'TERMINADO');
-                                        })
-                                        ->get();
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                })
+                ->get();
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -635,14 +640,14 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                        ->with([
-                                            'estadodos'
-                                        ])
-                                        ->whereHas('estadodos', function ($query) {
-                                            $query->where('nombre', 'TERMINADO');
-                                        })
-                                        ->get();
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'TERMINADO');
+                })
+                ->get();
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -668,15 +673,15 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                                        ->where('acc_publico', false)
-                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                        ->with([
-                                            'estadodos'
-                                        ])
-                                        ->whereHas('estadodos', function ($query) {
-                                            $query->where('nombre', '!=', 'TERMINADO');
-                                        })
-                                        ->get();
+                ->where('acc_publico', false)
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                })
+                ->get();
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -701,15 +706,15 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                                        ->where('acc_publico', false)
-                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                        ->with([
-                                            'estadodos'
-                                        ])
-                                        ->whereHas('estadodos', function ($query) {
-                                            $query->where('nombre', 'TERMINADO');
-                                        })
-                                        ->get();
+                ->where('acc_publico', false)
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'TERMINADO');
+                })
+                ->get();
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -738,13 +743,13 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                        ->with([
-                                            'estadodos'
-                                        ])
-                                        ->whereHas('estadodos', function ($query) {
-                                            $query->where('nombre', '!=', 'TERMINADO');
-                                        })
-                                        ->get();
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                })
+                ->get();
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -769,14 +774,14 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                        ->with([
-                                            'estadodos'
-                                        ])
-                                        ->whereHas('estadodos', function ($query) {
-                                            $query->where('nombre', '!=', 'TERMINADO');
-                                        })
-                                        ->get();
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                })
+                ->get();
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -801,15 +806,15 @@ class TableroController extends Controller
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
             $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                                        ->where('user_id', $user_id)
-                                        ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                                        ->with([
-                                            'estadodos'
-                                        ])
-                                        ->whereHas('estadodos', function ($query) {
-                                            $query->where('nombre', '!=', 'TERMINADO');
-                                        })
-                                        ->get();
+                ->where('user_id', $user_id)
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                })
+                ->get();
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];

@@ -392,12 +392,9 @@ class FaseController extends Controller
     {
         $user = auth('api')->user();
 
-        $permisosAgencias = DB::SELECT(
-            "SELECT a.alm_id 
-                                                FROM crm.usuario_almacen a
-                                                WHERE a.user_id = ?",
-            [$user->id]
-        );
+        $permisosAgencias = DB::SELECT("SELECT a.alm_id 
+                                            FROM crm.usuario_almacen a
+                                        WHERE a.user_id = ?", [$user->id]);
 
         $stringAlmIdAgencias = collect($permisosAgencias)->pluck('alm_id')->toArray();
 
@@ -409,7 +406,7 @@ class FaseController extends Controller
                 'caso.resumen',
                 'caso.tareas2',
                 'caso.actividad',
-                'caso.miembros.usuario.departamento',
+                // 'caso.miembros.usuario.departamento',
                 'caso.Etiqueta',
                 'caso.req_caso' => function ($query) {
                     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
@@ -492,12 +489,9 @@ class FaseController extends Controller
         try {
             $user = auth('api')->user();
 
-            $data = DB::SELECT(
-                "SELECT a.alm_id 
-                                            FROM crm.usuario_almacen a
-                                            WHERE a.user_id = ?",
-                [$user->id]
-            );
+            $data = DB::SELECT("SELECT a.alm_id 
+                                    FROM crm.usuario_almacen a
+                                WHERE a.user_id = ?", [$user->id]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (Exception $e) {

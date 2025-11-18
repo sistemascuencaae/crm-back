@@ -113,6 +113,7 @@ use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
 use App\Http\Controllers\correo\CorreoController;
+use App\Http\Controllers\crm\FaseController2;
 use App\Http\Controllers\crm\seriesalm\BodegaSeriesGeneradasController;
 use Illuminate\Support\Facades\Route;
 
@@ -496,6 +497,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // FASES
     Route::get('/listFasesByTableroId', [FaseController::class, 'listFasesByTableroId']);
     Route::get('/agenciasCrmUsuario', [FaseController::class, 'agenciasCrmUsuario']);
+    
+    // FASES 2
+    Route::get('/listTableroCompleto', [FaseController2::class, 'listTableroCompleto']);
     
     // Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
     Route::post('/addDirectorio', [DirectorioController::class, 'addDirectorio']); // guardar

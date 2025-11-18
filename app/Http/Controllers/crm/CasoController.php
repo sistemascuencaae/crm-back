@@ -352,27 +352,143 @@ class CasoController extends Controller
         $casoId = $request->input("casoId");
         $bloqueado = $request->input("bloqueado");
         $bloqueado_user = $request->input("bloqueado_user");
+        $user = auth('api')->user();
 
+        // Usar transacción para evitar condiciones de carrera (race conditions)
+        DB::beginTransaction();
         try {
-            $caso = Caso::find($casoId);
+            // Obtener el caso con bloqueo de fila (FOR UPDATE) para evitar lecturas concurrentes
+            $caso = Caso::where('id', $casoId)->lockForUpdate()->first();
 
-            if ($caso) {
-                $caso->bloqueado = $bloqueado;
-                $caso->bloqueado_user = $bloqueado_user;
-                $caso->save();
+            if (!$caso) {
+                DB::rollBack();
+                return response()->json(
+                    RespuestaApi::returnResultado('error', 'Caso no encontrado', null),
+                    404
+                );
             }
+
+            // Obtener información del usuario que hace la petición
+            $usuarioActual = User::find($user->id);
+            $esAdmin = $usuarioActual && ($usuarioActual->usu_tipo == 2 || $usuarioActual->usu_tipo == 3);
+
+            // Variable para detectar desbloqueo forzado por admin
+            $desbloqueoForzado = false;
+            $usuarioAnterior = null;
+
+            // Si se quiere BLOQUEAR el caso
+            if ($bloqueado === true || $bloqueado === "true" || $bloqueado === 1) {
+                // Verificar si ya está bloqueado por OTRO usuario
+                if ($caso->bloqueado && $caso->bloqueado_user !== $bloqueado_user) {
+
+                    // ⭐ Si es ADMIN o SUPERUSUARIO, puede forzar el bloqueo y tomar control
+                    if ($esAdmin) {
+                        $desbloqueoForzado = true;
+                        $usuarioAnterior = $caso->bloqueado_user;
+                        $log->logInfo(CasoController::class, 'BLOQUEO FORZADO - Admin/Superusuario: ' . $bloqueado_user . ' tomó control del caso #' . $casoId . ' que estaba bloqueado por: ' . $usuarioAnterior);
+                    } else {
+                        // Si NO es admin, rechazar el bloqueo
+                        DB::rollBack();
+
+                        $log->logInfo(CasoController::class, 'Intento de bloqueo fallido - Caso #' . $casoId . ' ya está bloqueado por: ' . $caso->bloqueado_user . '. Usuario que intentó: ' . $bloqueado_user);
+
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Este caso está siendo atendido por ' . $caso->bloqueado_user,
+                            'data' => [
+                                'bloqueado' => true,
+                                'bloqueado_user' => $caso->bloqueado_user,
+                                'caso_id' => $casoId
+                            ]
+                        ], 423); // HTTP 423 Locked
+                    }
+                }
+
+                // Bloquear el caso (o re-bloquearlo si es admin forzando)
+                $caso->bloqueado = true;
+                $caso->bloqueado_user = $bloqueado_user;
+
+                if (!$desbloqueoForzado) {
+                    $log->logInfo(CasoController::class, 'Caso #' . $casoId . ' bloqueado exitosamente por: ' . $bloqueado_user);
+                }
+            } else {
+                // DESBLOQUEAR el caso
+                // Detectar si es un desbloqueo forzado por admin/superusuario
+                // Solo es desbloqueo forzado si:
+                // 1. El caso está bloqueado
+                // 2. Tiene un usuario que lo bloqueó
+                // 3. El usuario que desbloquea NO es el mismo (y no es vacío)
+                // 4. El usuario que desbloquea ES admin/superusuario
+                if ($caso->bloqueado && $caso->bloqueado_user && $bloqueado_user && $caso->bloqueado_user !== $bloqueado_user && $esAdmin) {
+                    $desbloqueoForzado = true;
+                    $usuarioAnterior = $caso->bloqueado_user;
+                    $log->logInfo(CasoController::class, 'Desbloqueo FORZADO - Admin/Superusuario: ' . $bloqueado_user . ' desbloqueó el caso #' . $casoId . ' que estaba bloqueado por: ' . $usuarioAnterior);
+                } else {
+                    $log->logInfo(CasoController::class, 'Caso #' . $casoId . ' desbloqueado por: ' . ($bloqueado_user ?: 'usuario'));
+                }
+
+                $caso->bloqueado = false;
+                $caso->bloqueado_user = null;
+            }
+
+            $caso->save();
+            DB::commit();
+
+            // Obtener datos actualizados del caso
             $data = $this->getCaso($casoId);
+
+            // Agregar información sobre desbloqueo forzado al evento
+            if ($desbloqueoForzado) {
+                $data->desbloqueo_forzado = true;
+                $data->admin_que_desbloqueo = $bloqueado_user;
+                $data->usuario_anterior = $usuarioAnterior;
+                $data->tipo_admin = $usuarioActual->usu_tipo == 2 ? 'Administrador' : 'Superusuario';
+            }
+
+            // Emitir evento WebSocket
             broadcast(new TableroEvent($data));
 
-            $log->logInfo(CasoController::class, 'Caso #' . $casoId . ' bloqueado por: ' . $bloqueado_user);
+            return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizó con éxito', $data));
 
-            return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
         } catch (\Throwable $e) {
+            DB::rollBack();
             $log->logError(CasoController::class, 'Error al actualizar el bloqueo del caso #' . $casoId, $e);
 
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
+            return response()->json(
+                RespuestaApi::returnResultado('error', 'Error al actualizar: ' . $e->getMessage(), null),
+                500
+            );
         }
     }
+
+    // public function bloqueoCaso(Request $request)
+    // {
+    //     $log = new Funciones();
+
+    //     $casoId = $request->input("casoId");
+    //     $bloqueado = $request->input("bloqueado");
+    //     $bloqueado_user = $request->input("bloqueado_user");
+
+    //     try {
+    //         $caso = Caso::find($casoId);
+
+    //         if ($caso) {
+    //             $caso->bloqueado = $bloqueado;
+    //             $caso->bloqueado_user = $bloqueado_user;
+    //             $caso->save();
+    //         }
+    //         $data = $this->getCaso($casoId);
+    //         broadcast(new TableroEvent($data));
+
+    //         $log->logInfo(CasoController::class, 'Caso #' . $casoId . ' bloqueado por: ' . $bloqueado_user);
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
+    //     } catch (\Throwable $e) {
+    //         $log->logError(CasoController::class, 'Error al actualizar el bloqueo del caso #' . $casoId, $e);
+
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
+    //     }
+    // }
 
     private function getCasoJoinTablero($casoId)
     {
