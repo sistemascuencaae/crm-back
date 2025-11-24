@@ -500,7 +500,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/agenciasCrmUsuario', [FaseController::class, 'agenciasCrmUsuario']);
     
     // FASES 2
-    Route::get('/listTableroCompleto', [FaseController2::class, 'listTableroCompleto']);
+    Route::post('/listTableroCompleto', [FaseController2::class, 'listTableroCompleto']);
     
     // Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
     Route::post('/addDirectorio', [DirectorioController::class, 'addDirectorio']); // guardar

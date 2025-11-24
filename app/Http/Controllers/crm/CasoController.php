@@ -908,14 +908,14 @@ class CasoController extends Controller
                     'user',
                     'userCreador',
                     'clienteCrm',
-                    'resumen',
+                    // 'resumen',
                     // 'tareas' => function ($query) use ($tabId) {
                     //     $query->where('tab_id', $tabId->id);
                     // },
                     'tareas2',
                     'actividad',
                     'Etiqueta',
-                    'miembros.usuario.departamento',
+                    // 'miembros.usuario.departamento',
                     'Galeria',
                     'Archivo',
                     'req_caso' => function ($query) {
@@ -986,7 +986,7 @@ class CasoController extends Controller
                 "tab_id" => sizeof($tabDepa) > 0 ? $tabDepa[0]->tab_id : null,
             ]);
 
-            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.agencia', 'tablero', 'user_destino')
+            $data = Notificaciones::with('caso.user', 'caso.miembros', 'tablero', 'user_destino')
                 ->where('id', $noti->id)
                 ->orderBy('id', 'DESC')->first();
 
@@ -1919,13 +1919,13 @@ class CasoController extends Controller
                     'user',
                     'userCreador',
                     'clienteCrm',
-                    'resumen',
+                    // 'resumen',
                     // 'tareas' => function ($query) use ($tabId) {
                     //     $query->where('tab_id', $tabId->id);
                     // },
                     'actividad',
                     'Etiqueta',
-                    'miembros.usuario.departamento',
+                    // 'miembros.usuario.departamento',
                     'Galeria',
                     'Archivo',
                     'req_caso' => function ($query) {
@@ -1963,13 +1963,13 @@ class CasoController extends Controller
                     'user',
                     'userCreador',
                     'clienteCrm',
-                    'resumen',
+                    // 'resumen',
                     // 'tareas' => function ($query) use ($tabId) {
                     //     $query->where('tab_id', $tabId->id);
                     // },
                     'actividad',
                     'Etiqueta',
-                    'miembros.usuario.departamento',
+                    // 'miembros.usuario.departamento',
                     'Galeria',
                     'Archivo',
                     'req_caso' => function ($query) {
@@ -2008,13 +2008,13 @@ class CasoController extends Controller
                     'user',
                     'userCreador',
                     'clienteCrm',
-                    'resumen',
+                    // 'resumen',
                     // 'tareas' => function ($query) use ($tabId) {
                     //     $query->where('tab_id', $tabId->id);
                     // },
                     'actividad',
                     'Etiqueta',
-                    'miembros.usuario.departamento',
+                    // 'miembros.usuario.departamento',
                     'Galeria',
                     'Archivo',
                     'req_caso' => function ($query) {
@@ -2049,13 +2049,13 @@ class CasoController extends Controller
                     'user',
                     'userCreador',
                     'clienteCrm',
-                    'resumen',
+                    // 'resumen',
                     // 'tareas' => function ($query) use ($tabId) {
                     //     $query->where('tab_id', $tabId->id);
                     // },
                     'actividad',
                     'Etiqueta',
-                    'miembros.usuario.departamento',
+                    // 'miembros.usuario.departamento',
                     'Galeria',
                     'Archivo',
                     'req_caso' => function ($query) {
@@ -2093,10 +2093,10 @@ class CasoController extends Controller
                     'user',
                     'userCreador',
                     'clienteCrm',
-                    'resumen',
+                    // 'resumen',
                     'actividad',
                     'Etiqueta',
-                    'miembros.usuario.departamento',
+                    // 'miembros.usuario.departamento',
                     'Galeria',
                     'Archivo',
                     'req_caso' => function ($query) {
@@ -2162,10 +2162,10 @@ class CasoController extends Controller
                     'user',
                     'userCreador',
                     'clienteCrm',
-                    'resumen',
+                    // 'resumen',
                     'actividad',
                     'Etiqueta',
-                    'miembros.usuario.departamento',
+                    // 'miembros.usuario.departamento',
                     'Galeria',
                     'Archivo',
                     'req_caso' => function ($query) {

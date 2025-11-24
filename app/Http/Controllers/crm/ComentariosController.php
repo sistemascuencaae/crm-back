@@ -75,25 +75,26 @@ class ComentariosController extends Controller
             $audit->save();
             // END Auditoria
 
+            // $data = DB::select('select * from crm.comentarios where caso_id = ' . $coment->caso_id . ' order by 1 desc');
             $data = DB::select('select * from crm.comentarios where caso_id = ' . $coment->caso_id . ' order by 1 desc');
 
-            $casoEnProceso = Caso::find($coment->caso_id);
-            $userLogin = auth('api')->user();
-            $noti = $this->getNotificacion(
-                'comento el caso #',
-                'Comentario',
-                $userLogin->name,
-                $casoEnProceso->id,
-                $casoEnProceso->user_id,
-                $casoEnProceso->fas_id,
-                $casoEnProceso->user->name
-            );
+            // $casoEnProceso = Caso::find($coment->caso_id);
+            // $userLogin = auth('api')->user();
+            // $noti = $this->getNotificacion(
+            //     'comento el caso #',
+            //     'Comentario',
+            //     $userLogin->name,
+            //     $casoEnProceso->id,
+            //     $casoEnProceso->user_id,
+            //     $casoEnProceso->fas_id,
+            //     $casoEnProceso->user->name
+            // );
 
-            if ($noti) {
-                broadcast(new NotificacionesCrmEvent($noti));
-            }
+            // if ($noti) {
+            //     broadcast(new NotificacionesCrmEvent($noti));
+            // }
 
-            broadcast(new ComentariosEvent($data));
+            // broadcast(new ComentariosEvent($data));
 
             $log->logInfo(ComentariosController::class, 'Se guardo con exito el comentario');
 
@@ -132,7 +133,7 @@ class ComentariosController extends Controller
                 "tab_id" => sizeof($tabDepa) > 0 ? $tabDepa[0]->tab_id : null,
             ]);
 
-            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'caso.estadodos', 'caso.agencia', 'tablero', 'user_destino')
+            $data = Notificaciones::with('caso.user', 'caso.miembros', 'tablero', 'user_destino')
                 ->where('id', $noti->id)
                 ->orderBy('id', 'DESC')->first();
 

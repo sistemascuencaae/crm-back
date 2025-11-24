@@ -216,12 +216,12 @@ class FaseController extends Controller
             'caso.user',
             'caso.userCreador',
             'caso.clienteCrm',
-            'caso.resumen',
+            // 'caso.resumen',
             'caso.tareas' => function ($query) use ($tabId) {
                 $query->where('tab_id', $tabId);
             },
             'caso.actividad',
-            'caso.miembros.usuario.departamento',
+            // 'caso.miembros.usuario.departamento',
             'caso.Etiqueta',
             'caso.req_caso' => function ($query) {
                 $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
@@ -258,12 +258,12 @@ class FaseController extends Controller
                     'caso.user',
                     'caso.userCreador',
                     'caso.clienteCrm',
-                    'caso.resumen',
+                    // 'caso.resumen',
                     'caso.tareas' => function ($query) use ($request) {
                         $query->where('tab_id', $request->tabId);
                     },
                     'caso.actividad',
-                    'caso.miembros.usuario.departamento',
+                    // 'caso.miembros.usuario.departamento',
                     'caso.Etiqueta',
                     'caso.req_caso' => function ($query) {
                         $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
@@ -305,10 +305,10 @@ class FaseController extends Controller
 
         $query = Fase::query()
             ->with([
-                'caso.user',
+                'caso.user', // --------------------------------------------------------------------
                 'caso.userCreador',
                 'caso.clienteCrm',
-                'caso.resumen',
+                // 'caso.resumen',
                 'caso.tareas2',
                 'caso.actividad',
                 // 'caso.miembros.usuario.departamento',
@@ -318,10 +318,10 @@ class FaseController extends Controller
                 },
                 'condicionFaseMover',
                 'caso.estadodos',
-                'caso.tipocaso',
+                'caso.tipocaso', //------------------------------------------------------------------------------
                 'caso.tiempo_caso',
                 'caso.agencia',
-                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user, $stringAlmIdAgencias) {
+                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user, $stringAlmIdAgencias) { // Se ocupa para poder mostrar el numero de casos que esta en la fase (Esto es un array)
 
                     // SI NO ES VACIO (Filtro por agencias asignadas)
                     if (!empty($stringAlmIdAgencias)) {
