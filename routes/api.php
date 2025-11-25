@@ -9,6 +9,7 @@ use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
+use App\Http\Controllers\configuracion\CodigoQrController;
 use App\Http\Controllers\configuracion\HorarioController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\AlmacenController;
@@ -1000,6 +1001,7 @@ Route::group(["prefix" => "gex", 'middleware' => ['jwt.auth', 'usuario.activo', 
 
     // SERIES ALM
     Route::get('/listBodegaSeriesGeneradas', [BodegaSeriesGeneradasController::class, 'listBodegaSeriesGeneradas']); // listar todas las bodegas
+    Route::get('/listSeriesGeneradasByBodId', [BodegaSeriesGeneradasController::class, 'listSeriesGeneradasByBodId']); // listar todas las bodegas
 
     Route::delete('/borrarInventarioCompleto/{numero_inventario}', [SeriesAlmController::class, 'borrarInventarioCompleto']); // Borrar un inventario completo que no tenga despachos ni contratos
     Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
@@ -1033,7 +1035,11 @@ Route::group(["prefix" => "gex", 'middleware' => ['jwt.auth', 'usuario.activo', 
 
 Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
 
-    // CONFIGURACION
+    // CODIGOS QR
+
+    Route::get('/listAllCodigosQr', [CodigoQrController::class, 'listAllCodigosQr']);
+
+    // ARCHIVOS 2
 
     Route::get('/listAllArchivos2', [Archivos2Controller::class, 'listAllArchivos2']);
     Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
