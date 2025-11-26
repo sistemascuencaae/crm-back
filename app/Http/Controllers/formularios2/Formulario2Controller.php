@@ -612,4 +612,19 @@ class Formulario2Controller extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    public function af_obtener_facturas_cliente(Request $request)
+    {
+        try {
+            $data = DB::select('SELECT * FROM crm.af_obtener_facturas_cliente(?, ?)', [$request->identificacion, $request->fecha_caso]);
+
+            if (!$data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron facturas.', ''));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 }

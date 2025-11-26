@@ -829,6 +829,7 @@ Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
     Route::get('/listFacturasPendientes/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasPendientes']); // lista de facturas
     Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
+    Route::post('/af_obtener_facturas_cliente', [Formulario2Controller::class, 'af_obtener_facturas_cliente']);
         
     Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
     Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios

@@ -39,7 +39,8 @@ class RequerimientoCaso extends Model
         'esimagen',
         'galerias_id',
         'archivos_id',
-        'desc_requerida'
+        'desc_requerida',
+        'cfa_id',
     ];
 
     public function setCreatedAtAttribute($value)
