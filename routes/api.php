@@ -265,6 +265,10 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listTableroMisCasosPendientes/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosPendientes']);
     Route::get('/listTableroMisCasosTerminados/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosTerminados']);
     Route::get('/listTableroMisCasosRechazados/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosRechazados']);
+
+    Route::get('/listTableroMisCasosPendientesPorCampo/{tipo_campo}/{valor}/{user_id}', [TableroController::class, 'listTableroMisCasosPendientesPorCampo']);
+    Route::get('/listTableroMisCasosTerminadosPorCampo/{tipo_campo}/{valor}/{user_id}', [TableroController::class, 'listTableroMisCasosTerminadosPorCampo']);
+    Route::get('/listTableroMisCasosRechazadosPorCampo/{tipo_campo}/{valor}/{user_id}', [TableroController::class, 'listTableroMisCasosRechazadosPorCampo']);
     
     Route::get('/listTodosLosCasosPendientesSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosPendientesSuperUsuario']);
     Route::get('/listTodosLosCasosTerminadosSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosTerminadosSuperUsuario']);

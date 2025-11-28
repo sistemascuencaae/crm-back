@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class VistaMisCasos extends Model
 {
-
     protected $table = 'crm.av_mis_casos';
 
     protected $fillable = [
@@ -29,16 +28,24 @@ class VistaMisCasos extends Model
         "nombre_tablero",
         "estado_2",
         "tc_id",
+        "fas_id",
         "user_creador_id",
+        "descripcion",
+        "cliente_caso",
+        "identificacion",
+        "comprobante",
         "datos_formulario",
         "tipo_caso",
         "nombre_categoria_caso",
         "acc_publico",
+        "acceso_caso",
     ];
 
-    public function miembros(){
+    public function miembros()
+    {
         return $this->hasMany(Miembros::class, "caso_id", "caso_id");
     }
+
     public function estadodos()
     {
         return $this->belongsTo(Estados::class, "estado_2", "id");

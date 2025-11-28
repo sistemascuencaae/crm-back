@@ -409,6 +409,7 @@ class TableroController extends Controller
     }
 
     // !START EndPoint para la tabla o pantalla de MIS CASOS
+    // ?START filtros por fechas
     public function listTableroMisCasosPendientes($fechaInicio, $fechaFin, $user_id)
     {
         $log = new Funciones();
@@ -492,6 +493,83 @@ class TableroController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+    // ?END filtros por fechas
+
+
+
+    // ?START filtros por campo específico
+    public function listTableroMisCasosPendientesPorCampo($tipo_campo, $valor, $user_id)
+    {
+        $log = new Funciones();
+        try {
+            $data = VistaMisCasos::where(function ($query) use ($user_id) {
+                $query->where('id_usuario_miembro', $user_id);
+            })
+                ->where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with(['estadodos'])
+                ->whereHas('estadodos', function ($query) {
+                    $query->whereNotIn('nombre', ['TERMINADO', 'Rechazado']);
+                })
+                ->get();
+
+            $log->logInfo(TableroController::class, 'Se listo con exito los casos para el tablero mis casos por campo: ' . $tipo_campo . ', valor: ' . $valor . ', user_id: ' . $user_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los casos para el tablero mis casos por campo, user_id: ' . $user_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTableroMisCasosTerminadosPorCampo($tipo_campo, $valor, $user_id)
+    {
+        $log = new Funciones();
+        try {
+            $data = VistaMisCasos::where(function ($query) use ($user_id) {
+                $query->where('id_usuario_miembro', $user_id);
+            })
+                ->where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with(['estadodos'])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'TERMINADO');
+                })
+                ->get();
+
+            $log->logInfo(TableroController::class, 'Se listo con exito los casos terminados para el tablero mis casos por campo: ' . $tipo_campo . ', valor: ' . $valor . ', user_id: ' . $user_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los casos terminados para el tablero mis casos por campo, user_id: ' . $user_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTableroMisCasosRechazadosPorCampo($tipo_campo, $valor, $user_id)
+    {
+        $log = new Funciones();
+        try {
+            $data = VistaMisCasos::where(function ($query) use ($user_id) {
+                $query->where('id_usuario_miembro', $user_id);
+            })
+                ->where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with(['estadodos'])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'Rechazado');
+                })
+                ->get();
+
+            $log->logInfo(TableroController::class, 'Se listo con exito los casos rechazados para el tablero mis casos por campo: ' . $tipo_campo . ', valor: ' . $valor . ', user_id: ' . $user_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(TableroController::class, 'Error al listar los casos rechazados para el tablero mis casos por campo, user_id: ' . $user_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    // ?END filtros por campo específico
     // !END EndPoint para la tabla o pantalla de MIS CASOS
     //
 
