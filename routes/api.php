@@ -114,6 +114,7 @@ use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
 use App\Http\Controllers\correo\CorreoController;
+use App\Http\Controllers\crm\credito\ResumenController;
 use App\Http\Controllers\crm\FaseController2;
 use App\Http\Controllers\crm\seriesalm\BodegaSeriesGeneradasController;
 use Illuminate\Support\Facades\Route;
@@ -937,6 +938,9 @@ Route::group(['prefix' => 'parametros', 'middleware' => ['jwt.auth', 'usuario.ac
 });
 
 Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+
+    // RESUMEN DE CASOS DEL CLIENTE
+    Route::post('/listResumenCasosClienteByIdentificacion', [ResumenController::class, 'listResumenCasosClienteByIdentificacion']); // Editar
 
     // SOLICITUD CREDITO
     Route::post('/editSolicitudCredito/{id}', [solicitudCreditoController::class, 'editSolicitudCredito']); // Editar

@@ -151,4 +151,5 @@ class ComentariosController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
 }
