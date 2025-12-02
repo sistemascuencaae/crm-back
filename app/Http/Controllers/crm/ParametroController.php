@@ -30,4 +30,44 @@ class ParametroController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
         }
     }
+
+    public function parametroFDias()
+    {
+        try {
+            $data = DB::table('crm.parametro')
+                            ->where('abreviacion', 'FDIAS')
+                            ->first();
+
+            if (!$data) {
+                // Si no existe el parámetro, crear un objeto con valor por defecto
+                $data = (object) [
+                    'valor' => '0',
+                ];
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
+        }
+    }
+
+    public function parametroFDiasMisCasos()
+    {
+        try {
+            $data = DB::table('crm.parametro')
+                            ->where('abreviacion', 'FDIAS2')
+                            ->first();
+
+            if (!$data) {
+                // Si no existe el parámetro, crear un objeto con valor por defecto
+                $data = (object) [
+                    'valor' => '0',
+                ];
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
+        }
+    }
 }

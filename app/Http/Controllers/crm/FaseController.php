@@ -30,13 +30,27 @@ class FaseController extends Controller
         $fechaDesde = $request->input('filtroFechaDesde');
         $fechaHasta = $request->input('filtroFechaHasta');
         $tipoTablero = $request->input('tipoTablero');
+
         try {
+            // Validar que el usuario pertenece al tablero
+            $user = auth('api')->user();
 
-            $data = $this->listarfases($tabId, $fechaDesde, $fechaHasta, $tipoTablero);
+            $tableroUser = DB::selectOne("SELECT * FROM crm.tablero_user t
+                                            WHERE t.user_id = ? AND t.tab_id = ?", [$user->id, $tabId]);
 
-            $log->logInfo(FaseController::class, 'Se listo con exito las fases');
+            if (!$tableroUser) {
+                $log->logError(FaseController::class, 'Usuario sin acceso al tablero: ' . $tabId);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+                return response()->json(RespuestaApi::returnResultado('error', 'No tiene permisos para acceder a este tablero', null));
+            } else {
+
+                // Si tiene acceso, continuar con el listado normal
+                $data = $this->listarfases($tabId, $fechaDesde, $fechaHasta, $tipoTablero);
+
+                $log->logInfo(FaseController::class, 'Se listo con exito las fases');
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+            }
         } catch (\Throwable $e) {
             $log->logError(FaseController::class, 'Error al listar las fases', $e);
 
@@ -202,12 +216,12 @@ class FaseController extends Controller
             'caso.user',
             'caso.userCreador',
             'caso.clienteCrm',
-            'caso.resumen',
+            // 'caso.resumen',
             'caso.tareas' => function ($query) use ($tabId) {
                 $query->where('tab_id', $tabId);
             },
             'caso.actividad',
-            'caso.miembros.usuario.departamento',
+            // 'caso.miembros.usuario.departamento',
             'caso.Etiqueta',
             'caso.req_caso' => function ($query) {
                 $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
@@ -236,101 +250,6 @@ class FaseController extends Controller
         return $data;
     }
 
-    // public function listarfases($tabId, $fechaInicio, $fechaFin, $tipoTablero = null)
-    // {
-    //     $userLogin = Auth::id();
-    //     $user = DB::selectOne("SELECT usu_tipo FROM crm.users where id = ?",[$userLogin]);
-
-    //     $query = Fase::query()
-    //         ->with([
-    //             'caso.user',
-    //             'caso.userCreador',
-    //             'caso.clienteCrm',
-    //             'caso.resumen',
-    //             // 'caso.tareas' => function ($query) use ($tabId) {
-    //             //     $query->where('tab_id', $tabId);
-    //             // },
-    //             'caso.tareas2',
-    //             'caso.actividad',
-    //             'caso.miembros.usuario.departamento',
-    //             'caso.Etiqueta',
-    //             'caso.req_caso' => function ($query) {
-    //                 $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-    //             },
-    //             'condicionFaseMover',
-    //             'caso.estadodos',
-    //             'caso.tipocaso',
-    //             'caso.tiempo_caso',
-    //             'caso.agencia',
-    //             'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user, $userLogin) {
-    //                 // $query->whereBetween('fecha_vencimiento', [
-    //                 //     Carbon::parse($fechaInicio)->startOfDay(),
-    //                 //     Carbon::parse($fechaFin)->endOfDay(),
-    //                 // ]);
-                    
-    //                 $permisosAgencias = DB::SELECT("SELECT a.alm_id 
-    //                                                         FROM crm.usuario_almacen a
-    //                                                         WHERE a.user_id = ?", 
-    //                                                         [$userLogin]
-    //                                                         );
-
-    //                 $stringAlmIdAgencias = collect($permisosAgencias)->pluck('alm_id')->toArray();
-
-    //                 $query->whereBetween('fecha_inicio', [Carbon::parse($fechaInicio)->startOfDay(), Carbon::parse($fechaFin)->endOfDay()]);
-                    
-    //                 // Filtro por permisos/agencias
-    //                 if (!empty($stringAlmIdAgencias)) {
-    //                     $query->whereIn('codigo_agencia', $stringAlmIdAgencias);
-    //                 }
-
-    //                 // listado para usuarios SUPER USUARIO (usu_tipo = 3)
-    //                 if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 3) {
-    //                     // // JGSJ Solo incluir todos los casos de la diferentes categoria_caso
-    //                     // $query->whereHas('tipocaso', function ($q) {
-    //                     //     $q->where('categoria_caso', 1)->orWhere('categoria_caso', 2)->orWhere('categoria_caso', 3);
-    //                     // });
-    //                     // // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
-    //                     // $query->whereDoesntHave('estadodos', function ($subquery) {
-    //                     //     $subquery->where('nombre', 'TERMINADO');
-    //                     // });
-    //                 }
-
-
-    //                 // listado para usuarios USUARIO COMUN (usu_tipo = 4)
-    //                 if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 4) {
-    //                     // JGSJ Solo incluir casos con categoria_caso = 1
-    //                     $query->whereHas('tipocaso', function ($q) {
-    //                         $q->where('categoria_caso', 1);
-    //                     });
-    //                     // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
-    //                     $query->whereDoesntHave('estadodos', function ($subquery) {
-    //                         $subquery->where('nombre', 'TERMINADO');
-    //                     });
-    //                 }
-
-
-
-    //                 // listado para usaurios USUARIO ADMINISTRADOR (USU_TIPO = 2)
-    //                 if ($tipoTablero === 'KANBAN' && $user->usu_tipo == 2) {
-    //                     // JGSJ Solo incluir casos con categoria_caso = 1
-    //                     $query->whereHas('tipocaso', function ($q) {
-    //                         $q->where('categoria_caso', 1);
-    //                     });
-    //                     // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
-    //                     $query->whereDoesntHave('estadodos', function ($subquery) {
-    //                         $subquery->where('nombre', 'TERMINADO');
-    //                     });
-    //                 }
-    //             },
-    //         ])
-    //         ->where('tab_id', $tabId);
-
-    //     $data = $query->orderBy('orden', 'asc')->get();
-
-    //     return $data;
-    // }
-
-    
     public function listFasesByTableroId(Request $request)
     {
         try {
@@ -339,12 +258,12 @@ class FaseController extends Controller
                     'caso.user',
                     'caso.userCreador',
                     'caso.clienteCrm',
-                    'caso.resumen',
+                    // 'caso.resumen',
                     'caso.tareas' => function ($query) use ($request) {
                         $query->where('tab_id', $request->tabId);
                     },
                     'caso.actividad',
-                    'caso.miembros.usuario.departamento',
+                    // 'caso.miembros.usuario.departamento',
                     'caso.Etiqueta',
                     'caso.req_caso' => function ($query) {
                         $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
@@ -368,10 +287,8 @@ class FaseController extends Controller
             $data = $query->orderBy('orden', 'asc')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-
         }
     }
 
@@ -381,32 +298,31 @@ class FaseController extends Controller
         $user = auth('api')->user();
 
         $permisosAgencias = DB::SELECT("SELECT a.alm_id 
-                                                FROM crm.usuario_almacen a
-                                                WHERE a.user_id = ?", [$user->id]
-                                                );
+                                            FROM crm.usuario_almacen a
+                                        WHERE a.user_id = ?", [$user->id]);
 
         $stringAlmIdAgencias = collect($permisosAgencias)->pluck('alm_id')->toArray();
 
         $query = Fase::query()
             ->with([
-                'caso.user',
+                'caso.user', // --------------------------------------------------------------------
                 'caso.userCreador',
                 'caso.clienteCrm',
-                'caso.resumen',
+                // 'caso.resumen',
                 'caso.tareas2',
                 'caso.actividad',
-                'caso.miembros.usuario.departamento',
+                // 'caso.miembros.usuario.departamento',
                 'caso.Etiqueta',
                 'caso.req_caso' => function ($query) {
                     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
                 },
                 'condicionFaseMover',
                 'caso.estadodos',
-                'caso.tipocaso',
+                'caso.tipocaso', //------------------------------------------------------------------------------
                 'caso.tiempo_caso',
                 'caso.agencia',
-                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user, $stringAlmIdAgencias) {
-                    
+                'caso' => function ($query) use ($fechaInicio, $fechaFin, $tipoTablero, $user, $stringAlmIdAgencias) { // Se ocupa para poder mostrar el numero de casos que esta en la fase (Esto es un array)
+
                     // SI NO ES VACIO (Filtro por agencias asignadas)
                     if (!empty($stringAlmIdAgencias)) {
                         $query->whereBetween('fecha_inicio', [Carbon::parse($fechaInicio)->startOfDay(), Carbon::parse($fechaFin)->endOfDay()]);
@@ -423,13 +339,17 @@ class FaseController extends Controller
                                     });
                                     // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
                                     $query->whereDoesntHave('estadodos', function ($subquery) {
-                                        $subquery->where('nombre', 'TERMINADO');
+                                        // $subquery->where('nombre', 'TERMINADO');
+                                        $subquery->whereIn('nombre', ['TERMINADO', 'Rechazado']);
                                     });
                                     break;
 
 
                                 case 3: // Super usuario
-
+                                    // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO y Rechazado
+                                    $query->whereDoesntHave('estadodos', function ($subquery) {
+                                        $subquery->whereIn('nombre', ['TERMINADO', 'Rechazado']);
+                                    });
                                     break;
 
 
@@ -438,9 +358,9 @@ class FaseController extends Controller
                                     $query->whereHas('tipocaso', function ($q) {
                                         $q->where('categoria_caso', 1);
                                     });
-                                    // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
+                                    // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO y Rechazado
                                     $query->whereDoesntHave('estadodos', function ($subquery) {
-                                        $subquery->where('nombre', 'TERMINADO');
+                                        $subquery->whereIn('nombre', ['TERMINADO', 'Rechazado']);
                                     });
                                     break;
 
@@ -452,17 +372,15 @@ class FaseController extends Controller
                                     });
                                     // Si el tipo de tablero es KANBAN, se excluyen los casos con estado TERMINADO
                                     $query->whereDoesntHave('estadodos', function ($subquery) {
-                                        $subquery->where('nombre', 'TERMINADO');
+                                        $subquery->whereIn('nombre', ['TERMINADO', 'Rechazado']);
                                     });
                                     break;
                             }
                         }
-
                     } else {
                         $query->whereRaw('1=0'); // condición siempre falsa, para que no me retorne ningun caso si no hay agencias asignadas
                         return;
                     }
-
                 },
             ])
             ->where('tab_id', $tabId);
@@ -472,14 +390,14 @@ class FaseController extends Controller
         return $data;
     }
 
-    public function agenciasCrmUsuario(){
+    public function agenciasCrmUsuario()
+    {
         try {
             $user = auth('api')->user();
 
             $data = DB::SELECT("SELECT a.alm_id 
-                                            FROM crm.usuario_almacen a
-                                            WHERE a.user_id = ?", [$user->id]
-                                        );
+                                    FROM crm.usuario_almacen a
+                                WHERE a.user_id = ?", [$user->id]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (Exception $e) {

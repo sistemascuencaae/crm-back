@@ -506,4 +506,15 @@ class MigracionController extends Controller
         }
     }
 
+    public function aav_migracion_referencias_cliente_by_identificacion($identificacion)
+    {
+        try {
+            $data = DB::select("SELECT * FROM public.aav_migracion_referencias_cliente where ent_identificacion = '$identificacion'");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
 }

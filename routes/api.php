@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\activos\ActasController;
+use App\Http\Controllers\activos\ActivosController;
 use App\Http\Controllers\appreact\ReactNativeMaps;
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
@@ -7,6 +9,7 @@ use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
+use App\Http\Controllers\configuracion\CodigoQrController;
 use App\Http\Controllers\configuracion\HorarioController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
 use App\Http\Controllers\crm\AlmacenController;
@@ -111,6 +114,9 @@ use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
 use App\Http\Controllers\correo\CorreoController;
+use App\Http\Controllers\crm\credito\ResumenController;
+use App\Http\Controllers\crm\FaseController2;
+use App\Http\Controllers\crm\seriesalm\BodegaSeriesGeneradasController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -160,6 +166,7 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addCaso', [CasoController::class, 'add']);
     Route::post('/addCaso2', [CasoController::class, 'addCaso2']);
     Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
+    Route::get('/getEstadoActualCaso/{caso_id}', [CasoController::class, 'getEstadoActualCaso']);
 });
 
 Route::group(["prefix" => "formulario"], function ($router) {
@@ -182,7 +189,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
-Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
 
     // GESTIONES
     Route::get('/listGestionByIdentificacion/{factura}', [GestionController::class, 'listGestionByIdentificacion']);
@@ -258,6 +265,11 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']]
 
     Route::get('/listTableroMisCasosPendientes/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosPendientes']);
     Route::get('/listTableroMisCasosTerminados/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosTerminados']);
+    Route::get('/listTableroMisCasosRechazados/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosRechazados']);
+
+    Route::get('/listTableroMisCasosPendientesPorCampo/{tipo_campo}/{valor}/{user_id}', [TableroController::class, 'listTableroMisCasosPendientesPorCampo']);
+    Route::get('/listTableroMisCasosTerminadosPorCampo/{tipo_campo}/{valor}/{user_id}', [TableroController::class, 'listTableroMisCasosTerminadosPorCampo']);
+    Route::get('/listTableroMisCasosRechazadosPorCampo/{tipo_campo}/{valor}/{user_id}', [TableroController::class, 'listTableroMisCasosRechazadosPorCampo']);
     
     Route::get('/listTodosLosCasosPendientesSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosPendientesSuperUsuario']);
     Route::get('/listTodosLosCasosTerminadosSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosTerminadosSuperUsuario']);
@@ -492,6 +504,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']]
     // FASES
     Route::get('/listFasesByTableroId', [FaseController::class, 'listFasesByTableroId']);
     Route::get('/agenciasCrmUsuario', [FaseController::class, 'agenciasCrmUsuario']);
+    
+    // FASES 2
+    Route::post('/listTableroCompleto', [FaseController2::class, 'listTableroCompleto']);
     
     // Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
     Route::post('/addDirectorio', [DirectorioController::class, 'addDirectorio']); // guardar
@@ -802,7 +817,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo']]
 
 });
 
-Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
 
     // FORMULARIOS2
 
@@ -819,6 +834,7 @@ Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
     Route::get('/listFacturasPendientes/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasPendientes']); // lista de facturas
     Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
+    Route::post('/af_obtener_facturas_cliente', [Formulario2Controller::class, 'af_obtener_facturas_cliente']);
         
     Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
     Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
@@ -832,7 +848,7 @@ Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.ac
 });
 
 /************************  CHAT   ****************** */
-Route::group(["prefix" => "chat", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "chat", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/listConversaciones/{userId}', [ChatController::class, 'listConversaciones']);
     Route::get('/listarMensajes/{converId}/{tipoConver}/{numeroPagina}', [ChatController::class, 'listarMensajes']);
     Route::post('/enviarMensaje/{converId}/{tipoConver}', [ChatController::class, 'enviarMensaje']); //
@@ -853,7 +869,7 @@ Route::group(["prefix" => "chat", 'middleware' => ['jwt.auth', 'usuario.activo']
 });
 // FORMULARIO AUTORIZACION TRATAMIENTO DE DATOS
 
-Route::group(["prefix" => "autorizaciones", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "autorizaciones", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::post('/add', [FormAuthDatosCliController::class, 'add']);
     Route::get('/getAlmacenId/{id}', [FormAuthDatosCliController::class, 'getAlmacenId']);
     Route::get('/listAlmacenes', [FormAuthDatosCliController::class, 'listAlmacenes']);
@@ -861,16 +877,16 @@ Route::group(["prefix" => "autorizaciones", 'middleware' => ['jwt.auth', 'usuari
     Route::get('/validarAutoTratDatos/{id}', [FormAuthDatosCliController::class, 'validarAutoTratDatos']);
 });
 
-Route::group(["prefix" => "crm/audi", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "crm/audi", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/cliTabAmortizacion/{cuentaanterior}', [ClienteAditoriaController::class, 'cliTabAmortizacion']);
 });
 
-Route::group(["prefix" => "crm/robot", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "crm/robot", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/reasignarCaso/{estadoFormId}/{casoId}/{tableroActualId}/{banMostrarVistaCreditoAprobado?}', [RobotCasoController::class, 'reasignarCaso']);
 });
 
 // FORMULARIOS FELIPE
-Route::group(["prefix" => "form", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "form", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/list', [FormController::class, 'list']);
     Route::get('/storeA/{formId}', [FormController::class, 'storeA']);
     Route::get('/storeB/{formId}/{userId}', [FormController::class, 'storeB']);
@@ -892,7 +908,7 @@ Route::group(["prefix" => "form", 'middleware' => ['jwt.auth', 'usuario.activo']
     Route::get('/getByTipoCasIdFormu/{formId}/{casoId}', [FormController::class, 'getByTipoCasIdFormu']);
 });
 
-Route::group(['prefix' => 'form/campo', 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(['prefix' => 'form/campo', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/store', [CampoController::class, 'store']);
     Route::get('/full/{id}', [CampoController::class, 'full']);
     Route::get('/list', [CampoController::class, 'list']);
@@ -909,19 +925,22 @@ Route::group(['prefix' => 'form/campo', 'middleware' => ['jwt.auth', 'usuario.ac
     Route::post('/listarEntidades', [ComponentsController::class, 'listarEntidades']);
 });
 
-Route::group(['prefix' => 'form/seccion', 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(['prefix' => 'form/seccion', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/store', [FormSeccionController::class, 'store']);
     Route::post('/add', [FormSeccionController::class, 'add']);
     Route::put('/edit/{id}', [FormSeccionController::class, 'edit']);
 });
 
 //----------------------- PARAMETROS DIRECCION ----------------------------------------------
-Route::group(['prefix' => 'parametros', 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(['prefix' => 'parametros', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/direccion', [ParametrosController::class, 'direccion']); //
     Route::get('/direccionParroquias/{cantonId}', [ParametrosController::class, 'direccionParroquias']); //direccionParroquias
 });
 
-Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+
+    // RESUMEN DE CASOS DEL CLIENTE
+    Route::post('/listResumenCasosClienteByIdentificacion', [ResumenController::class, 'listResumenCasosClienteByIdentificacion']); // Editar
 
     // SOLICITUD CREDITO
     Route::post('/editSolicitudCredito/{id}', [solicitudCreditoController::class, 'editSolicitudCredito']); // Editar
@@ -977,7 +996,7 @@ Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activ
 });
 
 //contratos gex felipe
-Route::group(["prefix" => "gex-contrato", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "gex-contrato", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/loadInitialData/{almId}', [ContratoGexController::class, 'loadInitialData']);
     Route::post('/generarContratoCRM', [ContratoGexController::class, 'generarContratoCRM']);
     Route::post('/validarSerieContrato', [ContratoGexController::class, 'validarSerieContrato']); //
@@ -987,9 +1006,11 @@ Route::group(["prefix" => "gex-contrato", 'middleware' => ['jwt.auth', 'usuario.
     Route::get('/getContratoGexCrmId/{id}', [ContratoGexController::class, 'getContratoGexCrmId']);
 });
 
-Route::group(["prefix" => "gex", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "gex", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
 
     // SERIES ALM
+    Route::get('/listBodegaSeriesGeneradas', [BodegaSeriesGeneradasController::class, 'listBodegaSeriesGeneradas']); // listar todas las bodegas
+    Route::get('/listSeriesGeneradasByBodId', [BodegaSeriesGeneradasController::class, 'listSeriesGeneradasByBodId']); // listar todas las bodegas
 
     Route::delete('/borrarInventarioCompleto/{numero_inventario}', [SeriesAlmController::class, 'borrarInventarioCompleto']); // Borrar un inventario completo que no tenga despachos ni contratos
     Route::get('/listBodegas', [SeriesAlmController::class, 'listBodegas']); // listar todas las bodegas
@@ -1021,9 +1042,13 @@ Route::group(["prefix" => "gex", 'middleware' => ['jwt.auth', 'usuario.activo']]
     Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
 });
 
-Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
 
-    // CONFIGURACION
+    // CODIGOS QR
+
+    Route::get('/listAllCodigosQr', [CodigoQrController::class, 'listAllCodigosQr']);
+
+    // ARCHIVOS 2
 
     Route::get('/listAllArchivos2', [Archivos2Controller::class, 'listAllArchivos2']);
     Route::post('/addArchivos2', [Archivos2Controller::class, 'addArchivos2']);
@@ -1066,7 +1091,7 @@ Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario
 
 });
 
-Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
 
     // openceo
 
@@ -1077,13 +1102,15 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
 
 });
 
-Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
+Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/listFormulaByParametro', [ParametroController::class, 'listFormulaByParametro']);
+    Route::get('/parametroFDias', [ParametroController::class, 'parametroFDias']);
+    Route::get('/parametroFDiasMisCasos', [ParametroController::class, 'parametroFDiasMisCasos']);
 });
 
 // PERFILES, MENU, ACCESOS
 
-Route::group(['prefix' => 'profile', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+Route::group(['prefix' => 'profile', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     Route::get('all', [ProfileController::class, 'all']);
     Route::get('list', [ProfileController::class, 'list']);
     Route::get('list/{id}', [ProfileController::class, 'findById']);
@@ -1094,17 +1121,17 @@ Route::group(['prefix' => 'profile', 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('buscarAccesosByProfileId/{id}', [ProfileController::class, 'buscarAccesosByProfileId']);
 });
 
-Route::group(['prefix' => 'access', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+Route::group(['prefix' => 'access', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     Route::get('program/{profile}/{program}', [ProfileController::class, 'findByProgram']);
     Route::get('menu/{userid}', [ProfileController::class, 'findByUser']);
 });
 
-Route::group(['prefix' => 'company', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+Route::group(['prefix' => 'company', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     Route::get('lista/{id}', [CompanyController::class, 'findById']);
     Route::put('editar/{id}', [CompanyController::class, 'edit']);
 });
 
-Route::group(['prefix' => 'menu', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+Route::group(['prefix' => 'menu', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     Route::get('list', [MenuController::class, 'list']);
     Route::get('list/{id}', [MenuController::class, 'findById']);
 
@@ -1113,6 +1140,32 @@ Route::group(['prefix' => 'menu', 'middleware' => ['jwt.auth', 'usuario.activo']
     Route::delete('deleteMenu/{id}', [MenuController::class, 'deleteMenu']);
 });
 
+Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+
+    // ACTIVOS
+
+    Route::get('/listAllActivos', [ActivosController::class, 'listAllActivos']);
+    Route::get('/listActivos', [ActivosController::class, 'listActivos']);
+    Route::post('/addActivo', [ActivosController::class, 'addActivo']);
+    Route::post('/editActivo/{id}', [ActivosController::class, 'editActivo']);
+    Route::delete('/deleteActivo/{id}', [ActivosController::class, 'deleteActivo']);
+    Route::get('/historyActivo/{id}', [ActivosController::class, 'historyActivo']);
+
+    Route::get('/listTipoActivos', [ActivosController::class, 'listTipoActivos']);
+    Route::get('/listEstadoActivos', [ActivosController::class, 'listEstadoActivos']);
+    Route::get('/listMarca', [ActivosController::class, 'listMarca']);
+    Route::get('/listLocalidades', [ActivosController::class, 'listLocalidades']);
+    
+    // ACTAS
+
+    Route::get('/listAllActas', [ActasController::class, 'listAllActas']);
+    Route::get('/getActivosByNumeroActa/{numero}', [ActasController::class, 'getActivosByNumeroActa']);
+    Route::post('/addActa', [ActasController::class, 'addActa']);
+    Route::post('/editActa/{numero}', [ActasController::class, 'editActa']);
+    Route::post('/editRecepcionFisica/{numero}', [ActasController::class, 'editRecepcionFisica']);
+    Route::post('/editRecibidoPor/{numero}', [ActasController::class, 'editRecibidoPor']);
+
+});
 
 // ------------------------------ END RUTAS PROTEGIDAS ------------------------------------------------------
 // ------------------------------ END RUTAS PROTEGIDAS ------------------------------------------------------
@@ -1159,4 +1212,5 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_migracion_productos_facturados_detalle/{factura}', [MigracionController::class, 'aav_migracion_productos_facturados_detalle']);
     Route::get('/aav_migracion_cuotas_gratis', [MigracionController::class, 'aav_migracion_cuotas_gratis']);
     Route::get('/aav_migracion_rec_anulados', [MigracionController::class, 'aav_migracion_rec_anulados']);
+    Route::get('/aav_migracion_referencias_cliente_by_identificacion/{identificacion}', [MigracionController::class, 'aav_migracion_referencias_cliente_by_identificacion']);
 });

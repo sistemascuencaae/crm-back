@@ -1,33 +1,44 @@
 <?php
 
-namespace App\Models\crm;
+namespace App\Models\activos;
 
-use App\Models\crm\TipoEstado;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Estados extends Model
+class Dacta extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.estados_caso';
+    protected $table = 'crm.dacta';
 
-    protected $fillable = ["nombre", "estado", "tab_id","tipo_estado_id"];
+    protected $fillable = [
+        "id_cacta",
+        "id_activo",
+        "secuencia",
+    ];
 
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["created_at"] = Carbon::now();
     }
+
     public function setUpdatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function tablero()
+    // Relación con Cacta (cabecera)
+    public function cacta()
     {
-        return $this->belongsTo(Tablero::class, "tab_id", "id");
+        return $this->belongsTo(Cacta::class, 'id_cacta', 'id');
+    }
+
+    // Relación con Activo
+    public function activo()
+    {
+        return $this->belongsTo(Activo::class, 'id_activo', 'id');
     }
 }

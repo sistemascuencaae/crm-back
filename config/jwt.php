@@ -101,7 +101,7 @@ return [
     |
     */
 
-    'ttl' => env('JWT_TTL', 1440), // JGSJ // Tiempo token actual 1440 mins = 24hrs
+    'ttl' => env('JWT_TTL', 480), // JGSJ // Tiempo token actual 480 mins = 8hrs
 
     /*
     |--------------------------------------------------------------------------
