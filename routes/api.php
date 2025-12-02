@@ -1039,7 +1039,8 @@ Route::group(["prefix" => "gex", 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/getSerie/{serie}', [StockProSerieController::class, 'getSerie']);
     Route::get('/despacharSerie/{serie}/{bodId}', [StockProSerieController::class, 'despacharSerie']);
     Route::get('/reportePorBodegaId/{bodId}', [StockProSerieController::class, 'reportePorBodegaId']);
-    Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
+    // Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
+    Route::post('/buscarProCodigo', [StockProSerieController::class, 'buscarProCodigo']);
 });
 
 Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
