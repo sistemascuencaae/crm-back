@@ -38,7 +38,7 @@ class UsuarioAlmacenController extends Controller
                 // Primero, eliminamos los usuarios que están en el array usuariosEliminados
                 if (isset($request->usuariosEliminados) && count($request->usuariosEliminados) > 0) {
                     foreach ($request->usuariosEliminados as $usuarioEliminado) {
-                        // Eliminamos el usuario de la tabla 'reporte_link_usuarios' por 'user_id'
+                        // Eliminamos el usuario de la tabla por 'user_id'
                         UsuarioAlmacen::where('alm_id', $usuarioEliminado['alm_id'])
                             ->where('user_id', $usuarioEliminado['user_id'])
                             ->delete();
@@ -48,7 +48,7 @@ class UsuarioAlmacenController extends Controller
                 // Luego, insertamos los usuarios nuevos que están en el array usuariosNuevos
                 if (isset($request->usuariosNuevos) && count($request->usuariosNuevos) > 0) {
                     foreach ($request->usuariosNuevos as $usuarioNuevo) {
-                        // Verificamos si el usuario ya existe en la tabla 'formularios_usuarios'
+                        // Verificamos si el usuario ya existe en la tabla
                         $existingUser = UsuarioAlmacen::where('alm_id', $usuarioNuevo['alm_id'])
                             ->where('user_id', $usuarioNuevo['user_id'])
                             ->first();

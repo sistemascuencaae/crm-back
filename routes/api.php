@@ -985,6 +985,7 @@ Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activ
 
     Route::post('/send_emailCambioFase/{caso_id}/{fase_id}', [EmailController::class, 'send_emailCambioFase']); // Envia un correo cuando cambia de fase
     Route::post('/send_emailLinkEnrolamiento', [EmailController::class, 'send_emailLinkEnrolamiento']); // Envia un correo con el link del enrolamiento
+    Route::post('/test_email', [EmailController::class, 'test_email']); // Envia un correo cuando cambia de fase
 
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
     Route::post('/addEmail', [EmailController::class, 'addEmail']);
