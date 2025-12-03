@@ -81,8 +81,11 @@ class UserDynamoController extends Controller
                     // (Puntos de venta de las ferias que estan vinculados alm_id = 1 que es Luis_Cordero_2 (601...))
                     if (!in_array(
                         $request->pve_numero,
-                        [601, 602, 603, 604, 605, 606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618, 619, 620, 621, 622, 623, 624, 625, 626]
-                    )) {
+                        [601, 602, 603, 604, 605, 606, 607, 608, 609, 610,
+                         611, 612, 613, 614, 615, 616, 617, 618, 619, 620,
+                         621, 622, 623, 624, 625, 626, 627, 628, 629, 630,
+                         631, 632, 633, 634, 635, 636, 637
+                        ])) {
 
                         // 2. Buscamos el usuario por usu_alias.
                         $user = User::where('usu_alias', $request->usu_alias)->first();
