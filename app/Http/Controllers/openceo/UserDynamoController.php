@@ -77,34 +77,37 @@ class UserDynamoController extends Controller
 
 
                     // START Este bloque de código, actualiza el permiso y la agencia de la cajera en el CRM.
-                    // 1. Verificamos que sea diferente de una feria para que no me cambie la agencia ni los permismos de la cajera.
-                    // (Puntos de venta de las ferias que estan vinculados alm_id = 1 que es Luis_Cordero_2 (601...))
-                    if (!in_array(
-                        $request->pve_numero,
-                        [601, 602, 603, 604, 605, 606, 607, 608, 609, 610,
-                         611, 612, 613, 614, 615, 616, 617, 618, 619, 620,
-                         621, 622, 623, 624, 625, 626, 627, 628, 629, 630,
-                         631, 632, 633, 634, 635, 636, 637
-                        ])) {
+                    // 1. Busco los pve_numero de las ferias en la tabla crm.parametro con abreviación PVEFERIAS
+                    $parametro = DB::table('crm.parametro')
+                        ->where('abreviacion', 'PVEFERIAS')
+                        ->first();
 
-                        // 2. Buscamos el usuario por usu_alias.
-                        $user = User::where('usu_alias', $request->usu_alias)->first();
+                    if ($parametro && $parametro->valor) {
+                        // 2. Convierto el parametro->valor a un array de enteros [601, 602, ...]
+                        $pveFeriasArray = array_map('intval', explode(',', $parametro->valor));
 
-                        // 3. Si existe en el CRM ingresa para actualizar su agencia.
-                        if ($user) {
-                            // 4. Actualiza la agencia de la cajera.
-                            $user->update([
-                                'alm_id' => $request->alm_id
-                            ]);
+                        // 3. Verificamos que sea diferente de una feria para que no me cambie la agencia ni los permismos de la cajera.
+                        // (Puntos de venta de las ferias que estan vinculados alm_id = 1 que es Luis_Cordero_2 (601...))
+                        if (!in_array($request->pve_numero, $pveFeriasArray)) {
+                            // 4. Buscamos el usuario por usu_alias.
+                            $user = User::where('usu_alias', $request->usu_alias)->first();
 
-                            // 5. Elimina todos los permisos de las agencias de la cajera.
-                            UsuarioAlmacen::where('user_id', $user->id)->delete();
+                            // 5. Si existe en el CRM ingresa para actualizar su agencia.
+                            if ($user) {
+                                // 6. Actualiza la agencia de la cajera.
+                                $user->update([
+                                    'alm_id' => $request->alm_id
+                                ]);
 
-                            // 6. Crea el permiso de la agencia.
-                            UsuarioAlmacen::create([
-                                'alm_id' => $request->alm_id,
-                                'user_id' => $user->id,
-                            ]);
+                                // 7. Elimina todos los permisos de las agencias de la cajera.
+                                UsuarioAlmacen::where('user_id', $user->id)->delete();
+
+                                // 8. Crea el permiso de la agencia.
+                                UsuarioAlmacen::create([
+                                    'alm_id' => $request->alm_id,
+                                    'user_id' => $user->id,
+                                ]);
+                            }
                         }
                     }
                     //  END Este bloque de código, actualiza el permiso y la agencia de la cajera en el CRM.
@@ -138,13 +141,20 @@ class UserDynamoController extends Controller
                     }
 
                     $exitoso = 'Se actualizó con éxito.';
-                    $usuario = DB::selectOne("SELECT u.usu_id, u.usu_alias, u.usu_nombre || ' ' || u.usu_apellido as usu_nombre_completo,
-                                                        p.pve_id, p.pve_numero || ' - ' || p.pve_nombre as pve_nombre,
-                                                        a.alm_id, a.alm_codigo || ' - ' || a.alm_nombre as alm_nombre
-                                                    FROM usuario u
-                                                        JOIN puntoventa p ON p.pve_id = u.pve_id
-                                                        JOIN almacen a ON a.alm_id = p.alm_id
-                                                    WHERE u.usu_id = ?;", [$request->usu_id]);
+                    $usuario = DB::selectOne("SELECT
+                                                    u.usu_id,
+                                                    u.usu_alias,
+                                                    u.usu_nombre || ' ' || u.usu_apellido AS usu_nombre_completo,
+                                                    p.pve_id,
+                                                    p.pve_numero,
+                                                    p.pve_numero || ' - ' || p.pve_nombre AS pve_nombre,
+                                                    a.alm_id,
+                                                    a.alm_codigo || ' - ' || a.alm_nombre as alm_nombre
+                                                FROM usuario u
+                                                    JOIN puntoventa p ON p.pve_id = u.pve_id
+                                                    JOIN almacen a ON a.alm_id = p.alm_id
+                                                WHERE u.usu_id = ?;", [$request->usu_id]);
+
                     return $usuario;
                 }
             });
