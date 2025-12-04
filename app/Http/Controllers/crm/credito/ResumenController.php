@@ -18,15 +18,19 @@ class ResumenController extends Controller
     public function listResumenCasosClienteByIdentificacion(Request $request)
     {
         try {
-            $data = Caso::where('identificacion', $request->identificacion)
-                ->select('id', 'fecha_inicio') // JGSJ devolver columnas especificas
-                ->orderBy('id', 'desc')
-                ->get();
+            $data = null;
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+            // Solo si identificacion tiene valor (no null, no vacío)
+            if ($request->filled('identificacion')) {
+                $data = Caso::where('identificacion', $request->identificacion)
+                    ->select('id', 'fecha_inicio')
+                    ->orderBy('id', 'desc')
+                    ->get();
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
-    
 }
