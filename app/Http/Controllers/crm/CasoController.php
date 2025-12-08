@@ -1914,28 +1914,28 @@ class CasoController extends Controller
             // $tabId = 230; // esta variable tengo que revisar que hace
 
             $data = Caso::where('identificacion', $identificacion)
-                ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
                 ->with([
-                    'user',
-                    'userCreador',
-                    'clienteCrm',
+                    // 'user',
+                    // 'userCreador',
+                    // 'clienteCrm',
                     // 'resumen',
                     // 'tareas' => function ($query) use ($tabId) {
                     //     $query->where('tab_id', $tabId->id);
                     // },
-                    'actividad',
-                    'Etiqueta',
+                    // 'actividad',
+                    // 'Etiqueta',
                     // 'miembros.usuario.departamento',
-                    'Galeria',
-                    'Archivo',
-                    'req_caso' => function ($query) {
-                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-                    },
-                    'tablero',
+                    // 'Galeria',
+                    // 'Archivo',
+                    // 'req_caso' => function ($query) {
+                    //     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    // },
+                    // 'tablero',
                     'fase.tablero',
                     'estadodos',
                     'tipocaso',
-                    'tiempo_caso',
+                    // 'tiempo_caso',
                 ])
                 ->whereHas('estadodos', function ($query) {
                     $query->where('nombre', '!=', 'TERMINADO');
@@ -1958,28 +1958,28 @@ class CasoController extends Controller
             // $tabId = 230; // esta variable tengo que revisar que hace
 
             $data = Caso::where('identificacion', $identificacion)
-                ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
                 ->with([
-                    'user',
-                    'userCreador',
-                    'clienteCrm',
+                    // 'user',
+                    // 'userCreador',
+                    // 'clienteCrm',
                     // 'resumen',
                     // 'tareas' => function ($query) use ($tabId) {
                     //     $query->where('tab_id', $tabId->id);
                     // },
-                    'actividad',
-                    'Etiqueta',
+                    // 'actividad',
+                    // 'Etiqueta',
                     // 'miembros.usuario.departamento',
-                    'Galeria',
-                    'Archivo',
-                    'req_caso' => function ($query) {
-                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-                    },
-                    'tablero',
+                    // 'Galeria',
+                    // 'Archivo',
+                    // 'req_caso' => function ($query) {
+                    //     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    // },
+                    // 'tablero',
                     'fase.tablero',
                     'estadodos',
                     'tipocaso',
-                    'tiempo_caso',
+                    // 'tiempo_caso',
                 ])
                 ->whereHas('estadodos', function ($query) {
                     $query->where('nombre', 'TERMINADO');
@@ -2003,28 +2003,28 @@ class CasoController extends Controller
 
             $data = Caso::where('identificacion', $identificacion)
                 ->where('acc_publico', false)
-                ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
                 ->with([
-                    'user',
-                    'userCreador',
-                    'clienteCrm',
+                    // 'user',
+                    // 'userCreador',
+                    // 'clienteCrm',
                     // 'resumen',
                     // 'tareas' => function ($query) use ($tabId) {
                     //     $query->where('tab_id', $tabId->id);
                     // },
-                    'actividad',
-                    'Etiqueta',
+                    // 'actividad',
+                    // 'Etiqueta',
                     // 'miembros.usuario.departamento',
-                    'Galeria',
-                    'Archivo',
-                    'req_caso' => function ($query) {
-                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-                    },
-                    'tablero',
+                    // 'Galeria',
+                    // 'Archivo',
+                    // 'req_caso' => function ($query) {
+                    //     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    // },
+                    // 'tablero',
                     'fase.tablero',
                     'estadodos',
                     'tipocaso',
-                    'tiempo_caso',
+                    // 'tiempo_caso',
                 ])->orderBy('id', 'desc')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
@@ -2044,28 +2044,28 @@ class CasoController extends Controller
 
             $data = Caso::where('identificacion', $identificacion)
                 ->where('acc_publico', false)
-                ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
                 ->with([
-                    'user',
-                    'userCreador',
-                    'clienteCrm',
+                    // 'user',
+                    // 'userCreador',
+                    // 'clienteCrm',
                     // 'resumen',
                     // 'tareas' => function ($query) use ($tabId) {
                     //     $query->where('tab_id', $tabId->id);
                     // },
-                    'actividad',
-                    'Etiqueta',
+                    // 'actividad',
+                    // 'Etiqueta',
                     // 'miembros.usuario.departamento',
-                    'Galeria',
-                    'Archivo',
-                    'req_caso' => function ($query) {
-                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-                    },
-                    'tablero',
+                    // 'Galeria',
+                    // 'Archivo',
+                    // 'req_caso' => function ($query) {
+                    //     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    // },
+                    // 'tablero',
                     'fase.tablero',
                     'estadodos',
                     'tipocaso',
-                    'tiempo_caso',
+                    // 'tiempo_caso',
                 ])->orderBy('id', 'desc')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
