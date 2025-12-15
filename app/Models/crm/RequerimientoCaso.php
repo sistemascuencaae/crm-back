@@ -40,6 +40,8 @@ class RequerimientoCaso extends Model
         'galerias_id',
         'archivos_id',
         'desc_requerida',
+        'tab_id',
+        'acc_publico',
         'cfa_id',
         'cfa_id_2',
         'cfa_id_3',

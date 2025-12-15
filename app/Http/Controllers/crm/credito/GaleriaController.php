@@ -7,8 +7,10 @@ use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\Audits;
+use App\Models\crm\Caso;
 use App\Models\crm\Galeria;
 use App\Models\crm\RequerimientoCaso;
+use App\Models\crm\TableroUsuario;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
@@ -85,53 +87,6 @@ class GaleriaController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
-    // public function listGaleriaByCasoId($caso_id)
-    // {
-    //     try {
-    //         $galerias = Galeria::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
-
-    //         // return response()->json([
-    //         //     "imagenes" => $imagenes,]);
-
-    //         // return response()->json([
-    //         //     "imagenes" => $galerias->map(function ($galeria) {
-    //         //         return [
-    //         //             "id" => $galeria->id,
-    //         //             "titulo" => $galeria->titulo,
-    //         //             "descripcion" => $galeria->descripcion,
-    //         //             // "imagen" => env("APP_URL") . "storage/app/public/" . $imagen->imagen,
-    //         //             "imagen" => $galeria->imagen,
-    //         //             "caso_id" => $galeria->caso_id,
-    //         //             "tipo_gal_id" => $galeria->tipo_gal_id
-    //         //         ];
-    //         //     }),
-    //         // ]);
-
-
-    //         return response()->json(
-    //             RespuestaApi::returnResultado(
-    //                 'success',
-    //                 'Se listo con éxito',
-    //                 $galerias
-    //                 // $galerias->map(function ($galeria) {
-    //                 //     return [
-    //                 //         "id" => $galeria->id,
-    //                 //         "titulo" => $galeria->titulo,
-    //                 //         "descripcion" => $galeria->descripcion,
-    //                 //         "imagen" => $galeria->imagen,
-    //                 //         "caso_id" => $galeria->caso_id,
-    //                 //         "tipo_gal_id" => $galeria->tipo_gal_id,
-    //                 //         "sc_id" => $galeria->sc_id,
-    //                 //     ];
-    //                 // })
-    //             )
-    //         );
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-
-    // }
 
     public function listGaleriaByCasoId($caso_id, $tabId)
     {
@@ -406,7 +361,7 @@ class GaleriaController extends Controller
 
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
-                $titulo = str_replace(' ', '-',$nuevaImagen->getClientOriginalName());
+                $titulo = str_replace(' ', '-', $nuevaImagen->getClientOriginalName());
 
                 // Fecha actual
                 $fechaActual = Carbon::now();
@@ -476,4 +431,59 @@ class GaleriaController extends Controller
         }
     }
 
+    //! Lista Todos los archivos e imagenes del caso
+    public function listAllAdjuntosByCasoId($caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $userLoginId = Auth::id();
+
+            // Obtener galerías: públicas O privadas si tiene acceso al tab_id de la galería
+            $galerias = DB::select("SELECT ga.* FROM crm.galerias ga
+                WHERE ga.caso_id = ?
+                AND (
+                    ga.acc_publico = true
+                    OR ga.tab_id IS NULL
+                    OR (
+                        ga.acc_publico = false
+                        AND ga.tab_id IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1 FROM crm.tablero_user tu
+                            WHERE tu.tab_id = ga.tab_id
+                            AND tu.user_id = ?
+                        )
+                    )
+                )
+                ORDER BY ga.id DESC", [$caso_id, $userLoginId]);
+
+            // Obtener archivos: públicos O privados si tiene acceso al tab_id del archivo
+            $archivos = DB::select("SELECT arch.* FROM crm.archivos arch
+                WHERE arch.caso_id = ?
+                AND (
+                    arch.acc_publico = true
+                    OR arch.tab_id IS NULL
+                    OR (
+                        arch.acc_publico = false
+                        AND arch.tab_id IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1 FROM crm.tablero_user tu
+                            WHERE tu.tab_id = arch.tab_id
+                            AND tu.user_id = ?
+                        )
+                    )
+                )
+                ORDER BY arch.id DESC", [$caso_id, $userLoginId]);
+
+            // Combinar galerías y archivos
+            $data = collect($galerias)->merge(collect($archivos));
+
+            $log->logInfo(GaleriaController::class, 'Se listo con exito todos los adjuntos del caso: #' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al listar todos los adjuntos del caso: #' . $caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }
