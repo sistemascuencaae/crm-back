@@ -408,6 +408,10 @@ class TableroController extends Controller
         }
     }
 
+
+
+
+
     // !START EndPoint para la tabla o pantalla de MIS CASOS
     // ?START filtros por fechas
     public function listTableroMisCasosPendientes($fechaInicio, $fechaFin, $user_id)
@@ -573,10 +577,15 @@ class TableroController extends Controller
     // !END EndPoint para la tabla o pantalla de MIS CASOS
     //
 
+
+
+
+
     //
     // !START EndPoint para la tabla o pantalla de TODOS LOS CASOS
+    // ?START filtros por fechas
 
-    // Para SuperUsuario Pendientes
+    // * START SuperUsuario
     public function listTodosLosCasosPendientesSuperUsuario($fechaInicio, $fechaFin)
     {
         try {
@@ -588,18 +597,9 @@ class TableroController extends Controller
                     'estadodos'
                 ])
                 ->whereHas('estadodos', function ($query) {
-                    $query->where('nombre', '!=', 'TERMINADO');
+                    $query->whereNotIn('nombre', ['TERMINADO', 'Rechazado']);
                 })
                 ->get();
-
-            // // Especificar las propiedades que representan fechas en tu objeto
-            // $dateFields = ['created_at'];
-            // // Utilizar la función map para transformar y obtener una nueva colección
-            // $data->map(function ($item) use ($dateFields) {
-            //     $funciones = new Funciones();
-            //     $funciones->formatoFechaItem($item, $dateFields);
-            //     return $item;
-            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -607,7 +607,6 @@ class TableroController extends Controller
         }
     }
 
-    // Para SuperUsuario Terminados
     public function listTodosLosCasosTerminadosSuperUsuario($fechaInicio, $fechaFin)
     {
         try {
@@ -623,23 +622,37 @@ class TableroController extends Controller
                 })
                 ->get();
 
-            // // Especificar las propiedades que representan fechas en tu objeto
-            // $dateFields = ['created_at'];
-            // // Utilizar la función map para transformar y obtener una nueva colección
-            // $data->map(function ($item) use ($dateFields) {
-            //     $funciones = new Funciones();
-            //     $funciones->formatoFechaItem($item, $dateFields);
-            //     return $item;
-            // });
-
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
+    public function listTodosLosCasosRechazadosSuperUsuario($fechaInicio, $fechaFin)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-    // Para Administrador Pendientes
+            $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'Rechazado');
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    // * END SuperUsuario
+
+
+
+    // * START Administrador
     public function listTodosLosCasosPendientesAdministrador($fechaInicio, $fechaFin, $tab_id)
     {
         try {
@@ -652,18 +665,9 @@ class TableroController extends Controller
                     'estadodos'
                 ])
                 ->whereHas('estadodos', function ($query) {
-                    $query->where('nombre', '!=', 'TERMINADO');
+                    $query->whereNotIn('nombre', ['TERMINADO', 'Rechazado']);
                 })
                 ->get();
-
-            // // Especificar las propiedades que representan fechas en tu objeto
-            // $dateFields = ['created_at'];
-            // // Utilizar la función map para transformar y obtener una nueva colección
-            // $data->map(function ($item) use ($dateFields) {
-            //     $funciones = new Funciones();
-            //     $funciones->formatoFechaItem($item, $dateFields);
-            //     return $item;
-            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -671,7 +675,6 @@ class TableroController extends Controller
         }
     }
 
-    // Para Administrador Terminados
     public function listTodosLosCasosTerminadosAdministrador($fechaInicio, $fechaFin, $tab_id)
     {
         try {
@@ -688,23 +691,38 @@ class TableroController extends Controller
                 })
                 ->get();
 
-            // // Especificar las propiedades que representan fechas en tu objeto
-            // $dateFields = ['created_at'];
-            // // Utilizar la función map para transformar y obtener una nueva colección
-            // $data->map(function ($item) use ($dateFields) {
-            //     $funciones = new Funciones();
-            //     $funciones->formatoFechaItem($item, $dateFields);
-            //     return $item;
-            // });
-
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
+    public function listTodosLosCasosRechazadosAdministrador($fechaInicio, $fechaFin, $tab_id)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-    // Para Usuario Comun Pendientes
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'Rechazado');
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    // * END Administrador
+
+
+
+    // * START Usuario Comun
     public function listTodosLosCasosPendientesUsuarioComun($fechaInicio, $fechaFin, $tab_id)
     {
         try {
@@ -718,18 +736,9 @@ class TableroController extends Controller
                     'estadodos'
                 ])
                 ->whereHas('estadodos', function ($query) {
-                    $query->where('nombre', '!=', 'TERMINADO');
+                    $query->whereNotIn('nombre', ['TERMINADO', 'Rechazado']);
                 })
                 ->get();
-
-            // // Especificar las propiedades que representan fechas en tu objeto
-            // $dateFields = ['created_at'];
-            // // Utilizar la función map para transformar y obtener una nueva colección
-            // $data->map(function ($item) use ($dateFields) {
-            //     $funciones = new Funciones();
-            //     $funciones->formatoFechaItem($item, $dateFields);
-            //     return $item;
-            // });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -737,7 +746,6 @@ class TableroController extends Controller
         }
     }
 
-    // Para Usuario Comun Terminados
     public function listTodosLosCasosTerminadosUsuarioComun($fechaInicio, $fechaFin, $tab_id)
     {
         try {
@@ -755,22 +763,223 @@ class TableroController extends Controller
                 })
                 ->get();
 
-            // // Especificar las propiedades que representan fechas en tu objeto
-            // $dateFields = ['created_at'];
-            // // Utilizar la función map para transformar y obtener una nueva colección
-            // $data->map(function ($item) use ($dateFields) {
-            //     $funciones = new Funciones();
-            //     $funciones->formatoFechaItem($item, $dateFields);
-            //     return $item;
-            // });
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTodosLosCasosRechazadosUsuarioComun($fechaInicio, $fechaFin, $tab_id)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where('acc_publico', false)
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'Rechazado');
+                })
+                ->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-    // !START EndPoint para la tabla o pantalla de TODOS LOS CASOS
+    // * END Usuario Comun
+    // ?END filtros por fechas
+
+
+
+
+
+    // ?START filtros por campo específico
+    // * START SuperUsuario
+    public function listTodosLosCasosPendientesSuperUsuarioPorCampo($tipo_campo, $valor)
+    {
+        try {
+            $data = VistaTodosLosCasos::where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with(['estadodos'])
+                ->whereHas('estadodos', function ($query) {
+                    $query->whereNotIn('nombre', ['TERMINADO', 'Rechazado']);
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTodosLosCasosTerminadosSuperUsuarioPorCampo($tipo_campo, $valor)
+    {
+        try {
+            $data = VistaTodosLosCasos::where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with(['estadodos'])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'TERMINADO');
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTodosLosCasosRechazadosSuperUsuarioPorCampo($tipo_campo, $valor)
+    {
+        try {
+            $data = VistaTodosLosCasos::where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with(['estadodos'])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'Rechazado');
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    // * END SuperUsuario
+
+
+
+    // * START Administrador
+    public function listTodosLosCasosPendientesAdministradorPorCampo($tipo_campo, $valor, $tab_id)
+    {
+        try {
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->whereNotIn('nombre', ['TERMINADO', 'Rechazado']);
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTodosLosCasosTerminadosAdministradorPorCampo($tipo_campo, $valor, $tab_id)
+    {
+        try {
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'TERMINADO');
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTodosLosCasosRechazadosAdministradorPorCampo($tipo_campo, $valor, $tab_id)
+    {
+        try {
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'Rechazado');
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    // * END Administrador
+
+
+
+    // * START Usuario Comun
+    public function listTodosLosCasosPendientesUsuarioComunPorCampo($tipo_campo, $valor, $tab_id)
+    {
+        try {
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where('acc_publico', false)
+                ->where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->whereNotIn('nombre', ['TERMINADO', 'Rechazado']);
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTodosLosCasosTerminadosUsuarioComunPorCampo($tipo_campo, $valor, $tab_id)
+    {
+        try {
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where('acc_publico', false)
+                ->where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'TERMINADO');
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTodosLosCasosRechazadosUsuarioComunPorCampo($tipo_campo, $valor, $tab_id)
+    {
+        try {
+            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where('acc_publico', false)
+                ->where($tipo_campo, 'ILIKE', '%' . $valor . '%')
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'Rechazado');
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    // * END Usuario Comun
+    // ?END filtros por campo específico
+    // !END EndPoint para la tabla o pantalla de TODOS LOS CASOS
     //
+
+
+
+
 
     //
     // !START EndPoint para la tabla o pantalla de REASIGNAR CASOS

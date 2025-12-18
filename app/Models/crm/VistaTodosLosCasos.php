@@ -11,27 +11,33 @@ class VistaTodosLosCasos extends Model
     protected $table = 'crm.av_todos_los_casos';
 
     protected $fillable = [
-        "user_id",
-        "dueno_caso",
-        "nombre",
-        "caso_id",
-        "fecha_vencimiento",
-        "fecha_inicio",
-        "ent_id",
-        "cliente",
-        "fase_nombre",
-        "fase_color",
-        "prioridad",
-        "tab_id",
-        "nombre_tablero",
-        "estado_2",
-        "tc_id",
-        "user_creador_id",
-        "datos_formulario",
-        "tipo_caso",
-        "nombre_categoria_caso",
-        "acc_publico",
-        "agencia",
+        'agencia',
+        'caso_id',
+        'nombre',
+        'fecha_inicio',
+        'fecha_vencimiento',
+        'tab_id',
+        'nombre_tablero',
+        'fas_id',
+        'fase_nombre',
+        'fase_color',
+        'user_id',
+        'dueno_caso',
+        'estado_2',
+        'prioridad',
+        'ent_id',
+        'cliente',
+        'tc_id',
+        'user_creador_id',
+        'descripcion',
+        'cliente_caso',
+        'identificacion',
+        'comprobante',
+        'datos_formulario',
+        'tipo_caso',
+        'nombre_categoria_caso',
+        'acc_publico',
+        'acceso_caso',
     ];
 
     public function setCreatedAtAttribute($value)
@@ -46,9 +52,8 @@ class VistaTodosLosCasos extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-        public function estadodos()
+    public function estadodos()
     {
         return $this->belongsTo(Estados::class, "estado_2", "id");
     }
-
 }
