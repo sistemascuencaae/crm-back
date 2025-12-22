@@ -477,6 +477,9 @@ class GaleriaController extends Controller
             // Combinar galerías y archivos
             $data = collect($galerias)->merge(collect($archivos));
 
+            // Ordenar por created_at ascendente
+            $data = $data->sortBy('created_at')->values();
+
             $log->logInfo(GaleriaController::class, 'Se listo con exito todos los adjuntos del caso: #' . $caso_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
