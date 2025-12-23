@@ -309,6 +309,14 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listReasignarCasosPendientesUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}/{user_id}', [TableroController::class, 'listReasignarCasosPendientesUsuarioComun']);
     // !END REASIGNAR CASOS
 
+    // !START MOVER CASOS MASIVAMENTE
+    Route::get('/listFasesByTableroId/{tab_id}', [TableroController::class, 'listFasesByTableroId']);
+    Route::get('/listTiposCasoByTableroId/{tab_id}', [TableroController::class, 'listTiposCasoByTableroId']);
+    Route::get('/listEstadosByTableroId/{tab_id}', [TableroController::class, 'listEstadosByTableroId']);
+    Route::get('/listCasosByFiltros/{tab_id}/{fase_id}/{tipo_caso_id}/{estado_id}/{fechaInicio}/{fechaFin}', [TableroController::class, 'listCasosByFiltros']);
+    Route::get('/listRespuestasCaso/{tab_id}/{tipo_caso_id}/{fas_id}/{estado_id}', [EstadosFormulasController::class, 'listRespuestasCaso']);
+    // !END MOVER CASOS MASIVAMENTE
+
     // DEPARTAMENTO
 
     Route::get('/allDepartamento', [DepartamentoController::class, 'allDepartamento']); // listar
@@ -598,6 +606,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
+    Route::post('/respuestaCasoMasivo', [CasoController::class, 'respuestaCasoMasivo']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
     Route::put('/actualizarCaso/{casoId}/{tabId}', [CasoController::class, 'actualizarCaso']); //

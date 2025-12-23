@@ -22,7 +22,7 @@ class EstadosFormulasController extends Controller
     {
         $log = new Funciones();
         try {
-            $respuestas = EstadosFormulas::where('tab_id', $id)->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima','tipoCaso')->get();
+            $respuestas = EstadosFormulas::where('tab_id', $id)->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima', 'tipoCaso')->get();
 
             $log->logInfo(EstadosFormulasController::class, 'Se listo con exito los estados del tablero con el ID: ' . $id);
 
@@ -40,12 +40,18 @@ class EstadosFormulasController extends Controller
         try {
             // original
             // $respuestas = EstadosFormulas::where('tab_id', $id)->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima','tipoCaso')->get();
-            
+
             // nuevo cambio
             $respuestas = TipoCasoTablero::where('tipo_caso_id', $tipo_caso_id)->where('tab_id', $tab_id)
-                ->with('estado_formula.estado_actual', 'estado_formula.fase_actual', 
-                        'estado_formula.respuesta_caso', 'estado_formula.estado_proximo', 
-                        'estado_formula.tablero_proximo', 'estado_formula.fase_proxima', 'estado_formula.tipoCaso')
+                ->with(
+                    'estado_formula.estado_actual',
+                    'estado_formula.fase_actual',
+                    'estado_formula.respuesta_caso',
+                    'estado_formula.estado_proximo',
+                    'estado_formula.tablero_proximo',
+                    'estado_formula.fase_proxima',
+                    'estado_formula.tipoCaso'
+                )
                 ->get();
 
             $log->logInfo(EstadosFormulasController::class, 'Se listo con exito los estados del tablero con el ID: ' . $tab_id);
@@ -95,7 +101,7 @@ class EstadosFormulasController extends Controller
                     $respuestas = EstadosFormulas::create($request->all());
 
                     $resultado = EstadosFormulas::where('tab_id', $respuestas->tab_id)
-                        ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima','tipoCaso')
+                        ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima', 'tipoCaso')
                         ->orderBy('id', 'DESC')
                         ->get();
 
@@ -147,7 +153,7 @@ class EstadosFormulasController extends Controller
                     $respuestas->update($request->all());
 
                     $resultado = EstadosFormulas::where('id', $respuestas->id)
-                        ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima','tipoCaso')
+                        ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima', 'tipoCaso')
                         ->first();
 
                     $exitoso = $resultado;
@@ -192,4 +198,36 @@ class EstadosFormulasController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+
+
+    //! START PARA LA PANTALLA DE MOVER CASOS MASIVAMENTE
+    public function listRespuestasCaso($tab_id, $tipo_caso_id, $fas_id, $estado_id)
+    {
+        try {
+            $respuestas = EstadosFormulas::where('tab_id', $tab_id)
+                ->where('tipo_caso_id', $tipo_caso_id)
+                ->where('est_id_actual', $estado_id)
+                ->where('fase_id_actual', $fas_id)
+                ->whereHas('respuesta_caso', function ($query) use ($fas_id) {
+                    $query->where('fase_id', $fas_id);
+                })
+                ->with([
+                    'estado_actual',
+                    'fase_actual',
+                    'respuesta_caso',
+                    'estado_proximo',
+                    'tablero_proximo',
+                    'fase_proxima',
+                    'tipoCaso'
+                ])
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuestas));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    //! END PARA LA PANTALLA DE MOVER CASOS MASIVAMENTE
+
 }

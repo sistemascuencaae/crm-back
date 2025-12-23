@@ -448,7 +448,6 @@ class CasoController extends Controller
             broadcast(new TableroEvent($data));
 
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizó con éxito', $data));
-
         } catch (\Throwable $e) {
             DB::rollBack();
             $log->logError(CasoController::class, 'Error al actualizar el bloqueo del caso #' . $casoId, $e);
@@ -2475,4 +2474,97 @@ class CasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+
+
+    // *************************************************
+    // JGSJ START MOVER CASOS MASIVAMENTE
+    // *************************************************
+
+    public function respuestaCasoMasivo(Request $request)
+    {
+        $log = new Funciones();
+
+        $estadoFormId = $request->input('estadoFormId');
+        $casosIds = $request->input('casosIds'); // Array de IDs de casos
+
+        try {
+            $formula = EstadosFormulas::find($estadoFormId);
+            if (!$formula) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La fórmula no existe.'));
+            }
+
+            if (!is_array($casosIds) || empty($casosIds)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error', 'Debe existir al menos un caso.'));
+            }
+
+            $result = DB::transaction(function () use ($estadoFormId, $casosIds, $log) {
+                $robot = new RobotCasoController();
+                $casosActualizados = [];
+                $casosConError = [];
+
+                foreach ($casosIds as $casoId) {
+                    try {
+                        $caso = Caso::find($casoId);
+                        if (!$caso) {
+                            $casosConError[] = [
+                                'caso_id' => $casoId,
+                                'error' => 'El caso no existe'
+                            ];
+                            continue;
+                        }
+
+                        // Obtener el tablero actual del caso
+                        $tableroActualId = DB::selectOne('SELECT t.id FROM crm.caso c
+                                                            INNER JOIN crm.fase f ON f.id = c.fas_id
+                                                            INNER JOIN crm.tablero t ON t.id = f.tab_id
+                                                            WHERE c.id = ?', [$casoId])->id;
+
+                        $casoModificado = $robot->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
+
+                        // Desbloquear el caso
+                        $casoModificado->bloqueado = false;
+                        $casoModificado->bloqueado_user = '';
+                        $casoModificado->save();
+
+                        $data = $this->getCaso($casoModificado->id);
+                        broadcast(new ReasignarCasoEvent($data));
+
+                        $casosActualizados[] = $casoId;
+
+                        $log->logInfo(CasoController::class, 'Se movio con exito el caso #' . $casoId);
+                    } catch (Exception $e) {
+                        $casosConError[] = [
+                            'caso_id' => $casoId,
+                            'error' => $e->getMessage()
+                        ];
+                        $log->logError(CasoController::class, 'Error al mover el caso #' . $casoId, $e);
+                    }
+                }
+
+                return [
+                    'casos_actualizados' => $casosActualizados,
+                    'casos_con_error' => $casosConError,
+                    'total_actualizados' => count($casosActualizados),
+                    'total_errores' => count($casosConError)
+                ];
+            });
+
+            $mensaje = $result['total_actualizados'] . ' casos actualizados correctamente';
+            if ($result['total_errores'] > 0) {
+                $mensaje .= ', ' . $result['total_errores'] . ' casos con errores';
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', $mensaje, $result));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al mover casos masivamente', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    // *************************************************
+    // JGSJ END MOVER CASOS MASIVAMENTE
+    // *************************************************
+
 }

@@ -9,6 +9,7 @@ use App\Models\crm\ActividadesFormulas;
 use App\Models\crm\CondicionesFaseMover;
 use App\Models\crm\CTipoResultadoCierre;
 use App\Models\crm\Estados;
+use App\Models\crm\Fase;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\crm\VistaMisCasos;
@@ -1079,4 +1080,100 @@ class TableroController extends Controller
         }
     }
     // !END EndPoint para la tabla o pantalla de REASIGNAR CASOS
+
+
+
+
+
+    //! START PARA LA PANTALLA DE MOVER CASOS MASIVAMENTE
+    public function listFasesByTableroId($tab_id)
+    {
+        try {
+            $data = Fase::where('tab_id', $tab_id)
+                ->orderBy('orden', 'asc')
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listTiposCasoByTableroId($tab_id)
+    {
+        try {
+            $data = DB::select("SELECT DISTINCT tc.*
+                                FROM crm.tipo_caso tc
+                                    INNER JOIN crm.tipo_caso_tablero tct ON tc.id = tct.tipo_caso_id
+                                WHERE tct.tab_id = ?
+                                ORDER BY tc.nombre ASC", [$tab_id]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listEstadosByTableroId($tab_id)
+    {
+        try {
+            $data = Estados::where('tab_id', $tab_id)
+                ->where('estado', true)
+                ->orderBy('nombre', 'asc')
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listCasosByFiltros($tab_id, $fase_id, $tipo_caso_id, $estado_id, $fechaInicio, $fechaFin)
+    {
+        try {
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay();
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();
+
+            $query = VistaTodosLosCasos::where('tab_id', $tab_id)
+                ->where('fas_id', $fase_id)
+                ->where('tc_id', $tipo_caso_id)
+                ->where('estado_2', $estado_id)
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with(['estadodos'])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                });
+
+            $data = $query->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listCasosByFaseId($fase_id, $fechaInicio, $fechaFin)
+    {
+        try {
+
+            $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
+            $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
+
+            $data = VistaTodosLosCasos::where('fas_id', $fase_id)
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'estadodos'
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                })
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+    //! END PARA LA PANTALLA DE MOVER CASOS MASIVAMENTE
+
 }
