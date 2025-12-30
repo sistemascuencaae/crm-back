@@ -8,6 +8,7 @@ use App\Http\Controllers\crm\CasoController;
 use App\Http\Resources\RespuestaApi;
 use App\Models\configuracion\UsuarioCHorario;
 use App\Models\crm\Almacen;
+use App\Models\openceo\Usuario;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
@@ -43,7 +44,7 @@ class UserController extends Controller
         foreach ($data as &$item) {
             // Convertir el string JSON a array
             $item->agencias_ids = json_decode($item->agencias_ids, true);
-        
+
             // Si viene [null] o null, convertirlo en array vacío
             if (!$item->agencias_ids || $item->agencias_ids === [null]) {
                 $item->agencias_ids = [];
@@ -144,8 +145,8 @@ class UserController extends Controller
 
             if ($newUserData->id) {
                 UsuarioCHorario::create([
-                        "user_id" => $newUserData->id,
-                        "chorario_id" => 3, // 3 es el ID del horario default en la tabla crm.chorario
+                    "user_id" => $newUserData->id,
+                    "chorario_id" => 3, // 3 es el ID del horario default en la tabla crm.chorario
                 ]);
             }
 
@@ -212,11 +213,21 @@ class UserController extends Controller
                 }
             }
 
-            $data = User::where('id', $usuario->id)
-                        ->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')
-                        ->first();
+            $mensajeUsuDynamo = '';
+            $usuDynamo = Usuario::where('usu_alias', $usuario->cedula)->orWhere('usu_alias', $usuario->usu_alias)->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+            if ($usuDynamo) {
+                $usuDynamo->update(['usu_activo' => $usuario->estado]);
+                $mensajeUsuDynamo = 'Usuario del Dynamo actualizado.';
+            } else {
+                $mensajeUsuDynamo = 'Usuario no existe en Dynamo.';
+            }
+
+            $data = User::where('id', $usuario->id)
+                ->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')
+                ->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Usuario del CRM actualizado - ' . $mensajeUsuDynamo, $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -300,7 +311,8 @@ class UserController extends Controller
                     'SELECT caso.id FROM crm.users usuario 
                             JOIN crm.caso caso 
                                 ON caso.user_id = usuario.id
-                            WHERE usuario.id = ?', [$usuario->id]
+                            WHERE usuario.id = ?',
+                    [$usuario->id]
                 );
 
                 foreach ($query as $key => $value) {
@@ -308,7 +320,7 @@ class UserController extends Controller
                     $data = $caso->getCaso($value->id);
                     broadcast(new TableroEvent($data));
                 }
-                
+
                 return User::where('id', $usuario->id)->first();
             });
 
