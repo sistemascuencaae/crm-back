@@ -76,6 +76,8 @@ class ReqCasoController extends Controller
                         "caso_id" => $inputReq->caso_id,
                         "tipo_gal_id" => 8, // Tipo Requerimiento es el id 8
                         "sc_id" => 0,
+                        "tab_id" => $requerimiento->tab_id,
+                        "acc_publico" => $requerimiento->acc_publico,
                     ]);
 
 
@@ -105,6 +107,9 @@ class ReqCasoController extends Controller
                     $newGaleria->caso_id = $inputReq->caso_id;
                     $newGaleria->tipo_gal_id = 8;
                     $newGaleria->sc_id = 0;
+                    $newGaleria->tab_id = $requerimiento->tab_id;
+                    $newGaleria->acc_publico = $requerimiento->acc_publico;
+
                     $newGaleria->save();
                     $requerimiento->galerias_id = $newGaleria->id;
 
@@ -160,6 +165,8 @@ class ReqCasoController extends Controller
                         "archivo" => $path,
                         "caso_id" => $inputReq->caso_id,
                         "tipo" => 'Requerimiento',
+                        "tab_id" => $requerimiento->tab_id,
+                        "acc_publico" => $requerimiento->acc_publico,
                     ]);
 
                     // START Bloque de código que genera un registro de auditoría manualmente
@@ -185,6 +192,8 @@ class ReqCasoController extends Controller
                     $newArchivo->archivo = $path;
                     $newArchivo->caso_id = $inputReq->caso_id;
                     $newArchivo->tipo = 'Requerimiento';
+                    $newArchivo->tab_id = $requerimiento->tab_id;
+                    $newArchivo->acc_publico = $requerimiento->acc_publico;
                     $newArchivo->save();
                     $requerimiento->archivos_id = $newArchivo->id;
 

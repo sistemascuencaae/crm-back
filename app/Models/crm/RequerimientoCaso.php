@@ -40,7 +40,18 @@ class RequerimientoCaso extends Model
         'galerias_id',
         'archivos_id',
         'desc_requerida',
+        'tab_id',
+        'acc_publico',
         'cfa_id',
+        'cfa_id_2',
+        'cfa_id_3',
+        'cfa_id_4',
+        'cfa_id_5',
+        'cfa_id_6',
+        'cfa_id_7',
+        'cfa_id_8',
+        'cfa_id_9',
+        'cfa_id_10',
     ];
 
     public function setCreatedAtAttribute($value)

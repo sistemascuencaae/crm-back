@@ -152,7 +152,7 @@ Route::group([], function ($router) {
 // --------------- START RUTAS SIN TOKEN -----------
 // --------------- START RUTAS SIN TOKEN -----------
 
-Route::group(["prefix" => "crm"], function ($router) {    
+Route::group(["prefix" => "crm"], function ($router) {
     // DIRECTORIO
     Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
 
@@ -204,6 +204,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/editGaleria/{id}', [GaleriaController::class, 'editGaleria']); // Edita la imagen
     Route::delete('/deleteGaleria/{id}', [GaleriaController::class, 'deleteGaleria']); // Elimina la imagen
     Route::get('/listGaleriaBySolicitudCreditoId/{id}', [GaleriaController::class, 'listGaleriaBySolicitudCreditoId']); // Listar las imagenes
+    Route::get('/listAllAdjuntosByCasoId/{caso_id}', [GaleriaController::class, 'listAllAdjuntosByCasoId']); // Lista Todos los archivos e imagenes del caso
 
     Route::get('/allTipoGaleria', [TipoGaleriaController::class, 'allTipoGaleria']); // Listar los tipos de imagenes
 
@@ -217,9 +218,11 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // ARCHIVO
 
     Route::post('/addArchivo/{caso_id}', [ArchivoController::class, 'addArchivo']); // Guardar
+    Route::post('/addArchivo2/{caso_id}', [ArchivoController::class, 'addArchivo2']); // Guardar
     Route::post('/addArrayArchivos/{caso_id}', [ArchivoController::class, 'addArrayArchivos']); // Guardar
     Route::get('/listArchivoByCasoId/{id}/{tableroListaId}', [ArchivoController::class, 'listArchivoByCasoId']); // Listar
     Route::post('/editArchivo/{id}', [ArchivoController::class, 'editArchivo']); // Editar
+    Route::post('/editArchivo2/{id}', [ArchivoController::class, 'editArchivo2']); // Editar
     Route::delete('/deleteArchivo/{id}', [ArchivoController::class, 'deleteArchivo']); // Eliminar
     //Para documentos de equifax
     Route::post('/addArchivosEquifax/{caso_id}', [ArchivoController::class, 'addArchivosEquifax']); // Guardar
@@ -258,11 +261,11 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/editMiembrosByTableroId/{id}', [TableroController::class, 'editMiembrosByTableroId']); // Editar los miembros del tablero
     Route::get('/usuariosTablero/{tabId}', [TableroController::class, 'usuariosTablero']); // usuariosTablero
     Route::get('/listTableroByDepId/{dep_id}', [TableroController::class, 'listTableroByDepId']); // listar
-    
+
     Route::get('/permisoTableroUsuario/{tab_id}/{user_id}', [TableroController::class, 'permisoTableroUsuario']); // pemiso del usuario tablero
     Route::get('/listTablerosByUserId/{user_id}', [TableroController::class, 'listTablerosByUserId']); // lista de tableros por user_id
-    
 
+    // !START MIS CASOS
     Route::get('/listTableroMisCasosPendientes/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosPendientes']);
     Route::get('/listTableroMisCasosTerminados/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosTerminados']);
     Route::get('/listTableroMisCasosRechazados/{fechaInicio}/{fechaFin}/{user_id}', [TableroController::class, 'listTableroMisCasosRechazados']);
@@ -270,17 +273,49 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listTableroMisCasosPendientesPorCampo/{tipo_campo}/{valor}/{user_id}', [TableroController::class, 'listTableroMisCasosPendientesPorCampo']);
     Route::get('/listTableroMisCasosTerminadosPorCampo/{tipo_campo}/{valor}/{user_id}', [TableroController::class, 'listTableroMisCasosTerminadosPorCampo']);
     Route::get('/listTableroMisCasosRechazadosPorCampo/{tipo_campo}/{valor}/{user_id}', [TableroController::class, 'listTableroMisCasosRechazadosPorCampo']);
-    
+    // !END MIS CASOS
+
+
+
+    // !START TODOS LOS CASOS
+    // *por fechas
     Route::get('/listTodosLosCasosPendientesSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosPendientesSuperUsuario']);
     Route::get('/listTodosLosCasosTerminadosSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosTerminadosSuperUsuario']);
+    Route::get('/listTodosLosCasosRechazadosSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosRechazadosSuperUsuario']);
     Route::get('/listTodosLosCasosPendientesAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesAdministrador']);
-    Route::get('/listTodosLosCasosTerminadosAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesAdministrador']);
+    Route::get('/listTodosLosCasosTerminadosAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosAdministrador']);
+    Route::get('/listTodosLosCasosRechazadosAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosAdministrador']);
     Route::get('/listTodosLosCasosPendientesUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesUsuarioComun']);
     Route::get('/listTodosLosCasosTerminadosUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosUsuarioComun']);
+    Route::get('/listTodosLosCasosRechazadosUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosUsuarioComun']);
 
+    // *por campo
+    Route::get('/listTodosLosCasosPendientesSuperUsuarioPorCampo/{tipo_campo}/{valor}', [TableroController::class, 'listTodosLosCasosPendientesSuperUsuarioPorCampo']);
+    Route::get('/listTodosLosCasosTerminadosSuperUsuarioPorCampo/{tipo_campo}/{valor}', [TableroController::class, 'listTodosLosCasosTerminadosSuperUsuarioPorCampo']);
+    Route::get('/listTodosLosCasosRechazadosSuperUsuarioPorCampo/{tipo_campo}/{valor}', [TableroController::class, 'listTodosLosCasosRechazadosSuperUsuarioPorCampo']);
+    Route::get('/listTodosLosCasosPendientesAdministradorPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesAdministradorPorCampo']);
+    Route::get('/listTodosLosCasosTerminadosAdministradorPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosAdministradorPorCampo']);
+    Route::get('/listTodosLosCasosRechazadosAdministradorPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosAdministradorPorCampo']);
+    Route::get('/listTodosLosCasosPendientesUsuarioComunPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesUsuarioComunPorCampo']);
+    Route::get('/listTodosLosCasosTerminadosUsuarioComunPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosUsuarioComunPorCampo']);
+    Route::get('/listTodosLosCasosRechazadosUsuarioComunPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosUsuarioComunPorCampo']);
+    // !END TODOS LOS CASOS
+
+
+
+    // !START REASIGNAR CASOS
     Route::get('/listReasignarCasosPendientesSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listReasignarCasosPendientesSuperUsuario']);
     Route::get('/listReasignarCasosPendientesAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listReasignarCasosPendientesAdministrador']);
     Route::get('/listReasignarCasosPendientesUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}/{user_id}', [TableroController::class, 'listReasignarCasosPendientesUsuarioComun']);
+    // !END REASIGNAR CASOS
+
+    // !START MOVER CASOS MASIVAMENTE
+    Route::get('/listFasesByTableroId/{tab_id}', [TableroController::class, 'listFasesByTableroId']);
+    Route::get('/listTiposCasoByTableroId/{tab_id}', [TableroController::class, 'listTiposCasoByTableroId']);
+    Route::get('/listEstadosByTableroId/{tab_id}', [TableroController::class, 'listEstadosByTableroId']);
+    Route::get('/listCasosByFiltros/{tab_id}/{fase_id}/{tipo_caso_id}/{estado_id}/{fechaInicio}/{fechaFin}', [TableroController::class, 'listCasosByFiltros']);
+    Route::get('/listRespuestasCaso/{tab_id}/{tipo_caso_id}/{fas_id}/{estado_id}', [EstadosFormulasController::class, 'listRespuestasCaso']);
+    // !END MOVER CASOS MASIVAMENTE
 
     // DEPARTAMENTO
 
@@ -408,7 +443,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/editLeidoNotificacion/{id}', [NotificacionesController::class, 'editLeidoNotificacion']);
     Route::post('/editLeidoAllNotificaciones/{id}', [NotificacionesController::class, 'editLeidoAllNotificaciones']);
     Route::get('/listNotificacionesCasoByUser_id', [NotificacionesController::class, 'listNotificacionesCasoByUser_id']);
-    
+
     // REQUERIMIENTOS
 
     Route::get('listRequerimientosByFaseId/{fase_id}', [RequerimientoController::class, 'listRequerimientosByFaseId']); // by caso_id
@@ -504,10 +539,10 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // FASES
     Route::get('/listFasesByTableroId', [FaseController::class, 'listFasesByTableroId']);
     Route::get('/agenciasCrmUsuario', [FaseController::class, 'agenciasCrmUsuario']);
-    
+
     // FASES 2
     Route::post('/listTableroCompleto', [FaseController2::class, 'listTableroCompleto']);
-    
+
     // Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
     Route::post('/addDirectorio', [DirectorioController::class, 'addDirectorio']); // guardar
     Route::post('/editDirectorio/{id}', [DirectorioController::class, 'editDirectorio']); // Editar
@@ -519,18 +554,18 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/addReporteLink', [ReporteLinkController::class, 'addReporteLink']); // guardar
     Route::post('/editReporteLink/{id}', [ReporteLinkController::class, 'editReporteLink']); // Editar
     Route::delete('/deleteReporteLink/{id}', [ReporteLinkController::class, 'deleteReporteLink']); // Eliminar
-    
+
     Route::get('/listUsuariosByReporteId/{id}', [ReporteLinkUsuariosController::class, 'listUsuariosByReporteId']); // listar
     Route::post('/addEditReporteLinkUsuarios', [ReporteLinkUsuariosController::class, 'addEditReporteLinkUsuarios']); // guardar
-    
+
     Route::get('/listReporteLinkByUserId/{id}', [ReporteLinkController::class, 'listReporteLinkByUserId']); // listar
 
     // ULTIMO ID
 
     Route::get('/addCasoOscarBravo', [UltimoIdController::class, 'addCasoOscarBravo']);
-    
+
     // TAREAS 2
-    
+
     Route::get('/listTareasByTipoCasoId/{tipo_caso_id}/{caso_id}', [Tareas2Controller::class, 'listTareasByTipoCasoId']);
     Route::post('/editTareas2/{tarea_id}', [Tareas2Controller::class, 'editTareas2']);
 
@@ -544,7 +579,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // ----------------------------------------------------------------------------------------------------------------------
     // ----------------------------------- START RUTAS FELIPAO --------------------------------------------------------------
     // ----------------------------------------------------------------------------------------------------------------------
-    
+
     //CRM CONTROLLER PRINCIPAL
     Route::get('/crmTablero/{id}', [CrmController::class, 'list']);
     //notificaciones
@@ -571,6 +606,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
+    Route::post('/respuestaCasoMasivo', [CasoController::class, 'respuestaCasoMasivo']);
     Route::get('/depUserTablero/{casoId}', [CasoController::class, 'depUserTablero']);
     Route::get('/addCasoOPMICreativa/{cppId}', [CasoController::class, 'addCasoOPMICreativa']);
     Route::put('/actualizarCaso/{casoId}/{tabId}', [CasoController::class, 'actualizarCaso']); //
@@ -613,7 +649,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/getPedidoById/{cppId}', [PedidoMovilController::class, 'getPedidoById']);
     Route::get('/comprasCliente/{entId}', [DashboardController::class, 'comprasCliente']);
 
-    
+
     // ----------------------------------------------------------------------------------------------------------------------
     // ------------------------------------ END RUTAS FELIPAO ---------------------------------------------------------------
     // ----------------------------------------------------------------------------------------------------------------------
@@ -830,19 +866,19 @@ Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.ac
 
     Route::get('/listCFormulario/{cForm_id}', [Formulario2Controller::class, 'listCFormulario']);
     Route::post('/editValorRespuesta/{id}', [Formulario2Controller::class, 'editValorRespuesta']); // Editar
-    
+
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
     Route::get('/listFacturasPendientes/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasPendientes']); // lista de facturas
     Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
     Route::post('/af_obtener_facturas_cliente', [Formulario2Controller::class, 'af_obtener_facturas_cliente']);
-        
+
     Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
     Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
     Route::get('/listFormulariosByUsuId/{usu_id}', [Formulario2UsuariosController::class, 'listFormulariosByUsuId']); // Formularios Usuarios
     Route::get('/listRespuestasByFormId/{form_id}', [Formulario2UsuariosController::class, 'listRespuestasByFormId']); // Formularios Usuarios
-    
+
     Route::get('/af_cliente_dfactura/{identificacion}', [Formulario2UsuariosController::class, 'af_cliente_dfactura']); // Formularios Usuarios
-    
+
     Route::get('/listAllClientesDynamo', [Formulario2Controller::class, 'listAllClientesDynamo']); // lista de clientes para actividades caso
     Route::get('/listClienteDynamoByIdentificacion/{identificacion}', [Formulario2Controller::class, 'listClienteDynamoByIdentificacion']); // lista de clientes para actividades caso
 });
@@ -985,6 +1021,7 @@ Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activ
 
     Route::post('/send_emailCambioFase/{caso_id}/{fase_id}', [EmailController::class, 'send_emailCambioFase']); // Envia un correo cuando cambia de fase
     Route::post('/send_emailLinkEnrolamiento', [EmailController::class, 'send_emailLinkEnrolamiento']); // Envia un correo con el link del enrolamiento
+    Route::post('/test_email', [EmailController::class, 'test_email']); // Envia un correo cuando cambia de fase
 
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
     Route::post('/addEmail', [EmailController::class, 'addEmail']);
@@ -1039,7 +1076,8 @@ Route::group(["prefix" => "gex", 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/getSerie/{serie}', [StockProSerieController::class, 'getSerie']);
     Route::get('/despacharSerie/{serie}/{bodId}', [StockProSerieController::class, 'despacharSerie']);
     Route::get('/reportePorBodegaId/{bodId}', [StockProSerieController::class, 'reportePorBodegaId']);
-    Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
+    // Route::get('/buscarProCodigo/{serie}', [StockProSerieController::class, 'buscarProCodigo']);
+    Route::post('/buscarProCodigo', [StockProSerieController::class, 'buscarProCodigo']);
 });
 
 Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
@@ -1076,9 +1114,9 @@ Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario
     Route::post('/editAgencia/{id}', [AgenciaController::class, 'editAgencia']); // Editar
     Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
     Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
-    
+
     // HORARIOS
-    
+
     Route::get('/listAllHorarios', [HorarioController::class, 'listAllHorarios']);
     Route::get('/listDhorarioById/{id}', [HorarioController::class, 'listDhorarioById']);
     Route::post('/addCDHorario', [HorarioController::class, 'addCDHorario']);
@@ -1088,7 +1126,6 @@ Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario
     Route::get('/listHorariosActivos', [HorarioController::class, 'listHorariosActivos']);
     Route::get('/getHorarioUsuario/{user_id}', [HorarioController::class, 'getHorarioUsuario']);
     Route::post('/editUserHorario', [HorarioController::class, 'editUserHorario']);
-
 });
 
 Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
@@ -1099,13 +1136,13 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/listAlmacenesPuntoVenta', [EntidadDynamoController::class, 'listAlmacenesPuntoVenta']);
     Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
     Route::get('/listBodegas', [BodegaController::class, 'listBodegas']);
-
 });
 
 Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/listFormulaByParametro', [ParametroController::class, 'listFormulaByParametro']);
     Route::get('/parametroFDias', [ParametroController::class, 'parametroFDias']);
     Route::get('/parametroFDiasMisCasos', [ParametroController::class, 'parametroFDiasMisCasos']);
+    Route::get('/parametroFDiasTodosLosCasos', [ParametroController::class, 'parametroFDiasTodosLosCasos']);
 });
 
 // PERFILES, MENU, ACCESOS
@@ -1155,7 +1192,7 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/listEstadoActivos', [ActivosController::class, 'listEstadoActivos']);
     Route::get('/listMarca', [ActivosController::class, 'listMarca']);
     Route::get('/listLocalidades', [ActivosController::class, 'listLocalidades']);
-    
+
     // ACTAS
 
     Route::get('/listAllActas', [ActasController::class, 'listAllActas']);
@@ -1164,7 +1201,6 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::post('/editActa/{numero}', [ActasController::class, 'editActa']);
     Route::post('/editRecepcionFisica/{numero}', [ActasController::class, 'editRecepcionFisica']);
     Route::post('/editRecibidoPor/{numero}', [ActasController::class, 'editRecibidoPor']);
-
 });
 
 // ------------------------------ END RUTAS PROTEGIDAS ------------------------------------------------------

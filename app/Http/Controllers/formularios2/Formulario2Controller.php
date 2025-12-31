@@ -39,8 +39,8 @@ class Formulario2Controller extends Controller
                         // Ordena los campos dentro de cada sección por el atributo 'orden'
                         $query->orderBy('order', 'asc');
                     }
-                    ])
-                    ->with('formUser.usuario')
+                ])
+                ->with('formUser.usuario')
                 ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
                 ->get();
 
@@ -72,7 +72,6 @@ class Formulario2Controller extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Formulario inactivo, por favor, comuniquese con el administrador.', ''));
             }
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $e->getMessage()));
         }
@@ -354,7 +353,6 @@ class Formulario2Controller extends Controller
                                 $campoData['form_control_name'] = str_replace(' ', '', $campoData['label']) . $campoData['id'];
                                 Field::updateOrCreate(['id' => $campoData['id']], $campoData);
                             }
-
                         }
                     }
                 }
@@ -383,19 +381,19 @@ class Formulario2Controller extends Controller
 
                 // Retornar los formularios guardados, excluyendo el formulario con id 1
                 return Form::where('id', '!=', 1)
-                ->with([
-                    'seccion' => function ($query) {
-                        // Ordena las secciones por el atributo 'orden'
-                        $query->orderBy('order', 'asc');
-                    },
-                    'seccion.campo' => function ($query) {
-                        // Ordena los campos dentro de cada sección por el atributo 'orden'
-                        $query->orderBy('order', 'asc');
-                    }
+                    ->with([
+                        'seccion' => function ($query) {
+                            // Ordena las secciones por el atributo 'orden'
+                            $query->orderBy('order', 'asc');
+                        },
+                        'seccion.campo' => function ($query) {
+                            // Ordena los campos dentro de cada sección por el atributo 'orden'
+                            $query->orderBy('order', 'asc');
+                        }
                     ])
                     ->with('formUser.usuario')
-                ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
-                ->get();
+                    ->orderBy('id', 'asc') // Esto ordena los formularios por el ID
+                    ->get();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $data));
@@ -579,18 +577,54 @@ class Formulario2Controller extends Controller
 
     // lista de clientes de dynamo
     // endPoint para las actividades de un caso
-    public function listAllClientesDynamo()
+    public function listAllClientesDynamo(Request $request)
     {
         try {
-            $data = DB::table('crm.av_cliente')
-                            ->orderBy('cliente', 'asc')
-                            ->get();
+            $page = $request->input('page', 1); // Página actual (por defecto 1)
+            $limit = $request->input('limit', 10); // Límite por página (por defecto 10)
+            $offset = ($page - 1) * $limit; // Calcular offset
+
+            // Parámetros de búsqueda
+            $searchType = $request->input('searchType', ''); // 'identificacion' o 'nombre'
+            $searchTerm = $request->input('searchTerm', ''); // Término de búsqueda
+
+            // Construir query base
+            $query = DB::table('crm.av_cliente');
+
+            // Aplicar filtros de búsqueda si existen
+            if ($searchType && $searchTerm) {
+                if ($searchType === 'identificacion') {
+                    $query->where('identificacion', 'ILIKE', '%' . $searchTerm . '%');
+                } elseif ($searchType === 'nombre') {
+                    $query->where('cliente', 'ILIKE', '%' . $searchTerm . '%');
+                }
+            }
+
+            // Obtener el total de registros (con filtros aplicados)
+            $total = $query->count();
+
+            // Obtener los datos paginados
+            $data = $query->orderBy('cliente', 'asc')
+                ->offset($offset)
+                ->limit($limit)
+                ->get();
 
             if (!$data) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No hay clientes', ''));
             }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+            // Preparar respuesta con metadata de paginación
+            $response = [
+                'data' => $data,
+                'pagination' => [
+                    'total' => $total,
+                    'page' => $page,
+                    'limit' => $limit,
+                    'totalPages' => ceil($total / $limit)
+                ]
+            ];
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $response));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
@@ -600,8 +634,8 @@ class Formulario2Controller extends Controller
     {
         try {
             $data = DB::table('crm.av_cliente')
-                            ->where('identificacion', $identificacion)
-                            ->first();
+                ->where('identificacion', $identificacion)
+                ->first();
 
             if (!$data) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No existe el cliente', ''));

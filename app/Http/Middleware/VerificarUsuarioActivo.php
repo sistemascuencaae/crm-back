@@ -130,7 +130,8 @@ class VerificarUsuarioActivo
             }
 
             // Obtener día actual (0 = domingo, 1 = lunes, ..., 6 = sábado)
-            $diaActual = now()->dayOfWeek;
+            // $diaActual = now()->dayOfWeek;
+            $diaActual = (int) date('w'); // 0 = domingo, 1 = lunes, ..., 6 = sábado
 
             // Buscar si existe horario activo para el día actual
             $diaHorario = $horario->dhorario->firstWhere('dia', $diaActual);
@@ -142,7 +143,8 @@ class VerificarUsuarioActivo
             }
 
             // Validar si la hora actual está dentro del rango permitido
-            $horaActual = now()->format('H:i:s');
+            // $horaActual = now()->format('H:i:s');
+            $horaActual = date('H:i:s');
 
             if ($horaActual <= $diaHorario->hora_inicio || $horaActual >= $diaHorario->hora_fin) {
                 return response()->json([

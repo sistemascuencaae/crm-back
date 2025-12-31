@@ -20,8 +20,8 @@ class ParametroController extends Controller
     {
         try {
             $parametro = DB::table('crm.parametro')
-                            ->where('abreviacion', 'TABACT')
-                            ->first();
+                ->where('abreviacion', 'TABACT')
+                ->first();
 
             $data = TipoCasoFormulas::where('tc_id', $parametro->valor)->first();
 
@@ -35,8 +35,8 @@ class ParametroController extends Controller
     {
         try {
             $data = DB::table('crm.parametro')
-                            ->where('abreviacion', 'FDIAS')
-                            ->first();
+                ->where('abreviacion', 'FDIAS')
+                ->first();
 
             if (!$data) {
                 // Si no existe el parámetro, crear un objeto con valor por defecto
@@ -55,8 +55,28 @@ class ParametroController extends Controller
     {
         try {
             $data = DB::table('crm.parametro')
-                            ->where('abreviacion', 'FDIAS2')
-                            ->first();
+                ->where('abreviacion', 'FDIAS2')
+                ->first();
+
+            if (!$data) {
+                // Si no existe el parámetro, crear un objeto con valor por defecto
+                $data = (object) [
+                    'valor' => '0',
+                ];
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e));
+        }
+    }
+
+    public function parametroFDiasTodosLosCasos()
+    {
+        try {
+            $data = DB::table('crm.parametro')
+                ->where('abreviacion', 'FDIAS3')
+                ->first();
 
             if (!$data) {
                 // Si no existe el parámetro, crear un objeto con valor por defecto

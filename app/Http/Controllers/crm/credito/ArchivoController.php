@@ -134,6 +134,8 @@ class ArchivoController extends Controller
                     "archivo" => $path,
                     "caso_id" => $request->caso_id,
                     "tipo" => 'Caso',
+                    "acc_publico" =>  $request->acc_publico,
+                    "tab_id" =>  $request->tab_id,
                 ]);
 
                 // START Bloque de código que genera un registro de auditoría manualmente
@@ -197,7 +199,8 @@ class ArchivoController extends Controller
             if ($user->usu_tipo_analista !== 1) {
                 $data = Archivo::orderBy("id", "desc")->where('caso_id', $caso_id)->get();
             } else {
-                $data = DB::select("SELECT * from (
+                $data = DB::select(
+                    "SELECT * from (
                     select arch.* from crm.archivos arch
                     where arch.tipo <> 'Requerimiento'
                     union
@@ -205,7 +208,7 @@ class ArchivoController extends Controller
                     inner join crm.requerimientos_caso rc2 on rc2.archivos_id = arch2.id
                     where rc2.tab_id = ? or rc2.acc_publico = true
                     ) temp where temp.caso_id = ? ORDER BY temp.id DESC",
-                            [$tableroListaId, $caso_id]
+                    [$tableroListaId, $caso_id]
                 );
             }
 
@@ -580,6 +583,177 @@ class ArchivoController extends Controller
             $log->logError(ArchivoController::class, 'Error al listar archivos firmados de Equifax del caso: #' . $caso_id, $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
+
+
+
+
+    public function addArchivo2(Request $request, $caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $data = DB::transaction(function () use ($request, $caso_id) {
+
+                $file = $request->file("archivo");
+                // $titulo = $file->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $file->getClientOriginalName()); // Reemplazar espacios por -
+
+                // $path = Storage::putFile("archivos", $request->file("archivo")); //se va a guardar dentro de la CARPETA archivos
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
+                if ($parametro->nas == true) {
+                    $path = Storage::disk('nas')->putFileAs("casos/" . $caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                } else {
+                    $path = Storage::disk('local')->putFileAs("casos/" . $caso_id . "/archivos", $file, $caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                }
+
+                $request->request->add(["archivo" => $path]); //Aqui obtenemos la ruta del archivo en la que se encuentra
+
+                $archivo = Archivo::create([
+                    "titulo" => $caso_id . '-' . $titulo,
+                    "observacion" => $request->observacion,
+                    "archivo" => $path,
+                    "caso_id" => $request->caso_id,
+                    "tipo" => 'Caso',
+                    "acc_publico" =>  $request->acc_publico,
+                    "tab_id" =>  $request->tab_id,
+                ]);
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                $audit->user_id = Auth::id();
+                $audit->event = 'created';
+                $audit->auditable_type = Archivo::class;
+                $audit->auditable_id = $archivo->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->old_values = json_encode($archivo);
+                $audit->new_values = json_encode([]);
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'addArchivo';
+                $audit->caso_id = $archivo->caso_id;
+                $audit->save();
+                // END Auditoria
+
+                return $archivo;
+            });
+
+            $log->logInfo(ArchivoController::class, 'Se guardo con exito el archivo en el caso: #' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(ArchivoController::class, 'Error al guardar el archivo en el caso: #' . $caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
+
+    public function editArchivo2(Request $request, $id)
+    {
+        $log = new Funciones();
+        try {
+            $resultado = DB::transaction(function () use ($request, $id) {
+
+                $archivo = Archivo::findOrFail($id);
+
+                // Obtener el old_values (valor antiguo)
+                $valorAntiguo = [
+                    'titulo' => $archivo->titulo,
+                    'observacion' => $archivo->observacion,
+                    'archivo' => $archivo->archivo,
+                ];
+
+                // Obtener parámetro de NAS
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
+                // Si se está subiendo un nuevo archivo
+                if ($request->hasFile("archivo")) {
+                    $file = $request->file("archivo");
+                    $titulo = str_replace(' ', '-', $file->getClientOriginalName()); // Reemplazar espacios por -
+
+                    // Eliminar el archivo anterior si existe
+                    if ($archivo->archivo) {
+                        if ($parametro->nas == true) {
+                            Storage::disk('nas')->delete($archivo->archivo);
+                        } else {
+                            Storage::disk('local')->delete($archivo->archivo);
+                        }
+                    }
+
+                    // Guardar el nuevo archivo
+                    if ($parametro->nas == true) {
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $request->caso_id . "/archivos", $file, $request->caso_id . '-' . $titulo);
+                    } else {
+                        $path = Storage::disk('local')->putFileAs("casos/" . $request->caso_id . "/archivos", $file, $request->caso_id . '-' . $titulo);
+                    }
+
+                    // Actualizar el archivo con el nuevo archivo
+                    $archivo->update([
+                        "titulo" => $request->caso_id . '-' . $titulo,
+                        "observacion" => $request->observacion,
+                        "archivo" => $path,
+                        "caso_id" => $request->caso_id,
+                        "tipo" => 'Caso',
+                        "acc_publico" => $request->acc_publico,
+                        "tab_id" => $request->tab_id,
+                    ]);
+                } else {
+                    // Si no se está subiendo archivo, solo actualizar datos
+                    $archivo->update([
+                        "titulo" => $request->titulo ?? $archivo->titulo,
+                        "observacion" => $request->observacion,
+                        "acc_publico" => $request->acc_publico,
+                        "tab_id" => $request->tab_id,
+                    ]);
+                }
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = Archivo::class;
+                $audit->auditable_id = $archivo->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip();
+                $audit->url = $request->fullUrl();
+                $audit->old_values = json_encode($valorAntiguo);
+                $audit->new_values = json_encode([
+                    'titulo' => $archivo->titulo,
+                    'observacion' => $archivo->observacion,
+                    'archivo' => $archivo->archivo,
+                ]);
+                $audit->user_agent = $request->header('User-Agent');
+                $audit->accion = 'editArchivo';
+                $audit->caso_id = $archivo->caso_id;
+                $audit->save();
+                // END Auditoria
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($archivo, $dateFields);
+
+                return $archivo;
+            });
+
+            $log->logInfo(ArchivoController::class, 'Se actualizo con exito el archivo con el ID: ' . $id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $resultado));
+        } catch (Exception $e) {
+            $log->logError(ArchivoController::class, 'Error al actualizar el archivo con el ID: ' . $id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 }

@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers\crm;
 
-use App\Events\ReasignarCasoEvent;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Controllers\openceo\PedidoMovilController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
@@ -17,10 +15,11 @@ use App\Models\mail\SendMailAutorizacionDatos;
 use App\Models\mail\sendMailCambioFase;
 use App\Models\mail\SendMailComite;
 use App\Models\mail\sendMailLinkEnrolamiento;
-use Exception;
+use App\Models\mail\TestMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Exception;
 
 class EmailController extends Controller
 {
@@ -94,9 +93,9 @@ class EmailController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', "Correo electrónico enviado correctamente a " . $object->email, ''));
         } catch (Exception $e) {
-            $log->logError(EmailController::class, 'Error al enviar el correo electrónico a ' . $object->email, $e);
+            $log->logError(EmailController::class, 'Error al enviar el correo electrónico', $e->getMessage());
 
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
@@ -400,6 +399,23 @@ class EmailController extends Controller
             $log->logError(EmailController::class, 'Error al enviar el correo electrónico al comité', $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
+
+    // ---------------------------------------------------------------------------------------------
+    // Enviar correo de prueba
+    public function test_email(Request $request)
+    {
+        try {
+            $email = $request->email;
+
+            Mail::to($email)->send(new TestMail(null));
+
+            return "Correo electrónico enviado correctamente a " . $email;
+        } catch (Exception $e) {
+            return "Error al enviar el correo: " . $e->getMessage();
         }
     }
 }

@@ -403,10 +403,20 @@ class StockProSerieController extends Controller
     }
 
 
-    public function buscarProCodigo($proCodigo)
+    // public function buscarProCodigo($proCodigo)
+    // {
+    //     try {
+    //         $data = DB::selectOne("SELECT * FROM public.producto where pro_codigo = ?",[$proCodigo]);
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
+    //     } catch (\Throwable $th) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
+    //     }
+    // }
+
+    public function buscarProCodigo(Request $request)
     {
         try {
-            $data = DB::selectOne("SELECT * FROM public.producto where pro_codigo = ?",[$proCodigo]);
+            $data = DB::selectOne("SELECT * FROM public.producto where pro_codigo = ?",[$request->proCodigo]);
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));

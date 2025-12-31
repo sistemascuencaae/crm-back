@@ -395,9 +395,11 @@ class FaseController extends Controller
         try {
             $user = auth('api')->user();
 
-            $data = DB::SELECT("SELECT a.alm_id 
+            $data = DB::SELECT("SELECT a.alm_id, ag.nombre
                                     FROM crm.usuario_almacen a
-                                WHERE a.user_id = ?", [$user->id]);
+                                        JOIN crm.agencia ag ON a.alm_id::text = ag.codigo
+                                WHERE a.user_id = ?
+                                ORDER BY ag.nombre ASC;", [$user->id]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (Exception $e) {
