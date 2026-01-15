@@ -115,9 +115,21 @@ use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
 use App\Http\Controllers\correo\CorreoController;
+use App\Http\Controllers\crediGestion\CrediGestionController;
 use App\Http\Controllers\crm\credito\ResumenController;
 use App\Http\Controllers\crm\FaseController2;
 use App\Http\Controllers\crm\seriesalm\BodegaSeriesGeneradasController;
+use App\Http\Controllers\gestionClientes\ActividadClienteController;
+use App\Http\Controllers\gestionClientes\AdjuntoClienteController;
+use App\Http\Controllers\gestionClientes\BitacoraController as GestionClientesBitacoraController;
+use App\Http\Controllers\gestionClientes\ClienteController;
+use App\Http\Controllers\gestionClientes\ContactoController;
+use App\Http\Controllers\gestionClientes\EstadoActividadController;
+use App\Http\Controllers\gestionClientes\EtiquetaActividadController;
+use App\Http\Controllers\gestionClientes\PrioridadActividadController;
+use App\Http\Controllers\gestionClientes\TipoActividadController;
+use App\Http\Controllers\gestionClientes\TipoAdjuntoController;
+use App\Http\Controllers\gestionClientes\ZonaController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -191,6 +203,102 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+
+
+
+    // ! START GESTION CLIENTES
+
+    // ZONAS
+    Route::get('/listAllZonas', [ZonaController::class, 'listAllZonas']);
+    Route::get('/listZonasActivas', [ZonaController::class, 'listZonasActivas']);
+    Route::get('/getZonaById/{id}', [ZonaController::class, 'getZonaById']);
+    Route::post('/addZona', [ZonaController::class, 'addZona']);
+    Route::post('/editZona/{id}', [ZonaController::class, 'editZona']);
+    Route::delete('/deleteZona/{id}', [ZonaController::class, 'deleteZona']);
+
+    // CLIENTES
+    Route::get('/listAllClientes', [ClienteController::class, 'listAllClientes']);
+    Route::get('/listClientesActivos', [ClienteController::class, 'listClientesActivos']);
+    Route::get('/listClientesByUsuario', [ClienteController::class, 'listClientesByUsuario']);
+    Route::get('/getClienteById/{id}', [ClienteController::class, 'getClienteById']);
+    Route::post('/addCliente', [ClienteController::class, 'addCliente']);
+    Route::post('/editCliente/{id}', [ClienteController::class, 'editCliente']);
+    Route::delete('/deleteCliente/{id}', [ClienteController::class, 'deleteCliente']);
+    Route::post('/asignarUsuarioCliente/{id}', [ClienteController::class, 'asignarUsuarioCliente']);
+    Route::post('/desasignarUsuarioCliente/{id}', [ClienteController::class, 'desasignarUsuarioCliente']);
+
+    // CONTACTOS
+    Route::get('/listContactosByCliente/{clienteId}', [ContactoController::class, 'listContactosByCliente']);
+    Route::get('/listContactosActivosByCliente/{clienteId}', [ContactoController::class, 'listContactosActivosByCliente']);
+    Route::get('/getContactoById/{id}', [ContactoController::class, 'getContactoById']);
+    Route::post('/addContacto', [ContactoController::class, 'addContacto']);
+    Route::post('/editContacto/{id}', [ContactoController::class, 'editContacto']);
+    Route::delete('/deleteContacto/{id}', [ContactoController::class, 'deleteContacto']);
+
+    // ACTIVIDADES
+    Route::get('/listAllActividades', [ActividadClienteController::class, 'listAllActividades']);
+    Route::get('/listActividadesByCliente/{clienteId}', [ActividadClienteController::class, 'listActividadesByCliente']);
+    Route::get('/listActividadesPendientesByCliente/{clienteId}', [ActividadClienteController::class, 'listActividadesPendientesByCliente']);
+    Route::get('/listActividadesTerminadasByCliente/{clienteId}', [ActividadClienteController::class, 'listActividadesTerminadasByCliente']);
+    Route::get('/getActividadById/{id}', [ActividadClienteController::class, 'getActividadById']);
+    Route::post('/addActividad', [ActividadClienteController::class, 'addActividad']);
+    Route::post('/editActividad/{id}', [ActividadClienteController::class, 'editActividad']);
+    Route::post('/cerrarActividad/{id}', [ActividadClienteController::class, 'cerrarActividad']);
+    Route::post('/reasignarActividad/{id}', [ActividadClienteController::class, 'reasignarActividad']);
+    Route::delete('/deleteActividad/{id}', [ActividadClienteController::class, 'deleteActividad']);
+
+    // TIPOS DE ACTIVIDAD
+    Route::get('/listAllTiposActividad', [TipoActividadController::class, 'listAllTiposActividad']);
+    Route::get('/listTiposActividadActivos', [TipoActividadController::class, 'listTiposActividadActivos']);
+    Route::post('/addTipoActividad', [TipoActividadController::class, 'addTipoActividad']);
+    Route::post('/editTipoActividad/{id}', [TipoActividadController::class, 'editTipoActividad']);
+    Route::delete('/deleteTipoActividad/{id}', [TipoActividadController::class, 'deleteTipoActividad']);
+
+    // PRIORIDADES
+    Route::get('/listAllPrioridades', [PrioridadActividadController::class, 'listAllPrioridades']);
+    Route::get('/listPrioridadesActivas', [PrioridadActividadController::class, 'listPrioridadesActivas']);
+    Route::post('/addPrioridad', [PrioridadActividadController::class, 'addPrioridad']);
+    Route::post('/editPrioridad/{id}', [PrioridadActividadController::class, 'editPrioridad']);
+    Route::delete('/deletePrioridad/{id}', [PrioridadActividadController::class, 'deletePrioridad']);
+
+    // ESTADOS DE ACTIVIDAD
+    Route::get('/listAllEstados', [EstadoActividadController::class, 'listAllEstados']);
+    Route::get('/listEstadosActivos', [EstadoActividadController::class, 'listEstadosActivos']);
+    Route::post('/addEstado', [EstadoActividadController::class, 'addEstado']);
+    Route::post('/editEstado/{id}', [EstadoActividadController::class, 'editEstado']);
+    Route::delete('/deleteEstado/{id}', [EstadoActividadController::class, 'deleteEstado']);
+
+    // ADJUNTOS
+    Route::get('/listAdjuntosByCliente/{clienteId}', [AdjuntoClienteController::class, 'listAdjuntosByCliente']);
+    Route::get('/listAdjuntosByActividad/{actividadId}', [AdjuntoClienteController::class, 'listAdjuntosByActividad']);
+    Route::get('/getAdjuntoById/{id}', [AdjuntoClienteController::class, 'getAdjuntoById']);
+    Route::post('/addAdjunto', [AdjuntoClienteController::class, 'addAdjunto']);
+    Route::post('/editAdjunto/{id}', [AdjuntoClienteController::class, 'editAdjunto']);
+    Route::delete('/deleteAdjunto/{id}', [AdjuntoClienteController::class, 'deleteAdjunto']);
+
+    // TIPOS DE ADJUNTO
+    Route::get('/listAllTiposAdjunto', [TipoAdjuntoController::class, 'listAllTiposAdjunto']);
+    Route::get('/listTiposAdjuntoActivos', [TipoAdjuntoController::class, 'listTiposAdjuntoActivos']);
+    Route::post('/addTipoAdjunto', [TipoAdjuntoController::class, 'addTipoAdjunto']);
+    Route::post('/editTipoAdjunto/{id}', [TipoAdjuntoController::class, 'editTipoAdjunto']);
+    Route::delete('/deleteTipoAdjunto/{id}', [TipoAdjuntoController::class, 'deleteTipoAdjunto']);
+
+    // ETIQUETAS
+    Route::get('/listEtiquetasByActividad/{actividadId}', [EtiquetaActividadController::class, 'listEtiquetasByActividad']);
+    Route::post('/addEtiquetaActividad', [EtiquetaActividadController::class, 'addEtiquetaActividad']);
+    Route::post('/editEtiquetaActividad/{id}', [EtiquetaActividadController::class, 'editEtiquetaActividad']);
+    Route::delete('/deleteEtiquetaActividad/{id}', [EtiquetaActividadController::class, 'deleteEtiquetaActividad']);
+
+    // BITÁCORA
+    Route::get('/listBitacora', [GestionClientesBitacoraController::class, 'listBitacora']);
+    Route::get('/getBitacoraById/{id}', [GestionClientesBitacoraController::class, 'getBitacoraById']);
+    Route::get('/getBitacoraByActividadClienteId/{id}', [GestionClientesBitacoraController::class, 'getBitacoraByActividadClienteId']);
+
+    // ! END GESTION CLIENTES
+
+
+
+
 
     // Tableau
     Route::get('/generateTokenTableau', [TableauAuthController::class, 'generateTokenTableau']);
@@ -1229,11 +1337,10 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
 
 
 
-// ---------- SISTEMA NOVASOFT----------
-// ---------- SISTEMA NOVASOFT----------
-// ---------- SISTEMA NOVASOFT----------
 
 Route::group(["prefix" => "almacenesespana"], function ($router) {
+    
+    // ---------- START SISTEMA NOVASOFT----------
     Route::get('/n8tt-aa1v-7g0a-m2ig-b7fq-c3ar-r1nc', [MigracionController::class, 'aav_migracion_cartera']);
     Route::get('/2e62-aa1v-e3sr-m2ig-33fi-c3li-xhv3', [MigracionController::class, 'aav_migracion_cliente']);
     Route::get('/7eiq-aa1v-72iu-m2ig-2nyv-r3ef-3l4y', [MigracionController::class, 'aav_migracion_referencias_cliente']);
@@ -1253,4 +1360,11 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_migracion_cuotas_gratis', [MigracionController::class, 'aav_migracion_cuotas_gratis']);
     Route::get('/aav_migracion_rec_anulados', [MigracionController::class, 'aav_migracion_rec_anulados']);
     Route::get('/aav_migracion_referencias_cliente_by_identificacion/{identificacion}', [MigracionController::class, 'aav_migracion_referencias_cliente_by_identificacion']);
+    // ---------- END SISTEMA NOVASOFT----------
+    
+    
+
+    // ---------- START SISTEMA CREDIGESTION----------
+    Route::get('/alm_facturas/{anio}/{mes}/{dia}', [CrediGestionController::class, 'alm_facturas']);
+    // ---------- END SISTEMA CREDIGESTION----------
 });
