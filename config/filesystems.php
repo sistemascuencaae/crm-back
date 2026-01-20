@@ -39,7 +39,8 @@ return [
             'driver' => 'ftp',
             // 'host' => '192.168.1.248', // La dirección IP o nombre de dominio de tu servidor FTP
             // 'host' => '191.100.27.176', // La dirección IP o nombre de dominio de tu servidor FTP // antes estaba directo esta publica de estapa
-            'host' => 'img.almacenesespana.ec', // La dirección IP o nombre de dominio de tu servidor FTP
+            // 'host' => 'img.almacenesespana.ec', // La dirección IP o nombre de dominio de tu servidor FTP
+            'host' => 'img.almespana.com.ec', // La dirección IP o nombre de dominio de tu servidor FTP
             'username' => 'apialm', // Tu nombre de usuario FTP
             'password' => '_BrL3LPJ2ss.2020', // Tu contraseña FTP
             'root' => '/crm', // Ruta raíz en el servidor FTP

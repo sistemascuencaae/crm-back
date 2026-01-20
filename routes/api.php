@@ -119,6 +119,7 @@ use App\Http\Controllers\crediGestion\CrediGestionController;
 use App\Http\Controllers\crm\credito\ResumenController;
 use App\Http\Controllers\crm\FaseController2;
 use App\Http\Controllers\crm\seriesalm\BodegaSeriesGeneradasController;
+use App\Http\Controllers\db_oracle\MultiNivelController;
 use App\Http\Controllers\gestionClientes\ActividadClienteController;
 use App\Http\Controllers\gestionClientes\AdjuntoClienteController;
 use App\Http\Controllers\gestionClientes\BitacoraController as GestionClientesBitacoraController;
@@ -1340,7 +1341,7 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
 
 Route::group(["prefix" => "almacenesespana"], function ($router) {
     
-    // ---------- START SISTEMA NOVASOFT----------
+    // ---------- START SISTEMA NOVASOFT ----------
     Route::get('/n8tt-aa1v-7g0a-m2ig-b7fq-c3ar-r1nc', [MigracionController::class, 'aav_migracion_cartera']);
     Route::get('/2e62-aa1v-e3sr-m2ig-33fi-c3li-xhv3', [MigracionController::class, 'aav_migracion_cliente']);
     Route::get('/7eiq-aa1v-72iu-m2ig-2nyv-r3ef-3l4y', [MigracionController::class, 'aav_migracion_referencias_cliente']);
@@ -1360,11 +1361,18 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/aav_migracion_cuotas_gratis', [MigracionController::class, 'aav_migracion_cuotas_gratis']);
     Route::get('/aav_migracion_rec_anulados', [MigracionController::class, 'aav_migracion_rec_anulados']);
     Route::get('/aav_migracion_referencias_cliente_by_identificacion/{identificacion}', [MigracionController::class, 'aav_migracion_referencias_cliente_by_identificacion']);
-    // ---------- END SISTEMA NOVASOFT----------
-    
-    
+    // ---------- END SISTEMA NOVASOFT ----------
 
-    // ---------- START SISTEMA CREDIGESTION----------
+
+
+    // ---------- START SISTEMA CREDIGESTION ----------
     Route::get('/alm_facturas/{anio}/{mes}/{dia}', [CrediGestionController::class, 'alm_facturas']);
-    // ---------- END SISTEMA CREDIGESTION----------
+    // ---------- END SISTEMA CREDIGESTION ----------
+
+
+
+    // ---------- START ORACLE DB Y POSTGRES ----------
+    Route::get('/multinivel/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel']);
+    // ---------- END ORACLE DB Y POSTGRES ----------
+
 });
