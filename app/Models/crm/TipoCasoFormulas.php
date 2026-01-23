@@ -26,12 +26,15 @@ class TipoCasoFormulas extends Model
         "tiempo_vencimiento",
         "fase_id",
         "estado",
+        "acc_publico",
     ];
+
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["created_at"] = Carbon::now();
     }
+
     public function setUpdatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
@@ -67,5 +70,4 @@ class TipoCasoFormulas extends Model
     {
         return $this->belongsTo(Fase::class, "fase_id");
     }
-
 }

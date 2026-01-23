@@ -171,7 +171,8 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listDirectorioCrm', [DirectorioController::class, 'listDirectorioCrm']);
 
     // FORMULARIOS EXTERNOS
-    Route::get('/listFormulariosExternos', [TipoCasoFormulasController::class, 'listFormulariosExternos']);
+    Route::get('/listFormulariosExternosPublicos', [TipoCasoFormulasController::class, 'listFormulariosExternosPublicos']);
+    Route::get('/listFormulariosExternosPrivados', [TipoCasoFormulasController::class, 'listFormulariosExternosPrivados']);
 
     // ALMACENES-ZONAS CRM
     Route::get('/listAlmacenCrm', [AlmacenController::class, 'listAlmacenCrm']);

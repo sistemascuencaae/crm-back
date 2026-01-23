@@ -12,10 +12,10 @@ use Illuminate\Support\Facades\DB;
 class TipoCasoFormulasController extends Controller
 {
     public function __construct()
-    {        
+    {
         $this->middleware('auth:api', ['except' =>
         [
-            'listFormulariosExternos',
+            'listFormulariosExternosPublicos',
         ]]);
     }
 
@@ -32,7 +32,6 @@ class TipoCasoFormulasController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'No hay ninguna fórmula con este tipo de caso, comuníquese con el administrador, por favor.', ''));
             }
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -79,7 +78,6 @@ class TipoCasoFormulasController extends Controller
                     // Si ya existe un registro con los mismos valores, devuelve un error
                     $error = 'Ya EXISTE un registro con los valores tablero: ' . $existingRecord->tablero->nombre . ' y Tipo caso: ' . $existingRecord->tipoCaso->nombre;
                     return null;
-
                 } else {
 
                     // Si no existe un registro con los mismos valores, crea el nuevo registro
@@ -92,7 +90,6 @@ class TipoCasoFormulasController extends Controller
                     $exitoso = $resultado;
                     return null;
                 }
-
             });
 
             if ($error) {
@@ -100,7 +97,6 @@ class TipoCasoFormulasController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $exitoso));
             }
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -126,7 +122,6 @@ class TipoCasoFormulasController extends Controller
                     // Si la actualización resultaría en valores duplicados, devuelve un error
                     $error = 'Ya EXISTE un registro con los valores tablero: ' . $existingRecord->tablero->nombre . ' y Tipo caso: ' . $existingRecord->tipoCaso->nombre;
                     return null;
-
                 } else {
 
                     $respuestas->update($request->all());
@@ -145,7 +140,6 @@ class TipoCasoFormulasController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $exitoso));
             }
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
@@ -171,22 +165,48 @@ class TipoCasoFormulasController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $exitoso));
             }
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    public function listFormulariosExternos(){
+    public function listFormulariosExternosPublicos()
+    {
         try {
-            // $data = DB::SELECT("SELECT c3.name, 'http://192.168.1.142:4201/formularioExterno/' ||c3.id as url from crm.tipo_caso_formulas c
-            $data = DB::SELECT("SELECT c3.name, 'http://crm.almacenesespana.ec/formularioExterno/' ||c3.id as url from crm.tipo_caso_formulas c
-                                join crm.tipo_caso c2 on c.tc_id = c2.id
-                                join crm.form c3 on c3.id = c2.form_id
-                                where c3.id not in (1);");
+            // $data = DB::SELECT("SELECT c3.name, 'http://crm.almacenesespana.ec/formularioExterno/' ||c3.id as url from crm.tipo_caso_formulas c
+            // $data = DB::SELECT("SELECT c3.name, 'http://crm.almespana.com.ec/formularioExterno/' ||c3.id as url from crm.tipo_caso_formulas c
+            $data = DB::SELECT("SELECT 
+                                    c3.name,
+                                    'http://192.168.1.142:4201/formularioExterno/' ||c3.id as url
+                                from crm.tipo_caso_formulas c
+                                    join crm.tipo_caso c2 on c.tc_id = c2.id
+                                    join crm.form c3 on c3.id = c2.form_id
+                                where c3.id not in (1)
+                                    and c.acc_publico = true;");
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
-        } catch (Exception $e){
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listFormulariosExternosPrivados()
+    {
+        try {
+            // $data = DB::SELECT("SELECT c3.name, 'http://crm.almacenesespana.ec/formularioExterno/' ||c3.id as url from crm.tipo_caso_formulas c
+            // $data = DB::SELECT("SELECT c3.name, 'http://crm.almespana.com.ec/formularioExterno/' ||c3.id as url from crm.tipo_caso_formulas c
+                                    // 'http://192.168.1.142:4201/formularioExterno/' ||c3.id as url
+                                    $data = DB::SELECT("SELECT 
+                                    c3.name,
+                                    'http://crm.almespana.com.ec/formularioExterno/' ||c3.id as url
+                                from crm.tipo_caso_formulas c
+                                    join crm.tipo_caso c2 on c.tc_id = c2.id
+                                    join crm.form c3 on c3.id = c2.form_id
+                                where c3.id not in (1)
+                                    and c.acc_publico = false;");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
