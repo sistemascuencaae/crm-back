@@ -20,6 +20,8 @@ class Access extends Model
         'edit',
         'delete',
         'report',
+        'cerrar_actividad',
+        'cerrar_reagendar_actividad',
         // 'other',
         'ejecutar'
     ];
