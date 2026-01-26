@@ -116,6 +116,7 @@ use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
 use App\Http\Controllers\correo\CorreoController;
 use App\Http\Controllers\crediGestion\CrediGestionController;
+use App\Http\Controllers\crm\cambioAgencia\CambioAgenciaController;
 use App\Http\Controllers\crm\credito\ResumenController;
 use App\Http\Controllers\crm\FaseController2;
 use App\Http\Controllers\crm\seriesalm\BodegaSeriesGeneradasController;
@@ -205,6 +206,12 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+
+    // ? START CAMBIO VENDEDORES AGENCIA
+    Route::get('/listAlmacenesDynamo', [CambioAgenciaController::class, 'listAlmacenesDynamo']);
+    Route::post('/getVendedorByIdentificacion', [CambioAgenciaController::class, 'getVendedorByIdentificacion']);
+    Route::post('/editAgenciaVendedor', [CambioAgenciaController::class, 'editAgenciaVendedor']);
+    // ? END CAMBIO VENDEDORES AGENCIA
 
 
 
@@ -1341,7 +1348,7 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
 
 
 Route::group(["prefix" => "almacenesespana"], function ($router) {
-    
+
     // ---------- START SISTEMA NOVASOFT ----------
     Route::get('/n8tt-aa1v-7g0a-m2ig-b7fq-c3ar-r1nc', [MigracionController::class, 'aav_migracion_cartera']);
     Route::get('/2e62-aa1v-e3sr-m2ig-33fi-c3li-xhv3', [MigracionController::class, 'aav_migracion_cliente']);
