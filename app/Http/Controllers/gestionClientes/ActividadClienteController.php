@@ -9,6 +9,7 @@ use App\Models\gestionClientes\ActividadCliente;
 use App\Models\gestionClientes\BitacoraGestionCliente;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -19,9 +20,7 @@ class ActividadClienteController extends Controller
         $this->middleware('auth:api');
     }
 
-    /**
-     * Listar todas las actividades
-     */
+    // * Listar todas las actividades
     public function listAllActividades(Request $request)
     {
         $log = new Funciones();
@@ -32,7 +31,7 @@ class ActividadClienteController extends Controller
                 'tipoActividad',
                 'prioridadActividad',
                 'estadoActividad',
-                'etiquetas'
+                // 'etiquetas'
             ]);
 
             // Filtro por cliente
@@ -76,9 +75,7 @@ class ActividadClienteController extends Controller
         }
     }
 
-    /**
-     * Listar actividades por cliente
-     */
+    // * Listar actividades por cliente
     public function listActividadesByCliente($clienteId)
     {
         $log = new Funciones();
@@ -88,7 +85,7 @@ class ActividadClienteController extends Controller
                 'tipoActividad',
                 'prioridadActividad',
                 'estadoActividad',
-                'etiquetas'
+                // 'etiquetas'
             ])
                 ->where('cliente_id', $clienteId)
                 ->orderBy('fecha_inicio', 'desc')
@@ -104,9 +101,7 @@ class ActividadClienteController extends Controller
         }
     }
 
-    /**
-     * Listar actividades pendientes por cliente
-     */
+    // * Listar actividades pendientes por cliente
     public function listActividadesPendientesByCliente($clienteId)
     {
         $log = new Funciones();
@@ -116,10 +111,12 @@ class ActividadClienteController extends Controller
                 'tipoActividad',
                 'prioridadActividad',
                 'estadoActividad',
-                'etiquetas'
+                // 'etiquetas'
             ])
+                ->whereHas('estadoActividad', function ($query) {
+                    $query->where('id', 1);
+                })
                 ->where('cliente_id', $clienteId)
-                ->whereNull('fecha_cierre')
                 ->orderBy('fecha_inicio', 'desc')
                 ->get();
 
@@ -133,9 +130,7 @@ class ActividadClienteController extends Controller
         }
     }
 
-    /**
-     * Listar actividades terminadas por cliente
-     */
+    // * Listar actividades terminadas por cliente
     public function listActividadesTerminadasByCliente($clienteId)
     {
         $log = new Funciones();
@@ -145,7 +140,7 @@ class ActividadClienteController extends Controller
                 'tipoActividad',
                 'prioridadActividad',
                 'estadoActividad',
-                'etiquetas'
+                // 'etiquetas'
             ])
                 ->where('cliente_id', $clienteId)
                 ->whereNotNull('fecha_cierre')
@@ -162,9 +157,7 @@ class ActividadClienteController extends Controller
         }
     }
 
-    /**
-     * Obtener una actividad por ID
-     */
+    // * Obtener una actividad por ID
     public function getActividadById($id)
     {
         $log = new Funciones();
@@ -189,9 +182,7 @@ class ActividadClienteController extends Controller
         }
     }
 
-    /**
-     * Crear una nueva actividad
-     */
+    // * Crear una nueva actividad
     public function addActividad(Request $request)
     {
         $log = new Funciones();
@@ -203,7 +194,6 @@ class ActividadClienteController extends Controller
                 'prioridad_actividad_id' => 'required|integer',
                 'estado_actividad_id' => 'required|integer',
                 'fecha_inicio' => 'required|date',
-                'hora_inicio' => 'nullable|date_format:H:i',
                 'observacion_inicio' => 'nullable|string',
                 'valor' => 'nullable|numeric',
                 'es_reasignado' => 'nullable|boolean'
@@ -240,9 +230,7 @@ class ActividadClienteController extends Controller
         }
     }
 
-    /**
-     * Actualizar una actividad existente
-     */
+    // * Actualizar una actividad existente
     public function editActividad(Request $request, $id)
     {
         $log = new Funciones();
@@ -290,9 +278,7 @@ class ActividadClienteController extends Controller
         }
     }
 
-    /**
-     * Cerrar una actividad
-     */
+    // * Cerrar una actividad
     public function cerrarActividad(Request $request, $id)
     {
         $log = new Funciones();
@@ -300,7 +286,6 @@ class ActividadClienteController extends Controller
             $request->validate([
                 'estado_actividad_id' => 'required|integer',
                 'fecha_cierre' => 'required|date',
-                'hora_cierre' => 'nullable|date_format:H:i',
                 'observacion_cierre' => 'required|string'
             ]);
 
@@ -310,7 +295,6 @@ class ActividadClienteController extends Controller
 
                 $actividad->estado_actividad_id = $request->estado_actividad_id;
                 $actividad->fecha_cierre = $request->fecha_cierre;
-                $actividad->hora_cierre = $request->hora_cierre;
                 $actividad->observacion_cierre = $request->observacion_cierre;
                 $actividad->save();
 
@@ -341,9 +325,7 @@ class ActividadClienteController extends Controller
         }
     }
 
-    /**
-     * Reasignar una actividad a otro usuario
-     */
+    // * Reasignar una actividad a otro usuario
     public function reasignarActividad(Request $request, $id)
     {
         $log = new Funciones();
@@ -387,9 +369,7 @@ class ActividadClienteController extends Controller
         }
     }
 
-    /**
-     * Eliminar una actividad
-     */
+    // * Eliminar una actividad
     public function deleteActividad($id)
     {
         $log = new Funciones();
@@ -452,4 +432,177 @@ class ActividadClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al eliminar', $e->getMessage()), 500);
         }
     }
+
+
+
+
+
+    // **************************************************************
+    // ! START pantalla actividades pendientes de los clientes
+    // **************************************************************
+
+    // * Lista de activiades pendientes del usuario
+    public function listActividadesPendientesByUsuario($fechaInicio, $fechaFin)
+    {
+        try {
+            $usuario = Auth::user();
+
+            $data = ActividadCliente::where('user_id', $usuario->id)
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    // 'usuario',
+                    'cliente',
+                    'tipoActividad.csemaforo.dsemaforos',
+                    'prioridadActividad',
+                    'estadoActividad',
+                    // 'etiquetas',
+                ])
+                ->whereHas('estadoActividad', function ($query) {
+                    $query->where('id', 1);
+                })
+                ->orderBy('fecha_inicio', 'asc')
+                ->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                // $this->formatoFechaItem($item, $dateFields);
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar ', $e->getMessage()));
+        }
+    }
+
+    // * Lista de actividades terminadas del usuario
+    public function listActividadesTerminadasByUsuario($fechaInicio, $fechaFin)
+    {
+        try {
+            $usuario = Auth::user();
+
+            $data = ActividadCliente::where('user_id', $usuario->id)
+                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+                ->with([
+                    'cliente',
+                    'tipoActividad.csemaforo.dsemaforos',
+                    'prioridadActividad',
+                    'estadoActividad',
+                ])
+                ->whereHas('estadoActividad', function ($query) {
+                    $query->where('id', 2);
+                })
+                ->orderBy('fecha_inicio', 'asc')
+                ->get();
+
+            $dateFields = ['created_at', 'updated_at'];
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar ', $e->getMessage()));
+        }
+    }
+
+    // * Lista de actividades pendientes del usuario filtrado por campo
+    public function listActividadesPendientesByUsuarioPorCampo($tipo_campo, $valor)
+    {
+        try {
+            $usuario = Auth::user();
+
+            $query = ActividadCliente::where('user_id', $usuario->id)
+                ->with([
+                    'cliente',
+                    'tipoActividad.csemaforo.dsemaforos',
+                    'prioridadActividad',
+                    'estadoActividad',
+                ])
+                ->whereHas('estadoActividad', function ($query) {
+                    $query->where('id', 1);
+                });
+
+            // Filtrar según el tipo de campo seleccionado
+            if ($tipo_campo === 'identificacion') {
+                $query->whereHas('cliente', function ($q) use ($valor) {
+                    $q->where('identificacion', 'ILIKE', '%' . $valor . '%');
+                });
+            } else if ($tipo_campo === 'nombre_cliente') {
+                $query->whereHas('cliente', function ($q) use ($valor) {
+                    $q->where('nombre_completo', 'ILIKE', '%' . $valor . '%');
+                });
+            } else if ($tipo_campo === 'actividad_id') {
+                $query->where('id', $valor);
+            }
+
+            $data = $query->orderBy('fecha_inicio', 'asc')->get();
+
+            $dateFields = ['fecha_inicio', 'created_at', 'updated_at'];
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar ', $e->getMessage()));
+        }
+    }
+
+    // * Lista de actividades terminadas del usuario filtrado por campo
+    public function listActividadesTerminadasByUsuarioPorCampo($tipo_campo, $valor)
+    {
+        try {
+            $usuario = Auth::user();
+
+            $query = ActividadCliente::where('user_id', $usuario->id)
+                ->with([
+                    'cliente',
+                    'tipoActividad.csemaforo.dsemaforos',
+                    'prioridadActividad',
+                    'estadoActividad',
+                ])
+                ->whereHas('estadoActividad', function ($query) {
+                    $query->where('id', 2);
+                });
+
+            // Filtrar según el tipo de campo seleccionado
+            if ($tipo_campo === 'identificacion') {
+                $query->whereHas('cliente', function ($q) use ($valor) {
+                    $q->where('identificacion', 'ILIKE', '%' . $valor . '%');
+                });
+            } else if ($tipo_campo === 'nombre_cliente') {
+                $query->whereHas('cliente', function ($q) use ($valor) {
+                    $q->where('nombre_completo', 'ILIKE', '%' . $valor . '%');
+                });
+            } else if ($tipo_campo === 'actividad_id') {
+                $query->where('id', $valor);
+            }
+
+            $data = $query->orderBy('fecha_inicio', 'asc')->get();
+
+            $dateFields = ['fecha_inicio', 'created_at', 'updated_at'];
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar ', $e->getMessage()));
+        }
+    }
+
+    // **************************************************************
+    // ! END pantalla actividades pendientes de los clientes
+    // **************************************************************
 }

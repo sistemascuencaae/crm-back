@@ -131,6 +131,8 @@ use App\Http\Controllers\gestionClientes\EtiquetaActividadController;
 use App\Http\Controllers\gestionClientes\PrioridadActividadController;
 use App\Http\Controllers\gestionClientes\TipoActividadController;
 use App\Http\Controllers\gestionClientes\TipoAdjuntoController;
+use App\Http\Controllers\gestionClientes\CSemaforoController;
+use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use Illuminate\Support\Facades\Route;
 
@@ -256,6 +258,11 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/reasignarActividad/{id}', [ActividadClienteController::class, 'reasignarActividad']);
     Route::delete('/deleteActividad/{id}', [ActividadClienteController::class, 'deleteActividad']);
 
+    Route::get('/listActividadesPendientesByUsuario/{fechaInicio}/{fechaFin}', [ActividadClienteController::class, 'listActividadesPendientesByUsuario']);
+    Route::get('/listActividadesTerminadasByUsuario/{fechaInicio}/{fechaFin}', [ActividadClienteController::class, 'listActividadesTerminadasByUsuario']);
+    Route::get('/listActividadesPendientesByUsuarioPorCampo/{tipo_campo}/{valor}', [ActividadClienteController::class, 'listActividadesPendientesByUsuarioPorCampo']);
+    Route::get('/listActividadesTerminadasByUsuarioPorCampo/{tipo_campo}/{valor}', [ActividadClienteController::class, 'listActividadesTerminadasByUsuarioPorCampo']);
+
     // TIPOS DE ACTIVIDAD
     Route::get('/listAllTiposActividad', [TipoActividadController::class, 'listAllTiposActividad']);
     Route::get('/listTiposActividadActivos', [TipoActividadController::class, 'listTiposActividadActivos']);
@@ -302,6 +309,19 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listBitacora', [GestionClientesBitacoraController::class, 'listBitacora']);
     Route::get('/getBitacoraById/{id}', [GestionClientesBitacoraController::class, 'getBitacoraById']);
     Route::get('/getBitacoraByActividadClienteId/{id}', [GestionClientesBitacoraController::class, 'getBitacoraByActividadClienteId']);
+
+    // SEMÁFOROS (cabecera)
+    Route::get('/listAllSemaforos', [CSemaforoController::class, 'listAllSemaforos']);
+    Route::get('/listSemaforosActivos', [CSemaforoController::class, 'listSemaforosActivos']);
+    Route::post('/addSemaforo', [CSemaforoController::class, 'addSemaforo']);
+    Route::post('/editSemaforo/{id}', [CSemaforoController::class, 'editSemaforo']);
+    Route::delete('/deleteSemaforo/{id}', [CSemaforoController::class, 'deleteSemaforo']);
+
+    // RANGOS DE SEMÁFORO (detalle)
+    Route::get('/listDSemaforosByCSemaforo/{csemaforoId}', [DSemaforoController::class, 'listDSemaforosByCSemaforo']);
+    Route::post('/addDSemaforo', [DSemaforoController::class, 'addDSemaforo']);
+    Route::post('/editDSemaforo/{id}', [DSemaforoController::class, 'editDSemaforo']);
+    Route::delete('/deleteDSemaforo/{id}', [DSemaforoController::class, 'deleteDSemaforo']);
 
     // ! END GESTION CLIENTES
 
