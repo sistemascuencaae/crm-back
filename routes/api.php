@@ -114,6 +114,7 @@ use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
+use App\Http\Controllers\configuracion\ZonaAgenciaController;
 use App\Http\Controllers\correo\CorreoController;
 use App\Http\Controllers\crediGestion\CrediGestionController;
 use App\Http\Controllers\crm\cambioAgencia\CambioAgenciaController;
@@ -324,6 +325,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::delete('/deleteDSemaforo/{id}', [DSemaforoController::class, 'deleteDSemaforo']);
 
     // ! END GESTION CLIENTES
+
 
 
 
@@ -1256,8 +1258,12 @@ Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario
     Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
     Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
 
-    // HORARIOS
 
+    // ZONAS AGENCIAS
+    Route::get('/listZonasAgenciaActivas', [ZonaAgenciaController::class, 'listZonasAgenciaActivas']);
+
+
+    // HORARIOS
     Route::get('/listAllHorarios', [HorarioController::class, 'listAllHorarios']);
     Route::get('/listDhorarioById/{id}', [HorarioController::class, 'listDhorarioById']);
     Route::post('/addCDHorario', [HorarioController::class, 'addCDHorario']);
