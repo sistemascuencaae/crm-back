@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
+use App\Models\configuracion\Agencia;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\ClienteCrm;
@@ -110,6 +111,15 @@ class CasoController extends Controller
 
             if ($caso->desc_json) {
             }
+
+            // Buscar id_zona_agencia por codigo_agencia
+            if ($caso->codigo_agencia) {
+                $agencia = Agencia::where('codigo', $caso->codigo_agencia)->first();
+                if ($agencia) {
+                    $caso->id_zona_agencia = $agencia->id_zona_agencia;
+                }
+            }
+
             $caso->save();
             for ($i = 0; $i < sizeof($miembros); $i++) {
                 $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
@@ -170,6 +180,7 @@ class CasoController extends Controller
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
         // }
     }
+
     public function crearFormularioStatico($data, $casoId)
     {
         $dataObject = json_decode($data); // assuming $data is a JSON string
@@ -177,6 +188,7 @@ class CasoController extends Controller
         $dataObject->user_id = Auth::id();
         $result = DB::table('crm.formulario_estatico')->insert((array) $dataObject);
     }
+
     public function formularioSoporte($request, $casoId)
     {
         $valoresFormulario = json_decode($request->input('valoresFormulario'), true);
@@ -2398,6 +2410,14 @@ class CasoController extends Controller
             } else {
                 $caso->cliente_id = 29; // ID del cliente default del crm
                 $caso->ent_id = 999; // ID del cliente default de dynamo
+            }
+
+            // Buscar id_zona_agencia por codigo_agencia
+            if ($caso->codigo_agencia) {
+                $agencia = Agencia::where('codigo', $caso->codigo_agencia)->first();
+                if ($agencia) {
+                    $caso->id_zona_agencia = $agencia->id_zona_agencia;
+                }
             }
 
             $caso->save();

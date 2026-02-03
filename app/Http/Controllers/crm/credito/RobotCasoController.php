@@ -64,10 +64,10 @@ class RobotCasoController extends Controller
 
                 $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
 
-                // Desbloquear el caso
-                $casoModificado->bloqueado = false;
-                $casoModificado->bloqueado_user = '';
-                $casoModificado->save();
+                // Desbloquear el caso (ya se realiza en validacionReasignacionUsuario lineas 146-147)
+                // $casoModificado->bloqueado = false;
+                // $casoModificado->bloqueado_user = '';
+                // $casoModificado->save();
 
                 $data = $casoController->getCaso($casoModificado->id);
                 broadcast(new ReasignarCasoEvent($data));
@@ -98,10 +98,12 @@ class RobotCasoController extends Controller
 
 
         if (!$casoEnProceso) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
+            // return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
+            throw new Exception('El caso no existe.');
         }
         if (!$formula) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La formula no existe.'));
+            // return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La formula no existe.'));
+            throw new Exception('La formula no existe.');
         }
         //--- APROBAR CREDITO
         if ($casoEnProceso->cpp_id) {
