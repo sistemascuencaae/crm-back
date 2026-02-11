@@ -120,6 +120,12 @@ class ActividadClienteController extends Controller
                 ->orderBy('fecha_inicio', 'desc')
                 ->get();
 
+            $actividades->each(function ($actividad) {
+                if ($actividad->usuario) {
+                    $actividad->usuario->nombre_completo = trim($actividad->usuario->name . ' ' . $actividad->usuario->surname);
+                }
+            });
+
             $log->logInfo(ActividadClienteController::class, 'Se listaron las actividades pendientes del cliente exitosamente');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
@@ -146,6 +152,12 @@ class ActividadClienteController extends Controller
                 ->whereNotNull('fecha_cierre')
                 ->orderBy('fecha_cierre', 'desc')
                 ->get();
+
+            $actividades->each(function ($actividad) {
+                if ($actividad->usuario) {
+                    $actividad->usuario->nombre_completo = trim($actividad->usuario->name . ' ' . $actividad->usuario->surname);
+                }
+            });
 
             $log->logInfo(ActividadClienteController::class, 'Se listaron las actividades terminadas del cliente exitosamente');
 
