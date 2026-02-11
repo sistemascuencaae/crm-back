@@ -238,6 +238,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::delete('/deleteCliente/{id}', [ClienteController::class, 'deleteCliente']);
     Route::post('/asignarUsuarioCliente/{id}', [ClienteController::class, 'asignarUsuarioCliente']);
     Route::post('/desasignarUsuarioCliente/{id}', [ClienteController::class, 'desasignarUsuarioCliente']);
+    Route::post('/importClientesExcel', [ClienteController::class, 'importClientesExcel']);
 
     // CONTACTOS
     Route::get('/listContactosByCliente/{clienteId}', [ContactoController::class, 'listContactosByCliente']);

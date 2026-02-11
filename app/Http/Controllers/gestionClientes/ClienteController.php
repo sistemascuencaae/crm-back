@@ -10,6 +10,7 @@ use App\Models\gestionClientes\BitacoraGestionCliente;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ClienteController extends Controller
 {
@@ -214,22 +215,15 @@ class ClienteController extends Controller
     {
         $log = new Funciones();
         try {
-            $cliente = DB::transaction(function () use ($id) {
-                $cliente = Cliente::findOrFail($id);
-                $valoresAnteriores = $cliente->toArray();
+            $cliente = Cliente::findOrFail($id);
 
-                $cliente->estado = false;
-                $cliente->save();
+            // Validar que no tenga actividades asociadas
+            if ($cliente->actividades()->count() > 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se puede eliminar el cliente porque tiene actividades asociadas', null));
+            }
 
-                // Registrar en bitácora
-                BitacoraGestionCliente::create([
-                    'user_id' => auth()->id(),
-                    'accion' => 'deleteCliente',
-                    'valores_anteriores' => $valoresAnteriores,
-                    'valores_nuevos' => $cliente->toArray()
-                ]);
-
-                return $cliente;
+            DB::transaction(function () use ($cliente) {
+                $cliente->delete();
             });
 
             $log->logInfo(ClienteController::class, 'Se eliminó el cliente exitosamente');
@@ -299,6 +293,137 @@ class ClienteController extends Controller
             $log->logError(ClienteController::class, 'Error al desasignar usuario', $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error al desasignar', $e->getMessage()), 500);
+        }
+    }
+
+    /**
+     * Importar clientes desde archivo Excel
+     */
+    public function importClientesExcel(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $request->validate([
+                'archivo' => 'required|file|mimes:xlsx,xls,csv|max:10240'
+            ]);
+
+            $archivo = $request->file('archivo');
+            $spreadsheet = IOFactory::load($archivo->getPathname());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+
+            // Remover encabezado
+            $encabezado = array_shift($rows);
+
+            $total = count($rows);
+            $exitosos = 0;
+            $errores = 0;
+            $detalleErrores = [];
+
+            $columnasEsperadas = [
+                'zona_id', 'identificacion', 'tipo_identificacion', 'nombres', 'apellidos',
+                'email', 'telefono_1', 'telefono_2', 'telefono_3',
+                'calle_principal', 'calle_secundaria'
+            ];
+
+            foreach ($rows as $index => $row) {
+                $fila = $index + 2; // +2 porque removimos encabezado y Excel empieza en 1
+
+                try {
+                    // Mapear columnas
+                    $data = [];
+                    foreach ($columnasEsperadas as $i => $columna) {
+                        $data[$columna] = isset($row[$i]) ? trim((string)$row[$i]) : null;
+                    }
+
+                    // Validar campos obligatorios
+                    $erroresFila = [];
+                    if (empty($data['zona_id'])) $erroresFila[] = 'zona_id es obligatorio';
+                    if (empty($data['identificacion'])) $erroresFila[] = 'identificacion es obligatorio';
+                    if (empty($data['tipo_identificacion'])) $erroresFila[] = 'tipo_identificacion es obligatorio';
+                    if (!in_array($data['tipo_identificacion'], ['1', '2', '3'])) $erroresFila[] = 'tipo_identificacion debe ser 1, 2 o 3';
+                    if (empty($data['nombres'])) $erroresFila[] = 'nombres es obligatorio';
+                    if (empty($data['apellidos'])) $erroresFila[] = 'apellidos es obligatorio';
+
+                    if (!empty($erroresFila)) {
+                        $errores++;
+                        $detalleErrores[] = [
+                            'fila' => $fila,
+                            'mensaje' => implode(', ', $erroresFila)
+                        ];
+                        continue;
+                    }
+
+                    // Verificar identificación duplicada
+                    $existe = Cliente::where('identificacion', $data['identificacion'])->first();
+                    if ($existe) {
+                        $errores++;
+                        $detalleErrores[] = [
+                            'fila' => $fila,
+                            'mensaje' => "La identificación '{$data['identificacion']}' ya existe"
+                        ];
+                        continue;
+                    }
+
+                    // Validar email si se proporcionó
+                    if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                        $errores++;
+                        $detalleErrores[] = [
+                            'fila' => $fila,
+                            'mensaje' => "El email '{$data['email']}' no es válido"
+                        ];
+                        continue;
+                    }
+
+                    DB::transaction(function () use ($data) {
+                        $cliente = Cliente::create([
+                            'zona_id' => $data['zona_id'],
+                            'identificacion' => $data['identificacion'],
+                            'tipo_identificacion' => $data['tipo_identificacion'],
+                            'nombres' => $data['nombres'],
+                            'apellidos' => $data['apellidos'],
+                            'email' => $data['email'] ?: null,
+                            'telefono_1' => $data['telefono_1'] ?: null,
+                            'telefono_2' => $data['telefono_2'] ?: null,
+                            'telefono_3' => $data['telefono_3'] ?: null,
+                            'calle_principal' => $data['calle_principal'] ?: null,
+                            'calle_secundaria' => $data['calle_secundaria'] ?: null,
+                            'estado' => true,
+                            'nombre_completo' => $data['nombres'] . ' ' . $data['apellidos'] ?: null,
+                        ]);
+
+                        BitacoraGestionCliente::create([
+                            'user_id' => auth()->id(),
+                            'accion' => 'importClientesExcel',
+                            'valores_anteriores' => [],
+                            'valores_nuevos' => $cliente->toArray()
+                        ]);
+                    });
+
+                    $exitosos++;
+                } catch (Exception $e) {
+                    $errores++;
+                    $detalleErrores[] = [
+                        'fila' => $fila,
+                        'mensaje' => $e->getMessage()
+                    ];
+                }
+            }
+
+            $resultado = [
+                'total' => $total,
+                'exitosos' => $exitosos,
+                'errores' => $errores,
+                'detalle_errores' => $detalleErrores
+            ];
+
+            $log->logInfo(ClienteController::class, "Importación completada: {$exitosos} exitosos, {$errores} errores de {$total} total");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Importación completada', $resultado));
+        } catch (Exception $e) {
+            $log->logError(ClienteController::class, 'Error al importar clientes desde Excel', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al importar', $e->getMessage()), 500);
         }
     }
 }

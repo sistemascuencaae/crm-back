@@ -27,6 +27,7 @@ class Cliente extends Model
         'calle_principal',
         'calle_secundaria',
         'estado',
+        'nombre_completo',
     ];
 
     public function setCreatedAtAttribute($value)
