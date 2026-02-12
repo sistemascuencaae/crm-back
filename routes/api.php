@@ -126,6 +126,7 @@ use App\Http\Controllers\gestionClientes\ActividadClienteController;
 use App\Http\Controllers\gestionClientes\AdjuntoClienteController;
 use App\Http\Controllers\gestionClientes\BitacoraController as GestionClientesBitacoraController;
 use App\Http\Controllers\gestionClientes\ClienteController;
+use App\Http\Controllers\gestionClientes\CargoController;
 use App\Http\Controllers\gestionClientes\ContactoController;
 use App\Http\Controllers\gestionClientes\EstadoActividadController;
 use App\Http\Controllers\gestionClientes\EtiquetaActividadController;
@@ -247,6 +248,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/addContacto', [ContactoController::class, 'addContacto']);
     Route::post('/editContacto/{id}', [ContactoController::class, 'editContacto']);
     Route::delete('/deleteContacto/{id}', [ContactoController::class, 'deleteContacto']);
+
+    // CARGOS
+    Route::get('/listAllCargos', [CargoController::class, 'listAllCargos']);
 
     // ACTIVIDADES
     Route::get('/listAllActividades', [ActividadClienteController::class, 'listAllActividades']);

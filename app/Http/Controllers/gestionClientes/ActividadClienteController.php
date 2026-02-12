@@ -208,7 +208,8 @@ class ActividadClienteController extends Controller
                 'fecha_inicio' => 'required|date',
                 'observacion_inicio' => 'nullable|string',
                 'valor' => 'nullable|numeric',
-                'es_reasignado' => 'nullable|boolean'
+                'es_reasignado' => 'nullable|boolean',
+                'plazo' => 'nullable|integer',
             ]);
 
             $actividad = DB::transaction(function () use ($request) {
@@ -252,7 +253,8 @@ class ActividadClienteController extends Controller
                 'prioridad_actividad_id' => 'required|integer',
                 'estado_actividad_id' => 'required|integer',
                 'fecha_inicio' => 'required|date',
-                'valor' => 'nullable|numeric'
+                'valor' => 'nullable|numeric',
+                'plazo' => 'nullable|integer'
             ]);
 
             $actividad = DB::transaction(function () use ($request, $id) {

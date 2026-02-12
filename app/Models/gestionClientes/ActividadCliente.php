@@ -26,6 +26,7 @@ class ActividadCliente extends Model
         'observacion_cierre',
         'valor',
         'es_reasignado',
+        'plazo',
     ];
 
     public function setCreatedAtAttribute($value)

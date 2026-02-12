@@ -24,7 +24,8 @@ class ContactoController extends Controller
     {
         $log = new Funciones();
         try {
-            $contactos = Contacto::where('cliente_id', $clienteId)
+            $contactos = Contacto::with(['parentesco', 'cargo'])
+                ->where('cliente_id', $clienteId)
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -45,7 +46,8 @@ class ContactoController extends Controller
     {
         $log = new Funciones();
         try {
-            $contactos = Contacto::where('cliente_id', $clienteId)
+            $contactos = Contacto::with(['parentesco', 'cargo'])
+                ->where('cliente_id', $clienteId)
                 ->where('estado', true)
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -67,7 +69,7 @@ class ContactoController extends Controller
     {
         $log = new Funciones();
         try {
-            $contacto = Contacto::with('cliente')->findOrFail($id);
+            $contacto = Contacto::with(['cliente', 'parentesco', 'cargo'])->findOrFail($id);
 
             $log->logInfo(ContactoController::class, 'Se obtuvo el contacto exitosamente');
 
@@ -89,7 +91,8 @@ class ContactoController extends Controller
             $request->validate([
                 'cliente_id' => 'required|integer',
                 'nombre' => 'required|string|max:255',
-                'parentesco' => 'nullable|string|max:255',
+                'parentesco_id' => 'nullable|integer',
+                'cargo_id' => 'nullable|integer',
                 'telefono_1' => 'nullable|string',
                 'telefono_2' => 'nullable|string',
                 'telefono_3' => 'nullable|string'
@@ -97,7 +100,7 @@ class ContactoController extends Controller
 
             $contacto = DB::transaction(function () use ($request) {
                 $contacto = Contacto::create($request->all());
-                return $contacto->load('cliente');
+                return $contacto->load(['cliente', 'parentesco', 'cargo']);
             });
 
             $log->logInfo(ContactoController::class, 'Se creó el contacto exitosamente');
@@ -119,13 +122,14 @@ class ContactoController extends Controller
         try {
             $request->validate([
                 'nombre' => 'required|string|max:255',
-                'parentesco' => 'nullable|string|max:255'
+                'parentesco_id' => 'nullable|integer',
+                'cargo_id' => 'nullable|integer'
             ]);
 
             $contacto = DB::transaction(function () use ($request, $id) {
                 $contacto = Contacto::findOrFail($id);
                 $contacto->update($request->all());
-                return $contacto->load('cliente');
+                return $contacto->load(['cliente', 'parentesco', 'cargo']);
             });
 
             $log->logInfo(ContactoController::class, 'Se actualizó el contacto exitosamente');

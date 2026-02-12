@@ -16,7 +16,8 @@ class Contacto extends Model
         'id',
         'cliente_id',
         'nombre',
-        'parentesco',
+        'parentesco_id',
+        'cargo_id',
         'telefono_1',
         'telefono_2',
         'telefono_3',
@@ -39,5 +40,17 @@ class Contacto extends Model
     public function cliente()
     {
         return $this->belongsTo(Cliente::class, 'cliente_id', 'id');
+    }
+
+    // Relación con parentesco
+    public function parentesco()
+    {
+        return $this->belongsTo(Parentesco::class, 'parentesco_id', 'id');
+    }
+
+    // Relación con cargo
+    public function cargo()
+    {
+        return $this->belongsTo(Cargo::class, 'cargo_id', 'id');
     }
 }
