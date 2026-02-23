@@ -8,6 +8,7 @@ use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\TableauAuthController;
+use App\Http\Controllers\PowerBiRefreshDatasetController;
 use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\configuracion\CodigoQrController;
@@ -336,8 +337,11 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
 
 
-    // Tableau
+    // !Tableau
     Route::get('/generateTokenTableau', [TableauAuthController::class, 'generateTokenTableau']);
+    // !Power BI
+    Route::post('/refreshDataset', [PowerBiRefreshDatasetController::class, 'refreshDataset']);
+    Route::post('/getRefreshStatus', [PowerBiRefreshDatasetController::class, 'getRefreshStatus']);
 
     // GESTIONES
     Route::get('/listGestionByIdentificacion/{factura}', [GestionController::class, 'listGestionByIdentificacion']);

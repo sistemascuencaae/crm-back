@@ -12,7 +12,7 @@ class ReporteLink extends Model
     use HasFactory;
 
     protected $table = 'crm.reporte_link';
-    protected $fillable = ["nombre", "link", "estado", "departamento_id", "descripcion", "tipo_reporte"];
+    protected $fillable = ["nombre", "link", "estado", "departamento_id", "descripcion", "tipo_reporte", "workspace_id", "dataset_id"];
 
     public function setCreatedAtAttribute($value)
     {
