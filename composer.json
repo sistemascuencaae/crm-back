@@ -19,6 +19,7 @@
         "mpdf/mpdf": "^8.2.2",
         "owen-it/laravel-auditing": "^13.5",
         "phpoffice/phpspreadsheet": "^5.1",
+        "phpseclib/phpseclib": "~3.0",
         "pusher/pusher-php-server": "^4.0.0",
         "tymon/jwt-auth": "^1.0",
         "yajra/laravel-oci8": "^8.8"

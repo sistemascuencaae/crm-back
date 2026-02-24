@@ -137,6 +137,7 @@ use App\Http\Controllers\gestionClientes\TipoAdjuntoController;
 use App\Http\Controllers\gestionClientes\CSemaforoController;
 use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
+use App\Http\Controllers\ServidorController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -211,6 +212,14 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+
+
+
+    // ! SERVIDOR SSH
+    Route::get('/listServidores', [ServidorController::class, 'listarServidores']);
+    Route::post('/reiniciarServidor', [ServidorController::class, 'reiniciarServidor']);
+
+
 
     // ? START CAMBIO VENDEDORES AGENCIA
     Route::get('/listAlmacenesDynamo', [CambioAgenciaController::class, 'listAlmacenesDynamo']);
