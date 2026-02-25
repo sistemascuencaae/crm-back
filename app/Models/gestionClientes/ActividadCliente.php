@@ -21,20 +21,12 @@ class ActividadCliente extends Model
         'prioridad_actividad_id',
         'estado_actividad_id',
         'fecha_inicio',
-        'hora_inicio',
         'fecha_cierre',
-        'hora_cierre',
         'observacion_inicio',
         'observacion_cierre',
         'valor',
         'es_reasignado',
-    ];
-
-    protected $casts = [
-        'fecha_inicio' => 'datetime',
-        'fecha_cierre' => 'datetime',
-        'es_reasignado' => 'boolean',
-        'valor' => 'decimal:2'
+        'plazo',
     ];
 
     public function setCreatedAtAttribute($value)

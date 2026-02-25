@@ -8,6 +8,7 @@ use App\Http\Controllers\chat\ChatController;
 use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\TableauAuthController;
+use App\Http\Controllers\PowerBiRefreshDatasetController;
 use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\configuracion\CodigoQrController;
@@ -114,6 +115,7 @@ use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
+use App\Http\Controllers\configuracion\ZonaAgenciaController;
 use App\Http\Controllers\correo\CorreoController;
 use App\Http\Controllers\crediGestion\CrediGestionController;
 use App\Http\Controllers\crm\cambioAgencia\CambioAgenciaController;
@@ -125,13 +127,17 @@ use App\Http\Controllers\gestionClientes\ActividadClienteController;
 use App\Http\Controllers\gestionClientes\AdjuntoClienteController;
 use App\Http\Controllers\gestionClientes\BitacoraController as GestionClientesBitacoraController;
 use App\Http\Controllers\gestionClientes\ClienteController;
+use App\Http\Controllers\gestionClientes\CargoController;
 use App\Http\Controllers\gestionClientes\ContactoController;
 use App\Http\Controllers\gestionClientes\EstadoActividadController;
 use App\Http\Controllers\gestionClientes\EtiquetaActividadController;
 use App\Http\Controllers\gestionClientes\PrioridadActividadController;
 use App\Http\Controllers\gestionClientes\TipoActividadController;
 use App\Http\Controllers\gestionClientes\TipoAdjuntoController;
+use App\Http\Controllers\gestionClientes\CSemaforoController;
+use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
+use App\Http\Controllers\ServidorController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -207,6 +213,14 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
 
+
+
+    // ! SERVIDOR SSH
+    Route::get('/listServidores', [ServidorController::class, 'listarServidores']);
+    Route::post('/reiniciarServidor', [ServidorController::class, 'reiniciarServidor']);
+
+
+
     // ? START CAMBIO VENDEDORES AGENCIA
     Route::get('/listAlmacenesDynamo', [CambioAgenciaController::class, 'listAlmacenesDynamo']);
     Route::post('/getVendedorByIdentificacion', [CambioAgenciaController::class, 'getVendedorByIdentificacion']);
@@ -235,6 +249,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::delete('/deleteCliente/{id}', [ClienteController::class, 'deleteCliente']);
     Route::post('/asignarUsuarioCliente/{id}', [ClienteController::class, 'asignarUsuarioCliente']);
     Route::post('/desasignarUsuarioCliente/{id}', [ClienteController::class, 'desasignarUsuarioCliente']);
+    Route::post('/importClientesExcel', [ClienteController::class, 'importClientesExcel']);
 
     // CONTACTOS
     Route::get('/listContactosByCliente/{clienteId}', [ContactoController::class, 'listContactosByCliente']);
@@ -243,6 +258,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/addContacto', [ContactoController::class, 'addContacto']);
     Route::post('/editContacto/{id}', [ContactoController::class, 'editContacto']);
     Route::delete('/deleteContacto/{id}', [ContactoController::class, 'deleteContacto']);
+
+    // CARGOS
+    Route::get('/listAllCargos', [CargoController::class, 'listAllCargos']);
 
     // ACTIVIDADES
     Route::get('/listAllActividades', [ActividadClienteController::class, 'listAllActividades']);
@@ -255,6 +273,11 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/cerrarActividad/{id}', [ActividadClienteController::class, 'cerrarActividad']);
     Route::post('/reasignarActividad/{id}', [ActividadClienteController::class, 'reasignarActividad']);
     Route::delete('/deleteActividad/{id}', [ActividadClienteController::class, 'deleteActividad']);
+
+    Route::get('/listActividadesPendientesByUsuario/{fechaInicio}/{fechaFin}', [ActividadClienteController::class, 'listActividadesPendientesByUsuario']);
+    Route::get('/listActividadesTerminadasByUsuario/{fechaInicio}/{fechaFin}', [ActividadClienteController::class, 'listActividadesTerminadasByUsuario']);
+    Route::get('/listActividadesPendientesByUsuarioPorCampo/{tipo_campo}/{valor}', [ActividadClienteController::class, 'listActividadesPendientesByUsuarioPorCampo']);
+    Route::get('/listActividadesTerminadasByUsuarioPorCampo/{tipo_campo}/{valor}', [ActividadClienteController::class, 'listActividadesTerminadasByUsuarioPorCampo']);
 
     // TIPOS DE ACTIVIDAD
     Route::get('/listAllTiposActividad', [TipoActividadController::class, 'listAllTiposActividad']);
@@ -303,14 +326,31 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/getBitacoraById/{id}', [GestionClientesBitacoraController::class, 'getBitacoraById']);
     Route::get('/getBitacoraByActividadClienteId/{id}', [GestionClientesBitacoraController::class, 'getBitacoraByActividadClienteId']);
 
+    // SEMÁFOROS (cabecera)
+    Route::get('/listAllSemaforos', [CSemaforoController::class, 'listAllSemaforos']);
+    Route::get('/listSemaforosActivos', [CSemaforoController::class, 'listSemaforosActivos']);
+    Route::post('/addSemaforo', [CSemaforoController::class, 'addSemaforo']);
+    Route::post('/editSemaforo/{id}', [CSemaforoController::class, 'editSemaforo']);
+    Route::delete('/deleteSemaforo/{id}', [CSemaforoController::class, 'deleteSemaforo']);
+
+    // RANGOS DE SEMÁFORO (detalle)
+    Route::get('/listDSemaforosByCSemaforo/{csemaforoId}', [DSemaforoController::class, 'listDSemaforosByCSemaforo']);
+    Route::post('/addDSemaforo', [DSemaforoController::class, 'addDSemaforo']);
+    Route::post('/editDSemaforo/{id}', [DSemaforoController::class, 'editDSemaforo']);
+    Route::delete('/deleteDSemaforo/{id}', [DSemaforoController::class, 'deleteDSemaforo']);
+
     // ! END GESTION CLIENTES
 
 
 
 
 
-    // Tableau
+
+    // !Tableau
     Route::get('/generateTokenTableau', [TableauAuthController::class, 'generateTokenTableau']);
+    // !Power BI
+    Route::post('/refreshDataset', [PowerBiRefreshDatasetController::class, 'refreshDataset']);
+    Route::post('/getRefreshStatus', [PowerBiRefreshDatasetController::class, 'getRefreshStatus']);
 
     // GESTIONES
     Route::get('/listGestionByIdentificacion/{factura}', [GestionController::class, 'listGestionByIdentificacion']);
@@ -1236,8 +1276,12 @@ Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario
     Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
     Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
 
-    // HORARIOS
 
+    // ZONAS AGENCIAS
+    Route::get('/listZonasAgenciaActivas', [ZonaAgenciaController::class, 'listZonasAgenciaActivas']);
+
+
+    // HORARIOS
     Route::get('/listAllHorarios', [HorarioController::class, 'listAllHorarios']);
     Route::get('/listDhorarioById/{id}', [HorarioController::class, 'listDhorarioById']);
     Route::post('/addCDHorario', [HorarioController::class, 'addCDHorario']);

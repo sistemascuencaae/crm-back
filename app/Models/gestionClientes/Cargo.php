@@ -1,17 +1,21 @@
 <?php
 
-namespace App\Models\configuracion;
+namespace App\Models\gestionClientes;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Agencia extends Model
+class Cargo extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.agencia';
-    protected $fillable = ["codigo", "nombre", "estado", "id_zona_agencia"];
+    protected $table = 'crm.cargo';
+
+    protected $fillable = [
+        'nombre',
+        'estado',
+    ];
 
     public function setCreatedAtAttribute($value)
     {
@@ -25,8 +29,8 @@ class Agencia extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function zona_agencia()
+    public function contactos()
     {
-        return $this->belongsTo(ZonaAgencia::class, 'id_zona_agencia');
+        return $this->hasMany(Contacto::class, 'cargo_id', 'id');
     }
 }

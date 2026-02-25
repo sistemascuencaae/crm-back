@@ -16,6 +16,7 @@ class TipoActividad extends Model
         'id',
         'nombre',
         'estado',
+        'csemaforo_id',
     ];
 
     public function setCreatedAtAttribute($value)
@@ -34,5 +35,11 @@ class TipoActividad extends Model
     public function actividades()
     {
         return $this->hasMany(ActividadCliente::class, 'tipo_actividad_id', 'id');
+    }
+
+    // Relación con semáforo
+    public function csemaforo()
+    {
+        return $this->belongsTo(CSemaforo::class, 'csemaforo_id', 'id');
     }
 }

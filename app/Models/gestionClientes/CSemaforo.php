@@ -6,21 +6,15 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Contacto extends Model
+class CSemaforo extends Model
 {
     use HasFactory;
 
-    protected $table = 'crm.contactos';
+    protected $table = 'crm.csemaforo';
 
     protected $fillable = [
         'id',
-        'cliente_id',
         'nombre',
-        'parentesco_id',
-        'cargo_id',
-        'telefono_1',
-        'telefono_2',
-        'telefono_3',
         'estado',
     ];
 
@@ -36,21 +30,15 @@ class Contacto extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    // Relación con cliente
-    public function cliente()
+    // Relación con detalle de semáforo (rangos)
+    public function dsemaforos()
     {
-        return $this->belongsTo(Cliente::class, 'cliente_id', 'id');
+        return $this->hasMany(DSemaforo::class, 'csemaforo_id', 'id');
     }
 
-    // Relación con parentesco
-    public function parentesco()
+    // Relación con tipos de actividad
+    public function tiposActividad()
     {
-        return $this->belongsTo(Parentesco::class, 'parentesco_id', 'id');
-    }
-
-    // Relación con cargo
-    public function cargo()
-    {
-        return $this->belongsTo(Cargo::class, 'cargo_id', 'id');
+        return $this->hasMany(TipoActividad::class, 'csemaforo_id', 'id');
     }
 }

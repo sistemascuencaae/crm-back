@@ -61,7 +61,8 @@ class MultiNivelController extends Controller
                                         politica,
                                         numero_cuotas,
                                         subtotalmenosdescuentos as subtotal,
-                                        forma_pago
+                                        forma_pago,
+                                        (total - valor_impuesto) as total_menos_valoriva
                                     FROM dashboard.af_cfactura_periodo_menos1_api(?,?,?);",[$anio,$mes,$dia]);
 
             // Filtrar y mapear en una sola iteración (evita recorrer dos veces)
@@ -95,6 +96,7 @@ class MultiNivelController extends Controller
                     'numero_cuotas' => $item->numero_cuotas,
                     'subtotal' => $item->subtotal,
                     'forma_pago' => $item->forma_pago,
+                    'total_menos_valoriva' => $item->total_menos_valoriva,
                 ];
             }
 

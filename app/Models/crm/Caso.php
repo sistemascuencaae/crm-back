@@ -78,6 +78,7 @@ class Caso extends Model
         "edit_fecha_inicio",
 
         "codigo_agencia",
+        "id_zona_agencia",
     ];
 
     public function userCreador()

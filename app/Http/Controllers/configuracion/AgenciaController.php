@@ -11,14 +11,14 @@ use Illuminate\Support\Facades\DB;
 
 class AgenciaController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function listAllAgencias()
     {
         try {
-            $data = Agencia::selectRaw("*, (CASE WHEN crm.agencia.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")->orderBy('nombre', 'asc')->get();
+            $data = Agencia::selectRaw("*, (CASE WHEN crm.agencia.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                ->with('zona_agencia')
+                ->orderBy('nombre', 'asc')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -29,7 +29,7 @@ class AgenciaController extends Controller
     public function listAgenciasActivas()
     {
         try {
-            $agencias = Agencia::where('estado', true)->orderBy('nombre', 'asc')->get();
+            $agencias = Agencia::where('estado', true)->with('zona_agencia')->orderBy('nombre', 'asc')->get();
             $bodegas = DB::select("SELECT * FROM public.bodega WHERE bod_activo = true
                         AND bod_nombre NOT LIKE '%CONSIG%';");
 
@@ -51,7 +51,9 @@ class AgenciaController extends Controller
 
                 Agencia::create($request->all());
 
-                $data = Agencia::selectRaw("*, (CASE WHEN crm.agencia.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")->orderBy('nombre', 'asc')->get();
+                $data = Agencia::selectRaw("*, (CASE WHEN crm.agencia.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                    ->with('zona_agencia')
+                    ->orderBy('nombre', 'asc')->get();
 
                 return $data;
             });
@@ -70,7 +72,9 @@ class AgenciaController extends Controller
 
                 $agencia->update($request->all());
 
-                $data = Agencia::selectRaw("*, (CASE WHEN crm.agencia.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")->orderBy('nombre', 'asc')->get();
+                $data = Agencia::selectRaw("*, (CASE WHEN crm.agencia.estado = false THEN 'Inactivo' ELSE 'Activo' END) AS estado2")
+                    ->with('zona_agencia')
+                    ->orderBy('nombre', 'asc')->get();
 
                 return $data;
             });
@@ -102,7 +106,7 @@ class AgenciaController extends Controller
     public function listAgenciasActivas2()
     {
         try {
-            $data = Agencia::where('estado', true)->orderBy('nombre', 'asc')->get();
+            $data = Agencia::where('estado', true)->with('zona_agencia')->orderBy('nombre', 'asc')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
