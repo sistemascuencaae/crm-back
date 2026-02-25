@@ -63,7 +63,7 @@ class MultiNivelController extends Controller
                                         subtotalmenosdescuentos as subtotal,
                                         forma_pago,
                                         (total - valor_impuesto) as total_menos_valoriva
-                                    FROM dashboard.af_cfactura_periodo_menos1_api(?,?,?);",[$anio,$mes,$dia]);
+                                    FROM public.af_cfactura_multinivel_api(?,?,?);",[$anio,$mes,$dia]);
 
             // Filtrar y mapear en una sola iteración (evita recorrer dos veces)
             $data = [];
