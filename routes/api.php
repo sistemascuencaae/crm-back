@@ -1425,6 +1425,7 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
 
     // ---------- START ORACLE DB Y POSTGRES ----------
     Route::get('/multinivel/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel']);
+    Route::get('/multinivel_nce/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel_nce']);
     // ---------- END ORACLE DB Y POSTGRES ----------
 
 });
