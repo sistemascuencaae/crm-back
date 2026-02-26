@@ -216,8 +216,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
 
     // ! SERVIDOR SSH
-    Route::get('/listServidores', [ServidorController::class, 'listarServidores']);
-    Route::post('/reiniciarServidor', [ServidorController::class, 'reiniciarServidor']);
+    Route::get('/listServidores',           [ServidorController::class, 'listarServidores']);
+    Route::get('/getStatsAllServidores',    [ServidorController::class, 'getStatsAllServidores']);
+    Route::post('/reiniciarServidor',       [ServidorController::class, 'reiniciarServidor']);
 
 
 
