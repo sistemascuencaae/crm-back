@@ -30,5 +30,4 @@ class Servidor extends Model
     {
         return $this->belongsTo(ZonaAgencia::class, "id_zona_agencia");
     }
-
 }

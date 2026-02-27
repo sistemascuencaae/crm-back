@@ -101,7 +101,7 @@ class ServidorController extends Controller
     public function getStatsAllServidores()
     {
         $servidores = Servidor::where('estado', true)->get();
-        $resultado  = [];
+        $resultado = [];
 
         foreach ($servidores as $servidor) {
             try {
@@ -112,20 +112,24 @@ class ServidorController extends Controller
                     continue;
                 }
 
-                $output = $ssh->exec('free -b');
-                $lines = preg_split('/\n/', trim($output));
+                $output = $ssh->exec('free -b && echo "|||" && cat /proc/loadavg && echo "|||" && nproc');
+                $partes = explode('|||', $output);
 
-                // Formato antiguo (CentOS 6): tiene línea extra "-/+ buffers/cache:"
+                $lines = preg_split('/\n/', trim($partes[0]));
                 $formatoAntiguo = isset($lines[2]) && strpos(trim($lines[2]), '-/+') === 0;
-
                 $mem = preg_split('/\s+/', trim($lines[1]));
-
                 $ramTotal = (int) $mem[1];
                 $ramUsed = $formatoAntiguo ? (int) preg_split('/\s+/', trim($lines[2]))[1] : (int) $mem[2];
                 $ramPorcentaje = $ramTotal > 0 ? round($ramUsed / $ramTotal * 100, 1) : 0;
 
+                $loadParts = explode(' ', trim($partes[1]));
+                $load1min  = (float) ($loadParts[0] ?? 0);
+                $nproc     = (int) trim($partes[2]);
+                $cpuPorcentaje = $nproc > 0 ? round($load1min / $nproc * 100, 1) : 0;
+
                 $resultado[$servidor->id] = [
                     'ram' => ['total' => $ramTotal, 'used' => $ramUsed, 'porcentaje' => $ramPorcentaje],
+                    'cpu' => ['nucleos' => $nproc, 'porcentaje' => $cpuPorcentaje],
                 ];
             } catch (Exception $e) {
                 $resultado[$servidor->id] = ['error' => $e->getMessage()];
