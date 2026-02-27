@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\configuracion\ZonaAgencia;
 use Illuminate\Database\Eloquent\Model;
 
 class Servidor extends Model
@@ -16,6 +17,7 @@ class Servidor extends Model
         'archivo',
         'estado',
         'link',
+        'id_zona_agencia',
     ];
 
     protected $hidden = [
@@ -23,4 +25,10 @@ class Servidor extends Model
         'clave',
         'archivo',
     ];
+
+    public function zona()
+    {
+        return $this->belongsTo(ZonaAgencia::class, "id_zona_agencia");
+    }
+
 }

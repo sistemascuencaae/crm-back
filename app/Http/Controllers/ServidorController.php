@@ -21,8 +21,15 @@ class ServidorController extends Controller
     {
         try {
             $servidores = Servidor::where('estado', true)
+                ->with('zona')
                 ->orderBy('nombre', 'asc')
-                ->get();
+                ->get()
+                ->map(function ($servidor) {
+                    $servidor->agencias = $servidor->zona
+                        ? $servidor->zona->agencia->pluck('nombre')->join(', ')
+                        : '';
+                    return $servidor->makeHidden('zona');
+                });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Servidores obtenidos', $servidores));
         } catch (Exception $e) {
@@ -124,10 +131,9 @@ class ServidorController extends Controller
                 $swapPorcentaje = $swapTotal > 0 ? round($swapUsed / $swapTotal * 100, 1) : 0;
 
                 $resultado[$servidor->id] = [
-                                                'ram' => ['total' => $ramTotal, 'used' => $ramUsed, 'porcentaje' => $ramPorcentaje],
-                                                'swap' => ['total' => $swapTotal, 'used' => $swapUsed, 'porcentaje' => $swapPorcentaje],
-                                            ];
-
+                    'ram' => ['total' => $ramTotal, 'used' => $ramUsed, 'porcentaje' => $ramPorcentaje],
+                    'swap' => ['total' => $swapTotal, 'used' => $swapUsed, 'porcentaje' => $swapPorcentaje],
+                ];
             } catch (Exception $e) {
                 $resultado[$servidor->id] = ['error' => $e->getMessage()];
             }

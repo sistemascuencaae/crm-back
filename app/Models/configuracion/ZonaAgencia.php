@@ -25,4 +25,9 @@ class ZonaAgencia extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
+    public function agencia()
+    {
+        return $this->hasMany(Agencia::class, "id_zona_agencia");
+    }
+
 }
