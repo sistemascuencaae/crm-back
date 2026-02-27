@@ -117,22 +117,15 @@ class ServidorController extends Controller
 
                 // Formato antiguo (CentOS 6): tiene línea extra "-/+ buffers/cache:"
                 $formatoAntiguo = isset($lines[2]) && strpos(trim($lines[2]), '-/+') === 0;
-                $lineaSwap = $formatoAntiguo ? 3 : 2;
 
                 $mem = preg_split('/\s+/', trim($lines[1]));
-                $swap = preg_split('/\s+/', trim($lines[$lineaSwap]));
 
                 $ramTotal = (int) $mem[1];
                 $ramUsed = $formatoAntiguo ? (int) preg_split('/\s+/', trim($lines[2]))[1] : (int) $mem[2];
                 $ramPorcentaje = $ramTotal > 0 ? round($ramUsed / $ramTotal * 100, 1) : 0;
 
-                $swapTotal = (int) $swap[1];
-                $swapUsed = (int) $swap[2];
-                $swapPorcentaje = $swapTotal > 0 ? round($swapUsed / $swapTotal * 100, 1) : 0;
-
                 $resultado[$servidor->id] = [
                     'ram' => ['total' => $ramTotal, 'used' => $ramUsed, 'porcentaje' => $ramPorcentaje],
-                    'swap' => ['total' => $swapTotal, 'used' => $swapUsed, 'porcentaje' => $swapPorcentaje],
                 ];
             } catch (Exception $e) {
                 $resultado[$servidor->id] = ['error' => $e->getMessage()];
