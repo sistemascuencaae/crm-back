@@ -216,8 +216,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
 
     // ! SERVIDOR SSH
-    Route::get('/listServidores', [ServidorController::class, 'listarServidores']);
-    Route::post('/reiniciarServidor', [ServidorController::class, 'reiniciarServidor']);
+    Route::get('/listServidores',           [ServidorController::class, 'listarServidores']);
+    Route::get('/getStatsAllServidores',    [ServidorController::class, 'getStatsAllServidores']);
+    Route::post('/reiniciarServidor',       [ServidorController::class, 'reiniciarServidor']);
 
 
 
@@ -1425,6 +1426,7 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
 
     // ---------- START ORACLE DB Y POSTGRES ----------
     Route::get('/multinivel/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel']);
+    Route::get('/multinivel_nce/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel_nce']);
     // ---------- END ORACLE DB Y POSTGRES ----------
 
 });
