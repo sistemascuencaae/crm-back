@@ -41,10 +41,10 @@ class MultiNivelController extends Controller
                                 )
                             WHERE registro = 1");
 
-            // Indexar datos de Oracle usando array nativo (más rápido que colecciones)
-            $oracleIndexado = [];
+            $oracleClientes = [];
+
             foreach ($dataOracle as $item) {
-                $oracleIndexado[$item->cod_cliente] = $item;
+                $oracleClientes[$item->cod_cliente] = $item;
             }
 
             // Obtener datos de PostgreSQL
@@ -65,22 +65,26 @@ class MultiNivelController extends Controller
                                         (total - valor_impuesto) as total_menos_valoriva
                                     FROM public.af_cfactura_multinivel_api(?,?,?);", [$anio, $mes, $dia]);
 
-            // Filtrar y mapear en una sola iteración (evita recorrer dos veces)
             $data = [];
+
+            // Filtrar y mapear en una sola iteración
             foreach ($dataAlm as $item) {
+
                 // Solo incluir si el cliente existe en Oracle
-                if (!isset($oracleIndexado[$item->identificacion])) {
-                    continue;
+                if (!isset($oracleClientes[$item->identificacion])) {
+                    continue; // Descarta clientes que NO están en Oracle
                 }
 
-                $oracleData = $oracleIndexado[$item->identificacion];
+                // Busca en el array de Oracle el registro que corresponde al cliente actual de Dynamo.
+                // para luego mergear el cliente de Novasoft y Dynamo.
+                $oracleRegistro = $oracleClientes[$item->identificacion];
 
                 $data[] = [
                     // Datos de la DB Oracle
-                    'fecha_ingreso' => $oracleData->fecha_ingreso,
-                    'identificacion_corredor' => $oracleData->cod_agente,
-                    'corredor' => $oracleData->nombre_agente,
-                    // 'nombre_cliente' => $oracleData->nombre,
+                    'fecha_ingreso' => $oracleRegistro->fecha_ingreso,
+                    'identificacion_corredor' => $oracleRegistro->cod_agente,
+                    'corredor' => $oracleRegistro->nombre_agente,
+                    // 'nombre_cliente' => $oracleRegistro->nombre,
 
                     // Datos de la DB Postgres
                     'identificacion' => $item->identificacion,
@@ -131,10 +135,10 @@ class MultiNivelController extends Controller
                                 )
                             WHERE registro = 1");
 
-            // Indexar datos de Oracle usando array nativo (más rápido que colecciones)
-            $oracleIndexado = [];
+            $oracleClientes = [];
+
             foreach ($dataOracle as $item) {
-                $oracleIndexado[$item->cod_cliente] = $item;
+                $oracleClientes[$item->cod_cliente] = $item;
             }
 
             // Obtener datos de PostgreSQL
@@ -154,22 +158,25 @@ class MultiNivelController extends Controller
                                         (total - valor_impuesto) as total_menos_valoriva
                                     FROM public.af_nce_multinivel_api(?,?,?);", [$anio, $mes, $dia]);
 
-            // Filtrar y mapear en una sola iteración (evita recorrer dos veces)
             $data = [];
+
+            // Filtrar y mapear en una sola iteración
             foreach ($dataAlm as $item) {
                 // Solo incluir si el cliente existe en Oracle
-                if (!isset($oracleIndexado[$item->identificacion])) {
-                    continue;
+                if (!isset($oracleClientes[$item->identificacion])) {
+                    continue; // Descarta clientes que NO están en Oracle
                 }
 
-                $oracleData = $oracleIndexado[$item->identificacion];
+                // Busca en el array de Oracle el registro que corresponde al cliente actual de Dynamo.
+                // para luego mergear el cliente de Novasoft y Dynamo.
+                $oracleRegistro = $oracleClientes[$item->identificacion];
 
                 $data[] = [
                     // Datos de la DB Oracle
-                    'fecha_ingreso' => $oracleData->fecha_ingreso,
-                    'identificacion_corredor' => $oracleData->cod_agente,
-                    'corredor' => $oracleData->nombre_agente,
-                    // 'nombre_cliente' => $oracleData->nombre,
+                    'fecha_ingreso' => $oracleRegistro->fecha_ingreso,
+                    'identificacion_corredor' => $oracleRegistro->cod_agente,
+                    'corredor' => $oracleRegistro->nombre_agente,
+                    // 'nombre_cliente' => $oracleRegistro->nombre,
 
                     // Datos de la DB Postgres
                     'identificacion' => $item->identificacion,
