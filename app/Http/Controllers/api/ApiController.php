@@ -430,7 +430,7 @@ class ApiController extends Controller
             // Ejecutar request HTTP
             $httpClient = Http::withHeaders($headersArray)->withOptions([
                 'verify'  => false,
-                'timeout' => 0,
+                'timeout' => 300, // Tiempo de respuesta para el endpoint, sino va a dar error (300 seg => 5 mins)
             ]);
 
             switch ($metodo) {
