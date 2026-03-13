@@ -96,9 +96,7 @@ class TutorialController extends Controller
 
                         // $archivosGuardados[] = $nuevoArchivo;
                     }
-
                 }
-
             });
 
             $tutorialesGaleria = Galeria::where('tipo_gal_id', 11)->get();
@@ -108,7 +106,6 @@ class TutorialController extends Controller
             $tutoriales = $tutorialesGaleria->merge($tutorialesArchivo);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $tutoriales));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
             // return $e;
@@ -122,7 +119,7 @@ class TutorialController extends Controller
             $fechaActual = Carbon::now();
 
             // Formatear la fecha en formato deseado
-// $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+            // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
 
             // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
             $fecha_actual = str_replace(':', '-', $fechaActual);
@@ -133,9 +130,18 @@ class TutorialController extends Controller
 
             DB::transaction(function () use ($request, $id, $parametro, $fecha_actual) {
 
-                $galeria = Galeria::find($id);
+                $tipoRegistro = $request->input('tipo_registro'); // 'galeria' o 'archivo'
+
+                $galeria = ($tipoRegistro === 'galeria') ? Galeria::find($id) : null;
 
                 if ($galeria) {
+
+                    $updateData = [
+                        'titulo'      => $request->input('titulo', $galeria->titulo),
+                        'descripcion' => $request->input('descripcion', $galeria->descripcion),
+                        'tipo_gal_id' => $request->input('tipo_gal_id', $galeria->tipo_gal_id),
+                        'sc_id'       => $request->input('sc_id', $galeria->sc_id),
+                    ];
 
                     if ($request->hasFile("imagen_file")) {
                         if ($galeria->imagen) {
@@ -162,11 +168,10 @@ class TutorialController extends Controller
                             $path = Storage::disk('local')->putFileAs("tutoriales/galerias", $nuevaImagen, $fecha_actual . '-' . $titulo);
                         }
 
-                        $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
+                        $updateData['imagen'] = $path;
                     }
 
-                    $galeria->update($request->all());
-
+                    $galeria->update($updateData);
                 } else {
 
                     $archivo = Archivo::find($id);
@@ -218,12 +223,14 @@ class TutorialController extends Controller
                             "observacion" => 'Tutorial - ' . $request->input("observacion"),
                             "archivo" => $path,
                         ]);
-
+                    } else {
+                        // Sin nuevo archivo: solo actualizar titulo y observacion
+                        $archivo->update([
+                            "titulo" => $request->input("titulo"),
+                            "observacion" => $request->input("observacion"),
+                        ]);
                     }
-
-
                 }
-
             });
 
             $tutorialesGaleria = Galeria::where('tipo_gal_id', 11)->get();
@@ -237,7 +244,7 @@ class TutorialController extends Controller
         }
     }
 
-    public function deleteTutorial(Request $request, $id)
+    public function deleteTutorial(Request $request, $id, $tipo_registro)
     {
         try {
 
@@ -245,9 +252,9 @@ class TutorialController extends Controller
                 ->where('abreviacion', 'NAS')
                 ->first();
 
-            DB::transaction(function () use ($id, $parametro) {
+            DB::transaction(function () use ($id, $tipo_registro, $parametro) {
 
-                $galeria = Galeria::find($id);
+                $galeria = ($tipo_registro === 'galeria') ? Galeria::find($id) : null;
 
                 if ($galeria) {
 
@@ -258,7 +265,6 @@ class TutorialController extends Controller
                     }
 
                     $galeria->delete();
-
                 } else {
 
                     $archivo = Archivo::find($id);
@@ -273,9 +279,7 @@ class TutorialController extends Controller
 
                     // Eliminar el archivo de la base de datos
                     $archivo->delete();
-
                 }
-
             });
 
             $tutorialesGaleria = Galeria::where('tipo_gal_id', 11)->get();
@@ -288,5 +292,4 @@ class TutorialController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 }

@@ -709,7 +709,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listTutoriales', [TutorialController::class, 'listTutoriales']); // Lista los tutoriales
     Route::post('/addTutorial', [TutorialController::class, 'addTutorial']);
     Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
-    Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
+    Route::delete('/deleteTutorial/{id}/{tipo_registro}', [TutorialController::class, 'deleteTutorial']);
 
     Route::get('/listTutorialesByUserId/{user_id}', [TutorialUsuarioController::class, 'listTutorialesByUserId']);
     Route::post('/addEditTutorialUsuarios', [TutorialUsuarioController::class, 'addEditTutorialUsuarios']);
