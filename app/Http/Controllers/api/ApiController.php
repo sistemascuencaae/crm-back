@@ -95,7 +95,11 @@ class ApiController extends Controller
         try {
             $data = DB::transaction(function () use ($id) {
                 $coleccion = ApiColeccion::findOrFail($id);
-                ApiRequest::where('api_colecciones_id', $id)->delete();
+                $requestIds = ApiRequest::where('api_colecciones_id', $id)->pluck('id');
+                if ($requestIds->isNotEmpty()) {
+                    ApiHistorial::whereIn('api_requests_id', $requestIds)->update(['api_requests_id' => null]);
+                    ApiRequest::whereIn('id', $requestIds)->delete();
+                }
                 $coleccion->delete();
                 return $coleccion;
             });
@@ -164,8 +168,16 @@ class ApiController extends Controller
             $data = DB::transaction(function () use ($request, $id) {
                 $apiRequest = ApiRequest::findOrFail($id);
                 $apiRequest->update($request->only([
-                    'nombre', 'metodo', 'url', 'headers', 'params',
-                    'body_tipo', 'body', 'auth_tipo', 'auth_data', 'orden'
+                    'nombre',
+                    'metodo',
+                    'url',
+                    'headers',
+                    'params',
+                    'body_tipo',
+                    'body',
+                    'auth_tipo',
+                    'auth_data',
+                    'orden'
                 ]));
                 return $apiRequest;
             });
@@ -185,6 +197,7 @@ class ApiController extends Controller
         try {
             $data = DB::transaction(function () use ($id) {
                 $apiRequest = ApiRequest::findOrFail($id);
+                ApiHistorial::where('api_requests_id', $id)->update(['api_requests_id' => null]);
                 $apiRequest->delete();
                 return $apiRequest;
             });
@@ -210,7 +223,23 @@ class ApiController extends Controller
             $historial = ApiHistorial::where('users_id', $userId)
                 ->orderBy('created_at', 'desc')
                 ->limit(50)
-                ->get();
+                ->get([
+                    'id',
+                    'api_requests_id',
+                    'nombre',
+                    'metodo',
+                    'url',
+                    'headers',
+                    'params',
+                    'body_tipo',
+                    'body',
+                    'auth_tipo',
+                    'auth_data',
+                    'respuesta_status',
+                    'respuesta_tiempo_ms',
+                    'respuesta_tamano_kb',
+                    'created_at',
+                ]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $historial));
         } catch (Exception $e) {
@@ -399,7 +428,10 @@ class ApiController extends Controller
             }
 
             // Ejecutar request HTTP
-            $httpClient = Http::withHeaders($headersArray)->withOptions(['verify' => false]);
+            $httpClient = Http::withHeaders($headersArray)->withOptions([
+                'verify'  => false,
+                'timeout' => 0,
+            ]);
 
             switch ($metodo) {
                 case 'GET':
@@ -427,6 +459,28 @@ class ApiController extends Controller
             $responseBody = $response->body();
             $tamanoKb     = (int) ceil(strlen($responseBody) / 1024);
 
+            // Detectar si la respuesta es un archivo descargable
+            $contentType        = $response->header('Content-Type') ?? 'application/octet-stream';
+            $contentDisposition = $response->header('Content-Disposition') ?? '';
+            $isFile = str_contains($contentDisposition, 'attachment') ||
+                str_contains($contentDisposition, 'filename') ||
+                (
+                    !str_contains($contentType, 'text/') &&
+                    !str_contains($contentType, 'application/json') &&
+                    !str_contains($contentType, 'application/xml') &&
+                    !str_contains($contentType, 'application/javascript') &&
+                    $contentType !== ''
+                );
+
+            // Extraer nombre de archivo del Content-Disposition
+            $filename = 'archivo';
+            if (preg_match('/filename[^;=\n]*=[\'""]?([^\'""\n;]+)/i', $contentDisposition, $matches)) {
+                $filename = trim($matches[1]);
+            }
+            if ($filename === 'archivo') {
+                $filename = basename(parse_url($url, PHP_URL_PATH)) ?: 'archivo';
+            }
+
             // Guardar en historial
             if ($guardarHist) {
                 ApiHistorial::create([
@@ -443,7 +497,7 @@ class ApiController extends Controller
                     'auth_data'           => $authData,
                     'respuesta_status'    => $response->status(),
                     'respuesta_headers'   => $response->headers(),
-                    'respuesta_body'      => $responseBody,
+                    'respuesta_body'      => $isFile ? '[archivo: ' . $filename . ']' : $responseBody,
                     'respuesta_tiempo_ms' => $tiempoMs,
                     'respuesta_tamano_kb' => $tamanoKb,
                 ]);
@@ -452,11 +506,15 @@ class ApiController extends Controller
             $log->logInfo(ApiController::class, 'Request ejecutado: ' . $metodo . ' ' . $url);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Request ejecutado', [
-                'status'    => $response->status(),
-                'headers'   => $response->headers(),
-                'body'      => $responseBody,
-                'tiempo_ms' => $tiempoMs,
-                'tamano_kb' => $tamanoKb,
+                'status'       => $response->status(),
+                'headers'      => $response->headers(),
+                'body'         => $isFile ? null : $responseBody,
+                'body_base64'  => $isFile ? base64_encode($responseBody) : null,
+                'is_file'      => $isFile,
+                'filename'     => $isFile ? $filename : null,
+                'content_type' => $contentType,
+                'tiempo_ms'    => $tiempoMs,
+                'tamano_kb'    => $tamanoKb,
             ]));
         } catch (Exception $e) {
             $log->logError(ApiController::class, 'Error al ejecutar request: ' . $e->getMessage(), $e);

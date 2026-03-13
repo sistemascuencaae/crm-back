@@ -220,24 +220,24 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/colecciones', [ApiController::class, 'addColeccion']);
     Route::put('/colecciones/{id}', [ApiController::class, 'editColeccion']);
     Route::delete('/colecciones/{id}', [ApiController::class, 'deleteColeccion']);
-    
+
     // Requests
     Route::get('/requests/{coleccionId}', [ApiController::class, 'listRequests']);
     Route::post('/requests', [ApiController::class, 'addRequest']);
     Route::put('/requests/{id}', [ApiController::class, 'editRequest']);
     Route::delete('/requests/{id}', [ApiController::class, 'deleteRequest']);
-    
+
     // Historial
     Route::get('/historial', [ApiController::class, 'listHistorial']);
     Route::delete('/historial/clear', [ApiController::class, 'clearHistorial']);
     Route::delete('/historial/{id}', [ApiController::class, 'deleteHistorial']);
-    
+
     // Variables
     Route::get('/variables', [ApiController::class, 'listVariables']);
     Route::post('/variables', [ApiController::class, 'addVariable']);
     Route::put('/variables/{id}', [ApiController::class, 'editVariable']);
     Route::delete('/variables/{id}', [ApiController::class, 'deleteVariable']);
-    
+
     // Ejecutar
     Route::post('/ejecutar', [ApiController::class, 'ejecutarRequest']);
     // ? END API TESTER
