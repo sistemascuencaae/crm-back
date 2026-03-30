@@ -162,4 +162,204 @@ class DemoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error: ' . $e->getMessage(), null));
         }
     }
+
+
+
+
+    public function diferenciasFechasDynamoNovasoft()
+    {
+        try {
+            // Obtener datos de PostgreSQL (Dynamo)
+            $dataPostgres = DB::select("SELECT ddo_doctran, cuota, ddo_fechaven, cli_codigo, cliente, ddo_monto, saldo, estado_cuota FROM public.av_carterapagare_mes_anterior");
+
+            // Obtener datos de Oracle (Novasoft)
+            $dataOracle = DB::connection('oracle')
+                ->select("SELECT ddo_doctran, cuota, ddo_fechaven, cli_codigo, cliente, ddo_monto, saldo, estado_cuota FROM stock.vt_cartera_espana_01");
+
+            // Indexar PostgreSQL por ddo_doctran + cuota
+            $pgMap = [];
+            foreach ($dataPostgres as $row) {
+                $key = trim($row->ddo_doctran) . '|' . trim($row->cuota);
+                $pgMap[$key] = $row;
+            }
+
+            // Comparar Oracle contra PostgreSQL
+            $diferencias = [];
+            foreach ($dataOracle as $oraRow) {
+                $key = trim($oraRow->ddo_doctran) . '|' . trim($oraRow->cuota);
+
+                if (isset($pgMap[$key])) {
+                    $pgRow = $pgMap[$key];
+                    $fechaPg = substr(trim($pgRow->ddo_fechaven), 0, 10);
+                    $fechaOra = substr(trim($oraRow->ddo_fechaven), 0, 10);
+
+                    if ($fechaPg !== $fechaOra) {
+                        $diferencias[] = [
+                            'ddo_doctran' => trim($oraRow->ddo_doctran),
+                            'cuota' => trim($oraRow->cuota),
+                            'cli_codigo' => trim($oraRow->cli_codigo),
+                            'cliente' => trim($oraRow->cliente),
+                            'fecha_dynamo' => $fechaPg,
+                            'fecha_novasoft' => $fechaOra,
+                            // 'ddo_monto' => $oraRow->ddo_monto,
+                            // 'saldo_dynamo' => $pgRow->saldo,
+                            // 'saldo_novasoft' => $oraRow->saldo,
+                            // 'estado_dynamo' => trim($pgRow->estado_cuota),
+                            // 'estado_novasoft' => trim($oraRow->estado_cuota),
+                        ];
+                    }
+                }
+            }
+
+            // Generar archivo Excel
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $headerStyle = [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4472C4']],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+            ];
+
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('1. Diferencias Fechas Venc');
+
+            $encabezados = [
+                'FACTURA',
+                'CUOTA',
+                'CLI_CODIGO',
+                'CLIENTE',
+                'FECHA VENC. DYNAMO',
+                'FECHA VENC. NOVASOFT',
+                // 'MONTO',
+                // 'SALDO DYNAMO',
+                // 'SALDO NOVASOFT',
+                // 'ESTADO DYNAMO',
+                // 'ESTADO NOVASOFT',
+            ];
+
+            foreach ($encabezados as $col => $encabezado) {
+                $sheet->setCellValue([$col + 1, 1], $encabezado);
+            }
+            $sheet->getStyle([1, 1, count($encabezados), 1])->applyFromArray($headerStyle);
+
+            $fila = 2;
+            foreach ($diferencias as $dif) {
+                $col = 1;
+                foreach ($dif as $valor) {
+                    $sheet->setCellValue([$col, $fila], $valor);
+                    $col++;
+                }
+                $fila++;
+            }
+
+            foreach (range(1, count($encabezados)) as $col) {
+                $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+            }
+
+            // Segunda hoja: solo facturas (distinct)
+            $sheetFacturas = $spreadsheet->createSheet();
+            $sheetFacturas->setTitle('2. Resumen Solo Facturas');
+            $sheetFacturas->setCellValue([1, 1], 'FACTURA');
+            $sheetFacturas->getStyle([1, 1, 1, 1])->applyFromArray($headerStyle);
+
+            $facturasUnicas = array_unique(array_column($diferencias, 'ddo_doctran'));
+            sort($facturasUnicas);
+            $filaFact = 2;
+            foreach ($facturasUnicas as $factura) {
+                $sheetFacturas->setCellValue([1, $filaFact], $factura);
+                $filaFact++;
+            }
+            $sheetFacturas->getColumnDimensionByColumn(1)->setAutoSize(true);
+
+            // Tercera hoja: cambios de fecha Novasoft
+            if (!empty($facturasUnicas)) {
+                $bindings = implode(',', array_fill(0, count($facturasUnicas), '?'));
+                $dataCambiosFecha = DB::select(
+                    "SELECT fecha, tipo_comprobante_fp, cod_comprobante_fp, valor_ws, saldo_ws, valor_fpc, saldo_fpc, valor_co, saldo_co, cod_persona, accion
+                     FROM crm.aav_cambios_de_fecha_novasoft_materializada
+                     WHERE cod_comprobante_fp IN ($bindings)",
+                    array_values($facturasUnicas)
+                );
+
+                $sheetCambios = $spreadsheet->createSheet();
+                $sheetCambios->setTitle('3. Formato CambioFecha Novasoft');
+
+                // Definición de columnas: nombre de encabezado y tipo (text o number)
+                $columnasCambios = [
+                    'fecha' => ['label' => 'FECHA', 'tipo' => 'text'],
+                    'tipo_comprobante_fp' => ['label' => 'TIPO_COMPROBANTE_FP', 'tipo' => 'text'],
+                    'cod_comprobante_fp' => ['label' => 'COD_COMPROBANTE_FP', 'tipo' => 'text'],
+                    'valor_ws' => ['label' => 'VALOR_WS', 'tipo' => 'number'],
+                    'saldo_ws' => ['label' => 'SALDO_WS', 'tipo' => 'number'],
+                    'valor_fpc' => ['label' => 'VALOR_FPC', 'tipo' => 'number'],
+                    'saldo_fpc' => ['label' => 'SALDO_FPC', 'tipo' => 'number'],
+                    'valor_co' => ['label' => 'VALOR_CO', 'tipo' => 'number'],
+                    'saldo_co' => ['label' => 'SALDO_CO', 'tipo' => 'number'],
+                    'cod_persona' => ['label' => 'COD_PERSONA', 'tipo' => 'text'],
+                    'accion' => ['label' => 'ACCION', 'tipo' => 'text'],
+                ];
+
+                // Encabezados
+                $colIdx = 1;
+                foreach ($columnasCambios as $config) {
+                    $sheetCambios->setCellValue([$colIdx, 1], $config['label']);
+                    $colIdx++;
+                }
+                $sheetCambios->getStyle([1, 1, count($columnasCambios), 1])->applyFromArray($headerStyle);
+
+                // Datos con formato
+                $filaCambios = 2;
+                foreach ($dataCambiosFecha as $row) {
+                    $colIdx = 1;
+                    foreach ($columnasCambios as $campo => $config) {
+                        $valor = $row->$campo ?? '';
+                        if ($config['tipo'] === 'text') {
+                            $sheetCambios->setCellValueExplicit([$colIdx, $filaCambios], $valor, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                        } else {
+                            $sheetCambios->setCellValue([$colIdx, $filaCambios], is_numeric($valor) ? (float) $valor : $valor);
+                            $sheetCambios->getStyle([$colIdx, $filaCambios])->getNumberFormat()
+                                ->setFormatCode('0.00');
+                        }
+                        $colIdx++;
+                    }
+                    $filaCambios++;
+                }
+
+                foreach (range(1, count($columnasCambios)) as $col) {
+                    $sheetCambios->getColumnDimensionByColumn($col)->setAutoSize(true);
+                }
+
+                // Cuarta hoja: facturas sin cambios de fecha (están en hoja 2 pero no en hoja 3)
+                $facturasConCambios = array_unique(array_map(function ($row) {
+                    return trim($row->cod_comprobante_fp);
+                }, $dataCambiosFecha));
+
+                $facturasSinCambios = array_diff($facturasUnicas, $facturasConCambios);
+                sort($facturasSinCambios);
+
+                $sheetSinCambios = $spreadsheet->createSheet();
+                $sheetSinCambios->setTitle('4. Diferencias hojas 2 y 3');
+                $sheetSinCambios->setCellValue([1, 1], 'FACTURA');
+                $sheetSinCambios->getStyle([1, 1, 1, 1])->applyFromArray($headerStyle);
+
+                $filaSC = 2;
+                foreach ($facturasSinCambios as $factura) {
+                    $sheetSinCambios->setCellValue([1, $filaSC], $factura);
+                    $filaSC++;
+                }
+                $sheetSinCambios->getColumnDimensionByColumn(1)->setAutoSize(true);
+            }
+
+            // Guardar en archivo temporal y descargar
+            $fileName = 'diferencias_dynamo_novasoft_' . date('Y_m_d_His') . '.xlsx';
+            $tempPath = storage_path('app/public/' . $fileName);
+            $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+            $writer->save($tempPath);
+
+            return response()->download($tempPath, $fileName, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.xml',
+            ])->deleteFileAfterSend(true);
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
+        }
+    }
 }

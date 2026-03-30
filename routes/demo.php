@@ -8,5 +8,6 @@ Route::group([
 ], function () {
     // SUBIDA DATOS EXCEL
     Route::post('/addDatos', [DemoController::class, 'addDatos']);
+    Route::get('/diferenciasFechasDynamoNovasoft', [DemoController::class, 'diferenciasFechasDynamoNovasoft']);
 
 });
