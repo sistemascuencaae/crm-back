@@ -8,8 +8,11 @@ use App\Models\demo\Demo;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class DemoController extends Controller
 {
@@ -212,11 +215,11 @@ class DemoController extends Controller
             }
 
             // Generar archivo Excel
-            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $spreadsheet = new Spreadsheet();
             $headerStyle = [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4472C4']],
-                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4472C4']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ];
 
             $sheet = $spreadsheet->getActiveSheet();
@@ -275,8 +278,8 @@ class DemoController extends Controller
                 $bindings = implode(',', array_fill(0, count($facturasUnicas), '?'));
                 $dataCambiosFecha = DB::select(
                     "SELECT fecha, tipo_comprobante_fp, cod_comprobante_fp, valor_ws, saldo_ws, valor_fpc, saldo_fpc, valor_co, saldo_co, cod_persona, accion
-                     FROM crm.aav_cambios_de_fecha_novasoft_materializada
-                     WHERE cod_comprobante_fp IN ($bindings)",
+                        FROM crm.aav_cambios_de_fecha_novasoft_materializada
+                        WHERE cod_comprobante_fp IN ($bindings)",
                     array_values($facturasUnicas)
                 );
 
@@ -313,7 +316,7 @@ class DemoController extends Controller
                     foreach ($columnasCambios as $campo => $config) {
                         $valor = $row->$campo ?? '';
                         if ($config['tipo'] === 'text') {
-                            $sheetCambios->setCellValueExplicit([$colIdx, $filaCambios], $valor, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                            $sheetCambios->setCellValueExplicit([$colIdx, $filaCambios], $valor, DataType::TYPE_STRING);
                         } else {
                             $sheetCambios->setCellValue([$colIdx, $filaCambios], is_numeric($valor) ? (float) $valor : $valor);
                             $sheetCambios->getStyle([$colIdx, $filaCambios])->getNumberFormat()
