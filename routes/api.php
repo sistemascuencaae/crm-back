@@ -6,6 +6,7 @@ use App\Http\Controllers\api\ApiController;
 use App\Http\Controllers\appreact\ReactNativeMaps;
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
+use App\Http\Controllers\cobranzas\CobranzasController;
 use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\TableauAuthController;
@@ -213,6 +214,15 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+
+
+    // ? START COBRANZAS
+
+    Route::get('/diferenciasFechasDynamoNovasoft', [CobranzasController::class, 'diferenciasFechasDynamoNovasoft']);
+
+    // ? END COBRANZAS
+
+
 
     // ? START API TESTER
     // Colecciones
