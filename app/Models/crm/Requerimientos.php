@@ -25,6 +25,8 @@ class Requerimientos extends Model
         "acc_publico",
         "desc_requerida",
         "tipo_caso_id",
+        "minimo",
+        "maximo",
     ];
 
     public function setCreatedAtAttribute($value)

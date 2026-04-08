@@ -1120,6 +1120,8 @@ class CasoController extends Controller
                 $reqCaso->orden = $reqFase[$i]->orden;
                 $reqCaso->acc_publico = $reqFase[$i]->acc_publico;
                 $reqCaso->desc_requerida = $reqFase[$i]->desc_requerida;
+                $reqCaso->minimo = $reqFase[$i]->minimo;
+                $reqCaso->maximo = $reqFase[$i]->maximo;
 
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(';', $reqCaso->valor_lista);

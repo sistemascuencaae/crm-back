@@ -61,6 +61,8 @@ class RequerimientoCaso extends Model
         'pro_id_8',
         'pro_id_9',
         'pro_id_10',
+        "minimo",
+        "maximo",
     ];
 
     public function setCreatedAtAttribute($value)
