@@ -125,6 +125,7 @@ use App\Http\Controllers\crm\cambioAgencia\CambioAgenciaController;
 use App\Http\Controllers\crm\credito\ResumenController;
 use App\Http\Controllers\crm\FaseController2;
 use App\Http\Controllers\crm\seriesalm\BodegaSeriesGeneradasController;
+use App\Http\Controllers\db_oracle\CelProspectoController;
 use App\Http\Controllers\db_oracle\MultiNivelController;
 use App\Http\Controllers\gestionClientes\ActividadClienteController;
 use App\Http\Controllers\gestionClientes\AdjuntoClienteController;
@@ -1473,6 +1474,7 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::get('/multinivel/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel']);
     Route::get('/multinivel2/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel2']);
     Route::get('/multinivel_nce/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel_nce']);
-    // ---------- END ORACLE DB Y POSTGRES ----------
 
+    Route::get('/listVsCelProspecto', [CelProspectoController::class, 'listVsCelProspecto']);
+    // ---------- END ORACLE DB Y POSTGRES ----------
 });
