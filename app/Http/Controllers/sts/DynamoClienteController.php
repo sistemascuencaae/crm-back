@@ -18,7 +18,7 @@ use Validator;
 class DynamoClienteController extends Controller
 {
     // Version 1.0
-    public function verificarIdentificacion(Request $request)
+    public function verificarClienteDynamo(Request $request)
     {
         try {
             $identificacion = trim($request->input('identificacion'));
@@ -49,43 +49,16 @@ class DynamoClienteController extends Controller
 
             // 4: Verifico si ya existe el cliente
             $clienteOpenceo = DB::selectOne(
-                "SELECT c.cli_codigo AS identificacion FROM public.cliente c
+                "SELECT c.cli_codigo FROM public.cliente c
                                                 WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
                                                     AND c.cli_tipocli = 1",
                 [$identificacionBusqueda]
             );
 
-            // 5: Buscar si existe la entidad
-            $entidad = DB::selectOne(
-                "SELECT e.ent_tipo_identificacion AS tipo_identificacion, e.ent_identificacion AS identificacion, CONCAT(e.ent_nombres, ' ', e.ent_apellidos) AS cliente FROM public.entidad e
-                                        WHERE SUBSTRING(TRIM(e.ent_identificacion), 1, 10) = ?",
-                [$identificacionBusqueda]
-            );
-
             if ($clienteOpenceo) {
-                // Buscar la última precalificación del cliente en el CRM
-                $precalificacion = DB::selectOne(
-                    "SELECT CONCAT(a.tipo_cliente, ' / ', a.formal_informal) AS precalificacion
-                        FROM crm.av_tiempos_casos_xfase a
-                        WHERE SUBSTRING(TRIM(a.identificacion), 1, 10) = ?
-                        AND a.caso_id = (
-                            SELECT MAX(b.caso_id) FROM crm.av_tiempos_casos_xfase b
-                            WHERE SUBSTRING(TRIM(b.identificacion), 1, 10) = ?
-                        )
-                        LIMIT 1",
-                    [$identificacionBusqueda, $identificacionBusqueda]
-                );
-
-                // new \stdClass() crea un objeto vacío de PHP. Es como un {} en JavaScript.
-                $resultado = (object) array_merge(
-                    (array) ($entidad ?? new \stdClass()),
-                    (array) ($precalificacion ?? new \stdClass())
-                );
-
-                return response()->json(RespuestaApi::returnResultado('success', 'El cliente ya existe', $resultado));
+                return response()->json(RespuestaApi::returnResultado('success', 'El cliente ya existe', null));
             }
 
-            // Si no existe como cliente
             return response()->json(RespuestaApi::returnResultado('success', 'El cliente no existe', null));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
