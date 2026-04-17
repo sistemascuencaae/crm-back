@@ -6,6 +6,7 @@ use App\Events\NotificacionesCrmEvent;
 use App\Events\ReasignarCasoEvent;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\EmailDinamicoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
@@ -322,8 +323,8 @@ class CasoController extends Controller
             $audit->caso_id = $caso->id;
             $audit->save();
             // END Auditoria
-            $emailController = new EmailController();
-            $emailController->send_emailCambioFase($caso->id, $caso->fas_id);
+            $emailController = new EmailDinamicoController();
+            $emailController->sendEmailDinamico($caso->id, $caso->fas_id);
             //$this->enviarCorreoCliente($caso->id);
 
             $log->logInfo(CasoController::class, 'Se actualizo la fase del caso con exito');
@@ -727,8 +728,8 @@ class CasoController extends Controller
                 $casoEnProceso->user_anterior_id = $user_anterior_id;
                 $casoEnProceso->save();
                 $this->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id, $casoEnProceso->tc_id);
-                $emailController = new EmailController();
-                $emailController->send_emailCambioFase($caso_id, $casoEnProceso->fas_id);
+                $emailController = new EmailDinamicoController();
+                $emailController->sendEmailDinamico($caso_id, $casoEnProceso->fas_id);
                 //$this->enviarCorreoCliente($caso_id);
 
                 // Obtener el old_values (valor antiguo)

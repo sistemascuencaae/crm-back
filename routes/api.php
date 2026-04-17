@@ -36,6 +36,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\EmailDinamicoController;
 use App\Http\Controllers\crm\ParametroController;
 use App\Http\Controllers\crm\seriesalm\SeriesAlm2Controller;
 use App\Http\Controllers\crm\seriesalm\SeriesAlmController;
@@ -1228,6 +1229,10 @@ Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
     Route::post('/addEmail', [EmailController::class, 'addEmail']);
     Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
+
+    // Email Dinámico - Palabras clave y envío con reemplazo de {req:...} y {caso_*}
+    Route::get('/getPlaceholdersByFase/{fase_id}', [EmailDinamicoController::class, 'getPlaceholdersByFase']);
+    Route::post('/sendEmailDinamico/{caso_id}/{fase_id}', [EmailDinamicoController::class, 'sendEmailDinamico']);
 
     // FILTRAR CASOS RECHAZADOS Y TERMINADOS PARA QUE VEAN TODAS LAS ANALISTAS, ASI NO HAYA PARTICIPADO EN EL CASO
 
