@@ -18,7 +18,7 @@ class Galeria extends Model
 
     protected $table = 'crm.galerias';
 
-    protected $fillable = ["titulo", "descripcion", "imagen", "caso_id", "tipo_gal_id", "sc_id", "equifax", "enrolamiento_id", "tab_id", "acc_publico"];
+    protected $fillable = ["titulo", "descripcion", "imagen", "caso_id", "tipo_gal_id", "sc_id", "equifax", "enrolamiento_id", "tab_id", "acc_publico", "usuario_netos",];
 
     public function setCreatedAtAttribute($value)
     {
@@ -30,11 +30,11 @@ class Galeria extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-    public function setDeletedAtAttribute($value)
-    {
-        date_default_timezone_set("America/Guayaquil");
-        $this->attributes["deleted_at"] = Carbon::now();
-    }
+    // public function setDeletedAtAttribute($value)
+    // {
+    //     date_default_timezone_set("America/Guayaquil");
+    //     $this->attributes["deleted_at"] = Carbon::now();
+    // }
 
     public function tipo_galeria()
     {

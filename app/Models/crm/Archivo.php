@@ -16,7 +16,7 @@ class Archivo extends Model
     //use SoftDeletes;
 
     protected $table = 'crm.archivos';
-    protected $fillable = ["titulo", "observacion", "archivo", "caso_id", "tipo", "acc_publico", "tab_id"];
+    protected $fillable = ["titulo", "observacion", "archivo", "caso_id", "tipo", "acc_publico", "tab_id", 'usuario_netos',];
 
     public function setCreatedAtAttribute($value)
     {
@@ -28,9 +28,9 @@ class Archivo extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
-    public function setDeletedAtAttribute($value)
-    {
-        date_default_timezone_set("America/Guayaquil");
-        $this->attributes["deleted_at"] = Carbon::now();
-    }
+    // public function setDeletedAtAttribute($value)
+    // {
+    //     date_default_timezone_set("America/Guayaquil");
+    //     $this->attributes["deleted_at"] = Carbon::now();
+    // }
 }
