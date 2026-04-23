@@ -199,6 +199,9 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::post('/addCDFormulario', [Formulario2Controller::class, 'addCDFormulario']);
     Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
     Route::get('/listFormulaByIdForm/{form_id}', [Formulario2Controller::class, 'listFormulaByIdForm']);
+
+    Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
+
 });
 
 // ----------------- END RUTAS SIN TOKEN -------------
@@ -1070,7 +1073,7 @@ Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('/listCFormulario/{cForm_id}', [Formulario2Controller::class, 'listCFormulario']);
     Route::post('/editValorRespuesta/{id}', [Formulario2Controller::class, 'editValorRespuesta']); // Editar
 
-    Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
+    // Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
     Route::get('/listFacturasPendientes/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasPendientes']); // lista de facturas
     Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
     Route::post('/af_obtener_facturas_cliente', [Formulario2Controller::class, 'af_obtener_facturas_cliente']);
