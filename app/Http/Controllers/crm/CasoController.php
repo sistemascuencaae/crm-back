@@ -1052,6 +1052,27 @@ class CasoController extends Controller
 
                 $reqCaso->valor_multiple = $nuevoArray;
             }
+
+            if ($reqCaso->tipo_campo == 'lista agrupada') {
+                $grupos = json_decode($reqCaso->valor_lista, true);
+                $nuevoArray = array();
+
+                if (is_array($grupos)) {
+                    foreach ($grupos as $grupo) {
+                        if (isset($grupo['items']) && is_array($grupo['items'])) {
+                            foreach ($grupo['items'] as $item) {
+                                $nuevoArray[] = array(
+                                    'id' => $item,
+                                    'valor' => $item,
+                                    'grupo' => $grupo['grupo'] ?? '',
+                                );
+                            }
+                        }
+                    }
+                }
+
+                $reqCaso->valor_multiple = $nuevoArray;
+            }
             array_push($arrayTest, $reqCaso);
             //echo ('$reqCaso: '.json_encode($reqCaso));
             //$reqCaso->save();
@@ -1133,6 +1154,25 @@ class CasoController extends Controller
                             'valor' => $item
                         );
                         $nuevoArray[] = $objeto;
+                    }
+                    $reqCaso->valor_multiple = json_encode($nuevoArray);
+                }
+
+                if ($reqCaso->tipo_campo == 'lista agrupada') {
+                    $grupos = json_decode($reqCaso->valor_lista, true);
+                    $nuevoArray = array();
+                    if (is_array($grupos)) {
+                        foreach ($grupos as $grupo) {
+                            if (isset($grupo['items']) && is_array($grupo['items'])) {
+                                foreach ($grupo['items'] as $item) {
+                                    $nuevoArray[] = array(
+                                        'id' => $item,
+                                        'valor' => $item,
+                                        'grupo' => $grupo['grupo'] ?? '',
+                                    );
+                                }
+                            }
+                        }
                     }
                     $reqCaso->valor_multiple = json_encode($nuevoArray);
                 }
