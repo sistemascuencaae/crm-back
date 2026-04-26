@@ -25,7 +25,7 @@ class TipoCasoFormulasController extends Controller
             $data = TipoCasoFormulas::where([
                 ['tab_id', $tab_id],
                 ['tc_id', $tc_id]
-            ])->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")->first();
+            ])->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase", "agencia")->first();
 
             if ($data) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
@@ -40,7 +40,7 @@ class TipoCasoFormulasController extends Controller
     public function listTpoCasoFormulas(Request $request)
     {
         try {
-            $data = TipoCasoFormulas::with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")->get();
+            $data = TipoCasoFormulas::with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase", "agencia")->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -51,7 +51,7 @@ class TipoCasoFormulasController extends Controller
     public function listTpoCasoFormulasActivos(Request $request)
     {
         try {
-            $data = TipoCasoFormulas::with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")->where('estado', true)->get();
+            $data = TipoCasoFormulas::with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase", "agencia")->where('estado', true)->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -71,7 +71,7 @@ class TipoCasoFormulasController extends Controller
                 // Validar si ya existe un registro con el mismo est_id_actual y resp_id
                 $existingRecord = TipoCasoFormulas::where('tab_id', $request->tab_id)
                     ->where('tc_id', $request->tc_id)
-                    ->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")
+                    ->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase", "agencia")
                     ->first();
 
                 if ($existingRecord) {
@@ -83,7 +83,7 @@ class TipoCasoFormulasController extends Controller
                     // Si no existe un registro con los mismos valores, crea el nuevo registro
                     TipoCasoFormulas::create($request->all());
 
-                    $resultado = TipoCasoFormulas::with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")
+                    $resultado = TipoCasoFormulas::with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase", "agencia")
                         ->orderBy('id', 'DESC')
                         ->get();
 
@@ -127,7 +127,7 @@ class TipoCasoFormulasController extends Controller
                     $respuestas->update($request->all());
 
                     $resultado = TipoCasoFormulas::where('id', $respuestas->id)
-                        ->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase")
+                        ->with("departamento", "tablero", "tipoCaso", "usuario", "estadodos", "fase", "agencia")
                         ->first();
 
                     $exitoso = $resultado;

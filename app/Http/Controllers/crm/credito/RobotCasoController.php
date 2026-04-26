@@ -6,6 +6,7 @@ use App\Events\ReasignarCasoEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\EmailDinamicoController;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
@@ -89,7 +90,7 @@ class RobotCasoController extends Controller
 
     public function validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId)
     {
-        $emailController = new EmailController();
+        $emailController = new EmailDinamicoController();
         $casoEnProceso = Caso::find($casoId);
         $formula = EstadosFormulas::where('id', $estadoFormId)
             ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
@@ -196,7 +197,7 @@ class RobotCasoController extends Controller
                     $casoEnProceso->user_id = $user_id;
                     $casoEnProceso->save();
                     $this->addMiembro($user_id, $casoEnProceso->id, $formula->tablero_id);
-                    $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+                    $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
                     $this->calcularTiemposCaso($casoEnProceso);
                     return $casoEnProceso;
                 }
@@ -205,7 +206,7 @@ class RobotCasoController extends Controller
         // si se mueve en el mismo tablero y se encuentra asignado un usuario
         if ($formula->tablero_id == $tableroActualId) {
             $casoEnProceso->save();
-            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
             $this->calcularTiemposCaso($casoEnProceso);
             return $casoEnProceso;
         }
@@ -213,7 +214,7 @@ class RobotCasoController extends Controller
         if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
             $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
             $casoEnProceso->save();
-            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
             $this->calcularTiemposCaso($casoEnProceso);
             return $casoEnProceso;
         }
@@ -231,7 +232,7 @@ class RobotCasoController extends Controller
             $casoEnProceso->user_id = $controlTiemposCaso->user_id;
             $casoEnProceso->save();
             $this->addMiembro($casoEnProceso->user_id, $casoEnProceso->id, $formula->tablero_id);
-            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
             $this->calcularTiemposCaso($casoEnProceso);
             return $casoEnProceso;
         }
@@ -242,7 +243,7 @@ class RobotCasoController extends Controller
         $casoEnProceso->user_id = $userGeneralNuevoTablero->id;
         $casoEnProceso->save();
         $this->addMiembro($casoEnProceso->user_id, $casoEnProceso->id, $formula->tablero_id);
-        $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+        $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
         $this->calcularTiemposCaso($casoEnProceso);
         return $casoEnProceso;
     }

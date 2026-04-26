@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\configuracion\Agencia;
 use App\Models\crm\Estados;
 use App\Models\crm\Fase;
 use App\Models\crm\Tablero;
@@ -27,6 +28,7 @@ class TipoCasoFormulas extends Model
         "fase_id",
         "estado",
         "acc_publico",
+        "codigo_agencia",
     ];
 
     public function setCreatedAtAttribute($value)
@@ -69,5 +71,10 @@ class TipoCasoFormulas extends Model
     public function fase()
     {
         return $this->belongsTo(Fase::class, "fase_id");
+    }
+
+    public function agencia()
+    {
+        return $this->belongsTo(Agencia::class, "codigo_agencia", "codigo");
     }
 }

@@ -6,6 +6,7 @@ use App\Events\NotificacionesCrmEvent;
 use App\Events\ReasignarCasoEvent;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\EmailDinamicoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
@@ -322,8 +323,8 @@ class CasoController extends Controller
             $audit->caso_id = $caso->id;
             $audit->save();
             // END Auditoria
-            $emailController = new EmailController();
-            $emailController->send_emailCambioFase($caso->id, $caso->fas_id);
+            $emailController = new EmailDinamicoController();
+            $emailController->sendEmailDinamico($caso->id, $caso->fas_id);
             //$this->enviarCorreoCliente($caso->id);
 
             $log->logInfo(CasoController::class, 'Se actualizo la fase del caso con exito');
@@ -727,8 +728,8 @@ class CasoController extends Controller
                 $casoEnProceso->user_anterior_id = $user_anterior_id;
                 $casoEnProceso->save();
                 $this->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id, $casoEnProceso->tc_id);
-                $emailController = new EmailController();
-                $emailController->send_emailCambioFase($caso_id, $casoEnProceso->fas_id);
+                $emailController = new EmailDinamicoController();
+                $emailController->sendEmailDinamico($caso_id, $casoEnProceso->fas_id);
                 //$this->enviarCorreoCliente($caso_id);
 
                 // Obtener el old_values (valor antiguo)
@@ -1051,6 +1052,27 @@ class CasoController extends Controller
 
                 $reqCaso->valor_multiple = $nuevoArray;
             }
+
+            if ($reqCaso->tipo_campo == 'lista agrupada') {
+                $grupos = json_decode($reqCaso->valor_lista, true);
+                $nuevoArray = array();
+
+                if (is_array($grupos)) {
+                    foreach ($grupos as $grupo) {
+                        if (isset($grupo['items']) && is_array($grupo['items'])) {
+                            foreach ($grupo['items'] as $item) {
+                                $nuevoArray[] = array(
+                                    'id' => $item,
+                                    'valor' => $item,
+                                    'grupo' => $grupo['grupo'] ?? '',
+                                );
+                            }
+                        }
+                    }
+                }
+
+                $reqCaso->valor_multiple = $nuevoArray;
+            }
             array_push($arrayTest, $reqCaso);
             //echo ('$reqCaso: '.json_encode($reqCaso));
             //$reqCaso->save();
@@ -1120,6 +1142,8 @@ class CasoController extends Controller
                 $reqCaso->orden = $reqFase[$i]->orden;
                 $reqCaso->acc_publico = $reqFase[$i]->acc_publico;
                 $reqCaso->desc_requerida = $reqFase[$i]->desc_requerida;
+                $reqCaso->minimo = $reqFase[$i]->minimo;
+                $reqCaso->maximo = $reqFase[$i]->maximo;
 
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(';', $reqCaso->valor_lista);
@@ -1130,6 +1154,25 @@ class CasoController extends Controller
                             'valor' => $item
                         );
                         $nuevoArray[] = $objeto;
+                    }
+                    $reqCaso->valor_multiple = json_encode($nuevoArray);
+                }
+
+                if ($reqCaso->tipo_campo == 'lista agrupada') {
+                    $grupos = json_decode($reqCaso->valor_lista, true);
+                    $nuevoArray = array();
+                    if (is_array($grupos)) {
+                        foreach ($grupos as $grupo) {
+                            if (isset($grupo['items']) && is_array($grupo['items'])) {
+                                foreach ($grupo['items'] as $item) {
+                                    $nuevoArray[] = array(
+                                        'id' => $item,
+                                        'valor' => $item,
+                                        'grupo' => $grupo['grupo'] ?? '',
+                                    );
+                                }
+                            }
+                        }
                     }
                     $reqCaso->valor_multiple = json_encode($nuevoArray);
                 }

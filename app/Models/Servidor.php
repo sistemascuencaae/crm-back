@@ -30,4 +30,9 @@ class Servidor extends Model
     {
         return $this->belongsTo(ZonaAgencia::class, "id_zona_agencia");
     }
+
+    public function ultimoReinicio()
+    {
+        return $this->hasOne(BitacoraServidor::class, 'servidor_id')->latestOfMany();
+    }
 }

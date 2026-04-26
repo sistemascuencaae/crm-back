@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
+use App\Models\BitacoraServidor;
 use App\Models\Servidor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use phpseclib3\Net\SSH2;
 use Exception;
 
@@ -21,14 +23,21 @@ class ServidorController extends Controller
     {
         try {
             $servidores = Servidor::where('estado', true)
-                ->with('zona')
+                ->with(['zona', 'ultimoReinicio.usuario'])
                 ->orderBy('nombre', 'asc')
                 ->get()
                 ->map(function ($servidor) {
                     $servidor->agencias = $servidor->zona
                         ? $servidor->zona->agencia->pluck('nombre')->join(', ')
                         : '';
-                    return $servidor->makeHidden('zona');
+                    $servidor->ultimo_reinicio = $servidor->ultimoReinicio
+                        ? [
+                            'usuario'   => $servidor->ultimoReinicio->usuario->name . ' ' . $servidor->ultimoReinicio->usuario->surname ?? 'N/A',
+                            'resultado' => $servidor->ultimoReinicio->resultado,
+                            'fecha'     => $servidor->ultimoReinicio->created_at,
+                        ]
+                        : null;
+                    return $servidor->makeHidden(['zona', 'ultimoReinicio']);
                 });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Servidores obtenidos', $servidores));
@@ -83,16 +92,43 @@ class ServidorController extends Controller
                 $intentos++;
             }
 
+            $tiempoSegundos = ($intentos + 1) * $intervalo;
+
             if ($portCheck !== '') {
-                $log->logInfo(ServidorController::class, 'Servidor ' . $host . ' levantado en puerto 9191 tras ' . ($intentos + 1) * $intervalo . ' segundos');
+                $log->logInfo(ServidorController::class, 'Servidor ' . $host . ' levantado en puerto 9191 tras ' . $tiempoSegundos . ' segundos');
+
+                BitacoraServidor::create([
+                    'servidor_id'     => $servidor->id,
+                    'user_id'         => Auth::id(),
+                    'resultado'       => 'success',
+                    'detalle'         => 'Servidor levantado en puerto 9191 tras ' . $tiempoSegundos . ' segundos',
+                    'tiempo_segundos' => $tiempoSegundos,
+                ]);
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Servidor ' . $servidor->nombre . ' levantado correctamente', null));
             } else {
                 $log->logError(ServidorController::class, 'El puerto 9191 no respondió en el servidor ' . $host . ' tras 90 segundos');
+
+                BitacoraServidor::create([
+                    'servidor_id'     => $servidor->id,
+                    'user_id'         => Auth::id(),
+                    'resultado'       => 'error',
+                    'detalle'         => 'El puerto 9191 no respondió en el servidor ' . $host . ' tras 90 segundos',
+                    'tiempo_segundos' => 90,
+                ]);
+
                 return response()->json(RespuestaApi::returnResultado('error', 'El puerto 9191 no levantó en ' . $servidor->nombre . ' tras 90 segundos', null));
             }
         } catch (Exception $e) {
             $log->logError(ServidorController::class, 'Error al ejecutar script en ' . $host, $e);
+
+            BitacoraServidor::create([
+                'servidor_id'     => $servidor->id,
+                'user_id'         => Auth::id(),
+                'resultado'       => 'error',
+                'detalle'         => 'Excepción: ' . $e->getMessage(),
+                'tiempo_segundos' => null,
+            ]);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error al ejecutar el script en ' . $host, $e->getMessage()));
         }

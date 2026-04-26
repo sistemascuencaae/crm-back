@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\activos\ActasController;
 use App\Http\Controllers\activos\ActivosController;
+use App\Http\Controllers\api\ApiController;
 use App\Http\Controllers\appreact\ReactNativeMaps;
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
+use App\Http\Controllers\cobranzas\CobranzasController;
 use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\TableauAuthController;
@@ -34,6 +36,7 @@ use App\Http\Controllers\crm\credito\solicitudCreditoController;
 use App\Http\Controllers\crm\credito\TipoGaleriaController;
 use App\Http\Controllers\crm\DashboardController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\EmailDinamicoController;
 use App\Http\Controllers\crm\ParametroController;
 use App\Http\Controllers\crm\seriesalm\SeriesAlm2Controller;
 use App\Http\Controllers\crm\seriesalm\SeriesAlmController;
@@ -122,6 +125,7 @@ use App\Http\Controllers\crm\cambioAgencia\CambioAgenciaController;
 use App\Http\Controllers\crm\credito\ResumenController;
 use App\Http\Controllers\crm\FaseController2;
 use App\Http\Controllers\crm\seriesalm\BodegaSeriesGeneradasController;
+use App\Http\Controllers\db_oracle\CelProspectoController;
 use App\Http\Controllers\db_oracle\MultiNivelController;
 use App\Http\Controllers\gestionClientes\ActividadClienteController;
 use App\Http\Controllers\gestionClientes\AdjuntoClienteController;
@@ -195,6 +199,9 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::post('/addCDFormulario', [Formulario2Controller::class, 'addCDFormulario']);
     Route::get('/listFormulario2/{id}', [Formulario2Controller::class, 'listFormulario2']);
     Route::get('/listFormulaByIdForm/{form_id}', [Formulario2Controller::class, 'listFormulaByIdForm']);
+
+    Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
+
 });
 
 // ----------------- END RUTAS SIN TOKEN -------------
@@ -212,6 +219,43 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+
+
+    // ? START COBRANZAS
+
+    Route::get('/diferenciasFechasDynamoNovasoft', [CobranzasController::class, 'diferenciasFechasDynamoNovasoft']);
+
+    // ? END COBRANZAS
+
+
+
+    // ? START API TESTER
+    // Colecciones
+    Route::get('/colecciones', [ApiController::class, 'listColecciones']);
+    Route::post('/colecciones', [ApiController::class, 'addColeccion']);
+    Route::put('/colecciones/{id}', [ApiController::class, 'editColeccion']);
+    Route::delete('/colecciones/{id}', [ApiController::class, 'deleteColeccion']);
+
+    // Requests
+    Route::get('/requests/{coleccionId}', [ApiController::class, 'listRequests']);
+    Route::post('/requests', [ApiController::class, 'addRequest']);
+    Route::put('/requests/{id}', [ApiController::class, 'editRequest']);
+    Route::delete('/requests/{id}', [ApiController::class, 'deleteRequest']);
+
+    // Historial
+    Route::get('/historial', [ApiController::class, 'listHistorial']);
+    Route::delete('/historial/clear', [ApiController::class, 'clearHistorial']);
+    Route::delete('/historial/{id}', [ApiController::class, 'deleteHistorial']);
+
+    // Variables
+    Route::get('/variables', [ApiController::class, 'listVariables']);
+    Route::post('/variables', [ApiController::class, 'addVariable']);
+    Route::put('/variables/{id}', [ApiController::class, 'editVariable']);
+    Route::delete('/variables/{id}', [ApiController::class, 'deleteVariable']);
+
+    // Ejecutar
+    Route::post('/ejecutar', [ApiController::class, 'ejecutarRequest']);
+    // ? END API TESTER
 
 
 
@@ -680,7 +724,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listTutoriales', [TutorialController::class, 'listTutoriales']); // Lista los tutoriales
     Route::post('/addTutorial', [TutorialController::class, 'addTutorial']);
     Route::post('/editTutorial/{id}', [TutorialController::class, 'editTutorial']);
-    Route::delete('/deleteTutorial/{id}', [TutorialController::class, 'deleteTutorial']);
+    Route::delete('/deleteTutorial/{id}/{tipo_registro}', [TutorialController::class, 'deleteTutorial']);
 
     Route::get('/listTutorialesByUserId/{user_id}', [TutorialUsuarioController::class, 'listTutorialesByUserId']);
     Route::post('/addEditTutorialUsuarios', [TutorialUsuarioController::class, 'addEditTutorialUsuarios']);
@@ -1029,10 +1073,11 @@ Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('/listCFormulario/{cForm_id}', [Formulario2Controller::class, 'listCFormulario']);
     Route::post('/editValorRespuesta/{id}', [Formulario2Controller::class, 'editValorRespuesta']); // Editar
 
-    Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
+    // Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
     Route::get('/listFacturasPendientes/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasPendientes']); // lista de facturas
     Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
     Route::post('/af_obtener_facturas_cliente', [Formulario2Controller::class, 'af_obtener_facturas_cliente']);
+    Route::get('/listProductosActivosDynamo', [Formulario2Controller::class, 'listProductosActivosDynamo']);
 
     Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
     Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios
@@ -1188,6 +1233,10 @@ Route::group(["prefix" => "credito", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/listEmailByFaseId/{fase_id}', [EmailController::class, 'listEmailByFaseId']); // lista el correo de la fase
     Route::post('/addEmail', [EmailController::class, 'addEmail']);
     Route::post('/editEmail/{id}', [EmailController::class, 'editEmail']);
+
+    // Email Dinámico - Palabras clave y envío con reemplazo de {req:...} y {caso_*}
+    Route::get('/getPlaceholdersByFase/{fase_id}', [EmailDinamicoController::class, 'getPlaceholdersByFase']);
+    Route::post('/sendEmailDinamico/{caso_id}/{fase_id}', [EmailDinamicoController::class, 'sendEmailDinamico']);
 
     // FILTRAR CASOS RECHAZADOS Y TERMINADOS PARA QUE VEAN TODAS LAS ANALISTAS, ASI NO HAYA PARTICIPADO EN EL CASO
 
@@ -1426,7 +1475,9 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
 
     // ---------- START ORACLE DB Y POSTGRES ----------
     Route::get('/multinivel/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel']);
+    Route::get('/multinivel2/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel2']);
     Route::get('/multinivel_nce/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel_nce']);
-    // ---------- END ORACLE DB Y POSTGRES ----------
 
+    Route::get('/listVsCelProspecto', [CelProspectoController::class, 'listVsCelProspecto']);
+    // ---------- END ORACLE DB Y POSTGRES ----------
 });

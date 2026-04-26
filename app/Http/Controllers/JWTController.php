@@ -88,18 +88,18 @@ class JWTController extends Controller
             'ult_inicio_sesion' => now(), // ⬅️ Esta línea guarda el último login
         ]);
 
-        // buscar todos mis casos en los que el usuario este
-        $query = DB::select(
-            'SELECT caso.id FROM crm.users usuario 
-                    JOIN crm.caso caso 
-                        ON caso.user_id = usuario.id
-                    WHERE usuario.id = ?', [$user->id]
-        );
-        foreach ($query as $key => $value) {
-            $caso = new CasoController();
-            $data = $caso->getCaso($value->id);
-            broadcast(new TableroEvent($data));
-        }
+        // // buscar todos mis casos en los que el usuario este
+        // $query = DB::select(
+        //     'SELECT caso.id FROM crm.users usuario 
+        //             JOIN crm.caso caso 
+        //                 ON caso.user_id = usuario.id
+        //             WHERE usuario.id = ?', [$user->id]
+        // );
+        // foreach ($query as $key => $value) {
+        //     $caso = new CasoController();
+        //     $data = $caso->getCaso($value->id);
+        //     broadcast(new TableroEvent($data));
+        // }
 
         return $this->respondWithToken($token);
     }

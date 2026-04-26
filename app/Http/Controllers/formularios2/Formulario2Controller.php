@@ -661,4 +661,23 @@ class Formulario2Controller extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
+
+    public function listProductosActivosDynamo()
+    {
+        try {
+            $data = DB::select("SELECT p.pro_id, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto
+                                    FROM producto p
+                                    WHERE p.pro_activo = true
+                                    ORDER BY p.pro_codigo ASC;");
+
+            if (!$data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron productos.', ''));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
+        }
+    }
+
 }
