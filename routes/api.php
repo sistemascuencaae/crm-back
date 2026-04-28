@@ -4,6 +4,7 @@ use App\Http\Controllers\activos\ActasController;
 use App\Http\Controllers\activos\ActivosController;
 use App\Http\Controllers\api\ApiController;
 use App\Http\Controllers\pinpad\PinpadController;
+use App\Http\Controllers\pinpadjar\PinpadJarController;
 use App\Http\Controllers\appreact\ReactNativeMaps;
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
@@ -1444,35 +1445,64 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
 
 Route::group(["prefix" => "almacenesespana"], function ($router) {
 
-    // ---------- START PIN PAD MEDIANET ----------
-    // Utilidades
+    // ============================================================
+    // PIN PAD MEDIANET — endpoints REST
+    //
+    // Todos viven bajo /api/almacenesespana/pinpad/* (heredan el prefix
+    // del Route::group "almacenesespana" de mas arriba).
+    //
+    // El controlador esta en app/Http/Controllers/pinpad/PinpadController.php
+    // ============================================================
+
+    // ----- Utilidades / Diagnostico -----
+    // GET /probe : verifica que el Pin Pad responde TCP (no envia trama real)
     Route::get ('/pinpad/probe',              [PinpadController::class, 'probe']);
+    // GET /hash  : genera un hash 3DES de prueba (test del cifrado)
     Route::get ('/pinpad/hash',               [PinpadController::class, 'hash']);
+    // POST /raw  : envia una trama YA armada (debug o desde el JAR oficial)
     Route::post('/pinpad/raw',                [PinpadController::class, 'raw']);
 
-    // PP - Proceso de Pago
+    // ----- PP — Proceso de Pago (transacciones de venta) -----
+    // 5 modalidades: corriente, diferido, anulacion, reverso, maxidolar
     Route::post('/pinpad/cobrar',              [PinpadController::class, 'cobrar']);
     Route::post('/pinpad/diferido',            [PinpadController::class, 'diferido']);
     Route::post('/pinpad/anular',              [PinpadController::class, 'anular']);
     Route::post('/pinpad/reverso',             [PinpadController::class, 'reverso']);
+    // GET liviano: chequea si hay un reverso cacheado, sin tocar al Pin Pad
     Route::get ('/pinpad/reverso-disponible',  [PinpadController::class, 'reversoDisponible']);
     Route::post('/pinpad/maxidolar',           [PinpadController::class, 'maxidolar']);
 
-    // CT - Cierre de Turno
+    // ----- CT — Cierre / Consulta de Tarjeta -----
     Route::post('/pinpad/cierre-turno',       [PinpadController::class, 'cierreTurno']);
 
-    // LT - Lectura de Tarjeta
+    // ----- LT — Lectura de Tarjeta (offline o pre-pago) -----
     Route::post('/pinpad/lectura',            [PinpadController::class, 'lectura']);
 
-    // CP - Cambio de Parametros
+    // ----- CP — Configuracion del Pin Pad (admin only) -----
     Route::post('/pinpad/cambio-parametros',  [PinpadController::class, 'cambioParametros']);
 
-    // PC - Proceso de Control (cierre de lote)
+    // ----- PC — Proceso de Control / Cierre de Lote -----
     Route::post('/pinpad/cierre-lote',        [PinpadController::class, 'cierreLote']);
 
-    // RA - Reimpresion / Re-Autorizacion
+    // ----- RA — Avance en Efectivo / Cash Advance -----
     Route::post('/pinpad/reimpresion',        [PinpadController::class, 'reimpresion']);
-    // ---------- END PIN PAD MEDIANET ----------
+
+    // ============================================================
+    // PIN PAD - JAR BRIDGE (Trama Builder JavaFX)
+    //
+    // Endpoints aparte que abren la UI oficial JavaFX en la pantalla del
+    // cajero y traen la trama de vuelta via polling con archivos.
+    //
+    // Controlador: app/Http/Controllers/pinpadjar/PinpadJarController.php
+    // ============================================================
+    // GET diag    : verifica paths/archivos sin lanzar Java
+    Route::get   ('/pinpad/jar/diag',                 [PinpadJarController::class, 'diag']);
+    // POST abrir  : lanza el JAR en background, devuelve session_id
+    Route::post  ('/pinpad/jar/abrir',                [PinpadJarController::class, 'abrir']);
+    // GET leer    : polling cada 1.5s. Devuelve pending/ready/cancelled
+    Route::get   ('/pinpad/jar/leer/{sessionId}',     [PinpadJarController::class, 'leer']);
+    // DELETE limpiar : borra archivos de sesion tras consumirla
+    Route::delete('/pinpad/jar/limpiar/{sessionId}',  [PinpadJarController::class, 'limpiar']);
 
 
     // ---------- START SISTEMA NOVASOFT ----------
