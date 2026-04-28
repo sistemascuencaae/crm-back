@@ -3,6 +3,7 @@
 use App\Http\Controllers\activos\ActasController;
 use App\Http\Controllers\activos\ActivosController;
 use App\Http\Controllers\api\ApiController;
+use App\Http\Controllers\pinpad\PinpadController;
 use App\Http\Controllers\appreact\ReactNativeMaps;
 use App\Http\Controllers\chat\ChatArchivosController;
 use App\Http\Controllers\chat\ChatController;
@@ -1442,6 +1443,37 @@ Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activ
 
 
 Route::group(["prefix" => "almacenesespana"], function ($router) {
+
+    // ---------- START PIN PAD MEDIANET ----------
+    // Utilidades
+    Route::get ('/pinpad/probe',              [PinpadController::class, 'probe']);
+    Route::get ('/pinpad/hash',               [PinpadController::class, 'hash']);
+    Route::post('/pinpad/raw',                [PinpadController::class, 'raw']);
+
+    // PP - Proceso de Pago
+    Route::post('/pinpad/cobrar',              [PinpadController::class, 'cobrar']);
+    Route::post('/pinpad/diferido',            [PinpadController::class, 'diferido']);
+    Route::post('/pinpad/anular',              [PinpadController::class, 'anular']);
+    Route::post('/pinpad/reverso',             [PinpadController::class, 'reverso']);
+    Route::get ('/pinpad/reverso-disponible',  [PinpadController::class, 'reversoDisponible']);
+    Route::post('/pinpad/maxidolar',           [PinpadController::class, 'maxidolar']);
+
+    // CT - Cierre de Turno
+    Route::post('/pinpad/cierre-turno',       [PinpadController::class, 'cierreTurno']);
+
+    // LT - Lectura de Tarjeta
+    Route::post('/pinpad/lectura',            [PinpadController::class, 'lectura']);
+
+    // CP - Cambio de Parametros
+    Route::post('/pinpad/cambio-parametros',  [PinpadController::class, 'cambioParametros']);
+
+    // PC - Proceso de Control (cierre de lote)
+    Route::post('/pinpad/cierre-lote',        [PinpadController::class, 'cierreLote']);
+
+    // RA - Reimpresion / Re-Autorizacion
+    Route::post('/pinpad/reimpresion',        [PinpadController::class, 'reimpresion']);
+    // ---------- END PIN PAD MEDIANET ----------
+
 
     // ---------- START SISTEMA NOVASOFT ----------
     Route::get('/n8tt-aa1v-7g0a-m2ig-b7fq-c3ar-r1nc', [MigracionController::class, 'aav_migracion_cartera']);
