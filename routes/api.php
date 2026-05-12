@@ -1082,6 +1082,7 @@ Route::group(["prefix" => "formulario", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('/listFacturasProcesadas/{fechaInicio}/{fechaFin}', [Formulario2Controller::class, 'listFacturasProcesadas']); // lista de facturas
     Route::post('/af_obtener_facturas_cliente', [Formulario2Controller::class, 'af_obtener_facturas_cliente']);
     Route::get('/listProductosActivosDynamo', [Formulario2Controller::class, 'listProductosActivosDynamo']);
+    Route::get('/getCasoVacacionesByCasoId/{caso_id}', [Formulario2Controller::class, 'getCasoVacacionesByCasoId']);
 
     Route::get('/listFormulariosUsuarios', [Formulario2UsuariosController::class, 'listFormulariosUsuarios']); // Formularios Usuarios
     Route::post('/addEditFormulariosUsuarios', [Formulario2UsuariosController::class, 'addEditFormulariosUsuarios']); // Formularios Usuarios

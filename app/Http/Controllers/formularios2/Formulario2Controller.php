@@ -680,4 +680,49 @@ class Formulario2Controller extends Controller
         }
     }
 
+    public function getCasoVacacionesByCasoId($caso_id)
+    {
+        try {
+            $data = DB::selectOne("SELECT a.caso_id, a.tc_id, a.nombre AS nombre_caso, a.identificacion,
+                                          a.empleado, a.resultado_caso, a.fecha_fin
+                                   FROM crm.av_casos_vacaciones a
+                                   WHERE a.caso_id = ?", [$caso_id]);
+
+            if (!$data) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Caso no encontrado.', null));
+            }
+
+            if ($data->tc_id == 153) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este caso es una excepción, no es un caso de vacaciones.', null));
+            }
+
+            if ($data->resultado_caso == 'RECHAZADO') {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este caso ya ha sido rechazado.', null));
+            }
+
+            if ($data->resultado_caso !== 'APROBADO') {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este caso todavía sigue en proceso.', null));
+            }
+
+            if ($data->fecha_fin && $data->fecha_fin < now()->toDateString()) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este caso de vacaciones ya finalizó.', null));
+            }
+
+            $yaAfectado = DB::selectOne("SELECT caso_id FROM crm.av_casos_vacaciones
+                                         WHERE tc_id = 153 AND caso_afectado = ?
+                                         LIMIT 1", [$caso_id]);
+
+            if ($yaAfectado) {
+                return response()->json(RespuestaApi::returnResultado(
+                    'error',
+                    'Este caso ya ha sido afectado por la excepción #' . $yaAfectado->caso_id,
+                    null
+                ));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
+        }
+    }
 }

@@ -27,6 +27,7 @@ class Requerimientos extends Model
         "tipo_caso_id",
         "minimo",
         "maximo",
+        "editable",
     ];
 
     public function setCreatedAtAttribute($value)

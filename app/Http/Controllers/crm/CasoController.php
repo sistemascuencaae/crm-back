@@ -1144,6 +1144,7 @@ class CasoController extends Controller
                 $reqCaso->desc_requerida = $reqFase[$i]->desc_requerida;
                 $reqCaso->minimo = $reqFase[$i]->minimo;
                 $reqCaso->maximo = $reqFase[$i]->maximo;
+                $reqCaso->editable = $reqFase[$i]->editable;
 
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(';', $reqCaso->valor_lista);

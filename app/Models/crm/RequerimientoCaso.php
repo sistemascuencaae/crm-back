@@ -65,6 +65,7 @@ class RequerimientoCaso extends Model
         "maximo",
         "valor_2",
         "valor_varchar_2",
+        "editable",
     ];
 
     public function setCreatedAtAttribute($value)
