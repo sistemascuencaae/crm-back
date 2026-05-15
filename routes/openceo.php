@@ -4,6 +4,7 @@ use App\Http\Controllers\comercializacion\CliReiterativoController;
 use App\Http\Controllers\comercializacion\ComercializacionController;
 use App\Http\Controllers\crm\auditoria\MaestroController;
 use App\Http\Controllers\openceo\BodegaController;
+use App\Http\Controllers\openceo\SeriesController;
 use App\Http\Controllers\openceo\TipoProductoController;
 use App\Http\Controllers\openceo\UserDynamoController;
 use Illuminate\Http\Request;
@@ -24,8 +25,7 @@ use App\Http\Controllers\OpenceoController;
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
-], function ($router) {
-});
+], function ($router) {});
 
 
 Route::group([
@@ -48,7 +48,7 @@ Route::group([
     Route::post('/ventasAlmacenesPeriodos', [ComercializacionController::class, 'ventasAlmacenesPeriodos']);
     Route::post('/ventasPorAgente', [ComercializacionController::class, 'ventasPorAgente']);
     //CliReiterativoController
-    Route::get('/getCliReiIdenti/{identificacion}',[CliReiterativoController::class, 'getByIdentificacionCliReitera']);
+    Route::get('/getCliReiIdenti/{identificacion}', [CliReiterativoController::class, 'getByIdentificacionCliReitera']);
     //Route::get('/comprobantesCliReiterativo/{identificacion}/{comprobante}/{page}/{itemsPerPage}', [CliReiterativoController::class, 'comprobantesCliReiterativo']);
     Route::get('/comprobantesCliReiterativo/{comprobante}', [CliReiterativoController::class, 'comprobantesCliReiterativo']);
     Route::post('/comproClienReitera', [CliReiterativoController::class, 'comproClienReitera']);
@@ -61,24 +61,34 @@ Route::group([
     Route::get('/getClienteReiterativoByIdentificacion/{identificacion}', [CliReiterativoController::class, 'getClienteReiterativoByIdentificacion']);
     Route::get('/getInfoCuotasByComprobante/{comprobante}', [CliReiterativoController::class, 'getInfoCuotasByComprobante']);
     Route::get('/getInfoCobrosByComprobante/{comprobante}/{cuota}', [CliReiterativoController::class, 'getInfoCobrosByComprobante']);
-    
-    
-    
+
+
+
     // USUARIOS OPENCEO
     Route::get('/listAllUsuariosActivos', [UserDynamoController::class, 'listAllUsuariosActivos']);
     Route::get('/listAlmacenesActivos', [UserDynamoController::class, 'listAlmacenesActivos']);
     Route::post('/editUsuarioPuntoVenta', [UserDynamoController::class, 'editUsuarioPuntoVenta']);
-    
-    
+
+
     // BODEGAS USUARIOS
     Route::get('/listBodegasUsuarios', [BodegaController::class, 'listBodegasUsuarios']);
     Route::get('/listAllUsuActivos', [BodegaController::class, 'listAllUsuActivos']);
-    
+
     Route::get('/listBodegasDynamo', [BodegaController::class, 'listBodegasDynamo']);
     Route::get('/listUsuariosByBodIdDynamo/{bod_id}', [BodegaController::class, 'listUsuariosByBodIdDynamo']);
     Route::post('/editUsuBodegas', [BodegaController::class, 'editUsuBodegas']);
-    
+
     Route::get('/listUsuariosBodegasDynamo', [BodegaController::class, 'listUsuariosBodegasDynamo']);
     Route::get('/listBodegasByUsuIdDynamo/{usu_id}', [BodegaController::class, 'listBodegasByUsuIdDynamo']);
     Route::post('/editBodUsuario', [BodegaController::class, 'editBodUsuario']);
+});
+
+Route::group(['prefix' => 'open', 'middleware' => ['jwt.auth', 'usuario.activo']], function () {
+    // SERIES - Carga masiva desde Excel
+    Route::post('/previewExcelSeries', [SeriesController::class, 'previewExcelSeries']);
+    Route::post('/addSeriesProductos', [SeriesController::class, 'addSeriesProductos']);
+    Route::get('/listTiposProductoDynamo', [SeriesController::class, 'listTiposProductoDynamo']);
+    Route::get('/listProductosActivosByTprId/{tpr_id}', [SeriesController::class, 'listProductosActivosByTprId']);
+    Route::post('/validarColumnasProducto', [SeriesController::class, 'validarColumnasProducto']);
+    Route::get('/listLotesSeries', [SeriesController::class, 'listLotesSeries']);
 });
