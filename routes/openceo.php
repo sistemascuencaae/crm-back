@@ -91,4 +91,7 @@ Route::group(['prefix' => 'open', 'middleware' => ['jwt.auth', 'usuario.activo']
     Route::get('/listProductosActivosByTprId/{tpr_id}', [SeriesController::class, 'listProductosActivosByTprId']);
     Route::post('/validarColumnasProducto', [SeriesController::class, 'validarColumnasProducto']);
     Route::get('/listLotesSeries', [SeriesController::class, 'listLotesSeries']);
+    Route::get('/getSeriesByLote/{codigo_lote}', [SeriesController::class, 'getSeriesByLote']);
+    Route::get('/downloadLoteSeries/{codigo_lote}', [SeriesController::class, 'downloadLoteSeries']);
+    Route::delete('/deleteLoteSeries/{codigo_lote}', [SeriesController::class, 'deleteLoteSeries']);
 });

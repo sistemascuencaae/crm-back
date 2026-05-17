@@ -108,6 +108,233 @@ class SeriesController extends Controller
     }
 
     /**
+     * Devuelve el array de columnas (en orden) definido en parametros_tipo_producto
+     * para un tipo de producto. Reutiliza el mismo parseo que la validacion.
+     *
+     * @param  int $tprId
+     * @return array  Ej: ['MARCA', 'Modelo', 'Procesador']
+     */
+    private function columnasDelTipoProducto(int $tprId): array
+    {
+        // NO se filtra por estado a proposito: para VER/DESCARGAR lotes historicos
+        // necesitamos los nombres de columna aunque el parametro ya este desactivado.
+        // ORDER BY estado DESC, id DESC -> determinista: prefiere el activo y, si
+        // hubiera mas de uno (no deberia), el mas reciente.
+        $row = DB::select(
+            "SELECT string_to_array(
+                        replace(replace(replace(valor, '[', ''), ']', ''), '''', ''),
+                        ','
+                    ) AS columnas_array
+             FROM public.parametros_tipo_producto
+             WHERE tpr_id = ?
+             ORDER BY estado DESC, id DESC
+             LIMIT 1",
+            [$tprId]
+        );
+
+        if (empty($row)) {
+            return [];
+        }
+        return $this->pgArrayToPhp($row[0]->columnas_array ?? '{}');
+    }
+
+    /**
+     * Devuelve los registros de un lote junto con el encabezado (nombres reales
+     * de las columnas tomados del parametro del tipo de producto del lote).
+     *
+     * @param  string $codigo_lote  UUID del lote.
+     * @return \Illuminate\Http\JsonResponse  data: { encabezado, filas, lote }
+     */
+    public function getSeriesByLote($codigo_lote)
+    {
+        try {
+            $codigoLote = trim((string) $codigo_lote);
+            if ($codigoLote === '' || !preg_match('/^[0-9a-fA-F\-]{36}$/', $codigoLote)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'codigo_lote invalido.', []), 422);
+            }
+
+            // tpr_id del lote (todas las filas comparten el mismo).
+            $cab = DB::select(
+                "SELECT s.tpr_id, tp.tpr_nombre, s.observacion
+                 FROM public.series s
+                 LEFT JOIN public.tipo_producto tp ON tp.tpr_id = s.tpr_id
+                 WHERE s.codigo_lote = ?
+                 LIMIT 1",
+                [$codigoLote]
+            );
+
+            if (empty($cab)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El lote no existe.', []), 404);
+            }
+
+            $tprId    = (int) $cab[0]->tpr_id;
+            $columnas = $this->columnasDelTipoProducto($tprId);
+            $totalCol = count($columnas);
+
+            // Encabezado: campo1..campoN -> nombre real del parametro.
+            $encabezado = [];
+            for ($i = 0; $i < $totalCol; $i++) {
+                $encabezado[] = [
+                    'campo'  => 'campo' . ($i + 1),
+                    'titulo' => $columnas[$i],
+                ];
+            }
+
+            // Traer las filas del lote con el nombre del producto.
+            $filas = DB::select(
+                "SELECT s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre
+                 FROM public.series s
+                 LEFT JOIN public.producto p ON p.pro_id = s.pro_id
+                 WHERE s.codigo_lote = ?
+                 ORDER BY s.id ASC",
+                [$codigoLote]
+            );
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', [
+                'encabezado' => $encabezado,
+                'filas'      => $filas,
+                'lote'       => [
+                    'codigo_lote' => $codigoLote,
+                    'tpr_id'      => $tprId,
+                    'tpr_nombre'  => $cab[0]->tpr_nombre,
+                    'observacion' => $cab[0]->observacion,
+                ],
+            ]));
+
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    /**
+     * Genera y descarga un .xlsx con todos los registros del lote.
+     * Columnas: las del parametro (en orden) + Producto + Observacion + Fecha.
+     *
+     * @param  string $codigo_lote  UUID del lote.
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\JsonResponse
+     */
+    public function downloadLoteSeries($codigo_lote)
+    {
+        try {
+            $codigoLote = trim((string) $codigo_lote);
+            if ($codigoLote === '' || !preg_match('/^[0-9a-fA-F\-]{36}$/', $codigoLote)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'codigo_lote invalido.', []), 422);
+            }
+
+            $cab = DB::select(
+                "SELECT tpr_id FROM public.series WHERE codigo_lote = ? LIMIT 1",
+                [$codigoLote]
+            );
+            if (empty($cab)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El lote no existe.', []), 404);
+            }
+
+            $tprId    = (int) $cab[0]->tpr_id;
+            $columnas = $this->columnasDelTipoProducto($tprId);
+            $totalCol = count($columnas);
+
+            $filas = DB::select(
+                "SELECT s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre
+                 FROM public.series s
+                 LEFT JOIN public.producto p ON p.pro_id = s.pro_id
+                 WHERE s.codigo_lote = ?
+                 ORDER BY s.id ASC",
+                [$codigoLote]
+            );
+
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $hoja = $spreadsheet->getActiveSheet();
+
+            // API moderna de PhpSpreadsheet: setCellValue([col, row], valor).
+            // (setCellValueByColumnAndRow fue removido en versiones nuevas).
+            // Encabezados: columnas del parametro + Producto + Fecha.
+            $colIdx = 1;
+            for ($i = 0; $i < $totalCol; $i++) {
+                $hoja->setCellValue([$colIdx++, 1], (string) $columnas[$i]);
+            }
+            $hoja->setCellValue([$colIdx++, 1], 'Producto');
+            $hoja->setCellValue([$colIdx, 1], 'Fecha');
+
+            // Filas de datos.
+            $fila = 2;
+            foreach ($filas as $r) {
+                $c = 1;
+                for ($i = 0; $i < $totalCol; $i++) {
+                    $key = 'campo' . ($i + 1);
+                    $hoja->setCellValue([$c++, $fila], (string) ($r->$key ?? ''));
+                }
+                $hoja->setCellValue([$c++, $fila], (string) ($r->producto_nombre ?? ''));
+                $hoja->setCellValue([$c, $fila], (string) ($r->created_at ?? ''));
+                $fila++;
+            }
+
+            $nombreArchivo = 'lote_' . substr($codigoLote, 0, 8) . '.xlsx';
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+            // Generar el binario en un buffer DENTRO del try para que cualquier
+            // error quede capturado (streamDownload se ejecuta fuera del try/catch).
+            ob_start();
+            $writer->save('php://output');
+            $contenido = ob_get_clean();
+
+            // Liberar memoria del spreadsheet.
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet, $writer);
+
+            return response($contenido, 200, [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $nombreArchivo . '"',
+                'Content-Length'      => strlen($contenido),
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    /**
+     * Elimina TODOS los registros de un lote (todas las filas con el mismo codigo_lote).
+     * Operacion destructiva e irreversible.
+     *
+     * @param  string $codigo_lote  UUID del lote (parametro de URL).
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteLoteSeries($codigo_lote)
+    {
+        try {
+            $codigoLote = trim((string) $codigo_lote);
+
+            // Validacion basica del formato UUID (proteccion contra valores arbitrarios).
+            if ($codigoLote === '' || !preg_match('/^[0-9a-fA-F\-]{36}$/', $codigoLote)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'codigo_lote invalido.', []), 422);
+            }
+
+            // Verificar que el lote exista antes de intentar borrar.
+            $existe = DB::select(
+                "SELECT 1 AS ok FROM public.series WHERE codigo_lote = ? LIMIT 1",
+                [$codigoLote]
+            );
+            if (empty($existe)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El lote no existe o ya fue eliminado.', []), 404);
+            }
+
+            // Borrado dentro de transaccion. delete() devuelve el numero de filas afectadas.
+            $eliminados = 0;
+            DB::transaction(function () use ($codigoLote, &$eliminados) {
+                $eliminados = DB::table('series')->where('codigo_lote', $codigoLote)->delete();
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', "Se elimino el lote ($eliminados registros).", [
+                'eliminados'  => $eliminados,
+                'codigo_lote' => $codigoLote,
+            ]));
+
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    /**
      * Valida los encabezados del Excel contra los parametros definidos para el tipo de producto.
      *
      * Tres niveles de validacion:
@@ -135,21 +362,25 @@ class SeriesController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Los headers del Excel son requeridos.', []), 422);
             }
 
-            // 1) Buscar el parametro definido para este tpr_id y extraer su array de columnas.
+            // 1) Buscar el parametro ACTIVO definido para este tpr_id y extraer su array.
             //    El campo `valor` se guarda como string tipo "['col1','col2','col3']".
             //    Se limpia con replaces y se hace split por coma usando string_to_array.
+            //    Para CARGA NUEVA solo valen parametros con estado = true; si esta
+            //    desactivado se trata como inexistente (no se permite cargar contra el).
+            //    ORDER BY id DESC -> determinista si hubiera mas de uno (no deberia).
             $parametroInfo = DB::select(
                 "SELECT string_to_array(
                             replace(replace(replace(valor, '[', ''), ']', ''), '''', ''),
                             ','
                         ) AS columnas_array
                  FROM public.parametros_tipo_producto
-                 WHERE tpr_id = ?
+                 WHERE tpr_id = ? AND estado = true
+                 ORDER BY id DESC
                  LIMIT 1",
                 [(int) $tprId]
             );
 
-            // Si no hay parametro registrado para este tipo, no se puede validar nada.
+            // Si no hay parametro ACTIVO para este tipo, no se puede validar nada.
             if (empty($parametroInfo)) {
                 return response()->json(RespuestaApi::returnResultado('error',
                     'El parametro para este tipo de producto no existe. Por favor comuniquese con el administrador.',
