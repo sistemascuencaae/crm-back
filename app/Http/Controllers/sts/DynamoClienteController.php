@@ -76,13 +76,13 @@ class DynamoClienteController extends Controller
             $identificacion = trim($request->input('identificacion'));
             $tipoidentificacion = trim($request->input('tipoidentificacion'));
 
-            // 1: Revalidar identificación
-            if (empty($identificacion)) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar una identificación.', null));
-            }
-
+            // 1. Validamos que exista el tipo y la identificación
             if (empty($tipoidentificacion)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar el tipo de identificación.', null));
+            }
+
+            if (empty($identificacion)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar una identificación.', null));
             }
 
             if ($tipoidentificacion == 1) {
@@ -95,16 +95,15 @@ class DynamoClienteController extends Controller
                 }
             }
 
-            // 2: Validar todos los campos del formulario
+            // 2. Validamos todos los campos del formulario
             $validator = Validator::make($request->all(), [
-                'direccion' => 'required|string',
-                'telefono' => 'required|string',
-                'identificacion' => 'required|string',
                 'tipoidentificacion' => 'required|string',
+                'identificacion' => 'required|string',
                 'nombres' => 'required|string',
                 'apellidos' => 'required|string',
                 'email' => 'required|string',
-                'empId' => 'required|numeric',
+                'telefono' => 'required|string',
+                'direccion' => 'required|string',
                 'usuario_netos' => 'required|string',
             ]);
 
@@ -112,26 +111,23 @@ class DynamoClienteController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Validación datos', $validator->errors()));
             }
 
-            // 3: Cortamos a 10 caracteres
+            // 3. Cortamos a 10 caracteres
             $identificacionBusqueda = substr($identificacion, 0, 10);
 
-            // 4: Verificar si ya existe como cliente
-            $clienteOpenceo = DB::selectOne(
-                "SELECT * FROM public.cliente c
-                                            WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
-                                                AND c.cli_tipocli = 1",
-                [$identificacionBusqueda]
-            );
+            // 4. Verificamos si ya existe como cliente
+            $clienteOpenceo = DB::selectOne("SELECT * FROM public.cliente c
+                                                WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
+                                                AND c.cli_tipocli = 1", [$identificacionBusqueda]);
 
             if ($clienteOpenceo) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El cliente ya existe', null));
             }
 
-            // 5: Buscar si existe la entidad
+            // 5. Buscar si existe la entidad
             $entidad = DB::selectOne("SELECT * FROM public.entidad e
-                WHERE SUBSTRING(TRIM(e.ent_identificacion), 1, 10) = ?", [$identificacionBusqueda]);
+                                        WHERE SUBSTRING(TRIM(e.ent_identificacion), 1, 10) = ?", [$identificacionBusqueda]);
 
-            // 6: Crear cliente
+            // 6. Crear cliente básico
             $cliente = DB::transaction(function () use ($request, $entidad) {
                 $direccion = mb_strtoupper(trim($request->input('direccion')));
                 $telefono = trim($request->input('telefono'));
@@ -140,18 +136,18 @@ class DynamoClienteController extends Controller
                 $nombres = mb_strtoupper(trim($request->input('nombres')));
                 $apellidos = mb_strtoupper(trim($request->input('apellidos')));
                 $email = mb_strtolower(trim($request->input('email')));
-                $empId = $request->input('empId');
+                $empId = 1;
                 $identificacionConyugue = mb_strtoupper(trim($request->input('identificacionConyugue') ?? ''));
                 $nombreConyugue = mb_strtoupper(trim($request->input('nombreConyugue') ?? ''));
                 $apellidoConyugue = mb_strtoupper(trim($request->input('apellidoConyugue') ?? ''));
 
-                // 6.1: Crear nueva dirección (siempre se crea)
+                // 6.1. Crear nueva dirección (siempre se crea)
                 $newDireccion = new Direccion();
                 $newDireccion->dir_calle_principal = $direccion;
                 $newDireccion->dir_calle_secundaria = '.';
                 $newDireccion->save();
 
-                // 6.2: Crear nuevo teléfono (siempre se crea)
+                // 6.2. Crear nuevo teléfono (siempre se crea)
                 $newTelefono = new Telefono();
                 $newTelefono->tte_id = 2; // 2 es celular
                 $newTelefono->tel_numero = $telefono;
@@ -160,23 +156,25 @@ class DynamoClienteController extends Controller
                 $entId = null;
 
                 if ($entidad) {
-                    // 6.3.1: ENTIDAD EXISTE -> actualizar con los nuevos datos de dirección/teléfono
-                    DB::update(
-                        "UPDATE public.entidad SET
-                        ent_nombres = ?,
-                        ent_apellidos = ?,
-                        ent_tipo_identificacion = ?,
-                        ent_email = ?,
-                        ent_direccion_principal = ?,
-                        ent_telefono_principal = ?
-                        WHERE ent_id = ?",
-                        [$nombres, $apellidos, $tipoIdentificacion, $email, $newDireccion->dir_id, $newTelefono->tel_id, $entidad->ent_id]
-                    );
+                    // 6.3.1. ENTIDAD EXISTE -> actualizamos con la nueva dirección/teléfono
+                    DB::update("UPDATE public.entidad SET
+                                        ent_nombres = ?,
+                                        ent_apellidos = ?,
+                                        ent_tipo_identificacion = ?,
+                                        ent_email = ?,
+                                        ent_direccion_principal = ?,
+                                        ent_telefono_principal = ?
+                                    WHERE ent_id = ?",
+                                    [$nombres, $apellidos, $tipoIdentificacion, $email, $newDireccion->dir_id, $newTelefono->tel_id, $entidad->ent_id]);
 
                     $entId = $entidad->ent_id;
                 } else {
-                    // 6.3.2: ENTIDAD NO EXISTE -> crear nueva entidad
-                    $valor1 = DB::selectOne("SELECT to_number(par_texto,'999999') as tit_id from parametro where par_abreviacion='TIT' and mod_abreviatura='CLI' limit 1");
+                    // 6.3.2. ENTIDAD NO EXISTE -> creamos la nueva entidad
+                    $valor1 = DB::selectOne("SELECT to_number(par_texto,'999999') AS tit_id
+                                                FROM parametro
+                                                WHERE par_abreviacion='TIT'
+                                                    AND mod_abreviatura='CLI'
+                                                LIMIT 1");
 
                     $newEntidad = new Entidad();
                     $newEntidad->ent_identificacion = $identificacion;
@@ -192,21 +190,55 @@ class DynamoClienteController extends Controller
                     $entId = $newEntidad->ent_id;
                 }
 
-                // 6.4: Obtener parámetros por defecto para el nuevo cliente
+                // 6.4. Obtener datos por defecto para el nuevo cliente
                 // Ubicación
-                $valor2 = DB::selectOne("SELECT to_number(par_texto,'999999') as tit_id from parametro where par_abreviacion='UBI' and mod_abreviatura='CLI' LIMIT 1");
-                // Zona
-                $valor3 = DB::selectOne("SELECT zon_id from zona where zon_codigo in (select par_texto from parametro where par_abreviacion='ZON' and mod_abreviatura='CLI' limit 1) limit 1");
-                // Categoría
-                $valor4 = DB::selectOne("SELECT cat_id from catcliente where cat_abreviacion = 'clien'");
-                // Política
-                $valor5 = DB::selectOne("SELECT pol_id from politica where pol_nombre = 'CONTADO' and pol_tipocli = 1");
-                // Lista de precios
-                $valor6 = DB::selectOne("SELECT lpr_id from listapre where lpr_nombre in (select par_texto from parametro where par_abreviacion='LPR' and mod_abreviatura='CLI' limit 1) limit 1");
-                // Canal
-                $valor7 = DB::selectOne("SELECT to_number(par_texto,'999999') as can_id from parametro where par_abreviacion='CAN' and mod_abreviatura='CLI' limit 1");
+                $valor2 = DB::selectOne("SELECT to_number(par_texto,'999999') AS tit_id
+                                            FROM parametro
+                                            WHERE par_abreviacion='UBI'
+                                                AND mod_abreviatura='CLI'
+                                            LIMIT 1");
 
-                // 6.5: Crear nuevo cliente
+                // Zona
+                $valor3 = DB::selectOne("SELECT zon_id
+                                            FROM zona
+                                            WHERE zon_codigo
+                                                IN (SELECT par_texto
+                                                        FROM parametro
+                                                        WHERE par_abreviacion='ZON'
+                                                            AND mod_abreviatura='CLI'
+                                                        LIMIT 1)
+                                            LIMIT 1");
+
+                // Categoría
+                $valor4 = DB::selectOne("SELECT cat_id
+                                            FROM catcliente
+                                            WHERE cat_abreviacion = 'clien'");
+
+                // Política
+                $valor5 = DB::selectOne("SELECT pol_id
+                                            FROM politica
+                                            WHERE pol_nombre = 'CONTADO'
+                                                AND pol_tipocli = 1");
+
+                // Lista de precios
+                $valor6 = DB::selectOne("SELECT lpr_id
+                                            FROM listapre
+                                            WHERE lpr_nombre
+                                                IN (SELECT par_texto
+                                                        FROM parametro
+                                                        WHERE par_abreviacion='LPR'
+                                                            AND mod_abreviatura='CLI'
+                                                        LIMIT 1)
+                                            LIMIT 1");
+
+                // Canal
+                $valor7 = DB::selectOne("SELECT to_number(par_texto,'999999') AS can_id
+                                            FROM parametro
+                                            WHERE par_abreviacion='CAN'
+                                                AND mod_abreviatura='CLI'
+                                            LIMIT 1");
+
+                // 6.5. Crear nuevo cliente
                 $newCliente = new Cliente();
 
                 $newCliente->cli_codigo = $identificacion;
@@ -227,15 +259,14 @@ class DynamoClienteController extends Controller
                 $newCliente->cli_activo = true;
                 $newCliente->save();
 
-                // 6.6: Asignar tipo de pago por defecto sfp_id=1
-                DB::insert("insert into cliente_tipo_pago(cli_id, sfp_id) values (?, 1)", [$newCliente->cli_id]);
+                // 6.6. Asignar tipo de pago por defecto sfp_id=1
+                DB::insert("INSERT INTO cliente_tipo_pago(cli_id, sfp_id)
+                            VALUES (?, 1)", [$newCliente->cli_id]);
 
-                // 6.7: Registrar datos del cónyuge (opcional)
+                // 6.7. Registrar datos del cónyuge (opcional)
                 if ($identificacionConyugue && $nombreConyugue && $apellidoConyugue) {
-                    DB::insert(
-                        "INSERT into cliente_anexo(cliane_identificacion_conyuge, cliane_nombre_conyuge,cli_id) values (?,?,?)",
-                        [$identificacionConyugue, $nombreConyugue, $newCliente->cli_id]
-                    );
+                    DB::insert("INSERT INTO cliente_anexo(cliane_identificacion_conyuge, cliane_nombre_conyuge,cli_id)
+                                VALUES (?,?,?)", [$identificacionConyugue, $nombreConyugue, $newCliente->cli_id]);
                 }
 
                 // 6.8: Registrar el cliente al corredor Netos en Dynamo
