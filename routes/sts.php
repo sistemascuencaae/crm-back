@@ -4,14 +4,22 @@ use App\Http\Controllers\sts\ArchivoStsController;
 use App\Http\Controllers\sts\DynamoClienteController;
 use Illuminate\Support\Facades\Route;
 
-// Route::group(['prefix' => 'sts', 'middleware' => 'auth:api'], function () {
+// Rutas PROTEGIDAS (requieren token JWT del usuario/proveedor)
 Route::group(["prefix" => "sts", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
-    // CLIENTE DYNAMO
+    // CLIENTE DYNAMO: el proveedor pide el link firmado con sus credenciales
+    Route::post('/generarLinkFormulario', [DynamoClienteController::class, 'generarLinkFormulario']);
     Route::post('/verificarClienteDynamo', [DynamoClienteController::class, 'verificarClienteDynamo']);
-    Route::post('/addDynamoCliente', [DynamoClienteController::class, 'addDynamoCliente']);
 
     // ARCHIVOS
     Route::post('/addArchivos', [ArchivoStsController::class, 'addArchivos']);
     Route::post('/listArchivos', [ArchivoStsController::class, 'listArchivos']);
     Route::post('/deleteArchivo', [ArchivoStsController::class, 'deleteArchivo']);
+});
+
+// Rutas PÚBLICAS del formulario Dynamo (sin login).
+// Protegidas por token cifrado (Crypt, validado en el controlador) + rate limit.
+// throttle:10,1 = máx 10 peticiones por minuto por IP.
+Route::group(["prefix" => "sts", 'middleware' => ['throttle:10,1']], function ($router) {
+    Route::post('/validarEnlace', [DynamoClienteController::class, 'validarEnlace']);
+    Route::post('/addDynamoCliente', [DynamoClienteController::class, 'addDynamoCliente']);
 });

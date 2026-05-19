@@ -12,7 +12,9 @@ use App\Models\sts\ClientesMultinivel;
 use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Validator;
 
 class DynamoClienteController extends Controller
@@ -73,6 +75,15 @@ class DynamoClienteController extends Controller
     public function addDynamoCliente(Request $request)
     {
         try {
+            // 0. Descifrar y validar el token de la URL (caducidad + integridad).
+            // El usuario_netos sale de aquí, NO del formulario.
+            $credenciales = $this->validarTokenEnlace($request);
+            if ($credenciales instanceof JsonResponse) {
+                return $credenciales;
+            }
+
+            $usuarioNetos = trim($credenciales['usuario_netos']);
+
             $identificacion = trim($request->input('identificacion'));
             $tipoidentificacion = trim($request->input('tipoidentificacion'));
 
@@ -104,7 +115,6 @@ class DynamoClienteController extends Controller
                 'email' => 'required|string',
                 'telefono' => 'required|string',
                 'direccion' => 'required|string',
-                'usuario_netos' => 'required|string',
             ]);
 
             if ($validator->fails()) {
@@ -128,7 +138,7 @@ class DynamoClienteController extends Controller
                                         WHERE SUBSTRING(TRIM(e.ent_identificacion), 1, 10) = ?", [$identificacionBusqueda]);
 
             // 6. Crear cliente básico
-            $cliente = DB::transaction(function () use ($request, $entidad) {
+            DB::transaction(function () use ($request, $entidad, $usuarioNetos) {
                 $direccion = mb_strtoupper(trim($request->input('direccion')));
                 $telefono = trim($request->input('telefono'));
                 $identificacion = trim($request->input('identificacion'));
@@ -157,7 +167,8 @@ class DynamoClienteController extends Controller
 
                 if ($entidad) {
                     // 6.3.1. ENTIDAD EXISTE -> actualizamos con la nueva dirección/teléfono
-                    DB::update("UPDATE public.entidad SET
+                    DB::update(
+                        "UPDATE public.entidad SET
                                         ent_nombres = ?,
                                         ent_apellidos = ?,
                                         ent_tipo_identificacion = ?,
@@ -165,7 +176,8 @@ class DynamoClienteController extends Controller
                                         ent_direccion_principal = ?,
                                         ent_telefono_principal = ?
                                     WHERE ent_id = ?",
-                                    [$nombres, $apellidos, $tipoIdentificacion, $email, $newDireccion->dir_id, $newTelefono->tel_id, $entidad->ent_id]);
+                        [$nombres, $apellidos, $tipoIdentificacion, $email, $newDireccion->dir_id, $newTelefono->tel_id, $entidad->ent_id]
+                    );
 
                     $entId = $entidad->ent_id;
                 } else {
@@ -270,18 +282,130 @@ class DynamoClienteController extends Controller
                 }
 
                 // 6.8: Registrar el cliente al corredor Netos en Dynamo
-                $usuarioNetos = trim($request->input('usuario_netos'));
+                // ($usuarioNetos proviene del token cifrado, no del formulario)
                 $clienteMultinivel = new ClientesMultinivel();
                 $clienteMultinivel->cli_id = $newCliente->cli_id;
                 $clienteMultinivel->usuario_netos = $usuarioNetos;
                 $clienteMultinivel->save();
-
-                return $newCliente;
             });
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Cliente creado con éxito', $cliente));
+            return response()->json(RespuestaApi::returnResultado('success', 'Cliente creado con éxito', null));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
+    }
+
+
+
+
+    // Version 1.0
+    public function generarLinkFormulario(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'usuario_netos' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Validación datos incorrectos', $validator->errors()));
+            }
+
+            $usuarioNetos = trim($request->input('usuario_netos'));
+
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'URL-FRONTEND')
+                ->first();
+
+            if (!$parametro || empty($parametro->valor)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No está configurado el parámetro URL-FRONTEND.', null));
+            }
+
+            // valor = "base,/ruta?t=,minutos"
+            // [0] URL del frontend, [1] ruta del formulario, [2] minutos de vigencia
+            $partes = explode(',', $parametro->valor);
+
+            $ruta = isset($partes[1]) ? trim($partes[1]) : '';
+            if ($ruta === '') {
+                return response()->json(RespuestaApi::returnResultado('error', 'No está configurada la ruta del formulario en el parámetro URL-FRONTEND.', null));
+            }
+
+            $minutos = isset($partes[2]) ? (int) trim($partes[2]) : 0;
+            if ($minutos < 1) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No está configurado el tiempo de duración en el parámetro URL-FRONTEND.', null));
+            }
+
+            if ($parametro->activar == true) {
+                $base = rtrim(trim($partes[0]), '/');
+            } else {
+                $base = 'http://192.168.1.142:4201';
+            }
+
+            $expires = now()->addMinutes($minutos)->timestamp;
+
+            // Credenciales cifrado y autenticado: nadie puede leerlo ni manipularlo
+            $t = Crypt::encryptString(json_encode([
+                'usuario_netos' => $usuarioNetos,
+                'expires' => $expires,
+            ]));
+
+            $url = $base . $ruta . urlencode($t);
+
+            // Solo se devuelve la URL
+            return response()->json(RespuestaApi::returnResultado('success', 'Link generado con éxito', ['url' => $url,]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+
+
+    // Version 1.0
+    // Valida únicamente el token del enlace
+    public function validarEnlace(Request $request)
+    {
+        try {
+            // Descifrar y validar el token del enlace (caducidad + integridad)
+            $credenciales = $this->validarTokenEnlace($request);
+
+            if ($credenciales instanceof JsonResponse) {
+                return $credenciales;
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Enlace válido', null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+
+
+    // Descifra y valida el token ?t= del enlace (caducidad + integridad).
+    // Devuelve el array de las credenciales (['usuario_netos' => ..., 'expires' => ...])
+    // Metodo privado que se usa para validar si la url es correcta en el metodo addDynamoCliente
+    private function validarTokenEnlace(Request $request)
+    {
+        $t = (string) $request->input('t');
+
+        if ($t === '') {
+            return response()->json(RespuestaApi::returnResultado('error', 'Enlace no válido.', null));
+        }
+
+        try {
+            $credenciales = json_decode(Crypt::decryptString($t), true);
+        } catch (\Throwable $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Enlace no válido.', null));
+        }
+
+        if (!is_array($credenciales) || empty($credenciales['usuario_netos']) || empty($credenciales['expires'])) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Enlace no válido.', null));
+        }
+
+        if ((int) $credenciales['expires'] < now()->timestamp) {
+            return response()->json(RespuestaApi::returnResultado('error', 'El enlace ha expirado. Solicite uno nuevo.', null));
+        }
+
+        return $credenciales;
     }
 }
