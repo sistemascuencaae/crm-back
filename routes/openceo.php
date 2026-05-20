@@ -88,10 +88,13 @@ Route::group(['prefix' => 'open', 'middleware' => ['jwt.auth', 'usuario.activo']
     Route::post('/previewExcelSeries', [SeriesController::class, 'previewExcelSeries']);
     Route::post('/addSeriesProductos', [SeriesController::class, 'addSeriesProductos']);
     Route::get('/listTiposProductoDynamo', [SeriesController::class, 'listTiposProductoDynamo']);
+    Route::get('/listTiposConParametrosDynamo', [SeriesController::class, 'listTiposConParametrosDynamo']);
     Route::get('/listProductosActivosByTprId/{tpr_id}', [SeriesController::class, 'listProductosActivosByTprId']);
     Route::post('/validarColumnasProducto', [SeriesController::class, 'validarColumnasProducto']);
+    Route::post('/chequearCampo1Existentes', [SeriesController::class, 'chequearCampo1Existentes']);
     Route::get('/listLotesSeries', [SeriesController::class, 'listLotesSeries']);
     Route::get('/getSeriesByLote/{codigo_lote}', [SeriesController::class, 'getSeriesByLote']);
     Route::get('/downloadLoteSeries/{codigo_lote}', [SeriesController::class, 'downloadLoteSeries']);
+    Route::get('/downloadPlantillaSeries/{tpr_id}', [SeriesController::class, 'downloadPlantillaSeries']);
     Route::delete('/deleteLoteSeries/{codigo_lote}', [SeriesController::class, 'deleteLoteSeries']);
 });

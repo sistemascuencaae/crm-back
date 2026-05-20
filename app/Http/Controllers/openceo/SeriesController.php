@@ -10,59 +10,57 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-/**
- * Controlador de Series para carga masiva desde Excel.
- *
- * Flujo del modulo:
- *   1) previewExcelSeries        -> Lee el Excel y devuelve sus filas como JSON.
- *   2) listTiposProductoDynamo   -> Llena el dropdown del modal de tipo de producto.
- *   3) validarColumnasProducto   -> Valida que las columnas del Excel coincidan con
- *                                   los parametros del tipo seleccionado.
- *   4) listProductosActivosByTprId -> Llena el ng-select de productos filtrados.
- *   5) addSeriesProductos        -> Inserta los registros en la tabla series.
- */
 class SeriesController extends Controller
 {
-    // Tope maximo de filas por lote (proteccion contra archivos enormes).
     private const MAX_FILAS = 5000;
 
-    /**
-     * Lista los tipos de producto activos que se mostraran en el modal.
-     * Excluye los marcados como tpr_reporta = 209 (regla de negocio existente).
-     *
-     * @return \Illuminate\Http\JsonResponse  data: [{tpr_id, tpr_nombre}, ...]
-     */
     public function listTiposProductoDynamo()
     {
         try {
             $data = DB::select("SELECT tpr_id, tpr_nombre
                                 FROM public.tipo_producto
-                                WHERE tpr_activo = true AND tpr_reporta <> 209
+                                WHERE tpr_activo = true
+                                    AND tpr_reporta <> 209
                                 ORDER BY tpr_nombre ASC");
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
     }
 
-    /**
-     * Lista los productos activos pertenecientes a un tipo de producto especifico.
-     * Se invoca desde el frontend solo despues de que se valido el tpr_id en el modal.
-     *
-     * @param  int|string $tpr_id ID del tipo de producto (viene como parametro de URL).
-     * @return \Illuminate\Http\JsonResponse  data: [{pro_id, producto}, ...]
-     */
+    public function listTiposConParametrosDynamo()
+    {
+        try {
+            $data = DB::select("SELECT DISTINCT tp.tpr_id, tp.tpr_nombre
+                                FROM public.tipo_producto tp
+                                INNER JOIN public.parametros_tipo_producto ptp ON ptp.tpr_id = tp.tpr_id
+                                    AND ptp.estado = true
+                                WHERE tp.tpr_activo = true
+                                    AND tp.tpr_reporta <> 209
+                                ORDER BY tp.tpr_nombre ASC");
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
     public function listProductosActivosByTprId($tpr_id)
     {
         try {
-            // Validacion basica del tipo: debe ser numero positivo.
             if (!is_numeric($tpr_id) || (int) $tpr_id <= 0) {
                 return response()->json(RespuestaApi::returnResultado('error', 'tpr_id invalido.', []), 422);
             }
 
-            // CONCAT(codigo, ' - ', nombre) -> facilita la busqueda en el ng-select del frontend.
             $data = DB::select("SELECT p.pro_id, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto
                                 FROM public.producto p
                                 WHERE p.pro_activo = true
@@ -75,13 +73,6 @@ class SeriesController extends Controller
         }
     }
 
-    /**
-     * Lista todos los lotes de series cargados, agrupados por codigo_lote.
-     * Cada lote incluye: usuario que lo subio, tipo de producto, observacion,
-     * cantidad de registros y fecha del primer registro del lote.
-     *
-     * @return \Illuminate\Http\JsonResponse  data: [{codigo_lote, user_id, usuario, tpr_id, tpr_nombre, observacion, total_registros, fecha}, ...]
-     */
     public function listLotesSeries()
     {
         try {
@@ -97,8 +88,7 @@ class SeriesController extends Controller
                                 FROM public.series s
                                     LEFT JOIN crm.users u ON u.id = s.user_id
                                     LEFT JOIN public.tipo_producto tp ON tp.tpr_id = s.tpr_id
-                                GROUP BY s.codigo_lote, s.user_id, u.usu_alias, u.name, u.surname,
-                                         s.tpr_id, tp.tpr_nombre, s.observacion
+                                GROUP BY s.codigo_lote, s.user_id, u.usu_alias, u.name, u.surname, s.tpr_id, tp.tpr_nombre, s.observacion
                                 ORDER BY MIN(s.created_at) DESC");
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', $data));
@@ -107,67 +97,43 @@ class SeriesController extends Controller
         }
     }
 
-    /**
-     * Devuelve el array de columnas (en orden) definido en parametros_tipo_producto
-     * para un tipo de producto. Reutiliza el mismo parseo que la validacion.
-     *
-     * @param  int $tprId
-     * @return array  Ej: ['MARCA', 'Modelo', 'Procesador']
-     */
+    // Devuelve el array de columnas en el orden del parametros_tipo_producto
     private function columnasDelTipoProducto(int $tprId): array
     {
-        // NO se filtra por estado a proposito: para VER/DESCARGAR lotes historicos
-        // necesitamos los nombres de columna aunque el parametro ya este desactivado.
-        // ORDER BY estado DESC, id DESC -> determinista: prefiere el activo y, si
-        // hubiera mas de uno (no deberia), el mas reciente.
-        $row = DB::select(
-            "SELECT string_to_array(
-                        replace(replace(replace(valor, '[', ''), ']', ''), '''', ''),
-                        ','
-                    ) AS columnas_array
-             FROM public.parametros_tipo_producto
-             WHERE tpr_id = ?
-             ORDER BY estado DESC, id DESC
-             LIMIT 1",
-            [$tprId]
-        );
+        $row = DB::select("SELECT string_to_array(replace(replace(replace(valor, '[', ''), ']', ''), '''', ''), ',') AS columnas_array
+                            FROM public.parametros_tipo_producto
+                            WHERE tpr_id = ?
+                            ORDER BY estado DESC, id DESC
+                            LIMIT 1", [$tprId]);
 
         if (empty($row)) {
             return [];
         }
+
         return $this->pgArrayToPhp($row[0]->columnas_array ?? '{}');
     }
 
-    /**
-     * Devuelve los registros de un lote junto con el encabezado (nombres reales
-     * de las columnas tomados del parametro del tipo de producto del lote).
-     *
-     * @param  string $codigo_lote  UUID del lote.
-     * @return \Illuminate\Http\JsonResponse  data: { encabezado, filas, lote }
-     */
     public function getSeriesByLote($codigo_lote)
     {
         try {
             $codigoLote = trim((string) $codigo_lote);
+
             if ($codigoLote === '' || !preg_match('/^[0-9a-fA-F\-]{36}$/', $codigoLote)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'codigo_lote invalido.', []), 422);
             }
 
             // tpr_id del lote (todas las filas comparten el mismo).
-            $cab = DB::select(
-                "SELECT s.tpr_id, tp.tpr_nombre, s.observacion
-                 FROM public.series s
-                 LEFT JOIN public.tipo_producto tp ON tp.tpr_id = s.tpr_id
-                 WHERE s.codigo_lote = ?
-                 LIMIT 1",
-                [$codigoLote]
-            );
+            $cab = DB::select("SELECT s.tpr_id, tp.tpr_nombre, s.observacion
+                                FROM public.series s
+                                LEFT JOIN public.tipo_producto tp ON tp.tpr_id = s.tpr_id
+                                WHERE s.codigo_lote = ?
+                                LIMIT 1", [$codigoLote]);
 
             if (empty($cab)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El lote no existe.', []), 404);
             }
 
-            $tprId    = (int) $cab[0]->tpr_id;
+            $tprId = (int) $cab[0]->tpr_id;
             $columnas = $this->columnasDelTipoProducto($tprId);
             $totalCol = count($columnas);
 
@@ -175,83 +141,69 @@ class SeriesController extends Controller
             $encabezado = [];
             for ($i = 0; $i < $totalCol; $i++) {
                 $encabezado[] = [
-                    'campo'  => 'campo' . ($i + 1),
+                    'campo' => 'campo' . ($i + 1),
                     'titulo' => $columnas[$i],
                 ];
             }
 
             // Traer las filas del lote con el nombre del producto.
-            $filas = DB::select(
-                "SELECT s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre
-                 FROM public.series s
-                 LEFT JOIN public.producto p ON p.pro_id = s.pro_id
-                 WHERE s.codigo_lote = ?
-                 ORDER BY s.id ASC",
-                [$codigoLote]
-            );
+            $filas = DB::select("SELECT s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre
+                                FROM public.series s
+                                LEFT JOIN public.producto p ON p.pro_id = s.pro_id
+                                WHERE s.codigo_lote = ?
+                                ORDER BY s.id ASC", [$codigoLote]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', [
                 'encabezado' => $encabezado,
-                'filas'      => $filas,
-                'lote'       => [
+                'filas' => $filas,
+                'lote' => [
                     'codigo_lote' => $codigoLote,
-                    'tpr_id'      => $tprId,
-                    'tpr_nombre'  => $cab[0]->tpr_nombre,
+                    'tpr_id' => $tprId,
+                    'tpr_nombre' => $cab[0]->tpr_nombre,
                     'observacion' => $cab[0]->observacion,
                 ],
             ]));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
     }
 
-    /**
-     * Genera y descarga un .xlsx con todos los registros del lote.
-     * Columnas: las del parametro (en orden) + Producto + Observacion + Fecha.
-     *
-     * @param  string $codigo_lote  UUID del lote.
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\JsonResponse
-     */
+
     public function downloadLoteSeries($codigo_lote)
     {
         try {
             $codigoLote = trim((string) $codigo_lote);
+
             if ($codigoLote === '' || !preg_match('/^[0-9a-fA-F\-]{36}$/', $codigoLote)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'codigo_lote invalido.', []), 422);
             }
 
-            $cab = DB::select(
-                "SELECT tpr_id FROM public.series WHERE codigo_lote = ? LIMIT 1",
-                [$codigoLote]
-            );
+            $cab = DB::select("SELECT tpr_id FROM public.series WHERE codigo_lote = ? LIMIT 1", [$codigoLote]);
+
             if (empty($cab)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El lote no existe.', []), 404);
             }
 
-            $tprId    = (int) $cab[0]->tpr_id;
+            $tprId = (int) $cab[0]->tpr_id;
             $columnas = $this->columnasDelTipoProducto($tprId);
             $totalCol = count($columnas);
 
-            $filas = DB::select(
-                "SELECT s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre
-                 FROM public.series s
-                 LEFT JOIN public.producto p ON p.pro_id = s.pro_id
-                 WHERE s.codigo_lote = ?
-                 ORDER BY s.id ASC",
-                [$codigoLote]
-            );
+            $filas = DB::select("SELECT s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre
+                                FROM public.series s
+                                LEFT JOIN public.producto p ON p.pro_id = s.pro_id
+                                WHERE s.codigo_lote = ?
+                                ORDER BY s.id ASC", [$codigoLote]);
 
-            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $spreadsheet = new Spreadsheet();
             $hoja = $spreadsheet->getActiveSheet();
 
-            // API moderna de PhpSpreadsheet: setCellValue([col, row], valor).
-            // (setCellValueByColumnAndRow fue removido en versiones nuevas).
+            // PhpSpreadsheet: setCellValue([col, row], valor).
             // Encabezados: columnas del parametro + Producto + Fecha.
             $colIdx = 1;
             for ($i = 0; $i < $totalCol; $i++) {
                 $hoja->setCellValue([$colIdx++, 1], (string) $columnas[$i]);
             }
+
             $hoja->setCellValue([$colIdx++, 1], 'Producto');
             $hoja->setCellValue([$colIdx, 1], 'Fecha');
 
@@ -269,7 +221,7 @@ class SeriesController extends Controller
             }
 
             $nombreArchivo = 'lote_' . substr($codigoLote, 0, 8) . '.xlsx';
-            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer = new Xlsx($spreadsheet);
 
             // Generar el binario en un buffer DENTRO del try para que cualquier
             // error quede capturado (streamDownload se ejecuta fuera del try/catch).
@@ -282,23 +234,15 @@ class SeriesController extends Controller
             unset($spreadsheet, $writer);
 
             return response($contenido, 200, [
-                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'Content-Disposition' => 'attachment; filename="' . $nombreArchivo . '"',
-                'Content-Length'      => strlen($contenido),
+                'Content-Length' => strlen($contenido),
             ]);
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
     }
 
-    /**
-     * Elimina TODOS los registros de un lote (todas las filas con el mismo codigo_lote).
-     * Operacion destructiva e irreversible.
-     *
-     * @param  string $codigo_lote  UUID del lote (parametro de URL).
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function deleteLoteSeries($codigo_lote)
     {
         try {
@@ -310,10 +254,8 @@ class SeriesController extends Controller
             }
 
             // Verificar que el lote exista antes de intentar borrar.
-            $existe = DB::select(
-                "SELECT 1 AS ok FROM public.series WHERE codigo_lote = ? LIMIT 1",
-                [$codigoLote]
-            );
+            $existe = DB::select("SELECT 1 AS ok FROM public.series WHERE codigo_lote = ? LIMIT 1", [$codigoLote]);
+
             if (empty($existe)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El lote no existe o ya fue eliminado.', []), 404);
             }
@@ -328,61 +270,37 @@ class SeriesController extends Controller
                 'eliminados'  => $eliminados,
                 'codigo_lote' => $codigoLote,
             ]));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
     }
 
-    /**
-     * Valida los encabezados del Excel contra los parametros definidos para el tipo de producto.
-     *
-     * Tres niveles de validacion:
-     *   1) Existencia del parametro (parametros_tipo_producto.tpr_id).
-     *   2) Cantidad de columnas: deben coincidir exacto.
-     *   3) Nombres: invoca a la funcion SQL crm.validar_columnas_producto (case-insensitive).
-     *
-     * Si todo OK -> devuelve el orden correcto de las columnas para que el frontend
-     * reordene el preview y guarde los datos alineados al parametro.
-     *
-     * @param  Request $request  body: { tpr_id: int, headers: string[] }
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function validarColumnasProducto(Request $request)
     {
         try {
-            $tprId   = $request->input('tpr_id');
+            $tprId = $request->input('tpr_id');
             $headers = $request->input('headers');
 
             // Validacion de inputs basicos.
             if (!is_numeric($tprId) || (int) $tprId <= 0) {
                 return response()->json(RespuestaApi::returnResultado('error', 'tpr_id es requerido.', []), 422);
             }
+
             if (!is_array($headers) || empty($headers)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Los headers del Excel son requeridos.', []), 422);
             }
 
             // 1) Buscar el parametro ACTIVO definido para este tpr_id y extraer su array.
-            //    El campo `valor` se guarda como string tipo "['col1','col2','col3']".
-            //    Se limpia con replaces y se hace split por coma usando string_to_array.
-            //    Para CARGA NUEVA solo valen parametros con estado = true; si esta
-            //    desactivado se trata como inexistente (no se permite cargar contra el).
-            //    ORDER BY id DESC -> determinista si hubiera mas de uno (no deberia).
-            $parametroInfo = DB::select(
-                "SELECT string_to_array(
-                            replace(replace(replace(valor, '[', ''), ']', ''), '''', ''),
-                            ','
-                        ) AS columnas_array
-                 FROM public.parametros_tipo_producto
-                 WHERE tpr_id = ? AND estado = true
-                 ORDER BY id DESC
-                 LIMIT 1",
-                [(int) $tprId]
-            );
+            $parametroInfo = DB::select("SELECT string_to_array(replace(replace(replace(valor, '[', ''), ']', ''), '''', ''), ',') AS columnas_array
+                                        FROM public.parametros_tipo_producto
+                                        WHERE tpr_id = ? AND estado = true
+                                        ORDER BY id DESC
+                                        LIMIT 1", [(int) $tprId]);
 
             // Si no hay parametro ACTIVO para este tipo, no se puede validar nada.
             if (empty($parametroInfo)) {
-                return response()->json(RespuestaApi::returnResultado('error',
+                return response()->json(RespuestaApi::returnResultado(
+                    'error',
                     'El parametro para este tipo de producto no existe. Por favor comuniquese con el administrador.',
                     ['sin_parametro' => true]
                 ), 422);
@@ -390,16 +308,17 @@ class SeriesController extends Controller
 
             // Convertir el array nativo de PostgreSQL ("{a,b,c}") a array PHP limpio.
             $columnasParamRaw = $parametroInfo[0]->columnas_array ?? '{}';
-            $ordenColumnas    = $this->pgArrayToPhp($columnasParamRaw);
+            $ordenColumnas = $this->pgArrayToPhp($columnasParamRaw);
 
             // Normalizar (trim) cada header recibido para que las comparaciones sean fiables.
-            $headersClean   = array_values(array_map(fn($h) => trim((string) $h), $headers));
-            $totalEsperado  = count($ordenColumnas);
-            $totalRecibido  = count($headersClean);
+            $headersClean = array_values(array_map(fn($h) => trim((string) $h), $headers));
+            $totalEsperado = count($ordenColumnas);
+            $totalRecibido = count($headersClean);
 
             // 2) La cantidad de columnas debe coincidir exacto con el parametro.
             if ($totalEsperado > 0 && $totalRecibido !== $totalEsperado) {
-                return response()->json(RespuestaApi::returnResultado('error',
+                return response()->json(RespuestaApi::returnResultado(
+                    'error',
                     "El parametro espera $totalEsperado columna(s) pero el Excel tiene $totalRecibido. Corrige el archivo y vuelve a subirlo.",
                     [
                         'cantidad_incorrecta' => true,
@@ -409,28 +328,33 @@ class SeriesController extends Controller
                 ), 422);
             }
 
-            // 3) Validar nombres llamando a la funcion SQL crm.validar_columnas_producto.
-            //    La funcion devuelve TABLE(nombre TEXT, estado TEXT) con 'OK' o 'NO EXISTE'.
-            $arrayLiteral = $this->toPgArrayLiteral($headersClean);
-            $resultado = DB::select(
-                "SELECT nombre, estado FROM crm.validar_columnas_producto(?::int, ?::text[])",
-                [(int) $tprId, $arrayLiteral]
-            );
+            // 3) Validar nombres: para cada header recibido verificar que exista
+            //    en $ordenColumnas (case-insensitive). Antes esto se hacia con
+            //    la funcion SQL crm.validar_columnas_producto, pero esa funcion
+            //    no esta presente en todos los entornos (faltaba en produccion
+            //    y rompia la validacion). Hacerlo en PHP elimina la dependencia
+            //    de un objeto de BD que puede no estar deployado.
+            $ordenLowerSet = array_flip(array_map(
+                fn($c) => strtolower(trim((string) $c)),
+                $ordenColumnas
+            ));
 
-            // Recolectar las columnas que NO existen para reportarlas al usuario.
+            $resultado = [];
             $noExisten = [];
-            foreach ($resultado as $r) {
-                $estado = strtoupper(trim((string) ($r->estado ?? '')));
-                if ($estado !== 'OK') {
-                    $noExisten[] = (string) ($r->nombre ?? '');
+            foreach ($headersClean as $h) {
+                $existe = isset($ordenLowerSet[strtolower($h)]);
+                $resultado[] = (object) ['nombre' => $h, 'estado' => $existe ? 'OK' : 'NO EXISTE'];
+                if (!$existe) {
+                    $noExisten[] = $h;
                 }
             }
 
             if (!empty($noExisten)) {
-                return response()->json(RespuestaApi::returnResultado('error',
+                return response()->json(RespuestaApi::returnResultado(
+                    'error',
                     'Las siguientes columnas no existen para el tipo de producto seleccionado: ' . implode(', ', $noExisten),
                     [
-                        'validacion'        => $resultado,
+                        'validacion' => $resultado,
                         'columnasNoExisten' => $noExisten,
                     ]
                 ), 422);
@@ -438,22 +362,159 @@ class SeriesController extends Controller
 
             // Exito: devolvemos tambien el orden correcto para que el frontend reordene el preview.
             return response()->json(RespuestaApi::returnResultado('success', 'Todas las columnas son validas.', [
-                'validacion'     => $resultado,
+                'validacion' => $resultado,
                 'orden_columnas' => $ordenColumnas,
             ]));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
     }
 
-    /**
-     * Convierte el literal de array nativo de PostgreSQL a array PHP.
-     * Ejemplos: "{a,b,c}" o "{\"a\",\"b,c\"}" -> ['a','b','c'] / ['a','b,c']
-     *
-     * Usa str_getcsv porque maneja correctamente valores entre comillas con
-     * comas internas (que pueden venir de PostgreSQL).
-     */
+    public function chequearCampo1Existentes(Request $request)
+    {
+        try {
+            $campo1 = $request->input('campo1');
+
+            if (!is_array($campo1)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El campo "campo1" debe ser un array.', []), 422);
+            }
+
+            // Normalizar: trim, descartar vacios y deduplicar antes de consultar.
+            $valores = [];
+            foreach ($campo1 as $v) {
+                $s = trim((string) $v);
+                if ($s !== '') {
+                    $valores[$s] = true;
+                }
+            }
+            $valores = array_keys($valores);
+
+            // Si no quedo nada que consultar, salida temprana.
+            if (empty($valores)) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Sin valores a chequear.', [
+                    'existentes' => [],
+                ]));
+            }
+
+            // Consultar en chunks para no exceder el limite de parametros de Postgres.
+            $existentes = [];
+            foreach (array_chunk($valores, 1000) as $chunk) {
+                $ph = rtrim(str_repeat('?,', count($chunk)), ',');
+
+                $rows = DB::select("SELECT DISTINCT campo1 FROM public.series WHERE campo1 IN ($ph)", $chunk);
+
+                foreach ($rows as $r) {
+                    $existentes[] = (string) $r->campo1;
+                }
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se chequeo con exito.', [
+                'existentes' => array_values(array_unique($existentes)),
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    public function downloadPlantillaSeries($tpr_id)
+    {
+        try {
+            if (!is_numeric($tpr_id) || (int) $tpr_id <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'tpr_id invalido.', []), 422);
+            }
+            $tprId = (int) $tpr_id;
+
+            // Obtener nombre del tipo + las columnas del parametro ACTIVO.
+            // LEFT JOIN para distinguir "tipo no existe" de "tipo sin parametro".
+            $cab = DB::select(
+                "SELECT tp.tpr_nombre,
+                            string_to_array(replace(replace(replace(ptp.valor, '[', ''), ']', ''), '''', ''), ',') AS columnas_array
+                            FROM public.tipo_producto tp
+                            LEFT JOIN public.parametros_tipo_producto ptp ON ptp.tpr_id = tp.tpr_id
+                                AND ptp.estado = true
+                            WHERE tp.tpr_id = ?
+                            ORDER BY ptp.id DESC
+                            LIMIT 1",
+                [$tprId]
+            );
+
+            if (empty($cab)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El tipo de producto no existe.', []), 404);
+            }
+
+            if (empty($cab[0]->columnas_array)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este tipo no tiene parametros activos definidos.', []), 422);
+            }
+
+            $tprNombre = (string) $cab[0]->tpr_nombre;
+            $columnas = $this->pgArrayToPhp((string) $cab[0]->columnas_array);
+            $totalCol = count($columnas);
+
+            if ($totalCol === 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El parametro de este tipo esta vacio.', []), 422);
+            }
+
+            // Construir el spreadsheet.
+            $spreadsheet = new Spreadsheet();
+            $hoja = $spreadsheet->getActiveSheet();
+            $hoja->setTitle('Plantilla');
+
+            // Letra de la ultima columna (ej. totalCol=19 -> 'S') para los ranges.
+            $ultLetra = Coordinate::stringFromColumnIndex($totalCol);
+
+            // 1) Escribir headers en fila 1.
+            for ($i = 0; $i < $totalCol; $i++) {
+                $hoja->setCellValue([$i + 1, 1], (string) $columnas[$i]);
+            }
+
+            // 2) Formato TEXTO en TODO el rango util de la plantilla.
+            $ultimaFila = self::MAX_FILAS + 1;
+            $hoja->getStyle("A1:{$ultLetra}{$ultimaFila}")
+                ->getNumberFormat()
+                ->setFormatCode(NumberFormat::FORMAT_TEXT);
+
+            // 3) Estilo del header: negrita + fondo gris claro + centrado.
+            $estiloHeader = $hoja->getStyle("A1:{$ultLetra}1");
+            $estiloHeader->getFont()->setBold(true)->setSize(11);
+            $estiloHeader->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFE5E7EB');
+            $estiloHeader->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            // 4) Congelar la fila de headers para que siga visible al hacer scroll.
+            $hoja->freezePane('A2');
+
+            // 5) Ancho automatico por columna.
+            for ($i = 1; $i <= $totalCol; $i++) {
+                $letra = Coordinate::stringFromColumnIndex($i);
+                $hoja->getColumnDimension($letra)->setAutoSize(true);
+            }
+
+            // Generar el binario en buffer (mismo patron que downloadLoteSeries).
+            $writer = new Xlsx($spreadsheet);
+            ob_start();
+            $writer->save('php://output');
+            $contenido = ob_get_clean();
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet, $writer);
+
+            // Nombre seguro: reemplazar cualquier caracter raro por "_".
+            $nombreLimpio = preg_replace('/[^a-zA-Z0-9_-]/', '_', $tprNombre);
+            $nombreArchivo = 'plantilla_' . ($nombreLimpio !== '' ? $nombreLimpio : ('tpr_' . $tprId)) . '.xlsx';
+
+            return response($contenido, 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $nombreArchivo . '"',
+                'Content-Length' => strlen($contenido),
+            ]);
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // Convierte el literal de array nativo de PostgreSQL a array PHP.
+    // Ejemplos: "{a,b,c}" o "{\"a\",\"b,c\"}" -> ['a','b','c'] / ['a','b,c']
     private function pgArrayToPhp(string $pgArray): array
     {
         $s = trim($pgArray);
@@ -473,30 +534,6 @@ class SeriesController extends Controller
         ));
     }
 
-    /**
-     * Convierte un array PHP al formato literal de array PostgreSQL: {"a","b","c"}
-     * Escapa backslashes y comillas dobles internas. Se usa para pasar arrays
-     * como parametros con cast ::text[].
-     */
-    private function toPgArrayLiteral(array $values): string
-    {
-        $escaped = array_map(function ($v) {
-            $s = (string) $v;
-            // El orden importa: primero backslash (porque escapar la comilla agrega backslash).
-            $s = str_replace('\\', '\\\\', $s);
-            $s = str_replace('"', '\\"', $s);
-            return '"' . $s . '"';
-        }, $values);
-        return '{' . implode(',', $escaped) . '}';
-    }
-
-    /**
-     * Lee un archivo Excel (.xlsx, .xls o .csv) y devuelve sus filas como JSON.
-     * Mapea cada columna en orden a "campo1", "campo2", ..., "campoN".
-     *
-     * @param  Request $request  multipart/form-data con el campo "archivo".
-     * @return \Illuminate\Http\JsonResponse  data: { encabezado, filas, totalFilas, totalColumnas }
-     */
     public function previewExcelSeries(Request $request)
     {
         try {
@@ -512,9 +549,9 @@ class SeriesController extends Controller
                 ['archivo' => 'required|file|mimes:xlsx,xls,csv|max:10240'],
                 [
                     'archivo.required' => 'Debes adjuntar un archivo en el campo "archivo".',
-                    'archivo.file'     => 'El campo "archivo" debe ser un archivo valido.',
-                    'archivo.mimes'    => 'El archivo debe ser .xlsx, .xls o .csv.',
-                    'archivo.max'      => 'El archivo no puede exceder 10 MB.',
+                    'archivo.file' => 'El campo "archivo" debe ser un archivo valido.',
+                    'archivo.mimes' => 'El archivo debe ser .xlsx, .xls o .csv.',
+                    'archivo.max' => 'El archivo no puede exceder 10 MB.',
                 ]
             );
 
@@ -541,8 +578,8 @@ class SeriesController extends Controller
             //   - false: NO formatear (importante para que las fechas no se reordenen segun locale).
             //   - false: NO usar referencias de celda (devuelve indices 0..N).
             $spreadsheet = IOFactory::load($archivo->getRealPath());
-            $hoja        = $spreadsheet->getActiveSheet();
-            $filas       = $hoja->toArray(null, true, false, false);
+            $hoja = $spreadsheet->getActiveSheet();
+            $filas = $hoja->toArray(null, true, false, false);
 
             // Debe haber al menos encabezado (fila 1) + 1 fila de datos.
             if (count($filas) < 2) {
@@ -564,11 +601,21 @@ class SeriesController extends Controller
                 ];
             }
 
-            // Procesar cada fila de datos: saltar las completamente vacias y limitar al maximo.
+            // Procesar cada fila de datos: saltar las completamente vacias y
+            // RECHAZAR el archivo si excede el limite (en vez de truncar en
+            // silencio, que es peligroso porque el usuario no se entera de
+            // que se perdieron datos).
             $datos = [];
+            $excedeLimite = false;
             foreach ($filas as $fila) {
                 if ($this->filaVacia($fila)) {
                     continue;
+                }
+                // Si ya tenemos MAX_FILAS Y aparece otra fila no vacia,
+                // el archivo excede el tope -> marcar y salir.
+                if (count($datos) >= self::MAX_FILAS) {
+                    $excedeLimite = true;
+                    break;
                 }
                 $row = [];
                 for ($i = 0; $i < $totalColumnas; $i++) {
@@ -577,11 +624,14 @@ class SeriesController extends Controller
                     $row['campo' . ($i + 1)] = $valor === null ? null : trim((string) $valor);
                 }
                 $datos[] = $row;
+            }
 
-                // Cortar antes de exceder el tope de filas por lote.
-                if (count($datos) >= self::MAX_FILAS) {
-                    break;
-                }
+            if ($excedeLimite) {
+                return response()->json(RespuestaApi::returnResultado(
+                    'error',
+                    'El archivo excede el limite de ' . self::MAX_FILAS . ' filas con datos. Divide el archivo en varios y vuelve a subirlos.',
+                    []
+                ), 422);
             }
 
             // Si despues de filtrar filas vacias no queda nada, error.
@@ -590,46 +640,31 @@ class SeriesController extends Controller
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Preview generado correctamente.', [
-                'encabezado'    => $encabezado,
-                'filas'         => $datos,
-                'totalFilas'    => count($datos),
+                'encabezado' => $encabezado,
+                'filas' => $datos,
+                'totalFilas' => count($datos),
                 'totalColumnas' => $totalColumnas,
             ]));
-
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
     }
 
-    /**
-     * Inserta en la tabla series las filas validadas en el frontend.
-     *
-     * Pasos:
-     *   1) Validaciones de input (filas, tope, user autenticado, observacion, tpr_id).
-     *   2) Defense-in-depth: chequear que todos los pro_id pertenezcan al tpr_id.
-     *   3) Generar codigo_lote (UUID) comun para todas las filas del mismo guardado.
-     *   4) Construir los registros y filtrar las que no tengan pro_id valido.
-     *   5) Insertar en una transaccion en chunks de 500 para no saturar la BD.
-     *
-     * @param  Request $request  body: { filas: array, observacion: string, tpr_id: int }
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function addSeriesProductos(Request $request)
     {
         try {
-            // ----- 1) Validaciones de inputs ---------------------------------------
+            // 1) Validaciones de inputs
             $filas = $request->input('filas');
 
             if (!is_array($filas) || empty($filas)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No hay filas para guardar.', []), 422);
             }
 
-            // Limite duro por lote (proteccion contra DoS por payload gigante).
+            // Limite por lote
             if (count($filas) > self::MAX_FILAS) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El lote excede el limite de ' . self::MAX_FILAS . ' filas.', []), 422);
             }
 
-            // user_id se toma del JWT (la ruta tiene middleware jwt.auth).
             $userId = auth()->id();
             if (!$userId) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se pudo identificar al usuario autenticado.', []), 401);
@@ -637,9 +672,11 @@ class SeriesController extends Controller
 
             // Observacion es OBLIGATORIA y maximo 255 caracteres (igual que en BD).
             $observacion = trim((string) $request->input('observacion', ''));
+
             if ($observacion === '') {
                 return response()->json(RespuestaApi::returnResultado('error', 'La observacion es requerida.', []), 422);
             }
+
             if (mb_strlen($observacion) > 255) {
                 return response()->json(RespuestaApi::returnResultado('error', 'La observacion no puede exceder 255 caracteres.', []), 422);
             }
@@ -651,7 +688,7 @@ class SeriesController extends Controller
             }
             $tprId = (int) $tprId;
 
-            // ----- 2) Defense-in-depth: validar pro_id vs tpr_id -------------------
+            // 2) Defense-in-depth: validar pro_id vs tpr_id
             // El frontend filtra productos por tpr_id, pero un usuario malicioso podria
             // manipular el JSON. Aqui validamos contra la BD que todos los pro_id
             // realmente pertenezcan al tipo seleccionado.
@@ -665,36 +702,36 @@ class SeriesController extends Controller
                     $proIdsRecibidos[(int) $pid] = true;
                 }
             }
+
             $proIdsRecibidos = array_keys($proIdsRecibidos);
 
             if (!empty($proIdsRecibidos)) {
                 // UNA sola query para validar todos los IDs (independiente del numero de filas).
                 $placeholders = rtrim(str_repeat('?,', count($proIdsRecibidos)), ',');
-                $rowsValidos = DB::select(
-                    "SELECT pro_id FROM public.producto
-                     WHERE pro_activo = true AND tpr_id = ? AND pro_id IN ($placeholders)",
-                    array_merge([$tprId], $proIdsRecibidos)
-                );
-                $proIdsValidos   = array_map(fn($r) => (int) $r->pro_id, $rowsValidos);
+                $rowsValidos = DB::select("SELECT pro_id FROM public.producto
+                                            WHERE pro_activo = true AND tpr_id = ? AND pro_id IN ($placeholders)", array_merge([$tprId], $proIdsRecibidos));
+
+                $proIdsValidos = array_map(fn($r) => (int) $r->pro_id, $rowsValidos);
                 $proIdsInvalidos = array_values(array_diff($proIdsRecibidos, $proIdsValidos));
 
                 // Si hay alguno que no esta en la BD para ese tipo -> rechazar todo.
                 if (!empty($proIdsInvalidos)) {
-                    return response()->json(RespuestaApi::returnResultado('error',
+                    return response()->json(RespuestaApi::returnResultado(
+                        'error',
                         'Hay productos que no pertenecen al tipo seleccionado o estan inactivos: ' . implode(', ', $proIdsInvalidos),
                         ['proIdsInvalidos' => $proIdsInvalidos]
                     ), 422);
                 }
             }
 
-            // ----- 3) Generar identificadores del lote -----------------------------
+            // 3) Generar identificadores del lote
             $codigoLote = (string) Str::uuid();
 
             // Forzar timezone de Ecuador para que created_at/updated_at queden consistentes.
             date_default_timezone_set('America/Guayaquil');
             $now = Carbon::now()->toDateTimeString();
 
-            // ----- 4) Construir registros a insertar -------------------------------
+            // 4) Construir registros a insertar
             $insertar = [];
             $filasSinProducto = 0;
             foreach ($filas as $fila) {
@@ -712,12 +749,12 @@ class SeriesController extends Controller
                 // Datos comunes para cada registro del lote.
                 $registro = [
                     'codigo_lote' => $codigoLote,
-                    'user_id'     => $userId,
-                    'tpr_id'      => $tprId,
-                    'pro_id'      => (int) $proId,
+                    'user_id' => $userId,
+                    'tpr_id' => $tprId,
+                    'pro_id' => (int) $proId,
                     'observacion' => $observacion,
-                    'created_at'  => $now,
-                    'updated_at'  => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
 
                 // Copiar los campos campo1..campoN dinamicamente (whitelist con regex).
@@ -747,32 +784,103 @@ class SeriesController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', $msg, []), 422);
             }
 
-            // ----- 5) Insertar en transaccion por chunks ---------------------------
-            // chunks de 500 evitan exceder el limite de parametros de Postgres (~65k).
+            // 4.5) Unicidad de campo1 (global en toda la tabla series)
+            $omitidosDuplicados = []; // valores de campo1 omitidos por duplicado
+            $omitidosSinCampo1 = 0; // filas omitidas por campo1 vacio
+            $vistosEnArchivo = []; // set para deduplicar dentro del archivo
+
+            // a) Recolectar los campo1 NO vacios de las filas a insertar.
+            $campo1Recibidos = [];
+            foreach ($insertar as $reg) {
+                $c1 = isset($reg['campo1']) ? trim((string) $reg['campo1']) : '';
+                if ($c1 !== '') {
+                    $campo1Recibidos[$c1] = true;
+                }
+            }
+            $campo1Recibidos = array_keys($campo1Recibidos);
+
+            // b) Consultar cuales de esos campo1 YA existen en public.series.
+            // En chunks para no exceder el limite de parametros de Postgres.
+            $existentesEnBd = [];
+            foreach (array_chunk($campo1Recibidos, 1000) as $chunk) {
+                $ph = rtrim(str_repeat('?,', count($chunk)), ',');
+                $rows = DB::select("SELECT DISTINCT campo1 FROM public.series WHERE campo1 IN ($ph)", $chunk);
+
+                foreach ($rows as $r) {
+                    $existentesEnBd[(string) $r->campo1] = true;
+                }
+            }
+
+            // c) Filtrar: omitir filas con campo1 vacio (NOT NULL en BD) y las
+            // que ya existen en BD o se repiten dentro de este mismo archivo.
+            $insertarFiltrado = [];
+            foreach ($insertar as $reg) {
+                $c1 = isset($reg['campo1']) ? trim((string) $reg['campo1']) : '';
+                if ($c1 === '') {
+                    $omitidosSinCampo1++;
+                    continue;
+                }
+                if (isset($existentesEnBd[$c1]) || isset($vistosEnArchivo[$c1])) {
+                    $omitidosDuplicados[] = $c1;
+                    continue;
+                }
+                $vistosEnArchivo[$c1] = true;
+                $insertarFiltrado[]   = $reg;
+            }
+            $insertar = $insertarFiltrado;
+            $omitidosDuplicados = array_values(array_unique($omitidosDuplicados));
+            $totalDuplicados = count($omitidosDuplicados);
+
+            // Si tras filtrar no queda nada, error explicando el por que.
+            if (empty($insertar)) {
+                $partes = [];
+                if ($totalDuplicados > 0)   $partes[] = "$totalDuplicados con valor ya existente";
+                if ($omitidosSinCampo1 > 0) $partes[] = "$omitidosSinCampo1 con valor vacio";
+                $detalle = empty($partes) ? '' : ' (' . implode(', ', $partes) . ')';
+                return response()->json(RespuestaApi::returnResultado(
+                    'error',
+                    'No se guardo nada: todas las filas fueron descartadas' . $detalle . '.',
+                    [
+                        'omitidosDuplicados' => $omitidosDuplicados,
+                        'totalDuplicados' => $totalDuplicados,
+                        'omitidosSinCampo1' => $omitidosSinCampo1,
+                    ]
+                ), 422);
+            }
+
+            // 5) Insertar en transaccion de 500 filas
             $insertados = 0;
             DB::transaction(function () use ($insertar, &$insertados) {
                 foreach (array_chunk($insertar, 500) as $chunk) {
-                    DB::table('series')->insert($chunk);
-                    $insertados += count($chunk);
+                    $insertados += DB::table('series')->insertOrIgnore($chunk);
                 }
             });
 
-            // Devolver el codigo_lote para que el frontend pueda referenciarlo si quiere.
-            return response()->json(RespuestaApi::returnResultado('success', "Se guardaron $insertados registros correctamente.", [
-                'insertados'  => $insertados,
-                'codigo_lote' => $codigoLote,
-                'user_id'     => $userId,
-            ]));
+            // Mensaje final: cuantos se guardaron y cuantos/por que se omitieron.
+            $mensaje = "Se guardaron $insertados registros correctamente.";
+            if ($totalDuplicados > 0) {
+                $mensaje .= " Se omitieron $totalDuplicados por valor ya existente.";
+            }
+            if ($omitidosSinCampo1 > 0) {
+                $mensaje .= " Se omitieron $omitidosSinCampo1 por valor vacio.";
+            }
 
+            // Devolver el codigo_lote para que el frontend pueda referenciarlo si quiere.
+            return response()->json(RespuestaApi::returnResultado('success', $mensaje, [
+                'insertados' => $insertados,
+                'codigo_lote' => $codigoLote,
+                'user_id' => $userId,
+                'omitidosDuplicados' => $omitidosDuplicados,
+                'totalDuplicados' => $totalDuplicados,
+                'omitidosSinCampo1' => $omitidosSinCampo1,
+            ]));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
     }
 
-    /**
-     * Determina si una fila esta completamente vacia (todos sus valores null o solo espacios).
-     * Se usa para descartar filas inutiles del Excel.
-     */
+    // Determina si una fila esta completamente vacia (todos sus valores null o solo espacios).
+    // Se usa para descartar filas inutiles del Excel.
     private function filaVacia(array $valores): bool
     {
         foreach ($valores as $v) {
