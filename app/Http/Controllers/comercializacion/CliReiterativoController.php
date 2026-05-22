@@ -343,11 +343,12 @@ class CliReiterativoController extends Controller
     public function getClienteReiterativoByIdentificacion($identificacion)
     {
         try {
+            $identificacionBusqueda = substr($identificacion, 0, 10);
+
             $cliente = DB::select("SELECT estado, cliente, forma_pago, fecha, ultima_fecha_cobro, fecha, comprobante, plazo_pagare, dias_atraso,
                                                 estado, acuerdo, valor_cuota
                                                 FROM av_cartera_historica_agrupada_diasatraso_xsigla
-                                                WHERE identificacion = ?",
-                                        [$identificacion]);
+                                                WHERE SUBSTRING(TRIM(identificacion), 1, 10) = ?", [$identificacionBusqueda]);
 
             if (!empty($cliente)) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $cliente));

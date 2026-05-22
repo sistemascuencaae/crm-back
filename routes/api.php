@@ -68,6 +68,13 @@ use App\Http\Controllers\crm\TipoCasoController;
 use App\Http\Controllers\crm\TutorialController;
 use App\Http\Controllers\crm\TutorialUsuarioController;
 use App\Http\Controllers\crm\UltimoIdController;
+use App\Http\Controllers\fileManager\FmArchivoController;
+use App\Http\Controllers\fileManager\FmAuditController;
+use App\Http\Controllers\fileManager\FmBulkController;
+use App\Http\Controllers\fileManager\FmCarpetaController;
+use App\Http\Controllers\fileManager\FmPermisosController;
+use App\Http\Controllers\fileManager\FmSearchController;
+use App\Http\Controllers\fileManager\FmTagController;
 use App\Http\Controllers\directorio\DirectorioController;
 use App\Http\Controllers\formularios2\Formulario2Controller;
 use App\Http\Controllers\formularios2\Formulario2UsuariosController;
@@ -1459,9 +1466,9 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
 
     // ----- Utilidades / Diagnostico -----
     // GET /probe : verifica que el Pin Pad responde TCP (no envia trama real)
-    Route::get ('/pinpad/probe',              [PinpadController::class, 'probe']);
+    Route::get('/pinpad/probe',              [PinpadController::class, 'probe']);
     // GET /hash  : genera un hash 3DES de prueba (test del cifrado)
-    Route::get ('/pinpad/hash',               [PinpadController::class, 'hash']);
+    Route::get('/pinpad/hash',               [PinpadController::class, 'hash']);
     // POST /raw  : envia una trama YA armada (debug o desde el JAR oficial)
     Route::post('/pinpad/raw',                [PinpadController::class, 'raw']);
 
@@ -1472,7 +1479,7 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     Route::post('/pinpad/anular',              [PinpadController::class, 'anular']);
     Route::post('/pinpad/reverso',             [PinpadController::class, 'reverso']);
     // GET liviano: chequea si hay un reverso cacheado, sin tocar al Pin Pad
-    Route::get ('/pinpad/reverso-disponible',  [PinpadController::class, 'reversoDisponible']);
+    Route::get('/pinpad/reverso-disponible',  [PinpadController::class, 'reversoDisponible']);
     Route::post('/pinpad/maxidolar',           [PinpadController::class, 'maxidolar']);
 
     // ----- CT — Cierre / Consulta de Tarjeta -----
@@ -1499,11 +1506,11 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     // Controlador: app/Http/Controllers/pinpadjar/PinpadJarController.php
     // ============================================================
     // GET diag    : verifica paths/archivos sin lanzar Java
-    Route::get   ('/pinpad/jar/diag',                 [PinpadJarController::class, 'diag']);
+    Route::get('/pinpad/jar/diag',                 [PinpadJarController::class, 'diag']);
     // POST abrir  : lanza el JAR en background, devuelve session_id
-    Route::post  ('/pinpad/jar/abrir',                [PinpadJarController::class, 'abrir']);
+    Route::post('/pinpad/jar/abrir',                [PinpadJarController::class, 'abrir']);
     // GET leer    : polling cada 1.5s. Devuelve pending/ready/cancelled
-    Route::get   ('/pinpad/jar/leer/{sessionId}',     [PinpadJarController::class, 'leer']);
+    Route::get('/pinpad/jar/leer/{sessionId}',     [PinpadJarController::class, 'leer']);
     // DELETE limpiar : borra archivos de sesion tras consumirla
     Route::delete('/pinpad/jar/limpiar/{sessionId}',  [PinpadJarController::class, 'limpiar']);
 
@@ -1545,4 +1552,87 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
 
     Route::get('/listVsCelProspecto', [CelProspectoController::class, 'listVsCelProspecto']);
     // ---------- END ORACLE DB Y POSTGRES ----------
+});
+
+
+// ============================================================
+// FILE MANAGER — gestor documental con jerarquía de carpetas,
+// permisos granulares, papelera, versionado y tags.
+// Controllers: app/Http/Controllers/fileManager/Fm*Controller.php
+// URLs: /api/crm/file-manager/...
+// ============================================================
+Route::group(['prefix' => 'crm/file-manager', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+
+    // ----- Navegación de carpetas -----
+    Route::get('/roots',                       [FmCarpetaController::class, 'roots']);
+    Route::get('/folder/tree',                 [FmCarpetaController::class, 'tree']);
+    Route::get('/folder/{id}/contents',        [FmCarpetaController::class, 'contents']);
+    Route::get('/folder/{id}/breadcrumb',      [FmCarpetaController::class, 'breadcrumb']);
+
+    // ----- CRUD de carpetas -----
+    Route::post('/folder',                     [FmCarpetaController::class, 'create']);
+    Route::put('/folder/{id}/rename',          [FmCarpetaController::class, 'rename']);
+    Route::put('/folder/{id}/move',            [FmCarpetaController::class, 'move']);
+    Route::post('/folder/{id}/restore',        [FmCarpetaController::class, 'restore']);
+    Route::get('/folder/{id}',                 [FmCarpetaController::class, 'show']);
+    Route::delete('/folder/{id}',              [FmCarpetaController::class, 'delete']);
+
+    // ----- Archivos -----
+    Route::post('/file/upload',                [FmArchivoController::class, 'upload']);
+    Route::post('/file/upload-folder',         [FmArchivoController::class, 'uploadFolder']);
+    Route::get('/file/{id}/download',          [FmArchivoController::class, 'download']);
+    Route::get('/file/{id}/preview',           [FmArchivoController::class, 'preview']);
+    Route::put('/file/{id}/rename',            [FmArchivoController::class, 'rename']);
+    Route::put('/file/{id}/move',              [FmArchivoController::class, 'move']);
+    Route::post('/file/{id}/restore',          [FmArchivoController::class, 'restore']);
+    Route::get('/file/{id}',                   [FmArchivoController::class, 'show']);
+    Route::delete('/file/{id}',                [FmArchivoController::class, 'delete']);
+
+    // ----- Operaciones en lote (bulk) -----
+    Route::post('/bulk-delete',                [FmBulkController::class, 'bulkDelete']);
+    Route::post('/bulk-move',                  [FmBulkController::class, 'bulkMove']);
+    Route::post('/bulk-download',              [FmBulkController::class, 'bulkDownload']);
+
+    // ----- Tags -----
+    Route::get('/tags',                        [FmTagController::class, 'index']);
+    Route::post('/tags',                       [FmTagController::class, 'store']);
+    Route::put('/tags/{id}',                   [FmTagController::class, 'update']);
+    Route::delete('/tags/{id}',                [FmTagController::class, 'delete']);
+    Route::post('/file/{archivoId}/tags',      [FmTagController::class, 'asignarTags']);
+    Route::delete('/file/{archivoId}/tags/{tagId}', [FmTagController::class, 'quitarTag']);
+
+    // ----- Permisos de carpeta -----
+    Route::get('/folder/{id}/permisos',                  [FmPermisosController::class, 'indexCarpeta']);
+    Route::post('/folder/{id}/permisos',                 [FmPermisosController::class, 'storeCarpeta']);
+    Route::put('/folder/{id}/permisos/{userId}',         [FmPermisosController::class, 'updateCarpeta']);
+    Route::delete('/folder/{id}/permisos/{userId}',      [FmPermisosController::class, 'destroyCarpeta']);
+
+    // ----- Permisos de archivo -----
+    Route::get('/file/{id}/permisos',                    [FmPermisosController::class, 'indexArchivo']);
+    Route::post('/file/{id}/permisos',                   [FmPermisosController::class, 'storeArchivo']);
+    Route::put('/file/{id}/permisos/{userId}',           [FmPermisosController::class, 'updateArchivo']);
+    Route::delete('/file/{id}/permisos/{userId}',        [FmPermisosController::class, 'destroyArchivo']);
+
+    // ----- Autocomplete de usuarios -----
+    Route::get('/usuarios-asignables',                   [FmPermisosController::class, 'usuariosAsignables']);
+
+    // ----- Papelera -----
+    Route::get('/papelera',                              [FmCarpetaController::class, 'papelera']);
+    Route::delete('/papelera/vaciar',                    [FmCarpetaController::class, 'vaciarPapelera']);
+    Route::delete('/file/{id}/permanente',               [FmArchivoController::class, 'deletePermanente']);
+    Route::delete('/folder/{id}/permanente',             [FmCarpetaController::class, 'deletePermanente']);
+
+    // ----- Búsqueda global -----
+    Route::get('/search',                                                [FmSearchController::class, 'search']);
+
+    // ----- Auditoría (admin) -----
+    Route::get('/auditoria/recientes',                                   [FmAuditController::class, 'recientes']);
+
+    // ----- Upload preview / check colisiones -----
+    Route::post('/file/check-colisiones',                                [FmArchivoController::class, 'checkColisiones']);
+
+    // ----- Versionado -----
+    Route::get('/file/{id}/versiones',                                   [FmArchivoController::class, 'versiones']);
+    Route::get('/file/{id}/versiones/{versionId}/download',              [FmArchivoController::class, 'descargarVersion']);
+    Route::post('/file/{id}/versiones/{versionId}/restaurar',            [FmArchivoController::class, 'restaurarVersion']);
 });
