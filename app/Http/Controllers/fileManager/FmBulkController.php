@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\fileManager\FmArbolHelper;
 use App\Http\Resources\fileManager\FmAuditHelper;
+use App\Http\Resources\fileManager\FmPermisosHelper;
 use App\Http\Resources\fileManager\FmStorageHelper;
 use App\Http\Resources\RespuestaApi;
 use App\Models\fileManager\FmArchivo;
@@ -66,6 +67,7 @@ class FmBulkController extends Controller
             $resumen = DB::transaction(function () use ($archivoIds, $carpetaIds) {
                 $contadorArchivos = 0;
                 $contadorCarpetas = 0;
+                $omitidosPorPermiso = 0;
 
                 // ----- Carpetas (recursivo) -----
                 foreach ($carpetaIds as $id) {
@@ -76,6 +78,12 @@ class FmBulkController extends Controller
 
                     $carpeta = FmCarpeta::find($id);
                     if (!$carpeta) continue;
+
+                    // Validar permiso (saltar si no autorizado)
+                    if (!FmPermisosHelper::puedeRealizarAccion('eliminar', 'carpeta', $id)) {
+                        $omitidosPorPermiso++;
+                        continue;
+                    }
 
                     $antes = $carpeta->toArray();
 
@@ -101,6 +109,12 @@ class FmBulkController extends Controller
                     $archivo = FmArchivo::find($id);
                     if (!$archivo) continue;
 
+                    // Validar permiso (saltar si no autorizado)
+                    if (!FmPermisosHelper::puedeRealizarAccion('eliminar', 'archivo', $id)) {
+                        $omitidosPorPermiso++;
+                        continue;
+                    }
+
                     $antes = $archivo->toArray();
 
                     // Soft delete del linaje completo (versión actual + históricas)
@@ -122,13 +136,18 @@ class FmBulkController extends Controller
                 }
 
                 return [
-                    'archivos_eliminados' => $contadorArchivos,
-                    'carpetas_eliminadas' => $contadorCarpetas,
+                    'archivos_eliminados'   => $contadorArchivos,
+                    'carpetas_eliminadas'   => $contadorCarpetas,
+                    'omitidos_por_permiso'  => $omitidosPorPermiso,
                 ];
             });
 
-            $log->logInfo(self::class, "bulkDelete: {$resumen['carpetas_eliminadas']} carpeta(s), {$resumen['archivos_eliminados']} archivo(s)");
-            return response()->json(RespuestaApi::returnResultado('success', 'Items eliminados', $resumen));
+            $log->logInfo(self::class, "bulkDelete: {$resumen['carpetas_eliminadas']} carpeta(s), {$resumen['archivos_eliminados']} archivo(s), {$resumen['omitidos_por_permiso']} omitido(s) por permiso");
+            $msg = 'Items eliminados';
+            if ($resumen['omitidos_por_permiso'] > 0) {
+                $msg .= " ({$resumen['omitidos_por_permiso']} omitido(s) por falta de permiso)";
+            }
+            return response()->json(RespuestaApi::returnResultado('success', $msg, $resumen));
         } catch (Exception $e) {
             $log->logError(self::class, 'Error en bulkDelete', $e);
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
@@ -164,6 +183,19 @@ class FmBulkController extends Controller
         }
 
         try {
+            // ----- Validar permiso sobre el destino (una sola vez) -----
+            // La raíz id=1 es de uso común y no requiere validación de destino.
+            if ($nuevoParentId !== self::RAIZ_ID) {
+                $necesitaSubir = !empty($archivoIds);
+                $necesitaCrearSub = !empty($carpetaIds);
+                if ($necesitaSubir && !FmPermisosHelper::puedeRealizarAccion('subir_archivos', 'carpeta', $nuevoParentId)) {
+                    return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para mover archivos a la carpeta destino', null));
+                }
+                if ($necesitaCrearSub && !FmPermisosHelper::puedeRealizarAccion('crear_subcarpetas', 'carpeta', $nuevoParentId)) {
+                    return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para mover carpetas a la carpeta destino', null));
+                }
+            }
+
             $resumen = DB::transaction(function () use ($archivoIds, $carpetaIds, $nuevoParentId) {
                 $destino = FmCarpeta::find($nuevoParentId);
                 if (!$destino) {
@@ -172,6 +204,7 @@ class FmBulkController extends Controller
 
                 $movidasCarpetas = 0;
                 $movidosArchivos = 0;
+                $omitidosPorPermiso = 0;
 
                 // ----- Carpetas -----
                 foreach ($carpetaIds as $id) {
@@ -182,6 +215,12 @@ class FmBulkController extends Controller
 
                     $carpeta = FmCarpeta::find($id);
                     if (!$carpeta) continue;
+
+                    // Validar permiso de mover (saltar si no autorizado)
+                    if (!FmPermisosHelper::puedeRealizarAccion('mover', 'carpeta', $id)) {
+                        $omitidosPorPermiso++;
+                        continue;
+                    }
 
                     if ($carpeta->parent_id === $nuevoParentId) continue;
 
@@ -218,6 +257,12 @@ class FmBulkController extends Controller
                     $archivo = FmArchivo::find($id);
                     if (!$archivo) continue;
 
+                    // Validar permiso de mover (saltar si no autorizado)
+                    if (!FmPermisosHelper::puedeRealizarAccion('mover', 'archivo', $id)) {
+                        $omitidosPorPermiso++;
+                        continue;
+                    }
+
                     if ($archivo->carpeta_id === $nuevoParentId) continue;
 
                     $existe = FmArchivo::where('carpeta_id', $nuevoParentId)
@@ -244,13 +289,18 @@ class FmBulkController extends Controller
                 }
 
                 return [
-                    'archivos_movidos' => $movidosArchivos,
-                    'carpetas_movidas' => $movidasCarpetas,
+                    'archivos_movidos'      => $movidosArchivos,
+                    'carpetas_movidas'      => $movidasCarpetas,
+                    'omitidos_por_permiso'  => $omitidosPorPermiso,
                 ];
             });
 
-            $log->logInfo(self::class, "bulkMove: {$resumen['carpetas_movidas']} carpeta(s), {$resumen['archivos_movidos']} archivo(s)");
-            return response()->json(RespuestaApi::returnResultado('success', 'Items movidos', $resumen));
+            $log->logInfo(self::class, "bulkMove: {$resumen['carpetas_movidas']} carpeta(s), {$resumen['archivos_movidos']} archivo(s), {$resumen['omitidos_por_permiso']} omitido(s) por permiso");
+            $msg = 'Items movidos';
+            if ($resumen['omitidos_por_permiso'] > 0) {
+                $msg .= " ({$resumen['omitidos_por_permiso']} omitido(s) por falta de permiso)";
+            }
+            return response()->json(RespuestaApi::returnResultado('success', $msg, $resumen));
         } catch (Exception $e) {
             $log->logError(self::class, 'Error en bulkMove', $e);
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
@@ -301,18 +351,31 @@ class FmBulkController extends Controller
                 throw new Exception('No se pudo crear el archivo ZIP');
             }
 
+            $omitidosPorPermiso = 0;
+
             // Archivos sueltos en la raíz del ZIP
             foreach ($archivoIds as $id) {
-                $archivo = FmArchivo::find((int) $id);
+                $id = (int) $id;
+                $archivo = FmArchivo::find($id);
                 if (!$archivo) continue;
+                if (!FmPermisosHelper::puedeRealizarAccion('descargar', 'archivo', $id)) {
+                    $omitidosPorPermiso++;
+                    continue;
+                }
                 $this->agregarArchivoAlZip($zip, $archivo, $archivo->nombre, $tempLocalDir);
             }
 
-            // Carpetas (con su subárbol)
+            // Carpetas (con su subárbol). Validamos permiso de descargar sobre
+            // la carpeta misma; `agregarCarpetaAlZip` filtra internamente por archivo
+            // a través de `archivosVisiblesEnCarpeta` (que respeta permisos).
             foreach ($carpetaIds as $id) {
                 $id = (int) $id;
                 $carpeta = FmCarpeta::find($id);
                 if (!$carpeta) continue;
+                if (!FmPermisosHelper::puedeRealizarAccion('descargar', 'carpeta', $id)) {
+                    $omitidosPorPermiso++;
+                    continue;
+                }
                 $this->agregarCarpetaAlZip($zip, $carpeta, $carpeta->nombre, $tempLocalDir);
             }
 

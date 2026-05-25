@@ -30,6 +30,26 @@ class FmCarpetaController extends Controller
         $this->middleware('auth:api');
     }
 
+    /**
+     * ¿El usuario actual puede acceder/navegar a esta carpeta?
+     *
+     * Cubre 3 casos (modelo "carpetas de paso"):
+     *  - es admin global (bypass total), o
+     *  - tiene puede_ver directo o heredado en la carpeta, o
+     *  - la carpeta es "de paso": algún descendiente (carpeta o archivo) tiene
+     *    permiso directo, así que el usuario debe poder atravesar esta para llegar.
+     *
+     * En el último caso, el listado interno (subcarpetasVisibles/archivosVisiblesEnCarpeta)
+     * filtra automáticamente para mostrar SOLO los items con permiso directo.
+     */
+    private function puedeAccederCarpeta(int $carpetaId): bool
+    {
+        if (FmPermisosHelper::esAdmin()) {
+            return true;
+        }
+        return FmPermisosHelper::carpetasVisibles()->contains($carpetaId);
+    }
+
     // ------------------------------------------------------------------------
     // Navegación
     // ------------------------------------------------------------------------
@@ -59,8 +79,11 @@ class FmCarpetaController extends Controller
             }
 
             // La raíz id=1 es accesible para todos (sin contenido sensible directamente);
-            // los hijos ya se filtran por permisos.
-            if ($carpetaId !== self::RAIZ_ID && !FmPermisosHelper::puedeRealizarAccion('ver', 'carpeta', $carpetaId)) {
+            // los hijos ya se filtran por permisos. Para otras carpetas, además del
+            // permiso directo/heredado, se permite la entrada si es "carpeta de paso"
+            // (el usuario tiene permiso a algún descendiente); el listado interno
+            // mostrará solo los items con permiso directo.
+            if ($carpetaId !== self::RAIZ_ID && !$this->puedeAccederCarpeta($carpetaId)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene acceso a esta carpeta', null));
             }
 
@@ -184,7 +207,7 @@ class FmCarpetaController extends Controller
             if (!$carpeta) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Carpeta no encontrada', null));
             }
-            if ((int) $id !== self::RAIZ_ID && !FmPermisosHelper::puedeRealizarAccion('ver', 'carpeta', (int) $id)) {
+            if ((int) $id !== self::RAIZ_ID && !$this->puedeAccederCarpeta((int) $id)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene acceso a esta carpeta', null));
             }
             return response()->json(RespuestaApi::returnResultado('success', 'OK', $carpeta));
