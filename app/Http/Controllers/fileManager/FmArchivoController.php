@@ -31,6 +31,31 @@ class FmArchivoController extends Controller
         $this->middleware('auth:api');
     }
 
+    /**
+     * GET /file-manager/config
+     * Devuelve la configuración pública del módulo File Manager que el frontend
+     * necesita para validar antes de operar (límites, extensiones bloqueadas, etc.).
+     *
+     * - tamano_max_mb: int | null  → null = sin límite de aplicación (rige php.ini).
+     * - extensiones_bloqueadas: string[]
+     */
+    public function config()
+    {
+        $log = new Funciones();
+        try {
+            $rawMb = env('TAMANO_ARCHIVO_FILE_MANAGER');
+            $tamanoMaxMb = ($rawMb !== null && (int) $rawMb > 0) ? (int) $rawMb : null;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'OK', [
+                'tamano_max_mb'          => $tamanoMaxMb,
+                'extensiones_bloqueadas' => self::EXTENSIONES_BLOQUEADAS,
+            ]));
+        } catch (Exception $e) {
+            $log->logError(self::class, 'Error al obtener config FM', $e);
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
+        }
+    }
+
     // ------------------------------------------------------------------------
     // Upload
     // ------------------------------------------------------------------------
@@ -44,16 +69,21 @@ class FmArchivoController extends Controller
     {
         $log = new Funciones();
 
-        $maxMb = (int) env('FM_MAX_UPLOAD_MB', 100);
-        $maxKb = $maxMb * 1024;
+        // Si TAMANO_ARCHIVO_FILE_MANAGER no está en .env, no se aplica límite de
+        // aplicación: solo gobierna lo que diga php.ini / Apache.
+        $rawMb = env('TAMANO_ARCHIVO_FILE_MANAGER');
+        $maxMb = ($rawMb !== null && (int) $rawMb > 0) ? (int) $rawMb : null;
+        $reglaArchivo = $maxMb !== null ? 'required|file|max:' . ($maxMb * 1024) : 'required|file';
 
         $validator = Validator::make($request->all(), [
             'carpeta_id' => 'required|integer',
             'archivos'   => 'required|array|min:1',
-            'archivos.*' => 'required|file|max:' . $maxKb,
+            'archivos.*' => $reglaArchivo,
         ], [
             'archivos.required' => 'Debe adjuntar al menos un archivo',
-            'archivos.*.max'    => "Cada archivo debe pesar menos de {$maxMb}MB",
+            'archivos.*.max'    => $maxMb !== null
+                ? "Cada archivo debe pesar menos de {$maxMb}MB"
+                : 'Archivo demasiado grande',
         ]);
 
         if ($validator->fails()) {
@@ -164,7 +194,6 @@ class FmArchivoController extends Controller
                         'mime_type'   => $meta['mime_type'],
                         'tamano_bytes'=> $meta['tamano_bytes'],
                         'extension'   => $meta['extension'],
-                        'hash_sha256' => $meta['hash_sha256'],
                     ]);
 
                     // Creator gets admin: el creador del archivo recibe todos los permisos
@@ -666,17 +695,20 @@ class FmArchivoController extends Controller
     {
         $log = new Funciones();
 
-        $maxMb = (int) env('FM_MAX_UPLOAD_MB', 100);
-        $maxKb = $maxMb * 1024;
+        $rawMb = env('TAMANO_ARCHIVO_FILE_MANAGER');
+        $maxMb = ($rawMb !== null && (int) $rawMb > 0) ? (int) $rawMb : null;
+        $reglaArchivo = $maxMb !== null ? 'required|file|max:' . ($maxMb * 1024) : 'required|file';
 
         $validator = Validator::make($request->all(), [
             'carpeta_id' => 'required|integer',
             'paths'      => 'required|array|min:1',
             'paths.*'    => 'required|string',
             'archivos'   => 'required|array|min:1',
-            'archivos.*' => 'required|file|max:' . $maxKb,
+            'archivos.*' => $reglaArchivo,
         ], [
-            'archivos.*.max' => "Cada archivo debe pesar menos de {$maxMb}MB",
+            'archivos.*.max' => $maxMb !== null
+                ? "Cada archivo debe pesar menos de {$maxMb}MB"
+                : 'Archivo demasiado grande',
         ]);
 
         if ($validator->fails()) {
@@ -804,7 +836,6 @@ class FmArchivoController extends Controller
                         'mime_type'    => $meta['mime_type'],
                         'tamano_bytes' => $meta['tamano_bytes'],
                         'extension'    => $meta['extension'],
-                        'hash_sha256'  => $meta['hash_sha256'],
                     ]);
 
                     FmAuditHelper::registrar(
@@ -1024,7 +1055,7 @@ class FmArchivoController extends Controller
                 $nuevaActual->update(['es_version_actual' => true]);
 
                 FmAuditHelper::registrar(
-                    FmAuditHelper::ACCION_NUEVA_VERSION,
+                    FmAuditHelper::ACCION_RESTAURAR_VERSION,
                     FmAuditHelper::ENTIDAD_ARCHIVO,
                     $nuevaActual->id,
                     ['version_previa_id' => $archivo->id, 'version_previa' => $archivo->version],

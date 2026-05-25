@@ -33,6 +33,7 @@ class FmAuditHelper
     public const ACCION_UPLOAD             = 'upload';
     public const ACCION_DOWNLOAD           = 'download';
     public const ACCION_NUEVA_VERSION      = 'nueva_version';
+    public const ACCION_RESTAURAR_VERSION  = 'restaurar_version';
     public const ACCION_PERMISO_OTORGADO   = 'permiso_otorgado';
     public const ACCION_PERMISO_REVOCADO   = 'permiso_revocado';
     public const ACCION_PERMISO_ACTUALIZADO = 'permiso_actualizado';

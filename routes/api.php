@@ -1563,6 +1563,9 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
 // ============================================================
 Route::group(['prefix' => 'crm/file-manager', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
 
+    // ----- Configuración pública del módulo (límites, extensiones bloqueadas) -----
+    Route::get('/config',                      [FmArchivoController::class, 'config']);
+
     // ----- Navegación de carpetas -----
     Route::get('/roots',                       [FmCarpetaController::class, 'roots']);
     Route::get('/folder/tree',                 [FmCarpetaController::class, 'tree']);

@@ -23,7 +23,6 @@ class FmArchivo extends Model
         'tamano_bytes',
         'ruta_fisica',
         'disk',
-        'hash_sha256',
         'version',
         'archivo_padre_id',
         'es_version_actual',

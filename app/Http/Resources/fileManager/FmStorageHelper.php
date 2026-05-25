@@ -79,7 +79,7 @@ class FmStorageHelper
     /**
      * Guarda el archivo físico y devuelve los metadatos para persistir en fm_archivo.
      *
-     * @return array{ruta_fisica:string, disk:string, mime_type:?string, tamano_bytes:int, extension:?string, hash_sha256:?string}
+     * @return array{ruta_fisica:string, disk:string, mime_type:?string, tamano_bytes:int, extension:?string}
      */
     public static function store(UploadedFile $file, int $archivoId): array
     {
@@ -92,19 +92,6 @@ class FmStorageHelper
 
         Storage::disk($disk)->putFileAs($directorio, $file, $nombre);
 
-        $hash = null;
-        try {
-            // Sólo intentamos hash en local (FTP/NAS sería costoso por descarga adicional)
-            if ($disk === 'local') {
-                $rutaCompleta = Storage::disk('local')->path($rutaFisica);
-                if (is_readable($rutaCompleta)) {
-                    $hash = hash_file('sha256', $rutaCompleta) ?: null;
-                }
-            }
-        } catch (\Throwable $e) {
-            $hash = null;
-        }
-
         $extension = $file->getClientOriginalExtension();
         $extension = $extension !== '' ? strtolower($extension) : null;
 
@@ -114,7 +101,6 @@ class FmStorageHelper
             'mime_type'    => $file->getClientMimeType() ?: null,
             'tamano_bytes' => (int) $file->getSize(),
             'extension'    => $extension,
-            'hash_sha256'  => $hash,
         ];
     }
 
