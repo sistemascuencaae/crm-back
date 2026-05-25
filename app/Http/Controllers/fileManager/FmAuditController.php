@@ -17,10 +17,11 @@ use Illuminate\Support\Facades\Validator;
  * Vista de auditoría del File Manager.
  *
  * GET /crm/file-manager/auditoria/recientes
- *     ?limit=200&accion=upload&entidad_tipo=archivo&user_id=42
+ *     ?page=2&accion=upload&entidad_tipo=archivo&user_id=42
  *     &desde=2026-05-01&hasta=2026-05-20
  *
- * Solo admin global (usu_tipo_analista = 1) puede consultar.
+ * Resultado paginado de 10 en 10.
+ * Solo admin global (FmPermisosHelper::esAdmin) puede consultar.
  */
 class FmAuditController extends Controller
 {
@@ -39,7 +40,7 @@ class FmAuditController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                'limit'        => 'nullable|integer|min:1|max:500',
+                'page'         => 'nullable|integer|min:1',
                 'accion'       => 'nullable|string|max:50',
                 'entidad_tipo' => 'nullable|in:carpeta,archivo',
                 'user_id'      => 'nullable|integer',
@@ -49,8 +50,6 @@ class FmAuditController extends Controller
             if ($validator->fails()) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos', $validator->messages()));
             }
-
-            $limit = (int) $request->input('limit', 100);
 
             // JOIN a users para mostrar el nombre del usuario en la UI.
             $query = FmAuditLog::query()
@@ -77,9 +76,18 @@ class FmAuditController extends Controller
                 $query->where('crm.fm_audit_log.created_at', '<=', $request->input('hasta'));
             }
 
-            $items = $query->limit($limit)->get();
+            // Paginación fija de 10 por página (Laravel lee el parámetro ?page automáticamente).
+            $paginador = $query->paginate(10);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'OK', $items));
+            $resultado = [
+                'items'         => $paginador->items(),
+                'pagina_actual' => $paginador->currentPage(),
+                'total_paginas' => $paginador->lastPage(),
+                'total'         => $paginador->total(),
+                'por_pagina'    => $paginador->perPage(),
+            ];
+
+            return response()->json(RespuestaApi::returnResultado('success', 'OK', $resultado));
         } catch (Exception $e) {
             $log->logError(self::class, 'Error en auditoría/recientes', $e);
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
