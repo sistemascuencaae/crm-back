@@ -21,7 +21,8 @@ class FmCarpeta extends Model
         'materialized_path',
         'nivel',
         'creado_por',
-        'descripcion',
+        'color',
+        'icono',
     ];
 
     protected $casts = [

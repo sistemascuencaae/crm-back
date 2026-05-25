@@ -230,9 +230,10 @@ class FmCarpetaController extends Controller
         $log = new Funciones();
 
         $validator = Validator::make($request->all(), [
-            'nombre'      => 'required|string|max:255',
-            'parent_id'   => 'nullable|integer',
-            'descripcion' => 'nullable|string',
+            'nombre'    => 'required|string|max:255',
+            'parent_id' => 'nullable|integer',
+            'color'     => 'nullable|string|max:20',
+            'icono'     => 'nullable|string|max:50',
         ]);
 
         if ($validator->fails()) {
@@ -274,7 +275,8 @@ class FmCarpetaController extends Controller
                     'materialized_path' => $paths['materialized_path'],
                     'nivel'             => $paths['nivel'],
                     'creado_por'        => Auth::id(),
-                    'descripcion'       => $request->input('descripcion'),
+                    'color'             => $request->input('color'),
+                    'icono'             => $request->input('icono'),
                 ]);
 
                 // Creator gets admin: el creador recibe TODOS los permisos sobre la carpeta nueva
@@ -320,6 +322,8 @@ class FmCarpetaController extends Controller
 
         $validator = Validator::make($request->all(), [
             'nombre' => 'required|string|max:255',
+            'color'  => 'nullable|string|max:20',
+            'icono'  => 'nullable|string|max:50',
         ]);
 
         if ($validator->fails()) {
@@ -352,7 +356,16 @@ class FmCarpetaController extends Controller
                 }
 
                 $antes = $carpeta->toArray();
-                $carpeta->update(['nombre' => $nombre]);
+
+                // Solo actualizamos los campos que vienen en el request (color/icono son opcionales)
+                $payload = ['nombre' => $nombre];
+                if ($request->has('color')) {
+                    $payload['color'] = $request->input('color');
+                }
+                if ($request->has('icono')) {
+                    $payload['icono'] = $request->input('icono');
+                }
+                $carpeta->update($payload);
 
                 FmAuditHelper::registrar(
                     FmAuditHelper::ACCION_RENOMBRAR,
