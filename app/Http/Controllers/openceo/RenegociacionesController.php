@@ -196,6 +196,64 @@ class RenegociacionesController extends Controller
             }
 
             // -------------------------------------------------------------
+            // 3.5) Detectar facturas DUPLICADAS (misma factura en >1 fila).
+            //
+            // POR QUÉ: cada fila propaga la nueva fecha a todas las cuotas
+            // POSTERIORES (cuota X+1 = fecha + 1 mes, X+2 = +2 meses, etc).
+            // Si la misma factura aparece dos veces, las propagaciones se
+            // SOLAPAN y generan UPDATE duplicado al mismo ddo_id con valores
+            // distintos. Postgres no garantiza cuál gana → resultado
+            // INDETERMINADO (a veces bien, a veces mal).
+            //
+            // Regla: por cada factura, una sola fila en el Excel (la cuota
+            // más temprana que se quiera cambiar). Las cuotas siguientes se
+            // recalculan automáticamente por la propagación.
+            // -------------------------------------------------------------
+            $facturasPorFila = [];
+            foreach ($items as $idx => $it) {
+                $facturasPorFila[$it['numero_factura']][] = [
+                    'idx' => $idx,
+                    'fila' => $it['fila'],
+                    'numero_cuota' => $it['numero_cuota'],
+                    'fecha_cambio' => $it['fecha_cambio']->format('d/m/Y'),
+                ];
+            }
+
+            $idxsAQuitar = [];
+            foreach ($facturasPorFila as $factura => $apariciones) {
+                if (count($apariciones) > 1) {
+                    // Construir lista legible de filas afectadas
+                    $detalleFilas = array_map(
+                        fn($a) => "fila {$a['fila']} (cuota {$a['numero_cuota']} → {$a['fecha_cambio']})",
+                        $apariciones
+                    );
+                    $resumen = implode(', ', $detalleFilas);
+
+                    // Marcar TODAS las apariciones como error y quitarlas de $items
+                    foreach ($apariciones as $a) {
+                        $errores[] = [
+                            'fila' => $a['fila'],
+                            'numero_factura' => $factura,
+                            'numero_cuota' => $a['numero_cuota'],
+                            'fecha_cambio' => $a['fecha_cambio'],
+                            'motivos' => [
+                                "La factura {$factura} aparece " . count($apariciones)
+                                . " veces en el archivo: {$resumen}. "
+                                . "Cada factura debe aparecer SOLO UNA VEZ — sube la cuota "
+                                . "más temprana que quieras cambiar; las posteriores se "
+                                . "recalculan automáticamente por la propagación."
+                            ],
+                        ];
+                        $idxsAQuitar[] = $a['idx'];
+                    }
+                }
+            }
+
+            if ($idxsAQuitar) {
+                $items = array_values(array_filter($items, fn($_, $k) => !in_array($k, $idxsAQuitar, true), ARRAY_FILTER_USE_BOTH));
+            }
+
+            // -------------------------------------------------------------
             // 4) Pasada 2: validar contra BD (existencia y no-cancelado) Una sola consulta para todos los doctran's.
             // -------------------------------------------------------------
             if ($items) {
