@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\fileManager\FmAuditHelper;
 use App\Http\Resources\fileManager\FmPermisosHelper;
+use App\Http\Resources\fileManager\FmQueryHelper;
 use App\Http\Resources\RespuestaApi;
 use App\Models\fileManager\FmArchivo;
 use App\Models\fileManager\FmArchivoUsuario;
@@ -426,10 +427,11 @@ class FmPermisosController extends Controller
                 ->orderBy('usu_alias');
 
             if ($q !== '') {
-                $query->where(function ($w) use ($q) {
-                    $w->where('usu_alias', 'ILIKE', "%{$q}%")
-                      ->orWhere('name', 'ILIKE', "%{$q}%")
-                      ->orWhere('surname', 'ILIKE', "%{$q}%");
+                $qEscapado = FmQueryHelper::escaparLike($q);
+                $query->where(function ($w) use ($qEscapado) {
+                    $w->where('usu_alias', 'ILIKE', "%{$qEscapado}%")
+                      ->orWhere('name', 'ILIKE', "%{$qEscapado}%")
+                      ->orWhere('surname', 'ILIKE', "%{$qEscapado}%");
                 });
             }
 

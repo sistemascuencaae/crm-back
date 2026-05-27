@@ -7,6 +7,7 @@ use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\fileManager\FmArbolHelper;
 use App\Http\Resources\fileManager\FmAuditHelper;
 use App\Http\Resources\fileManager\FmPermisosHelper;
+use App\Http\Resources\fileManager\FmQueryHelper;
 use App\Http\Resources\fileManager\FmStorageHelper;
 use App\Models\fileManager\FmCarpetaUsuario;
 use App\Http\Resources\RespuestaApi;
@@ -67,7 +68,7 @@ class FmCarpetaController extends Controller
      * GET /folder/{id}/contents
      * Devuelve {folder, breadcrumb, subcarpetas, archivos} de la carpeta indicada.
      */
-    public function contents($id)
+    public function contents($id, Request $request)
     {
         $log = new Funciones();
         try {
@@ -87,29 +88,124 @@ class FmCarpetaController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene acceso a esta carpeta', null));
             }
 
+            // Parámetros opcionales de paginación / búsqueda de archivos.
+            $page = max(1, (int) $request->input('page', 1));
+            $q = trim((string) $request->input('q', ''));
+            $onlyArchivos = $request->boolean('only_archivos');
+
+            // Query base de archivos: visibles según permisos + filtro por nombre si hay `q`.
+            $queryArchivos = FmPermisosHelper::archivosVisiblesEnCarpeta($carpetaId)
+                ->with('tags')
+                ->orderBy('nombre');
+            if ($q !== '') {
+                $queryArchivos->where('nombre', 'ILIKE', '%' . FmQueryHelper::escaparLike($q) . '%');
+            }
+            // Paginación fija de 30 por página (scroll infinito en el frontend).
+            $paginador = $queryArchivos->paginate(30, ['*'], 'page', $page);
+
+            // Si se piden solo archivos (paginación con scroll), devolver solo eso —
+            // no recalcular folder/breadcrumb/subcarpetas (el frontend ya los tiene).
+            if ($onlyArchivos) {
+                $archivosPagina = collect($paginador->items());
+                $permisosLote = FmPermisosHelper::calcularPermisosEnLote(collect(), $archivosPagina);
+                foreach ($archivosPagina as $a) {
+                    $a->mis_permisos = $permisosLote['archivos'][$a->id] ?? [];
+                }
+
+                return response()->json(RespuestaApi::returnResultado('success', 'OK', [
+                    'archivos'              => $archivosPagina,
+                    'archivos_pagina_actual' => $paginador->currentPage(),
+                    'archivos_total_paginas' => $paginador->lastPage(),
+                    'archivos_total'        => $paginador->total(),
+                    'archivos_has_more'     => $paginador->hasMorePages(),
+                ]));
+            }
+
+            // Carga inicial: todo el contexto + página 1 de archivos.
             $breadcrumb = FmArbolHelper::construirBreadcrumb($carpetaId);
 
-            $subcarpetas = FmPermisosHelper::subcarpetasVisibles($carpetaId)
-                ->orderBy('nombre')
-                ->get();
+            // Subcarpetas: aplicar el mismo filtro `q` que a archivos (búsqueda
+            // server-side consistente; el frontend ya no filtra client-side).
+            $querySubcarpetas = FmPermisosHelper::subcarpetasVisibles($carpetaId)
+                ->orderBy('nombre');
+            if ($q !== '') {
+                $querySubcarpetas->where('nombre', 'ILIKE', '%' . FmQueryHelper::escaparLike($q) . '%');
+            }
+            $subcarpetas = $querySubcarpetas->get();
+            $archivosPagina = collect($paginador->items());
 
-            $archivos = FmPermisosHelper::archivosVisiblesEnCarpeta($carpetaId)
-                ->with('tags')
-                ->orderBy('nombre')
-                ->get();
+            // Inyectar permisos efectivos del usuario sobre cada item (frontend
+            // los usa para mostrar/ocultar acciones del context-menu, kebab,
+            // toolbar y bulk-toolbar).
+            $permisosLote = FmPermisosHelper::calcularPermisosEnLote($subcarpetas, $archivosPagina);
+            foreach ($subcarpetas as $c) {
+                $c->mis_permisos = $permisosLote['carpetas'][$c->id] ?? [];
+            }
+            foreach ($archivosPagina as $a) {
+                $a->mis_permisos = $permisosLote['archivos'][$a->id] ?? [];
+            }
+            // Permisos del usuario sobre la carpeta abierta (toolbar usa
+            // puede_subir_archivos/puede_crear_subcarpetas).
+            $carpeta->mis_permisos = FmPermisosHelper::calcularPermisosCarpeta($carpetaId);
 
             $data = [
-                'folder'      => $carpeta,
-                'breadcrumb'  => $breadcrumb,
-                'subcarpetas' => $subcarpetas,
-                'archivos'    => $archivos,
+                'folder'                => $carpeta,
+                'breadcrumb'            => $breadcrumb,
+                'subcarpetas'           => $subcarpetas,
+                'archivos'              => $archivosPagina,
+                'archivos_pagina_actual' => $paginador->currentPage(),
+                'archivos_total_paginas' => $paginador->lastPage(),
+                'archivos_total'        => $paginador->total(),
+                'archivos_has_more'     => $paginador->hasMorePages(),
             ];
 
-            $log->logInfo(self::class, "contents($carpetaId): " . count($subcarpetas) . " subcarpetas, " . count($archivos) . " archivos");
+            $log->logInfo(self::class, "contents($carpetaId): " . count($subcarpetas) . " subcarpetas, " . count($paginador->items()) . "/" . $paginador->total() . " archivos");
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
         } catch (Exception $e) {
             $log->logError(self::class, 'Error al listar contenido de carpeta ' . $id, $e);
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    /**
+     * GET /folder/{id}/all-ids?q=...
+     * Devuelve TODOS los IDs (subcarpetas + archivos) visibles en la carpeta,
+     * respetando permisos y el filtro `q`. Usado por el frontend cuando el
+     * usuario hace Ctrl+A con scroll infinito (no podemos pedirle al cliente
+     * que cargue todas las páginas solo para seleccionarlas).
+     *
+     * Devuelve solo IDs (no payload completo) para ser liviano incluso con
+     * miles de archivos.
+     */
+    public function allIds($id, Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $carpetaId = (int) $id;
+            if (!FmCarpeta::find($carpetaId)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Carpeta no encontrada', null));
+            }
+            if ($carpetaId !== self::RAIZ_ID && !$this->puedeAccederCarpeta($carpetaId)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No tiene acceso a esta carpeta', null));
+            }
+
+            $q = trim((string) $request->input('q', ''));
+
+            $querySubcarpetas = FmPermisosHelper::subcarpetasVisibles($carpetaId);
+            $queryArchivos = FmPermisosHelper::archivosVisiblesEnCarpeta($carpetaId);
+            if ($q !== '') {
+                $qEscapado = FmQueryHelper::escaparLike($q);
+                $querySubcarpetas->where('nombre', 'ILIKE', '%' . $qEscapado . '%');
+                $queryArchivos->where('nombre', 'ILIKE', '%' . $qEscapado . '%');
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'OK', [
+                'carpeta_ids' => $querySubcarpetas->pluck('id'),
+                'archivo_ids' => $queryArchivos->pluck('id'),
+            ]));
+        } catch (Exception $e) {
+            $log->logError(self::class, 'Error al listar all-ids de carpeta ' . $id, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
@@ -245,8 +341,10 @@ class FmCarpetaController extends Controller
             // Para crear directamente en la raíz, cualquier usuario autenticado puede
             // (porque la raíz no es "una carpeta del usuario", es el contenedor global).
             // Para crear en otra carpeta, validar permiso.
-            if ($parentIdValidacion !== self::RAIZ_ID &&
-                !FmPermisosHelper::puedeRealizarAccion('crear_subcarpetas', 'carpeta', $parentIdValidacion)) {
+            if (
+                $parentIdValidacion !== self::RAIZ_ID &&
+                !FmPermisosHelper::puedeRealizarAccion('crear_subcarpetas', 'carpeta', $parentIdValidacion)
+            ) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para crear subcarpetas en esta ubicación', null));
             }
 
@@ -279,7 +377,10 @@ class FmCarpetaController extends Controller
                     'icono'             => $request->input('icono'),
                 ]);
 
-                // Creator gets admin: el creador recibe TODOS los permisos sobre la carpeta nueva
+                // Creator gets editor: el creador recibe todos los permisos sobre la
+                // carpeta nueva EXCEPTO gestionar permisos — eso solo lo da un Admin
+                // explícitamente. Si quien crea era Admin del padre, hereda
+                // puede_gestionar_permisos por OR de todos modos.
                 FmCarpetaUsuario::create([
                     'carpeta_id'               => $nueva->id,
                     'user_id'                  => Auth::id(),
@@ -290,7 +391,7 @@ class FmCarpetaController extends Controller
                     'puede_renombrar'          => true,
                     'puede_eliminar'           => true,
                     'puede_mover'              => true,
-                    'puede_gestionar_permisos' => true,
+                    'puede_gestionar_permisos' => false,
                     'otorgado_por'             => Auth::id(),
                 ]);
 
@@ -409,8 +510,10 @@ class FmCarpetaController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para mover esta carpeta', null));
             }
             $nuevoParentIdValidacion = $request->input('nuevo_parent_id');
-            if ($nuevoParentIdValidacion !== null && (int) $nuevoParentIdValidacion !== self::RAIZ_ID &&
-                !FmPermisosHelper::puedeRealizarAccion('crear_subcarpetas', 'carpeta', (int) $nuevoParentIdValidacion)) {
+            if (
+                $nuevoParentIdValidacion !== null && (int) $nuevoParentIdValidacion !== self::RAIZ_ID &&
+                !FmPermisosHelper::puedeRealizarAccion('crear_subcarpetas', 'carpeta', (int) $nuevoParentIdValidacion)
+            ) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para mover a la carpeta destino', null));
             }
 

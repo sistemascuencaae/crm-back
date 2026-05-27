@@ -196,7 +196,9 @@ class FmArchivoController extends Controller
                         'extension'   => $meta['extension'],
                     ]);
 
-                    // Creator gets admin: el creador del archivo recibe todos los permisos
+                    // Creator gets editor: el creador del archivo recibe todos los permisos
+                    // EXCEPTO gestionar permisos (eso solo lo da un Admin explícitamente).
+                    // Si quien sube era Admin de la carpeta, hereda gestionar permisos por OR.
                     // (sólo si es archivo nuevo — para nuevas versiones se hereda del padre)
                     if (!$esNuevaVersion) {
                         FmArchivoUsuario::create([
@@ -208,7 +210,7 @@ class FmArchivoController extends Controller
                             'puede_editar_contenido'   => true,
                             'puede_eliminar'           => true,
                             'puede_mover'              => true,
-                            'puede_gestionar_permisos' => true,
+                            'puede_gestionar_permisos' => false,
                             'otorgado_por'             => Auth::id(),
                         ]);
                     } else {

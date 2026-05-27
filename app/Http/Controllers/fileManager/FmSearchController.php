@@ -5,6 +5,7 @@ namespace App\Http\Controllers\fileManager;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\fileManager\FmPermisosHelper;
+use App\Http\Resources\fileManager\FmQueryHelper;
 use App\Http\Resources\RespuestaApi;
 use App\Models\fileManager\FmArchivo;
 use App\Models\fileManager\FmCarpeta;
@@ -84,7 +85,7 @@ class FmSearchController extends Controller
                 $queryC = FmCarpeta::query()->where('id', '!=', 1); // excluir raíz
 
                 if ($q !== '') {
-                    $queryC->where('nombre', 'ILIKE', '%' . $q . '%');
+                    $queryC->where('nombre', 'ILIKE', '%' . FmQueryHelper::escaparLike($q) . '%');
                 }
                 if ($desde) $queryC->where('created_at', '>=', $desde);
                 if ($hasta) $queryC->where('created_at', '<=', $hasta);
@@ -110,7 +111,7 @@ class FmSearchController extends Controller
                     ->where('es_version_actual', true);
 
                 if ($q !== '') {
-                    $queryA->where('nombre', 'ILIKE', '%' . $q . '%');
+                    $queryA->where('nombre', 'ILIKE', '%' . FmQueryHelper::escaparLike($q) . '%');
                 }
                 if ($extension) {
                     $queryA->where('extension', strtolower($extension));
@@ -149,6 +150,17 @@ class FmSearchController extends Controller
                 }
 
                 $archivos = $queryA->with('tags')->orderBy('nombre')->limit($limit)->get();
+            }
+
+            // Inyectar permisos efectivos del usuario sobre cada item
+            // (mismo patrón que contents() — frontend usa los flags para
+            // mostrar/ocultar acciones).
+            $permisosLote = FmPermisosHelper::calcularPermisosEnLote($carpetas, $archivos, $userId);
+            foreach ($carpetas as $c) {
+                $c->mis_permisos = $permisosLote['carpetas'][$c->id] ?? [];
+            }
+            foreach ($archivos as $a) {
+                $a->mis_permisos = $permisosLote['archivos'][$a->id] ?? [];
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'OK', [

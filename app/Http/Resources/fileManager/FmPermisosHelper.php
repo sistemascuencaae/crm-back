@@ -166,6 +166,134 @@ class FmPermisosHelper
     }
 
     // ------------------------------------------------------------------------
+    // Cálculo en lote (para inyectar permisos en respuestas paginadas)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Computa los booleans efectivos de cada acción para los items dados,
+     * con sólo 2 queries iniciales (cargar todos los registros del usuario
+     * en fm_carpeta_usuario y fm_archivo_usuario), luego cálculo en memoria.
+     *
+     * @param Collection $subcarpetas  Collection<FmCarpeta>
+     * @param Collection $archivos     Collection<FmArchivo>
+     * @return array{carpetas: array<int, array<string,bool>>, archivos: array<int, array<string,bool>>}
+     */
+    public static function calcularPermisosEnLote(
+        Collection $subcarpetas,
+        Collection $archivos,
+        ?int $userId = null
+    ): array {
+        $userId = $userId ?? Auth::id();
+        $esAdmin = self::esAdmin($userId);
+
+        $resultadoCarpetas = [];
+        $resultadoArchivos = [];
+
+        // Admin global: todos los flags en true.
+        if ($esAdmin) {
+            foreach ($subcarpetas as $c) {
+                $resultadoCarpetas[$c->id] = array_fill_keys(array_values(self::ACCIONES_CARPETA), true);
+            }
+            foreach ($archivos as $a) {
+                $resultadoArchivos[$a->id] = array_fill_keys(array_values(self::ACCIONES_ARCHIVO), true);
+            }
+            return ['carpetas' => $resultadoCarpetas, 'archivos' => $resultadoArchivos];
+        }
+
+        // Carga TODO el cuadro de permisos del usuario (2 queries).
+        $permCarpeta = FmCarpetaUsuario::where('user_id', $userId)
+            ->get()
+            ->keyBy('carpeta_id'); // [carpeta_id => row]
+
+        $permArchivo = FmArchivoUsuario::where('user_id', $userId)
+            ->get()
+            ->keyBy('archivo_id');
+
+        // --- Carpetas: directo OR herencia desde ancestros ---
+        foreach ($subcarpetas as $c) {
+            $ancestros = self::parsearIdsDesdePath($c->materialized_path);
+            $cadena = array_merge([$c->id], $ancestros);
+
+            $flags = [];
+            foreach (self::ACCIONES_CARPETA as $accion => $columna) {
+                $flags[$columna] = self::orEnCadena($permCarpeta, $cadena, $columna);
+            }
+            $resultadoCarpetas[$c->id] = $flags;
+        }
+
+        // --- Archivos: directo OR herencia desde carpeta padre + ancestros ---
+        foreach ($archivos as $a) {
+            $carpetaPadre = $a->carpeta_id;
+            // Obtener path de la carpeta padre (puede no estar en $subcarpetas: ej. archivo a 2 niveles)
+            $carpetaObj = FmCarpeta::find($carpetaPadre);
+            $cadenaCarpetas = [];
+            if ($carpetaObj) {
+                $cadenaCarpetas = self::parsearIdsDesdePath($carpetaObj->materialized_path);
+                $cadenaCarpetas[] = $carpetaObj->id;
+            }
+
+            $directo = $permArchivo->get($a->id);
+
+            $flags = [];
+            foreach (self::ACCIONES_ARCHIVO as $accion => $columna) {
+                $columnaCarpeta = self::ARCHIVO_A_CARPETA[$accion] ?? null;
+                $efectivo =
+                    ($directo && (bool) $directo->{$columna})
+                    || ($columnaCarpeta && self::orEnCadena($permCarpeta, $cadenaCarpetas, $columnaCarpeta));
+                $flags[$columna] = $efectivo;
+            }
+            $resultadoArchivos[$a->id] = $flags;
+        }
+
+        return ['carpetas' => $resultadoCarpetas, 'archivos' => $resultadoArchivos];
+    }
+
+    /**
+     * Computa los 8 booleans efectivos de una sola carpeta (directo + herencia).
+     * Útil para anotar la carpeta_actual del response de contents().
+     */
+    public static function calcularPermisosCarpeta(int $carpetaId, ?int $userId = null): array
+    {
+        $userId = $userId ?? Auth::id();
+        if (self::esAdmin($userId)) {
+            return array_fill_keys(array_values(self::ACCIONES_CARPETA), true);
+        }
+
+        $carpeta = FmCarpeta::find($carpetaId);
+        if (!$carpeta) {
+            return array_fill_keys(array_values(self::ACCIONES_CARPETA), false);
+        }
+
+        $cadena = array_merge([$carpetaId], self::parsearIdsDesdePath($carpeta->materialized_path));
+
+        $perm = FmCarpetaUsuario::where('user_id', $userId)
+            ->whereIn('carpeta_id', $cadena)
+            ->get()
+            ->keyBy('carpeta_id');
+
+        $flags = [];
+        foreach (self::ACCIONES_CARPETA as $accion => $columna) {
+            $flags[$columna] = self::orEnCadena($perm, $cadena, $columna);
+        }
+        return $flags;
+    }
+
+    /**
+     * True si alguna fila de $cuadro indexado por id, dentro de $cadena de
+     * ids, tiene la $columna en true.
+     */
+    private static function orEnCadena($cuadro, array $cadena, string $columna): bool
+    {
+        foreach ($cadena as $cid) {
+            $row = $cuadro->get($cid);
+            if ($row && (bool) $row->{$columna}) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------------
     // Internos: cálculo de permisos puntuales
     // ------------------------------------------------------------------------
 

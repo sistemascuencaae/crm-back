@@ -1571,6 +1571,7 @@ Route::group(['prefix' => 'crm/file-manager', 'middleware' => ['jwt.auth', 'usua
     Route::get('/folder/tree',                 [FmCarpetaController::class, 'tree']);
     Route::get('/folder/{id}/contents',        [FmCarpetaController::class, 'contents']);
     Route::get('/folder/{id}/breadcrumb',      [FmCarpetaController::class, 'breadcrumb']);
+    Route::get('/folder/{id}/all-ids',         [FmCarpetaController::class, 'allIds']);
 
     // ----- CRUD de carpetas -----
     Route::post('/folder',                     [FmCarpetaController::class, 'create']);
