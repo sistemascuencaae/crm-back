@@ -57,6 +57,42 @@ class CelProspectoController extends Controller
                 }
             });
 
+            // Estos 3 registros van quemados porque en el novasoft no les dejo ingresar porque son nacionalizados
+            // FECHA_INGRESO,          COD_AGENTE,         NOMBRE_AGENTE,                          COD_CLIENTE,    NOMBRE
+            // '2026-04-27 13:46:00'   '0953917259'        'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS'      '0967582982'    'BARAHONA VERA ERWIN EFRAIN'
+            // '2026-04-19 19:52:00'   '0922672423'        'SILVA CALLE ALEX FABRICIO'             '0967004706'    'COLMENARES CHALEN JHONAIKER ALEXANDER'
+            // '2026-05-07 09:00:00'   '0953917259'        'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS'      '0966944936'    'SALAS MELENDEZ KAREN YAMILED'
+
+            DB::table('crm.vs_cel_prospecto')->insert([
+                'fecha_ingreso' => '2026-04-27 13:46:00',
+                'cod_agente' => '0953917259',
+                'nombre_agente' => 'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS',
+                'cod_cliente' => '096758298-2',
+                'nombre' => 'BARAHONA VERA ERWIN EFRAIN',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('crm.vs_cel_prospecto')->insert([
+                'fecha_ingreso' => '2026-04-19 19:52:00',
+                'cod_agente' => '0922672423',
+                'nombre_agente' => 'SILVA CALLE ALEX FABRICIO',
+                'cod_cliente' => '096700470-6',
+                'nombre' => 'COLMENARES CHALEN JHONAIKER ALEXANDER',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('crm.vs_cel_prospecto')->insert([
+                'fecha_ingreso' => '2026-05-07 09:00:00',
+                'cod_agente' => '0953917259',
+                'nombre_agente' => 'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS',
+                'cod_cliente' => '096694493-6',
+                'nombre' => 'SALAS MELENDEZ KAREN YAMILED',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se sincronizó con éxito. ' . count($rows) . ' registros.', null));
         } catch (\Throwable $e) {
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
