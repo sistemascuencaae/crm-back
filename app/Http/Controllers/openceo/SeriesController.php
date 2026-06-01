@@ -78,9 +78,7 @@ class SeriesController extends Controller
         try {
             $data = DB::select("SELECT
                                     s.codigo_lote,
-                                    s.user_id,
                                     concat(u.usu_alias, ' - ', u.name, ' ', u.surname) AS usuario,
-                                    s.tpr_id,
                                     tp.tpr_nombre,
                                     s.observacion,
                                     COUNT(*) AS total_registros,
@@ -88,7 +86,7 @@ class SeriesController extends Controller
                                 FROM public.series s
                                     LEFT JOIN crm.users u ON u.id = s.user_id
                                     LEFT JOIN public.tipo_producto tp ON tp.tpr_id = s.tpr_id
-                                GROUP BY s.codigo_lote, s.user_id, u.usu_alias, u.name, u.surname, s.tpr_id, tp.tpr_nombre, s.observacion
+                                GROUP BY s.codigo_lote, u.usu_alias, u.name, u.surname, tp.tpr_nombre, s.observacion
                                 ORDER BY MIN(s.created_at) DESC");
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', $data));
@@ -123,7 +121,7 @@ class SeriesController extends Controller
             }
 
             // tpr_id del lote (todas las filas comparten el mismo).
-            $cab = DB::select("SELECT s.tpr_id, tp.tpr_nombre, s.observacion
+            $cab = DB::select("SELECT s.id, s.tpr_id, tp.tpr_nombre, s.observacion
                                 FROM public.series s
                                 LEFT JOIN public.tipo_producto tp ON tp.tpr_id = s.tpr_id
                                 WHERE s.codigo_lote = ?
@@ -146,12 +144,31 @@ class SeriesController extends Controller
                 ];
             }
 
+            // // Traer las filas del lote con el nombre del producto.
+            // $filas = DB::select("SELECT s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre
+            //                     FROM public.series s
+            //                     LEFT JOIN public.producto p ON p.pro_id = s.pro_id
+            //                     WHERE s.codigo_lote = ?
+            //                     ORDER BY s.id ASC", [$codigoLote]);
+
             // Traer las filas del lote con el nombre del producto.
-            $filas = DB::select("SELECT s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre
+            $filas = DB::select("SELECT
+                                    s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre,
+                                    CASE
+                                        WHEN cf.cfa_id IS NOT NULL
+                                        THEN CONCAT(cf.cfa_periodo, '-', cti.cti_sigla, '-', alm.alm_codigo, '-', pve.pve_numero, '-', cf.cfa_numero) ELSE NULL END AS factura
                                 FROM public.series s
-                                LEFT JOIN public.producto p ON p.pro_id = s.pro_id
+                                    LEFT JOIN public.producto p ON p.pro_id = s.pro_id
+                                    LEFT join cfactura cf on s.cfa_id = cf.cfa_id
+                                    LEFT join ccomproba ccm ON ccm.pve_id = cf.pve_id 
+                                        AND ccm.ccm_periodo = cf.cfa_periodo 
+                                        AND ccm.cti_id = cf.cti_id 
+                                        AND ccm.ccm_numero = cf.cfa_numero
+                                    LEFT JOIN puntoventa pve ON pve.pve_id = cf.pve_id
+                                    LEFT JOIN almacen alm ON alm.alm_id = pve.alm_id
+                                    LEFT JOIN ctipocom cti ON cti.cti_id = cf.cti_id
                                 WHERE s.codigo_lote = ?
-                                ORDER BY s.id ASC", [$codigoLote]);
+                                ORDER BY s.id ASC;", [$codigoLote]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', [
                 'encabezado' => $encabezado,
@@ -258,6 +275,49 @@ class SeriesController extends Controller
 
             if (empty($existe)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'El lote no existe o ya fue eliminado.', []), 404);
+            }
+
+            // Buscar facturas relacionadas
+            $facturasRelacionadas = DB::select("SELECT
+                                                    CONCAT(cf.cfa_periodo, '-', cti.cti_sigla, '-', alm.alm_codigo, '-', pve.pve_numero, '-', cf.cfa_numero) AS factura,
+                                                    CONCAT_WS(
+                                                        ' || ',
+                                                        NULLIF(sr.campo1, ''), NULLIF(sr.campo2, ''), NULLIF(sr.campo3, ''),
+                                                        NULLIF(sr.campo4, ''), NULLIF(sr.campo5, ''), NULLIF(sr.campo6, ''),
+                                                        NULLIF(sr.campo7, ''), NULLIF(sr.campo8, ''), NULLIF(sr.campo9, ''),
+                                                        NULLIF(sr.campo10, ''), NULLIF(sr.campo11, ''), NULLIF(sr.campo12, ''),
+                                                        NULLIF(sr.campo13, ''), NULLIF(sr.campo14, ''), NULLIF(sr.campo15, ''),
+                                                        NULLIF(sr.campo16, ''), NULLIF(sr.campo17, ''), NULLIF(sr.campo18, ''),
+                                                        NULLIF(sr.campo19, ''), NULLIF(sr.campo20, ''), NULLIF(sr.campo21, ''),
+                                                        NULLIF(sr.campo22, ''), NULLIF(sr.campo23, ''), NULLIF(sr.campo24, ''),
+                                                        NULLIF(sr.campo25, ''), NULLIF(sr.campo26, ''), NULLIF(sr.campo27, ''),
+                                                        NULLIF(sr.campo28, ''), NULLIF(sr.campo29, ''), NULLIF(sr.campo30, '')
+                                                    ) AS registro_afectado
+                                                FROM cfactura cf
+                                                    JOIN ccomproba ccm ON ccm.pve_id = cf.pve_id
+                                                        AND ccm.ccm_periodo = cf.cfa_periodo
+                                                        AND ccm.cti_id = cf.cti_id
+                                                        AND ccm.ccm_numero = cf.cfa_numero
+                                                    JOIN puntoventa pve ON pve.pve_id = cf.pve_id
+                                                    JOIN almacen alm ON alm.alm_id = pve.alm_id
+                                                    JOIN ctipocom cti ON cti.cti_id = cf.cti_id
+                                                    JOIN series sr ON sr.cfa_id = cf.cfa_id
+                                                WHERE sr.codigo_lote = ?
+                                                    AND sr.cfa_id IS NOT NULL", [$codigoLote]);
+
+            // Si existen facturas relacionadas, bloquear eliminacion
+            if (!empty($facturasRelacionadas)) {
+                return response()->json(
+                    RespuestaApi::returnResultado(
+                        'error',
+                        'No se puede eliminar el lote porque existen registros asociadas a facturas',
+                        [
+                            'total_facturas' => count($facturasRelacionadas),
+                            'facturas' => $facturasRelacionadas
+                        ]
+                    ),
+                    409
+                );
             }
 
             // Borrado dentro de transaccion. delete() devuelve el numero de filas afectadas.
