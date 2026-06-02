@@ -331,7 +331,7 @@ class SeriesController extends Controller
                 'codigo_lote' => $codigoLote,
             ]));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', []));
         }
     }
 
@@ -949,5 +949,79 @@ class SeriesController extends Controller
             }
         }
         return true;
+    }
+
+    public function deleteSerieById(Request $request)
+    {
+        try {
+            $ids = $request->input('ids');
+
+            if (!is_array($ids) || empty($ids)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Debe enviar al menos un registro', []), 422);
+            }
+
+            // Normalizar: enteros positivos, sin duplicados.
+            $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($v) => $v > 0)));
+
+            if (empty($ids)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se recibieron registros validos.', []), 422);
+            }
+
+            $ph = rtrim(str_repeat('?,', count($ids)), ',');
+
+            // Verificar existencia
+            $series = DB::select("SELECT id FROM public.series WHERE id IN ($ph)", $ids);
+            $encontrados = array_column((array) $series, 'id');
+
+            // Buscar facturas relacionadas entre los IDs encontrados
+            $facturasRelacionadas = [];
+            if (!empty($encontrados)) {
+                $phEnc = rtrim(str_repeat('?,', count($encontrados)), ',');
+                $facturasRelacionadas = DB::select("SELECT
+                                                        CONCAT(cf.cfa_periodo, '-', cti.cti_sigla, '-', alm.alm_codigo, '-', pve.pve_numero, '-', cf.cfa_numero) AS factura
+                                                    FROM cfactura cf
+                                                        JOIN ccomproba ccm ON ccm.pve_id = cf.pve_id
+                                                            AND ccm.ccm_periodo = cf.cfa_periodo
+                                                            AND ccm.cti_id = cf.cti_id
+                                                            AND ccm.ccm_numero = cf.cfa_numero
+                                                        JOIN puntoventa pve ON pve.pve_id = cf.pve_id
+                                                        JOIN almacen alm ON alm.alm_id = pve.alm_id
+                                                        JOIN ctipocom cti ON cti.cti_id = cf.cti_id
+                                                        JOIN series sr ON sr.cfa_id = cf.cfa_id
+                                                    WHERE sr.id IN ($phEnc)
+                                                        AND sr.cfa_id IS NOT NULL", $encontrados);
+            }
+
+            // Si alguno tiene factura, bloquear toda la operacion
+            if (!empty($facturasRelacionadas)) {
+                return response()->json(
+                    RespuestaApi::returnResultado(
+                        'error',
+                        'No se puede eliminar porque el registro ya tiene asociado una factura',
+                        [
+                            'total_facturas' => count($facturasRelacionadas),
+                            'facturas'       => $facturasRelacionadas,
+                        ]
+                    ),
+                    409
+                );
+            }
+
+            $eliminados = 0;
+            if (!empty($encontrados)) {
+                $phDel = rtrim(str_repeat('?,', count($encontrados)), ',');
+                DB::transaction(function () use ($phDel, $encontrados, &$eliminados) {
+                    $eliminados = DB::delete("DELETE FROM public.series WHERE id IN ($phDel)", $encontrados);
+                });
+            }
+
+            $mensaje = "Se eliminaron $eliminados registro(s).";
+
+            return response()->json(RespuestaApi::returnResultado('success', $mensaje, [
+                'eliminados' => $eliminados,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', []));
+        }
     }
 }
