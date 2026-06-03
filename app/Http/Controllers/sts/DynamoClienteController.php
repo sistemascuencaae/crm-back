@@ -19,23 +19,27 @@ use Validator;
 
 class DynamoClienteController extends Controller
 {
-    // Version 1.0
+    // Version 2.0
     public function verificarClienteDynamo(Request $request)
     {
         try {
-            $identificacion = trim($request->input('identificacion'));
             $tipoidentificacion = trim($request->input('tipoidentificacion'));
+            $identificacion     = trim($request->input('identificacion'));
 
-            // 1: Validar que los campos requeridos no estén vacíos
             if (empty($identificacion)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar una identificación.', null));
             }
-
             if (empty($tipoidentificacion)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar el tipo de identificación.', null));
             }
 
-            // 2: Validar formato de la identificación según su tipo 1=Cédula; 2=RUC; 3=Pasaporte no se valida
+            // Extraer usuario_netos del token cifrado (igual que addDynamoCliente)
+            $tokenData = $this->validarTokenEnlace($request);
+            if ($tokenData instanceof JsonResponse) {
+                return $tokenData;
+            }
+            $usuarioNetos = $tokenData['usuario_netos'];
+
             if ($tipoidentificacion == 1) {
                 if (!ValidacionCedulaRucService::esCedulaValida($identificacion)) {
                     return response()->json(RespuestaApi::returnResultado('error', 'La cédula ingresada no es válida', null));
@@ -46,24 +50,142 @@ class DynamoClienteController extends Controller
                 }
             }
 
-            // 3: Corto a 10 digitos la identificacion que viene del frontEnd
             $identificacionBusqueda = substr($identificacion, 0, 10);
 
-            // 4: Verifico si ya existe el cliente
-            $clienteOpenceo = DB::selectOne(
-                "SELECT c.cli_codigo FROM public.cliente c
-                                                WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
-                                                    AND c.cli_tipocli = 1",
+            // LEFT JOIN: netos_vinculado = null si el cliente existe pero no tiene multinivel
+            $resultado = DB::selectOne("SELECT c.cli_id, c.cli_codigo,
+                                            e.ent_id, e.ent_nombres, e.ent_apellidos, e.ent_email, e.ent_tipo_identificacion,
+                                            t.tel_numero,
+                                            d.dir_calle_principal, d.dir_calle_secundaria,
+                                            cm.usuario_netos AS netos_vinculado
+                                        FROM public.cliente c
+                                        JOIN public.entidad e ON e.ent_id = c.ent_id
+                                        LEFT JOIN public.clientes_multinivel cm ON cm.cli_id = c.cli_id
+                                        LEFT JOIN public.direccion d ON d.dir_id = e.ent_direccion_principal
+                                        LEFT JOIN public.telefono t ON t.tel_id = e.ent_telefono_principal
+                                        WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
+                                            AND c.cli_tipocli = 1
+                                        ORDER BY c.cli_id ASC
+                                        LIMIT 1", [$identificacionBusqueda]);
+
+            // Escenario 4: cliente no existe
+            if (!$resultado) {
+                return response()->json(RespuestaApi::returnResultado('success', 'El cliente no existe', null));
+            }
+
+            // Escenario 3: cliente existe pero pertenece a otro vendedor
+            if ($resultado->netos_vinculado !== null && $resultado->netos_vinculado !== $usuarioNetos) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece al corredor: ' . $resultado->netos_vinculado, null));
+            }
+
+            // Escenarios 1 y 2: cliente libre o ya vinculado al mismo vendedor
+            $mensaje = $resultado->netos_vinculado === $usuarioNetos
+                ? 'El cliente ya existe'
+                : 'El cliente existe y está disponible';
+
+            return response()->json(RespuestaApi::returnResultado('success', $mensaje, $resultado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+    // Version 2.0
+    public function updateDynamoCliente(Request $request)
+    {
+        try {
+            $tokenData = $this->validarTokenEnlace($request);
+            if ($tokenData instanceof JsonResponse) {
+                return $tokenData;
+            }
+            $usuarioNetos = $tokenData['usuario_netos'];
+
+            $identificacion      = mb_strtoupper(trim($request->input('identificacion')));
+            $nombres             = mb_strtoupper(trim($request->input('nombres')));
+            $apellidos           = mb_strtoupper(trim($request->input('apellidos')));
+            $email               = mb_strtolower(trim($request->input('email')));
+            $telefono            = trim($request->input('telefono'));
+            $direccion           = mb_strtoupper(trim($request->input('direccion')));
+            $direccionSecundaria = mb_strtoupper(trim($request->input('dir_calle_secundaria') ?? ''));
+
+            if (
+                empty($identificacion) || empty($nombres) || empty($apellidos)
+                || empty($email) || empty($telefono) || empty($direccion)
+                || empty($direccionSecundaria)
+            ) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Todos los campos son requeridos.', null));
+            }
+
+            $identificacionBusqueda = substr($identificacion, 0, 10);
+
+            // ent_telefono_principal y ent_direccion_principal son FKs a tel_id y dir_id
+            $resultado = DB::selectOne(
+                "SELECT c.cli_id, e.ent_id,
+                        e.ent_telefono_principal  AS tel_id,
+                        e.ent_direccion_principal AS dir_id,
+                        cm.usuario_netos AS netos_vinculado
+                 FROM public.cliente c
+                 JOIN public.entidad e ON e.ent_id = c.ent_id
+                 LEFT JOIN public.clientes_multinivel cm ON cm.cli_id = c.cli_id
+                 WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
+                   AND c.cli_tipocli = 1
+                 ORDER BY c.cli_id ASC
+                 LIMIT 1",
                 [$identificacionBusqueda]
             );
 
-            if ($clienteOpenceo) {
-                return response()->json(RespuestaApi::returnResultado('success', 'El cliente ya existe', null));
+            if (!$resultado) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró el cliente para actualizar.', null));
             }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'El cliente no existe', null));
+            if ($resultado->netos_vinculado !== null && $resultado->netos_vinculado !== $usuarioNetos) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro vendedor.', null));
+            }
+
+            DB::beginTransaction();
+
+            // Actualizar datos de la entidad (solo campos propios, no los FKs)
+            Entidad::where('ent_id', $resultado->ent_id)->update([
+                'ent_nombres'   => trim($nombres),
+                'ent_apellidos' => trim($apellidos),
+                'ent_email'     => trim($email),
+            ]);
+
+            // Actualizar nombre comercial en la tabla cliente
+            Cliente::where('cli_id', $resultado->cli_id)->update([
+                'ent_nombre_comercial' => trim($apellidos) . ' ' . trim($nombres),
+            ]);
+
+            // Actualizar el registro de teléfono usando el FK tel_id
+            if ($resultado->tel_id) {
+                DB::update(
+                    "UPDATE public.telefono SET tel_numero = ? WHERE tel_id = ?",
+                    [trim($telefono), $resultado->tel_id]
+                );
+            }
+
+            // Actualizar el registro de dirección usando el FK dir_id
+            if ($resultado->dir_id) {
+                DB::update(
+                    "UPDATE public.direccion SET dir_calle_principal = ?, dir_calle_secundaria = ? WHERE dir_id = ?",
+                    [trim($direccion), trim($direccionSecundaria) ?: '.', $resultado->dir_id]
+                );
+            }
+
+            // Escenario 1: cliente libre → vincularlo al vendedor
+            if ($resultado->netos_vinculado === null) {
+                ClientesMultinivel::create([
+                    'cli_id'        => $resultado->cli_id,
+                    'usuario_netos' => $usuarioNetos,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Cliente actualizado con éxito', null));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+            DB::rollBack();
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar el cliente', $e->getMessage()));
         }
     }
 
@@ -108,13 +230,14 @@ class DynamoClienteController extends Controller
 
             // 2. Validamos todos los campos del formulario
             $validator = Validator::make($request->all(), [
-                'tipoidentificacion' => 'required|string',
-                'identificacion' => 'required|string',
-                'nombres' => 'required|string',
-                'apellidos' => 'required|string',
-                'email' => 'required|string',
-                'telefono' => 'required|string',
-                'direccion' => 'required|string',
+                'tipoidentificacion'  => 'required|string',
+                'identificacion'      => 'required|string',
+                'nombres'             => 'required|string',
+                'apellidos'           => 'required|string',
+                'email'               => 'required|string',
+                'telefono'            => 'required|string',
+                'direccion'           => 'required|string',
+                'dir_calle_secundaria' => 'required|string',
             ]);
 
             if ($validator->fails()) {
@@ -140,6 +263,7 @@ class DynamoClienteController extends Controller
             // 6. Crear cliente básico
             DB::transaction(function () use ($request, $entidad, $usuarioNetos) {
                 $direccion = mb_strtoupper(trim($request->input('direccion')));
+                $direccionSecundaria = mb_strtoupper(trim($request->input('dir_calle_secundaria')));
                 $telefono = trim($request->input('telefono'));
                 $identificacion = trim($request->input('identificacion'));
                 $tipoIdentificacion = trim($request->input('tipoidentificacion'));
@@ -154,7 +278,7 @@ class DynamoClienteController extends Controller
                 // 6.1. Crear nueva dirección (siempre se crea)
                 $newDireccion = new Direccion();
                 $newDireccion->dir_calle_principal = $direccion;
-                $newDireccion->dir_calle_secundaria = '.';
+                $newDireccion->dir_calle_secundaria = $direccionSecundaria;
                 $newDireccion->save();
 
                 // 6.2. Crear nuevo teléfono (siempre se crea)
@@ -263,7 +387,7 @@ class DynamoClienteController extends Controller
                 $newCliente->cli_tipocli = 1;
                 $newCliente->emp_id = $empId;
                 $newCliente->can_id = $valor7->can_id;
-                $newCliente->ent_nombre_comercial = $nombres . ' ' . $apellidos;
+                $newCliente->ent_nombre_comercial = $apellidos . ' ' . $nombres;
                 $newCliente->cli_tiposujeto = 'N';
                 $newCliente->cli_sexo = 'M';
                 $newCliente->cli_estadocivil = 'S';

@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Route;
 Route::group(["prefix" => "sts", 'middleware' => ['jwt.auth', 'usuario.activo']], function ($router) {
     // CLIENTE DYNAMO: el proveedor pide el link firmado con sus credenciales
     Route::post('/generarLinkFormulario', [DynamoClienteController::class, 'generarLinkFormulario']);
-    Route::post('/verificarClienteDynamo', [DynamoClienteController::class, 'verificarClienteDynamo']);
 
     // ARCHIVOS
     Route::post('/addArchivos', [ArchivoStsController::class, 'addArchivos']);
@@ -22,4 +21,6 @@ Route::group(["prefix" => "sts", 'middleware' => ['jwt.auth', 'usuario.activo']]
 Route::group(["prefix" => "sts", 'middleware' => ['throttle:10,1']], function ($router) {
     Route::post('/validarEnlace', [DynamoClienteController::class, 'validarEnlace']);
     Route::post('/addDynamoCliente', [DynamoClienteController::class, 'addDynamoCliente']);
+    Route::post('/verificarClienteDynamo', [DynamoClienteController::class, 'verificarClienteDynamo']);
+    Route::post('/updateDynamoCliente', [DynamoClienteController::class, 'updateDynamoCliente']);
 });
