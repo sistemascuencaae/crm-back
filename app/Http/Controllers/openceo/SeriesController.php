@@ -951,6 +951,106 @@ class SeriesController extends Controller
         return true;
     }
 
+    public function updateSerie(Request $request, $id)
+    {
+        try {
+            $id = (int) $id;
+            if ($id <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'ID invalido.', []), 422);
+            }
+
+            $serie = DB::selectOne("SELECT id, tpr_id, campo1 FROM public.series WHERE id = ?", [$id]);
+            if (!$serie) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El registro no existe.', []), 404);
+            }
+
+            $tprId = (int) $serie->tpr_id;
+
+            if (!$request->has('activo')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El campo activo es requerido.', []), 422);
+            }
+            $activo = $request->boolean('activo');
+
+            $proId = $request->input('pro_id');
+            if (!is_numeric($proId) || (int) $proId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'pro_id invalido.', []), 422);
+            }
+            $proId = (int) $proId;
+
+            $productoValido = DB::selectOne(
+                "SELECT pro_id FROM public.producto WHERE pro_activo = true AND tpr_id = ? AND pro_id = ?",
+                [$tprId, $proId]
+            );
+            if (!$productoValido) {
+                return response()->json(RespuestaApi::returnResultado(
+                    'error',
+                    'El producto no pertenece al tipo de producto de esta serie o esta inactivo.',
+                    []
+                ), 422);
+            }
+
+            date_default_timezone_set('America/Guayaquil');
+            $camposActualizar = [
+                'activo' => $activo,
+                'pro_id' => $proId,
+                'updated_at' => Carbon::now()->toDateTimeString(),
+            ];
+
+            foreach ($request->all() as $key => $valor) {
+                if (!is_string($key) || !preg_match('/^campo\d+$/', $key)) {
+                    continue;
+                }
+                $camposActualizar[$key] = $valor === null ? null : trim((string) $valor);
+            }
+
+            if (isset($camposActualizar['campo1'])) {
+                $nuevoCampo1 = trim((string) ($camposActualizar['campo1'] ?? ''));
+                $actualCampo1 = trim((string) ($serie->campo1 ?? ''));
+
+                if ($nuevoCampo1 !== $actualCampo1 && $nuevoCampo1 !== '') {
+                    $duplicado = DB::selectOne(
+                        "SELECT id FROM public.series WHERE campo1 = ? AND id <> ?",
+                        [$nuevoCampo1, $id]
+                    );
+                    if ($duplicado) {
+                        return response()->json(RespuestaApi::returnResultado(
+                            'error',
+                            "El valor \"$nuevoCampo1\" ya existe en otro registro.",
+                            []
+                        ), 422);
+                    }
+                }
+            }
+
+            DB::table('series')->where('id', $id)->update($camposActualizar);
+
+            $filas = DB::select("SELECT
+                                    s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre,
+                                    CASE
+                                        WHEN cf.cfa_id IS NOT NULL
+                                        THEN CONCAT(cf.cfa_periodo, '-', cti.cti_sigla, '-', alm.alm_codigo, '-', pve.pve_numero, '-', cf.cfa_numero)
+                                        ELSE NULL
+                                    END AS factura
+                                FROM public.series s
+                                    LEFT JOIN public.producto p ON p.pro_id = s.pro_id
+                                    LEFT JOIN cfactura cf ON s.cfa_id = cf.cfa_id
+                                    LEFT JOIN ccomproba ccm ON ccm.pve_id = cf.pve_id
+                                        AND ccm.ccm_periodo = cf.cfa_periodo
+                                        AND ccm.cti_id = cf.cti_id
+                                        AND ccm.ccm_numero = cf.cfa_numero
+                                    LEFT JOIN puntoventa pve ON pve.pve_id = cf.pve_id
+                                    LEFT JOIN almacen alm ON alm.alm_id = pve.alm_id
+                                    LEFT JOIN ctipocom cti ON cti.cti_id = cf.cti_id
+                                WHERE s.id = ?", [$id]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Registro actualizado correctamente.', [
+                'registro' => !empty($filas) ? $filas[0] : null,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
     public function deleteSerieById(Request $request)
     {
         try {
