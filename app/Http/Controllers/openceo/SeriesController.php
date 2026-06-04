@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -144,13 +145,6 @@ class SeriesController extends Controller
                 ];
             }
 
-            // // Traer las filas del lote con el nombre del producto.
-            // $filas = DB::select("SELECT s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre
-            //                     FROM public.series s
-            //                     LEFT JOIN public.producto p ON p.pro_id = s.pro_id
-            //                     WHERE s.codigo_lote = ?
-            //                     ORDER BY s.id ASC", [$codigoLote]);
-
             // Traer las filas del lote con el nombre del producto.
             $filas = DB::select("SELECT
                                     s.*, CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre,
@@ -170,6 +164,15 @@ class SeriesController extends Controller
                                 WHERE s.codigo_lote = ?
                                 ORDER BY s.id ASC;", [$codigoLote]);
 
+            $tieneArchivo = false;
+            $disk = $this->diskSeries();
+            foreach (['xlsx', 'xls', 'csv'] as $ext) {
+                if (Storage::disk($disk)->exists("series/{$codigoLote}.{$ext}")) {
+                    $tieneArchivo = true;
+                    break;
+                }
+            }
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito.', [
                 'encabezado' => $encabezado,
                 'filas' => $filas,
@@ -178,6 +181,7 @@ class SeriesController extends Controller
                     'tpr_id' => $tprId,
                     'tpr_nombre' => $cab[0]->tpr_nombre,
                     'observacion' => $cab[0]->observacion,
+                    'tiene_archivo_original' => $tieneArchivo,
                 ],
             ]));
         } catch (Exception $e) {
@@ -326,12 +330,47 @@ class SeriesController extends Controller
                 $eliminados = DB::table('series')->where('codigo_lote', $codigoLote)->delete();
             });
 
+            // Borrar archivo Excel original si existe.
+            $disk = $this->diskSeries();
+            foreach (['xlsx', 'xls', 'csv'] as $ext) {
+                if (Storage::disk($disk)->exists("series/{$codigoLote}.{$ext}")) {
+                    Storage::disk($disk)->delete("series/{$codigoLote}.{$ext}");
+                    break;
+                }
+            }
+
             return response()->json(RespuestaApi::returnResultado('success', "Se elimino el lote ($eliminados registros).", [
                 'eliminados'  => $eliminados,
                 'codigo_lote' => $codigoLote,
             ]));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', []));
+        }
+    }
+
+    public function downloadExcelOriginalSeries($codigo_lote)
+    {
+        try {
+            $codigoLote = trim((string) $codigo_lote);
+
+            if ($codigoLote === '' || !preg_match('/^[0-9a-fA-F\-]{36}$/', $codigoLote)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'codigo_lote invalido.', []), 422);
+            }
+
+            $disk = $this->diskSeries();
+            foreach (['xlsx', 'xls', 'csv'] as $ext) {
+                $path = "series/{$codigoLote}.{$ext}";
+                if (Storage::disk($disk)->exists($path)) {
+                    return response(Storage::disk($disk)->get($path), 200, [
+                        'Content-Type' => 'application/octet-stream',
+                        'Content-Disposition' => "attachment; filename=\"lote_{$codigoLote}.{$ext}\"",
+                    ]);
+                }
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', 'El archivo original no esta disponible.', []), 404);
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
     }
 
@@ -573,6 +612,12 @@ class SeriesController extends Controller
         }
     }
 
+    private function diskSeries(): string
+    {
+        $parametro = DB::table('crm.parametro')->where('abreviacion', 'NAS')->first();
+        return ($parametro && $parametro->nas) ? 'nas' : 'local';
+    }
+
     // Convierte el literal de array nativo de PostgreSQL a array PHP.
     // Ejemplos: "{a,b,c}" o "{\"a\",\"b,c\"}" -> ['a','b','c'] / ['a','b,c']
     private function pgArrayToPhp(string $pgArray): array
@@ -714,7 +759,9 @@ class SeriesController extends Controller
     {
         try {
             // 1) Validaciones de inputs
-            $filas = $request->input('filas');
+            // Soporta tanto JSON body como FormData (filas llega como string JSON en FormData).
+            $filasInput = $request->input('filas');
+            $filas = is_string($filasInput) ? json_decode($filasInput, true) : $filasInput;
 
             if (!is_array($filas) || empty($filas)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No hay filas para guardar.', []), 422);
@@ -916,6 +963,21 @@ class SeriesController extends Controller
                 }
             });
 
+            // Guardar archivo Excel original si fue enviado junto con la solicitud.
+            // Error de disco no debe revertir la insercion ya confirmada.
+            if ($request->hasFile('archivo_excel') && $request->file('archivo_excel')->isValid()) {
+                try {
+                    $ext = $request->file('archivo_excel')->getClientOriginalExtension();
+
+                    Storage::disk($this->diskSeries())->put(
+                        "series/{$codigoLote}.{$ext}",
+                        file_get_contents($request->file('archivo_excel')->getRealPath())
+                    );
+                } catch (Exception $e) {
+                    // No bloquear la respuesta exitosa por un fallo de almacenamiento.
+                }
+            }
+
             // Mensaje final: cuantos se guardaron y cuantos/por que se omitieron.
             $mensaje = "Se guardaron $insertados registros correctamente.";
             if ($totalDuplicados > 0) {
@@ -933,6 +995,57 @@ class SeriesController extends Controller
                 'omitidosDuplicados' => $omitidosDuplicados,
                 'totalDuplicados' => $totalDuplicados,
                 'omitidosSinCampo1' => $omitidosSinCampo1,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    public function listSeriesGeneral(Request $request)
+    {
+        try {
+            $tprId = $request->input('tpr_id');
+            if (!is_numeric($tprId) || (int) $tprId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'tpr_id es requerido.', []), 422);
+            }
+            $tprId = (int) $tprId;
+
+            $columnas = $this->columnasDelTipoProducto($tprId);
+            $totalCol = count($columnas);
+
+            $encabezado = [];
+            for ($i = 0; $i < $totalCol; $i++) {
+                $encabezado[] = [
+                    'campo'  => 'campo' . ($i + 1),
+                    'titulo' => $columnas[$i],
+                ];
+            }
+
+            $filas = DB::select("SELECT
+                                    s.*,
+                                    CONCAT(p.pro_codigo, ' - ', p.pro_nombre) AS producto_nombre,
+                                    CONCAT(u.usu_alias, ' - ', u.name, ' ', u.surname) AS usuario,
+                                    TO_CHAR(s.created_at, 'DD/MM/YYYY HH24:MI') AS fecha_formateada,
+                                    CASE WHEN cf.cfa_id IS NOT NULL
+                                        THEN CONCAT(cf.cfa_periodo,'-',cti.cti_sigla,'-',alm.alm_codigo,'-',pve.pve_numero,'-',cf.cfa_numero)
+                                        ELSE NULL END AS factura
+                                FROM public.series s
+                                    LEFT JOIN public.producto p ON p.pro_id = s.pro_id
+                                    LEFT JOIN crm.users u ON u.id = s.user_id
+                                    LEFT JOIN cfactura cf ON s.cfa_id = cf.cfa_id
+                                    LEFT JOIN ccomproba ccm ON ccm.pve_id = cf.pve_id
+                                        AND ccm.ccm_periodo = cf.cfa_periodo
+                                        AND ccm.cti_id = cf.cti_id
+                                        AND ccm.ccm_numero = cf.cfa_numero
+                                    LEFT JOIN puntoventa pve ON pve.pve_id = cf.pve_id
+                                    LEFT JOIN almacen alm ON alm.alm_id = pve.alm_id
+                                    LEFT JOIN ctipocom cti ON cti.cti_id = cf.cti_id
+                                WHERE s.tpr_id = ?
+                                ORDER BY s.created_at DESC", [$tprId]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'OK', [
+                'encabezado' => $encabezado,
+                'filas'      => $filas,
             ]));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));

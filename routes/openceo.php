@@ -99,4 +99,6 @@ Route::group(['prefix' => 'open', 'middleware' => ['jwt.auth', 'usuario.activo']
     Route::delete('/deleteLoteSeries/{codigo_lote}', [SeriesController::class, 'deleteLoteSeries']);
     Route::delete('/deleteSerieById', [SeriesController::class, 'deleteSerieById']);
     Route::put('/updateSerie/{id}', [SeriesController::class, 'updateSerie']);
+    Route::get('/downloadExcelOriginalSeries/{codigo_lote}', [SeriesController::class, 'downloadExcelOriginalSeries']);
+    Route::get('/listSeriesGeneral', [SeriesController::class, 'listSeriesGeneral']);
 });
