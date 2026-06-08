@@ -81,7 +81,7 @@ class UserController extends Controller
     public function allUsers()
     {
         try {
-            $usuarios = User::orderBy("id", "asc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')->get();
+            $usuarios = User::orderBy("id", "asc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario', 'usuario_crea_actualiza')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuarios));
         } catch (Exception $e) {
@@ -120,6 +120,8 @@ class UserController extends Controller
                 $request->merge(['emp_id' => $emp_id]);
             }
 
+            $request->merge(['id_usu_crea_actualiza' => auth()->id()]);
+
             // Si no existe, crea el nuevo usuario
             $newUserData = User::create($request->all());
 
@@ -150,7 +152,7 @@ class UserController extends Controller
                 ]);
             }
 
-            $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')->get();
+            $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario', 'usuario_crea_actualiza')->get();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $usuarios));
         } catch (Exception $e) {
@@ -179,6 +181,8 @@ class UserController extends Controller
             if ($existingUserCedula) {
                 return response()->json(RespuestaApi::returnResultado('error', 'La cédula ya está en uso por otro usuario', ''));
             }
+
+            $request->merge(['id_usu_crea_actualiza' => auth()->id()]);
 
             $usuario->update($request->all());
 
@@ -224,7 +228,7 @@ class UserController extends Controller
             }
 
             $data = User::where('id', $usuario->id)
-                ->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario')
+                ->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario', 'usuario_crea_actualiza')
                 ->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Usuario del CRM actualizado - ' . $mensajeUsuDynamo, $data));
@@ -332,8 +336,7 @@ class UserController extends Controller
     public function listUsers()
     {
         try {
-            $usuarios = User::selectRaw("*, CONCAT(usu_alias, ' - ', name, ' ', surname) as usuario_completo")
-                ->where('usu_alias', 'not like', 'USUARIOGENERAL%')
+            $usuarios = User::where('usu_alias', 'not like', 'USUARIOGENERAL%')
                 ->orderBy("name", "asc")
                 ->get();
 

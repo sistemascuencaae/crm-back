@@ -10,6 +10,7 @@ use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\Galeria;
 use App\Models\crm\RequerimientoCaso;
+use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
 use App\Models\User;
 use Exception;
@@ -284,8 +285,8 @@ class GaleriaController extends Controller
     {
         $log = new Funciones();
         try {
-
-            $galerias = Galeria::where('tab_id', $tab_id)->first();
+            $tablero = Tablero::find($tab_id);
+            $galerias = ($tablero && $tablero->gal_id) ? Galeria::find($tablero->gal_id) : null;
 
             $log->logInfo(GaleriaController::class, 'Se listo con exito el fondo del tablero con el ID ' . $tab_id);
 
@@ -326,9 +327,14 @@ class GaleriaController extends Controller
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
             }
 
-            $galeria = Galeria::create($request->all());
+            $galeria = DB::transaction(function () use ($request, $tab_id) {
+                $galeria = Galeria::create($request->all());
+                // Apuntamos el tablero a su fondo recién creado
+                Tablero::where('id', $tab_id)->update(['gal_id' => $galeria->id]);
+                return $galeria;
+            });
 
-            $log->logInfo(GaleriaController::class, 'Se guardo con exito el fondo del tablero con el ID ' . $tab_id);
+            $log->logInfo(GaleriaController::class, 'Se guardo con exito el fondo del tablero');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
         } catch (Exception $e) {
@@ -385,15 +391,7 @@ class GaleriaController extends Controller
 
             $galeria->update($request->all());
 
-            // si la imagen es de un requerimiento actualizar el requerimiento
-            $reqCaso = RequerimientoCaso::where('galerias_id', $galeria->id)->first();
-            if ($reqCaso) {
-                $reqCaso->descripcion = $galeria->descripcion;
-                $reqCaso->valor_varchar = $galeria->imagen;
-                $reqCaso->save();
-            }
-
-            $log->logInfo(GaleriaController::class, 'Se actualizo con exito el fondo del tablero, con el ID de la imagen ' . $id);
+            $log->logInfo(GaleriaController::class, 'Se actualizo con exito el fondo del tablero');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
         } catch (Exception $e) {
@@ -413,13 +411,20 @@ class GaleriaController extends Controller
                 ->where('abreviacion', 'NAS')
                 ->first();
 
-            if ($parametro->nas == true) {
-                Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta nas
-            } else {
-                Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
-            }
+            $galeria = DB::transaction(function () use ($id, $galeria, $parametro) {
+                // Primero soltamos la FK del tablero apuntando a esta galería
+                // (si existe), para no chocar con re_caso_galeria_fk u otras.
+                Tablero::where('gal_id', $id)->update(['gal_id' => null]);
 
-            $galeria->delete();
+                if ($parametro->nas == true) {
+                    Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta nas
+                } else {
+                    Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+                }
+
+                $galeria->delete();
+                return $galeria;
+            });
 
             $log->logInfo(GaleriaController::class, 'Se elimino con exito el fondo del tablero, con el ID de la imagen ' . $id);
 

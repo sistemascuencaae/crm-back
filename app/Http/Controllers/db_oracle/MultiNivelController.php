@@ -41,7 +41,17 @@ class MultiNivelController extends Controller
                                     ROW_NUMBER() OVER (PARTITION BY COD_CLIENTE ORDER BY FECHA_INGRESO DESC) AS registro
                                 FROM VS_CEL_PROSPECTO
                                 )
-                            WHERE registro = 1");
+                            WHERE registro = 1
+                            -- estos registros se agregaron manualmente porque en la app de novasoft no se agregaron porue son nacionalizados
+                            UNION ALL
+                                SELECT TO_DATE('2026-04-27 13:46:00','YYYY-MM-DD HH24:MI:SS'), '0953917259', 'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS',
+                                    '0967582982', 'BARAHONA VERA ERWIN EFRAIN' FROM DUAL
+                            UNION ALL
+                                SELECT TO_DATE('2026-04-19 19:52:00','YYYY-MM-DD HH24:MI:SS'), '0922672423', 'SILVA CALLE ALEX FABRICIO',
+                                    '0967004706', 'COLMENARES CHALEN JHONAIKER ALEXANDER' FROM DUAL
+                            UNION ALL
+                                SELECT TO_DATE('2026-05-07 09:00:00','YYYY-MM-DD HH24:MI:SS'), '0953917259', 'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS',
+                                    '0966944936', 'SALAS MELENDEZ KAREN YAMILED' FROM DUAL");
 
             $oracleClientes = [];
 
@@ -136,7 +146,17 @@ class MultiNivelController extends Controller
                                     ROW_NUMBER() OVER (PARTITION BY COD_CLIENTE ORDER BY FECHA_INGRESO DESC) AS registro
                                 FROM VS_CEL_PROSPECTO
                                 )
-                            WHERE registro = 1");
+                            WHERE registro = 1
+                            -- estos registros se agregaron manualmente porque en la app de novasoft no se agregaron porue son nacionalizados
+                            UNION ALL
+                                SELECT TO_DATE('2026-04-27 13:46:00','YYYY-MM-DD HH24:MI:SS'), '0953917259', 'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS',
+                                    '0967582982', 'BARAHONA VERA ERWIN EFRAIN' FROM DUAL
+                            UNION ALL
+                                SELECT TO_DATE('2026-04-19 19:52:00','YYYY-MM-DD HH24:MI:SS'), '0922672423', 'SILVA CALLE ALEX FABRICIO',
+                                    '0967004706', 'COLMENARES CHALEN JHONAIKER ALEXANDER' FROM DUAL
+                            UNION ALL
+                                SELECT TO_DATE('2026-05-07 09:00:00','YYYY-MM-DD HH24:MI:SS'), '0953917259', 'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS',
+                                    '0966944936', 'SALAS MELENDEZ KAREN YAMILED' FROM DUAL");
 
             $oracleClientes = [];
 
@@ -230,7 +250,17 @@ class MultiNivelController extends Controller
                                     ROW_NUMBER() OVER (PARTITION BY COD_CLIENTE ORDER BY FECHA_INGRESO DESC) AS registro
                                 FROM VS_CEL_PROSPECTO
                                 )
-                            WHERE registro = 1");
+                            WHERE registro = 1
+                            -- estos registros se agregaron manualmente porque en la app de novasoft no se agregaron porue son nacionalizados
+                            UNION ALL
+                                SELECT TO_DATE('2026-04-27 13:46:00','YYYY-MM-DD HH24:MI:SS'), '0953917259', 'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS',
+                                    '0967582982', 'BARAHONA VERA ERWIN EFRAIN' FROM DUAL
+                            UNION ALL
+                                SELECT TO_DATE('2026-04-19 19:52:00','YYYY-MM-DD HH24:MI:SS'), '0922672423', 'SILVA CALLE ALEX FABRICIO',
+                                    '0967004706', 'COLMENARES CHALEN JHONAIKER ALEXANDER' FROM DUAL
+                            UNION ALL
+                                SELECT TO_DATE('2026-05-07 09:00:00','YYYY-MM-DD HH24:MI:SS'), '0953917259', 'SANCHEZ ZHUCOZHAÑAY DANNA DENNIS',
+                                    '0966944936', 'SALAS MELENDEZ KAREN YAMILED' FROM DUAL");
 
             $oracleClientes = [];
 

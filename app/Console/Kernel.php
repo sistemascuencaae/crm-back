@@ -14,6 +14,8 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         \App\Console\Commands\ServicioEndPoint::class, // JGSJ - registro la clase para que se ejecute
+        \App\Console\Commands\FmPurgarPapelera::class,
+        \App\Console\Commands\FmLimpiarHuerfanos::class,
     ];
 
     /**
@@ -32,6 +34,18 @@ class Kernel extends ConsoleKernel
         // JGSJ Ejecutar cada 1 minuto
         // $schedule->command('servicioEndPoint')->everyMinute(); // Podemos ejecutar esta linea corta si no necesitamos guardar la respuesta del endPoint en un log
         $schedule->command('servicioEndPoint')->cron('0 */2 * * *')->withoutOverlapping()->sendOutputTo(storage_path('logs/scheduler.log')); // es para que se guarde la respuesta del endPoint en este archivo scheduler
+
+        // Purga diaria de papelera del File Manager (items > 30 días). 02:00 AM.
+        $schedule->command('fm:purgar-papelera --dias=30')
+            ->cron('0 2 * * *')
+            ->withoutOverlapping()
+            ->sendOutputTo(storage_path('logs/fm-purgar-papelera.log'));
+
+        // Limpieza semanal de archivos físicos sin registro DB (huérfanos). Domingo 03:00 AM.
+        $schedule->command('fm:limpiar-huerfanos --apply')
+            ->cron('0 3 * * 0')
+            ->withoutOverlapping()
+            ->sendOutputTo(storage_path('logs/fm-limpiar-huerfanos.log'));
         // Comandos de tiempo
             // ->hourly()
             // ->everyFiveMinutes()
