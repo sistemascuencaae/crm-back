@@ -1362,6 +1362,7 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/buscarEntidadEmpleado/{identificacion}', [EntidadDynamoController::class, 'buscarEntidadEmpleado']);
     Route::get('/listAlmacenesPuntoVenta', [EntidadDynamoController::class, 'listAlmacenesPuntoVenta']);
     Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
+    Route::get('/listEmpleadoByIdentificacion/{identificacion}', [EntidadDynamoController::class, 'listEmpleadoByIdentificacion']);
     Route::get('/listBodegas', [BodegaController::class, 'listBodegas']);
 });
 
