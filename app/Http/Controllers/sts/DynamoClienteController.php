@@ -19,12 +19,12 @@ use Validator;
 
 class DynamoClienteController extends Controller
 {
-    // Version 2.0
+    // Version 1.0
     public function verificarClienteDynamo(Request $request)
     {
         try {
             $tipoidentificacion = trim($request->input('tipoidentificacion'));
-            $identificacion     = trim($request->input('identificacion'));
+            $identificacion = trim($request->input('identificacion'));
 
             if (empty($identificacion)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar una identificación.', null));
@@ -90,7 +90,7 @@ class DynamoClienteController extends Controller
     }
 
 
-    // Version 2.0
+    // Version 1.0
     public function updateDynamoCliente(Request $request)
     {
         try {
@@ -100,18 +100,17 @@ class DynamoClienteController extends Controller
             }
             $usuarioNetos = $tokenData['usuario_netos'];
 
-            $identificacion      = mb_strtoupper(trim($request->input('identificacion')));
-            $nombres             = mb_strtoupper(trim($request->input('nombres')));
-            $apellidos           = mb_strtoupper(trim($request->input('apellidos')));
-            $email               = mb_strtolower(trim($request->input('email')));
-            $telefono            = trim($request->input('telefono'));
-            $direccion           = mb_strtoupper(trim($request->input('direccion')));
+            $identificacion = mb_strtoupper(trim($request->input('identificacion')));
+            $nombres = mb_strtoupper(trim($request->input('nombres')));
+            $apellidos = mb_strtoupper(trim($request->input('apellidos')));
+            $email = mb_strtolower(trim($request->input('email')));
+            $telefono = trim($request->input('telefono'));
+            $direccion = mb_strtoupper(trim($request->input('direccion')));
             $direccionSecundaria = mb_strtoupper(trim($request->input('dir_calle_secundaria') ?? ''));
 
             if (
                 empty($identificacion) || empty($nombres) || empty($apellidos)
-                || empty($email) || empty($telefono) || empty($direccion)
-                || empty($direccionSecundaria)
+                || empty($email) || empty($telefono) || empty($direccion) || empty($direccionSecundaria)
             ) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Todos los campos son requeridos.', null));
             }
@@ -119,20 +118,17 @@ class DynamoClienteController extends Controller
             $identificacionBusqueda = substr($identificacion, 0, 10);
 
             // ent_telefono_principal y ent_direccion_principal son FKs a tel_id y dir_id
-            $resultado = DB::selectOne(
-                "SELECT c.cli_id, e.ent_id,
-                        e.ent_telefono_principal  AS tel_id,
-                        e.ent_direccion_principal AS dir_id,
-                        cm.usuario_netos AS netos_vinculado
-                 FROM public.cliente c
-                 JOIN public.entidad e ON e.ent_id = c.ent_id
-                 LEFT JOIN public.clientes_multinivel cm ON cm.cli_id = c.cli_id
-                 WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
-                   AND c.cli_tipocli = 1
-                 ORDER BY c.cli_id ASC
-                 LIMIT 1",
-                [$identificacionBusqueda]
-            );
+            $resultado = DB::selectOne("SELECT c.cli_id, e.ent_id,
+                                            e.ent_telefono_principal  AS tel_id,
+                                            e.ent_direccion_principal AS dir_id,
+                                            cm.usuario_netos AS netos_vinculado
+                                        FROM public.cliente c
+                                            JOIN public.entidad e ON e.ent_id = c.ent_id
+                                            LEFT JOIN public.clientes_multinivel cm ON cm.cli_id = c.cli_id
+                                        WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
+                                            AND c.cli_tipocli = 1
+                                        ORDER BY c.cli_id ASC
+                                        LIMIT 1", [$identificacionBusqueda]);
 
             if (!$resultado) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontró el cliente para actualizar.', null));
@@ -146,9 +142,9 @@ class DynamoClienteController extends Controller
 
             // Actualizar datos de la entidad (solo campos propios, no los FKs)
             Entidad::where('ent_id', $resultado->ent_id)->update([
-                'ent_nombres'   => trim($nombres),
+                'ent_nombres' => trim($nombres),
                 'ent_apellidos' => trim($apellidos),
-                'ent_email'     => trim($email),
+                'ent_email' => trim($email),
             ]);
 
             // Actualizar nombre comercial en la tabla cliente
@@ -158,10 +154,7 @@ class DynamoClienteController extends Controller
 
             // Actualizar el registro de teléfono usando el FK tel_id
             if ($resultado->tel_id) {
-                DB::update(
-                    "UPDATE public.telefono SET tel_numero = ? WHERE tel_id = ?",
-                    [trim($telefono), $resultado->tel_id]
-                );
+                DB::update("UPDATE public.telefono SET tel_numero = ? WHERE tel_id = ?", [trim($telefono), $resultado->tel_id]);
             }
 
             // Actualizar el registro de dirección usando el FK dir_id
@@ -175,7 +168,7 @@ class DynamoClienteController extends Controller
             // Escenario 1: cliente libre → vincularlo al vendedor
             if ($resultado->netos_vinculado === null) {
                 ClientesMultinivel::create([
-                    'cli_id'        => $resultado->cli_id,
+                    'cli_id' => $resultado->cli_id,
                     'usuario_netos' => $usuarioNetos,
                 ]);
             }
@@ -230,13 +223,13 @@ class DynamoClienteController extends Controller
 
             // 2. Validamos todos los campos del formulario
             $validator = Validator::make($request->all(), [
-                'tipoidentificacion'  => 'required|string',
-                'identificacion'      => 'required|string',
-                'nombres'             => 'required|string',
-                'apellidos'           => 'required|string',
-                'email'               => 'required|string',
-                'telefono'            => 'required|string',
-                'direccion'           => 'required|string',
+                'tipoidentificacion' => 'required|string',
+                'identificacion' => 'required|string',
+                'nombres' => 'required|string',
+                'apellidos' => 'required|string',
+                'email' => 'required|string',
+                'telefono' => 'required|string',
+                'direccion' => 'required|string',
                 'dir_calle_secundaria' => 'required|string',
             ]);
 
