@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Exception;
 use Illuminate\Http\JsonResponse;
-use Validator;
+use Illuminate\Support\Facades\Validator;
 
 class DynamoClienteController extends Controller
 {
@@ -637,5 +637,65 @@ class DynamoClienteController extends Controller
         }
 
         return $credenciales;
+    }
+
+
+
+
+
+
+
+    // Version 1.0
+    // LISTADO GENERAL DE CLIENTES CON EL RESPECTIVO CORREDOR
+    // Devuelve las vinculaciones VIGENTES (activo = true y fecha_desvinculacion NULL)
+    // con los datos del cliente, filtradas por rango de fecha de registro
+    // (BETWEEN sobre cm.created_at). fecha_inicio y fecha_fin son requeridas (YYYY-MM-DD).
+    public function listClientesCorredor(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'fecha_inicio' => 'required|date',
+                'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
+            ], [
+                'fecha_inicio.required' => 'Debe ingresar la fecha de inicio.',
+                'fecha_inicio.date' => 'La fecha de inicio no es válida.',
+                'fecha_fin.required' => 'Debe ingresar la fecha de fin.',
+                'fecha_fin.date' => 'La fecha de fin no es válida.',
+                'fecha_fin.after_or_equal' => 'La fecha de fin debe ser mayor o igual a la fecha de inicio.',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+            }
+
+            $fechaInicio = trim($request->input('fecha_inicio'));
+            $fechaFin = trim($request->input('fecha_fin'));
+
+            // created_at es timestamp: se castea a date para que el BETWEEN
+            // incluya los registros de todo el día de fechaFin
+            $resultado = DB::select("SELECT
+                                        cm.corredor,
+                                        cm.created_at AS fecha_registro,
+                                        c.cli_codigo AS identificacion,
+                                        e.ent_nombres AS nombres,
+                                        e.ent_apellidos AS apellidos,
+                                        e.ent_email AS email,
+                                        t.tel_numero AS telefono,
+                                        d.dir_calle_principal AS calle_principal,
+                                        d.dir_calle_secundaria AS calle_secundaria
+                                    FROM public.clientes_multinivel cm
+                                        JOIN public.cliente c ON c.cli_id = cm.cli_id
+                                        JOIN public.entidad e ON e.ent_id = c.ent_id
+                                        LEFT JOIN public.telefono t ON t.tel_id = e.ent_telefono_principal
+                                        LEFT JOIN public.direccion d ON d.dir_id = e.ent_direccion_principal
+                                    WHERE cm.activo = true
+                                        AND cm.fecha_desvinculacion IS NULL
+                                        AND cm.created_at::date BETWEEN ? AND ?
+                                    ORDER BY cm.created_at ASC", [$fechaInicio, $fechaFin]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
     }
 }
