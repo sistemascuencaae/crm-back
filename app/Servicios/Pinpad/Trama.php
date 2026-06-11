@@ -611,10 +611,12 @@ final class Trama
             'len_hex'       => null,     // los 4 chars hex de longitud
             'len'           => null,     // longitud parseada (decimal)
             'body'          => null,     // cuerpo SIN prefijo y SIN hash final
-            'tipo'          => null,     // primeros 4 chars del cuerpo (ej: "PP00")
+            'tipo'          => null,     // 2 chars del tipo de mensaje (ej: "PP", "LT", "CT")
+            'cod_pinpad'    => null,     // solo PP: Codigo Respuesta del PINPAD (pos 2-3, ej: "00"=OK, "TO"=timeout)
+            'cod_red'       => null,     // solo PP: Codigo Red Adquirente (pos 4-5, ej: "02"=Medianet)
             'mensaje'       => null,     // mensaje humano detectado (ej: "AUTORIZACION OK")
             'hash_recibido' => null,     // los 32 chars hex del final
-            'cod_resp'      => null,     // codigo deducido (ej: "00", "51", "@B")
+            'cod_resp'      => null,     // Codigo Respuesta del Autorizador (banco), ej: "00", "62", "@B"
             'cod_resp_desc' => null,     // descripcion humana del codigo
         ];
 
@@ -639,9 +641,16 @@ final class Trama
         }
         $out['body'] = $body;
 
-        // Los primeros 4 chars del cuerpo son el "tipo" (ej: "PP00", "CT01").
-        // trim() por si el formato deja espacios.
-        $out['tipo'] = trim(substr($body, 0, 4));
+        // Los primeros 2 chars del cuerpo son el "tipo" (ej: "PP", "LT", "CT").
+        // RFC v1.4 p.3/4/8/13/15: Tipo de Mensaje = 2 AN en todos los mensajes.
+        $out['tipo'] = trim(substr($body, 0, 2));
+
+        // Para PP, los campos intermedios per RFC v1.4 p.8:
+        //   [TIPO:2][COD_PINPAD:2][COD_RED:2][COD_AUTORIZADOR:2][MENSAJE:20][...]
+        if (strtoupper($out['tipo']) === 'PP') {
+            $out['cod_pinpad'] = substr($body, 2, 2); // generado por el pinpad
+            $out['cod_red']    = substr($body, 4, 2); // 01=DF, 02=Medianet, 03=Austro
+        }
 
         // ===== Paso 3: detectar el codigo de respuesta por TEXTO =====
         // El cuerpo tiene un mensaje humano en alguna posicion (ej: "AUTORIZACION OK").
@@ -683,11 +692,16 @@ final class Trama
         }
 
         // ===== Paso 4: fallback - leer cod_resp por posicion fija =====
-        // Si no encontramos por texto, intentamos leer los 2 chars en posicion
-        // 4 del cuerpo (despues del tipo "PP01" -> el codigo va en bytes 4-5).
+        // Layout por RFC v1.4 Mensajeria Caja Pinpad:
+        //
+        //   PP respuesta (p.8): [TIPO:2][COD_PINPAD:2][COD_RED:2][COD_AUTORIZADOR:2][MENSAJE:20]
+        //   LT/CT/PC/CP:        [TIPO:2][COD_RESP:2][resto...]
+        //
+        // Para PP el codigo que importa (del autorizador/banco) esta en posicion 6-7.
+        // Para los demas tipos esta en posicion 2-3 (inmediatamente tras el tipo).
         if ($out['cod_resp'] === null) {
-            $candidato = trim(substr($body, 4, 2));
-            // Validamos que sean 2 chars alfanumericos validos antes de aceptarlo.
+            $offset    = (strtoupper($out['tipo']) === 'PP') ? 6 : 2;
+            $candidato = trim(substr($body, $offset, 2));
             if (preg_match('/^[0-9A-Z@]{2}$/i', $candidato)) {
                 $out['cod_resp'] = $candidato;
             }

@@ -532,11 +532,13 @@ class PinpadController extends Controller
             'trama_enviada'  => $trama,                      // lo que mandamos
             'trama_recibida' => $parsed['raw'],              // lo que vino crudo
             'longitud'       => $parsed['len'],              // longitud declarada
-            'tipo'           => $parsed['tipo'],             // primeros 4 chars
+            'tipo'           => $parsed['tipo'],             // tipo de mensaje (2 chars: PP, LT, CT...)
+            'cod_pinpad'     => $parsed['cod_pinpad'],       // solo PP: codigo del pinpad (00=OK, TO, ER...)
+            'cod_red'        => $parsed['cod_red'],          // solo PP: red adquirente (02=Medianet)
             'cuerpo'         => $parsed['body'],             // cuerpo sin hash
             'mensaje_pinpad' => $parsed['mensaje'],          // texto humano (ej: "AUTORIZACION OK")
             'hash_recibido'  => $parsed['hash_recibido'],    // 32 chars hex del hash
-            'cod_resp'       => $parsed['cod_resp'],         // codigo deducido
+            'cod_resp'       => $parsed['cod_resp'],         // codigo del autorizador/banco
             'cod_resp_desc'  => $parsed['cod_resp_desc'],    // descripcion humana
         ]);
 
