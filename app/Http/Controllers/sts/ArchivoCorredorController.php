@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-class ArchivoStsController extends Controller
+class ArchivoCorredorController extends Controller
 {
     public function __construct()
     {
@@ -32,17 +32,19 @@ class ArchivoStsController extends Controller
     public function addArchivos(Request $request)
     {
         // ===== 1) VALIDACIÓN DE INPUT =====
-        // - usuario_netos: requerido y string (el saneo se hace después).
+        // - corredor: requerido y string (el saneo se hace después).
         // - archivos: array con al menos 1 elemento.
         // - cada archivo: debe ser file real, con extensión/MIME permitida.
+        //   Las extensiones se parametrizan en crm.parametro (abreviacion EXTCOR).
+        $extensiones = $this->extensionesPermitidas();
+
         $validator = Validator::make($request->all(), [
-            'usuario_netos' => 'required|string',
+            'corredor' => 'required|string',
             'archivos' => 'required|array|min:1',
-            // 'archivos.*' => 'required|file|mimes:jpeg,jpg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,csv,txt,zip,rar',
-            'archivos.*' => 'required|file|mimes:pdf',
+            'archivos.*' => 'required|file|mimes:' . implode(',', $extensiones),
         ], [
-            'usuario_netos.required' => 'El usuario es incorrecto.',
-            'usuario_netos.string' => 'El usuario es incorrecto.',
+            'corredor.required' => 'El corredor es incorrecto.',
+            'corredor.string' => 'El corredor es incorrecto.',
             'archivos.required' => 'Debe enviar al menos un archivo.',
             'archivos.*.file' => 'Uno de los items no es un archivo válido.',
             'archivos.*.mimes' => 'Solo se admiten archivos: :values.',
@@ -52,12 +54,12 @@ class ArchivoStsController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null), 422);
         }
 
-        // ===== 2) SANITIZACIÓN DE usuario_netos =====
+        // ===== 2) SANITIZACIÓN DE corredor =====
         // Reemplaza caracteres peligrosos (/, \, :, *, espacios, etc.) por '-'.
         // Si luego del saneo queda vacío → el input era basura → rechazamos.
-        $usuarioNetos = $this->sanitizarSegmento($request->input('usuario_netos'));
-        if ($usuarioNetos === '') {
-            return response()->json(RespuestaApi::returnResultado('error', 'El usuario es incorrecto.', null), 422);
+        $corredor = $this->sanitizarSegmento($request->input('corredor'));
+        if ($corredor === '') {
+            return response()->json(RespuestaApi::returnResultado('error', 'El corredor es incorrecto.', null), 422);
         }
 
         // ===== 3) VALIDACIÓN DE TAMAÑO TOTAL =====
@@ -99,8 +101,8 @@ class ArchivoStsController extends Controller
                 $esImagen = str_starts_with($archivoData->getMimeType() ?? '', 'image/');
                 $carpeta = $esImagen ? 'galerias' : 'archivos';
 
-                // Guarda el binario físico en sts/<usuario_netos>/<galerias|archivos>/<nombre>
-                $path = Storage::disk($disk)->putFileAs("sts/{$usuarioNetos}/{$carpeta}", $archivoData, $nombreUnico);
+                // Guarda el binario físico en corredores/<corredor>/<galerias|archivos>/<nombre>
+                $path = Storage::disk($disk)->putFileAs("corredores/{$corredor}/{$carpeta}", $archivoData, $nombreUnico);
 
                 // Si putFileAs devuelve false, el write falló → disparamos exception
                 // para que el catch haga rollback y limpie lo anterior.
@@ -117,8 +119,8 @@ class ArchivoStsController extends Controller
                         'titulo' => $nombreUnico,
                         'descripcion' => $nombreSeguro,
                         'imagen' => $path,
-                        'tipo_gal_id' => 12, // tipo "STS"
-                        'usuario_netos' => $usuarioNetos,
+                        'tipo_gal_id' => 12, // tipo "Corredor"
+                        'corredor' => $corredor,
                     ]);
                 } else {
                     $archivosGuardados[] = Archivo::create([
@@ -126,15 +128,15 @@ class ArchivoStsController extends Controller
                         'observacion' => $nombreSeguro,
                         'archivo' => $path,
                         'caso_id' => null,
-                        'tipo' => 'STS',
-                        'usuario_netos' => $usuarioNetos,
+                        'tipo' => 'CORREDOR',
+                        'corredor' => $corredor,
                     ]);
                 }
 
                 // Auditoría: quién subió qué, desde qué IP, tamaño, MIME, path final.
                 // Escribe en storage/logs/logsCrm.log (canal 'single' de tu logging.php).
-                Log::info('STS archivo subido', [
-                    'usuario_netos' => $usuarioNetos,
+                Log::info('Corredores: archivo subido', [
+                    'corredor' => $corredor,
                     'user_id' => optional(auth()->user())->id,
                     'ip' => $request->ip(),
                     'user_agent' => $request->userAgent(),
@@ -167,8 +169,8 @@ class ArchivoStsController extends Controller
             }
 
             // Log del error con los paths que se tuvieron que limpiar, para auditoría.
-            Log::error('STS error al subir archivos', [
-                'usuario_netos' => $usuarioNetos,
+            Log::error('Corredores: error al subir archivos', [
+                'corredor' => $corredor,
                 'ip' => $request->ip(),
                 'paths_limpiados' => $pathsEscritos,
                 'mensaje' => $e->getMessage(),
@@ -184,10 +186,10 @@ class ArchivoStsController extends Controller
     {
         // ===== 1) VALIDACIÓN =====
         $validator = Validator::make($request->all(), [
-            'usuario_netos' => 'required|string',
+            'corredor' => 'required|string',
         ], [
-            'usuario_netos.required' => 'El usuario es incorrecto.',
-            'usuario_netos.string' => 'El usuario es incorrecto.',
+            'corredor.required' => 'El corredor es incorrecto.',
+            'corredor.string' => 'El corredor es incorrecto.',
         ]);
 
         if ($validator->fails()) {
@@ -195,38 +197,38 @@ class ArchivoStsController extends Controller
         }
 
         // ===== 2) SANITIZAR — exact match con lo que se guardó en upload =====
-        $usuarioNetos = $this->sanitizarSegmento($request->input('usuario_netos'));
-        if ($usuarioNetos === '') {
-            return response()->json(RespuestaApi::returnResultado('error', 'El usuario es incorrecto.', null), 422);
+        $corredor = $this->sanitizarSegmento($request->input('corredor'));
+        if ($corredor === '') {
+            return response()->json(RespuestaApi::returnResultado('error', 'El corredor es incorrecto.', null), 422);
         }
 
         // ===== 3) QUERIES =====
         // URL pública del NAS.
-        $baseUrl = 'http://img.almespana.com.ec:8582/crm/';
+        $baseUrl = 'https://img.almacenesespana.com.ec/crm/';
 
         try {
-            $archivos = Archivo::where('usuario_netos', $usuarioNetos)
-                ->where('tipo', 'STS')
+            $archivos = Archivo::where('corredor', $corredor)
+                ->where('tipo', 'CORREDOR')
                 ->orderByDesc('id')
-                ->get(['id', 'titulo', 'archivo', 'usuario_netos', 'created_at'])
+                ->get(['id', 'titulo', 'archivo', 'corredor', 'created_at'])
                 ->map(fn($a) => [
                     'id' => $a->id,
                     'titulo' => $a->titulo,
                     'archivo' => $baseUrl . $a->archivo,
-                    'usuario_netos' => $a->usuario_netos,
+                    'corredor' => $a->corredor,
                     'tipo' => 'archivo',
                     'created_at' => $a->created_at,
                 ]);
 
-            $imagenes = Galeria::where('usuario_netos', $usuarioNetos)
+            $imagenes = Galeria::where('corredor', $corredor)
                 ->where('tipo_gal_id', 12)
                 ->orderByDesc('id')
-                ->get(['id', 'titulo', 'imagen', 'usuario_netos', 'created_at'])
+                ->get(['id', 'titulo', 'imagen', 'corredor', 'created_at'])
                 ->map(fn($i) => [
                     'id' => $i->id,
                     'titulo' => $i->titulo,
                     'imagen' => $baseUrl . $i->imagen,
-                    'usuario_netos' => $i->usuario_netos,
+                    'corredor' => $i->corredor,
                     'tipo' => 'imagen',
                     'created_at' => $i->created_at,
                 ]);
@@ -253,12 +255,12 @@ class ArchivoStsController extends Controller
     {
         // ===== 1) VALIDACIÓN =====
         $validator = Validator::make($request->all(), [
-            'usuario_netos' => 'required|string',
+            'corredor' => 'required|string',
             'id' => 'required|integer|min:1',
             'tipo' => 'required|in:archivo,imagen',
         ], [
-            'usuario_netos.required' => 'El usuario es incorrecto.',
-            'usuario_netos.string' => 'El usuario es incorrecto.',
+            'corredor.required' => 'El corredor es incorrecto.',
+            'corredor.string' => 'El corredor es incorrecto.',
             'id.required' => 'Falta el id del archivo a eliminar.',
             'id.integer' => 'El id debe ser numérico.',
             'tipo.required' => 'Falta el tipo archivo.',
@@ -269,25 +271,25 @@ class ArchivoStsController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null), 422);
         }
 
-        // ===== 2) SANITIZAR usuario_netos =====
-        $usuarioNetos = $this->sanitizarSegmento($request->input('usuario_netos'));
-        if ($usuarioNetos === '') {
-            return response()->json(RespuestaApi::returnResultado('error', 'El usuario es incorrecto.', null), 422);
+        // ===== 2) SANITIZAR corredor =====
+        $corredor = $this->sanitizarSegmento($request->input('corredor'));
+        if ($corredor === '') {
+            return response()->json(RespuestaApi::returnResultado('error', 'El corredor es incorrecto.', null), 422);
         }
 
         $id = (int) $request->input('id');
         $tipo = $request->input('tipo');
 
-        // ===== 3) BUSCAR EL REGISTRO (filtrando por usuario_netos para seguridad) =====
+        // ===== 3) BUSCAR EL REGISTRO (filtrando por corredor para seguridad) =====
         if ($tipo === 'archivo') {
             $registro = Archivo::where('id', $id)
-                ->where('usuario_netos', $usuarioNetos)
-                ->where('tipo', 'STS')
+                ->where('corredor', $corredor)
+                ->where('tipo', 'CORREDOR')
                 ->first();
             $campoPath = 'archivo';
         } else {
             $registro = Galeria::where('id', $id)
-                ->where('usuario_netos', $usuarioNetos)
+                ->where('corredor', $corredor)
                 ->where('tipo_gal_id', 12)
                 ->first();
             $campoPath = 'imagen';
@@ -317,8 +319,8 @@ class ArchivoStsController extends Controller
 
             DB::commit();
 
-            Log::info('STS archivo eliminado', [
-                'usuario_netos' => $usuarioNetos,
+            Log::info('Corredores: archivo eliminado', [
+                'corredor' => $corredor,
                 'user_id' => optional(auth()->user())->id,
                 'ip' => $request->ip(),
                 'tipo' => $tipo,
@@ -331,8 +333,8 @@ class ArchivoStsController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            Log::error('STS error al eliminar archivo', [
-                'usuario_netos' => $usuarioNetos,
+            Log::error('Corredores: error al eliminar archivo', [
+                'corredor' => $corredor,
                 'ip' => $request->ip(),
                 'tipo' => $tipo,
                 'id' => $id,
@@ -342,6 +344,28 @@ class ArchivoStsController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
         }
+    }
+
+    /**
+     * Extensiones de archivo permitidas para subir (módulo corredores).
+     * Se leen SIEMPRE de crm.parametro (abreviacion = 'EXTCOR', campo valor)
+     * como lista separada por comas, ej: "pdf,jpg,png,docx". Se normalizan:
+     * minúsculas, sin puntos ni espacios, solo alfanuméricas, sin duplicados.
+     * Solo si el parámetro no existe o su valor queda vacío tras normalizar,
+     * se usa el fallback pdf.
+     */
+    private function extensionesPermitidas(): array
+    {
+        $parametro = DB::table('crm.parametro')->where('abreviacion', 'EXTCOR')->first();
+
+        $extensiones = collect(explode(',', $parametro->valor ?? ''))
+            ->map(fn($ext) => strtolower(trim($ext, " .\t")))
+            ->filter(fn($ext) => preg_match('/^[a-z0-9]+$/', $ext))
+            ->unique()
+            ->values()
+            ->all();
+
+        return $extensiones ?: ['pdf'];
     }
 
     /**

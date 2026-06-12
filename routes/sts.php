@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\crm\EmailController;
-use App\Http\Controllers\sts\ArchivoStsController;
+use App\Http\Controllers\sts\ArchivoCorredorController;
 use App\Http\Controllers\sts\DynamoClienteController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,9 +15,9 @@ Route::group(["prefix" => "sts", 'middleware' => ['jwt.auth', 'usuario.activo']]
     Route::post('/send_emailMultinivel', [EmailController::class, 'send_emailMultinivel']);
 
     // ARCHIVOS
-    Route::post('/addArchivos', [ArchivoStsController::class, 'addArchivos']);
-    Route::post('/listArchivos', [ArchivoStsController::class, 'listArchivos']);
-    Route::post('/deleteArchivo', [ArchivoStsController::class, 'deleteArchivo']);
+    Route::post('/addArchivos', [ArchivoCorredorController::class, 'addArchivos']);
+    Route::post('/listArchivos', [ArchivoCorredorController::class, 'listArchivos']);
+    Route::post('/deleteArchivo', [ArchivoCorredorController::class, 'deleteArchivo']);
 });
 
 // Rutas PÚBLICAS del formulario Dynamo (sin login).

@@ -16,7 +16,7 @@ class Archivo extends Model
     //use SoftDeletes;
 
     protected $table = 'crm.archivos';
-    protected $fillable = ["titulo", "observacion", "archivo", "caso_id", "tipo", "acc_publico", "tab_id", 'usuario_netos',];
+    protected $fillable = ["titulo", "observacion", "archivo", "caso_id", "tipo", "acc_publico", "tab_id", 'corredor',];
 
     public function setCreatedAtAttribute($value)
     {
