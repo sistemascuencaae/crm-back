@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\crm\EmailController;
 use App\Http\Controllers\sts\ArchivoStsController;
 use App\Http\Controllers\sts\DynamoClienteController;
 use Illuminate\Support\Facades\Route;
@@ -10,6 +11,8 @@ Route::group(["prefix" => "sts", 'middleware' => ['jwt.auth', 'usuario.activo']]
     Route::post('/generarLinkFormulario', [DynamoClienteController::class, 'generarLinkFormulario']);
     // CLIENTE DYNAMO: listado de clientes con su corredor (filtro opcional por corredor)
     Route::post('/listClientesCorredor', [DynamoClienteController::class, 'listClientesCorredor']);
+    // CLIENTE DYNAMO: envia un correo con la cuenta secundaria multinivel (smtp2)
+    Route::post('/send_emailMultinivel', [EmailController::class, 'send_emailMultinivel']);
 
     // ARCHIVOS
     Route::post('/addArchivos', [ArchivoStsController::class, 'addArchivos']);
