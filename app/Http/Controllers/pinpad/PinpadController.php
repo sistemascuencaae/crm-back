@@ -192,14 +192,17 @@ class PinpadController extends Controller
      * anular() - POST /pinpad/anular
      * PP Anulacion: cancela una transaccion del MISMO DIA.
      *
-     * Para anular se requiere el numero de referencia de la transaccion
-     * original (que el cajero anota al cobrar). Los montos van en cero
-     * automaticamente (el switch ya los conoce).
+     * Para anular se requiere el numero de referencia (secuencial) de la
+     * transaccion original y, segun el manual p.6, el numero de autorizacion
+     * que el banco devolvio en esa compra (ambos vienen en data.detalle del
+     * cobro y en el voucher impreso). Los montos van en cero automaticamente
+     * (el switch ya los conoce).
      */
     public function anular(Request $req)
     {
         return $this->enviarPp('anulacion', $req, [
-            'referencia' => 'required|string',
+            'referencia'   => 'required|string',
+            'autorizacion' => 'nullable|string|max:6',
         ]);
     }
 
@@ -310,7 +313,15 @@ class PinpadController extends Controller
 
             // Pasamos 'operacion' al helper para incluirla en la respuesta.
             // El frontend usa esto para saber que tipo de transaccion fue.
-            return response()->json($this->enviarYParsear($trama, ['operacion' => $modalidad]));
+            $extra = ['operacion' => $modalidad];
+
+            // Eco de plazo/gracia para diferidos: la respuesta del pinpad NO
+            // trae campo de cuotas (manual p.8-10), asi que devolvemos lo
+            // enviado para que el frontend pueda mostrarlo al cajero.
+            if (isset($data['plazo']))        $extra['plazo']        = (int) $data['plazo'];
+            if (isset($data['gracia_meses'])) $extra['gracia_meses'] = (int) $data['gracia_meses'];
+
+            return response()->json($this->enviarYParsear($trama, $extra));
         } catch (\Throwable $th) {
             Log::error("Pinpad/$modalidad: " . $th->getMessage());
             return response()->json(RespuestaApi::returnResultado('exception', $th->getMessage(), null));
@@ -463,7 +474,7 @@ class PinpadController extends Controller
                 'referencia'     => 'nullable|string|max:6',
                 'plazo'          => 'nullable|integer|min:0|max:99',
                 'gracia'         => 'nullable|integer|min:0|max:99',
-                'diferido_tipo'  => 'nullable|string|in:normal_con,gracia_con,mes_a_mes_con,especial_con,normal_sin,gracia_sin,mes_a_mes_sin,especial_sin',
+                'diferido_tipo'  => 'nullable|string|in:normal_con,gracia_con,mes_a_mes_con,normal_sin,gracia_sin,mes_a_mes_sin,especial_sin',
                 'adquirente_code'=> 'nullable|string|max:6',
             ]);
 
@@ -540,6 +551,7 @@ class PinpadController extends Controller
             'hash_recibido'  => $parsed['hash_recibido'],    // 32 chars hex del hash
             'cod_resp'       => $parsed['cod_resp'],         // codigo del autorizador/banco
             'cod_resp_desc'  => $parsed['cod_resp_desc'],    // descripcion humana
+            'detalle'        => $parsed['detalle'],          // solo PP: 31 campos posicionales (secuencial, lote, autorizacion, tarjeta, EMV...)
         ]);
 
         // ===== 4) DECIDIR ESTADO Y MENSAJE =====
@@ -569,7 +581,7 @@ class PinpadController extends Controller
         $op = $extra['operacion'] ?? '';
         $debeGuardarReverso = (
             in_array($op, ['corriente', 'diferido_normal_con', 'diferido_gracia_con',
-                           'diferido_mes_a_mes_con', 'diferido_especial_con',
+                           'diferido_mes_a_mes_con',
                            'diferido_normal_sin', 'diferido_gracia_sin',
                            'diferido_mes_a_mes_sin', 'diferido_especial_sin',
                            'reimpresion'])
