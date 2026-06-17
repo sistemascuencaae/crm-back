@@ -81,6 +81,7 @@ use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\gestiones\GestionController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
 use App\Http\Controllers\openceo\BodegaController;
+use App\Http\Controllers\openceo\ClienteController as Cliente2Controller;
 use App\Http\Controllers\openceo\EntidadDynamoController;
 use App\Http\Controllers\reportes\ReporteLinkController;
 use App\Http\Controllers\reportes\ReporteLinkUsuariosController;
@@ -1364,6 +1365,9 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
     Route::get('/listEmpleadoByIdentificacion/{identificacion}', [EntidadDynamoController::class, 'listEmpleadoByIdentificacion']);
     Route::get('/listBodegas', [BodegaController::class, 'listBodegas']);
+
+    // CLIENTE (réplica mntClienteAux vía crm.fn_clientes_registrar)
+    Route::post('/crearCliente', [Cliente2Controller::class, 'crear']);
 });
 
 Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
