@@ -1372,6 +1372,7 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/parroquiasByCanton/{ctnId}', [Cliente2Controller::class, 'parroquiasByCanton']);
     Route::get('/listarClientesDynamo', [Cliente2Controller::class, 'listar']);
     Route::get('/solicitudCreditoCliente/{cliId}', [Cliente2Controller::class, 'solicitudCredito']);
+    Route::get('/buscarClienteIdentificacion', [Cliente2Controller::class, 'buscarPorIdentificacion']);
 });
 
 Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {

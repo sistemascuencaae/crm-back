@@ -133,7 +133,7 @@ class ClienteController extends Controller
     {
         try {
             $data = (object) [
-                'politicas' => DB::select("SELECT pol_id, pol_nombre, pol_diasplazo FROM politica WHERE pol_activo = true ORDER BY pol_nombre"),
+                'politicas' => DB::select("SELECT pol_id, pol_nombre, pol_diasplazo FROM politica WHERE pol_activo = true AND pol_tipocli = 1 ORDER BY pol_nombre"),
                 'categorias' => DB::select("SELECT cat_id, cat_nombre FROM catcliente WHERE cat_activo = true AND cat_tipocli = 1 ORDER BY cat_nombre"),
                 'canales' => DB::select("SELECT can_id, can_nombre FROM canal WHERE can_activo = true ORDER BY can_nombre"),
                 'agentes' => DB::select("SELECT emp.emp_id, TRIM(COALESCE(ent.ent_nombres, '') || ' ' || COALESCE(ent.ent_apellidos, '')) AS nombre_completo
@@ -235,6 +235,45 @@ class ClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Solicitud de crédito generada con éxito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo generar la solicitud de crédito', $th->getMessage()));
+        }
+    }
+
+    // Busca un cliente existente por identificación: valida formato con crm.fn_validar_identificacion_ecuador
+    // y compara solo los primeros 10 dígitos (cédula vs RUC del mismo titular), para no duplicar un cliente
+    // que ya existe. Usado por el botón de búsqueda en la pestaña Identificación del modal "Nuevo Cliente".
+    public function buscarPorIdentificacion(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'identificacion' => 'required|string',
+            'tipo_identificacion' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Validación de datos', $validator->errors()));
+        }
+
+        try {
+            $resultado = DB::select('SELECT * FROM crm.fn_cliente_buscar_por_identificacion(?, ?)', [
+                $request->input('identificacion'),
+                $request->input('tipo_identificacion'),
+            ]);
+
+            $fila = $resultado[0] ?? null;
+            $cliente = $fila ? json_decode($fila->datos, true) : null;
+
+            return response()->json(RespuestaApi::returnResultado(
+                'success',
+                $cliente ? 'Cliente encontrado' : 'No se encontró un cliente con esa identificación',
+                $cliente
+            ));
+        } catch (QueryException $e) {
+            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
+                if (strpos($e->getMessage(), $codigo) !== false) {
+                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+                }
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo buscar el cliente', $e->getMessage()));
         }
     }
 }
