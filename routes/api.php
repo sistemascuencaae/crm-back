@@ -1368,6 +1368,10 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
 
     // CLIENTE (réplica mntClienteAux vía crm.fn_clientes_registrar)
     Route::post('/crearCliente', [Cliente2Controller::class, 'crear']);
+    Route::get('/catalogosCliente', [Cliente2Controller::class, 'catalogos']);
+    Route::get('/parroquiasByCanton/{ctnId}', [Cliente2Controller::class, 'parroquiasByCanton']);
+    Route::get('/listarClientesDynamo', [Cliente2Controller::class, 'listar']);
+    Route::get('/solicitudCreditoCliente/{cliId}', [Cliente2Controller::class, 'solicitudCredito']);
 });
 
 Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {

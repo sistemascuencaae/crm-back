@@ -127,4 +127,114 @@ class ClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear el cliente', $e->getMessage()));
         }
     }
+
+    // Catálogos para poblar los combos del formulario (réplica de mntClienteAux.jsf)
+    public function catalogos()
+    {
+        try {
+            $data = (object) [
+                'politicas' => DB::select("SELECT pol_id, pol_nombre, pol_diasplazo FROM politica WHERE pol_activo = true ORDER BY pol_nombre"),
+                'categorias' => DB::select("SELECT cat_id, cat_nombre FROM catcliente WHERE cat_activo = true AND cat_tipocli = 1 ORDER BY cat_nombre"),
+                'canales' => DB::select("SELECT can_id, can_nombre FROM canal WHERE can_activo = true ORDER BY can_nombre"),
+                'agentes' => DB::select("SELECT emp.emp_id, TRIM(COALESCE(ent.ent_nombres, '') || ' ' || COALESCE(ent.ent_apellidos, '')) AS nombre_completo
+                    FROM empleado emp
+                    INNER JOIN entidad ent ON ent.ent_id = emp.ent_id
+                    WHERE emp.emp_activo = true
+                    ORDER BY nombre_completo"),
+                'zonas' => DB::select("SELECT zon_id, zon_nombre FROM zona WHERE zon_activo = true ORDER BY zon_nombre"),
+                'listasPrecio' => DB::select("SELECT lpr_id, lpr_nombre FROM listapre WHERE lpr_activo = true ORDER BY lpr_nombre"),
+                'paises' => DB::select("SELECT pai_id, pai_nombre FROM pais ORDER BY pai_nombre"),
+                'companias' => DB::select("SELECT com_id, com_nombre FROM compania WHERE com_activo = true ORDER BY com_nombre"),
+                'actividadesEconomicas' => DB::select("SELECT aec_id, aec_nombre FROM actividad_economica ORDER BY aec_nombre"),
+                'formasPago' => DB::select("SELECT sfp_id, sfp_nombre FROM sri_formas_pago ORDER BY sfp_nombre"),
+                'tiposTelefono' => DB::select("SELECT tte_id, tte_nombre FROM tipo_telefono ORDER BY tte_nombre"),
+                'ubicaciones' => DB::select("SELECT ubi_id, ubi_nombre FROM ubicacion WHERE ubi_activo = true ORDER BY ubi_nombre"),
+                'titulos' => DB::select("SELECT tit_id, tit_nombre FROM titulo WHERE tit_activo = true ORDER BY tit_nombre"),
+                'cantones' => DB::select("SELECT ctn_id, ctn_nombre FROM canton ORDER BY ctn_nombre"),
+                'parametrosAnexo' => DB::select("SELECT pane_id, pane_grupo_codigo, pane_nombre, pane_principal, pane_cod_dinardap
+                    FROM parametro_anexo
+                    WHERE pane_grupo_codigo BETWEEN 2 AND 10
+                    ORDER BY pane_grupo_codigo, pane_nombre"),
+            ];
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Catálogos cargados con éxito', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los catálogos', $th->getMessage()));
+        }
+    }
+
+    // Parroquias filtradas por cantón (cascada en la pestaña Dirección)
+    public function parroquiasByCanton($ctnId)
+    {
+        try {
+            $parroquias = DB::select("SELECT prq_id, prq_nombre FROM parroquia WHERE ctn_id = ? ORDER BY prq_nombre", [$ctnId]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Parroquias cargadas con éxito', $parroquias));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar las parroquias', $th->getMessage()));
+        }
+    }
+
+    // Listado paginado de clientes (grid de list-cliente-dynamo).
+    // Sin busqueda -> crm.fn_cliente_listar_paginacion | con busqueda -> crm.fn_cliente_buscar_paginacion
+    public function listar(Request $request)
+    {
+        try {
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($busqueda !== '') {
+                $registros = DB::select('SELECT * FROM crm.fn_cliente_buscar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+            } else {
+                $registros = DB::select('SELECT * FROM crm.fn_cliente_listar_paginacion(?, ?)', [$pagina, $tamanio]);
+            }
+
+            $total = $registros[0]->total_registros ?? 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Clientes listados con éxito', [
+                'registros' => $registros,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los clientes', $th->getMessage()));
+        }
+    }
+
+    // Reporte "Solicitud de Cupo y Aceptación de Cesión de Derechos del Crédito" vía crm.fn_cliente_solicitud_credito.
+    // Resuelve el usu_id del ERP comparando UPPER(usu_alias) del usuario logueado contra UPPER(usu_alias) del ERP.
+    // Si no hay coincidencia, cae al usu_id del agente (empleado) asignado al cliente.
+    public function solicitudCredito($cliId)
+    {
+        try {
+            $usuAlias = optional(auth('api')->user())->usu_alias;
+            $usuId = null;
+
+            if ($usuAlias) {
+                $usuario = DB::selectOne(
+                    'SELECT usu_id FROM usuario WHERE UPPER(usu_alias) = UPPER(?) LIMIT 1',
+                    [$usuAlias]
+                );
+                $usuId = $usuario->usu_id ?? null;
+            }
+
+            if (!$usuId) {
+                $agente = DB::selectOne(
+                    'SELECT emp.usu_id
+                     FROM cliente cli
+                     INNER JOIN empleado emp ON emp.emp_id = cli.emp_id
+                     WHERE cli.cli_id = ?',
+                    [$cliId]
+                );
+                $usuId = $agente->usu_id ?? null;
+            }
+
+            $data = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito(?, ?)', [$cliId, $usuId]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Solicitud de crédito generada con éxito', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo generar la solicitud de crédito', $th->getMessage()));
+        }
+    }
 }
