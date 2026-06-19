@@ -39,6 +39,7 @@ class ClienteController extends Controller
         'REQUIERE_EGRESOSACTIVIDAD' => 'Debe ingresar los egresos mensuales.',
         'IDENTIFICACION_INVALIDA' => 'La identificación ingresada no es válida.',
         'IDENTIFICACION_DUPLICADA' => 'Ya existe un cliente con esa identificación.',
+        'CLIENTE_NO_ENCONTRADO' => 'No se encontró el cliente a modificar.',
         'POLITICA_INVALIDA' => 'La política seleccionada no es válida.',
         'EMAILINCO' => 'El email es requerido para clientes a crédito.',
         'CANTON' => 'Debe seleccionar el cantón para clientes a crédito.',
@@ -48,30 +49,35 @@ class ClienteController extends Controller
         'REFERENCIAS' => 'Debe registrar al menos 2 referencias para clientes a crédito.',
     ];
 
-    // Campos que se envían tal cual a crm.fn_clientes_registrar como jsonb
+    // Campos que se envían tal cual a crm.fn_clientes_registrar/crm.fn_clientes_modificar como jsonb
+    // (ent_id/cli_id solo aplican al modificar; si no vienen en el request, $request->only() los omite)
     private const CAMPOS_PAYLOAD = [
-        'identificacion',
-        'tipo_identificacion',
-        'codigo',
-        'nombres',
-        'apellidos',
-        'email',
-        'titulo_id',
-        'fecha_nacimiento',
-        'observacion',
-        'cupo',
+        'ent_id',
+        'cli_id',
+        'ent_identificacion',
+        'ent_tipo_identificacion',
+        'cli_codigo',
+        'ent_nombres',
+        'ent_apellidos',
+        'ent_email',
+        'tit_id',
+        'ent_fechanacimiento',
+        'cliane_fecha_exp_pasaporte',
+        'cliane_fecha_inicio_residencia',
+        'cli_observacion',
+        'cli_cupo',
         'pol_id',
         'lpr_id',
-        'impuesto',
-        'bloqueo',
-        'tarjeta',
-        'ilimitado',
-        'activo',
+        'cli_impuesto',
+        'cli_bloqueo',
+        'cli_tarjeta',
+        'cli_ilimitado',
+        'cli_activo',
         'emp_id',
         'can_id',
-        'nombre_comercial',
-        'representante_legal_ent_id',
-        'parterel',
+        'ent_nombre_comercial',
+        'ent_representante_legal',
+        'cli_parterel',
         'ubi_id',
         'zon_id',
         'cat_id',
@@ -93,18 +99,18 @@ class ClienteController extends Controller
     public function crear(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'identificacion' => 'required|string',
-            'tipo_identificacion' => 'required|integer',
-            'nombres' => 'required|string',
-            'apellidos' => 'required|string',
+            'ent_identificacion' => 'required|string',
+            'ent_tipo_identificacion' => 'required|integer',
+            'ent_nombres' => 'required|string',
+            'ent_apellidos' => 'required|string',
             'ubi_id' => 'nullable|integer',
             'cat_id' => 'required|integer',
             'pol_id' => 'required|integer',
             'emp_id' => 'required|integer',
             'tipos_pago' => 'required|array|min:1',
-            'direccion.calle_principal' => 'required|string',
-            'direccion.calle_secundaria' => 'required|string',
-            'telefono.numero' => 'required|string',
+            'direccion.dir_calle_principal' => 'required|string',
+            'direccion.dir_calle_secundaria' => 'required|string',
+            'telefono.tel_numero' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -125,6 +131,49 @@ class ClienteController extends Controller
             }
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error al crear el cliente', $e->getMessage()));
+        }
+    }
+
+    // Modifica un cliente/entidad existente (encontrado antes vía buscarPorIdentificacion). Misma validación
+    // de negocio que crear() (crm.fn_cliente_validaciones, dentro de crm.fn_clientes_modificar), pero nunca
+    // duplica entidad/cliente y nunca elimina filas hijas (tipos de pago/referencias/direcciones/teléfonos)
+    // que ya existían — solo las modifica o agrega nuevas.
+    public function modificar(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'ent_id' => 'required|integer',
+            'ent_identificacion' => 'required|string',
+            'ent_tipo_identificacion' => 'required|integer',
+            'ent_nombres' => 'required|string',
+            'ent_apellidos' => 'required|string',
+            'ubi_id' => 'nullable|integer',
+            'cat_id' => 'required|integer',
+            'pol_id' => 'required|integer',
+            'emp_id' => 'required|integer',
+            'tipos_pago' => 'required|array|min:1',
+            'direccion.dir_calle_principal' => 'required|string',
+            'direccion.dir_calle_secundaria' => 'required|string',
+            'telefono.tel_numero' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Validación de datos', $validator->errors()));
+        }
+
+        $payload = $request->only(self::CAMPOS_PAYLOAD);
+
+        try {
+            $resultado = DB::selectOne('SELECT crm.fn_clientes_modificar(?::jsonb) AS cli_id', [json_encode($payload)]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Cliente modificado con éxito', ['cli_id' => $resultado->cli_id]));
+        } catch (QueryException $e) {
+            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
+                if (strpos($e->getMessage(), $codigo) !== false) {
+                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+                }
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al modificar el cliente', $e->getMessage()));
         }
     }
 

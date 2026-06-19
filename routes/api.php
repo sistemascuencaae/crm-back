@@ -1366,8 +1366,9 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/listEmpleadoByIdentificacion/{identificacion}', [EntidadDynamoController::class, 'listEmpleadoByIdentificacion']);
     Route::get('/listBodegas', [BodegaController::class, 'listBodegas']);
 
-    // CLIENTE (réplica mntClienteAux vía crm.fn_clientes_registrar)
+    // CLIENTE (réplica mntClienteAux vía crm.fn_clientes_registrar / crm.fn_clientes_modificar)
     Route::post('/crearCliente', [Cliente2Controller::class, 'crear']);
+    Route::post('/modificarCliente', [Cliente2Controller::class, 'modificar']);
     Route::get('/catalogosCliente', [Cliente2Controller::class, 'catalogos']);
     Route::get('/parroquiasByCanton/{ctnId}', [Cliente2Controller::class, 'parroquiasByCanton']);
     Route::get('/listarClientesDynamo', [Cliente2Controller::class, 'listar']);
