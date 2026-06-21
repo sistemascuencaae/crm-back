@@ -1370,7 +1370,11 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::post('/crearCliente', [Cliente2Controller::class, 'crear']);
     Route::post('/modificarCliente', [Cliente2Controller::class, 'modificar']);
     Route::get('/catalogosCliente', [Cliente2Controller::class, 'catalogos']);
+    Route::get('/catalogoPaginado', [Cliente2Controller::class, 'catalogoPaginado']);
+    Route::get('/ubicacionArbol', [Cliente2Controller::class, 'ubicacionArbol']);
     Route::get('/parroquiasByCanton/{ctnId}', [Cliente2Controller::class, 'parroquiasByCanton']);
+    Route::get('/cantonesByProvincia/{prvId}', [Cliente2Controller::class, 'cantonesByProvincia']);
+    Route::get('/empresaInfo/{comId}', [Cliente2Controller::class, 'empresaInfo']);
     Route::get('/listarClientesDynamo', [Cliente2Controller::class, 'listar']);
     Route::get('/solicitudCreditoCliente/{cliId}', [Cliente2Controller::class, 'solicitudCredito']);
     Route::get('/buscarClienteIdentificacion', [Cliente2Controller::class, 'buscarPorIdentificacion']);

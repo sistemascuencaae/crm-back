@@ -46,7 +46,7 @@ class ClienteController extends Controller
         'AECONOMICA' => 'Debe seleccionar la actividad económica para clientes a crédito.',
         'EMPRESA' => 'Debe seleccionar la compañía para clientes a crédito.',
         'PARROQUIA' => 'Debe seleccionar la parroquia para clientes a crédito.',
-        'REFERENCIAS' => 'Debe registrar al menos 2 referencias para clientes a crédito.',
+        'REFERENCIAS' => 'Debe registrar al menos 3 referencias para clientes a crédito.',
     ];
 
     // Campos que se envían tal cual a crm.fn_clientes_registrar/crm.fn_clientes_modificar como jsonb
@@ -104,7 +104,7 @@ class ClienteController extends Controller
             'ent_nombres' => 'required|string',
             'ent_apellidos' => 'required|string',
             'ubi_id' => 'nullable|integer',
-            'cat_id' => 'required|integer',
+            'cat_id' => 'nullable|integer', // crm.fn_cliente_validaciones lo defaultea a catcliente.cat_pordefecto (cat_id=1)
             'pol_id' => 'required|integer',
             'emp_id' => 'required|integer',
             'tipos_pago' => 'required|array|min:1',
@@ -147,7 +147,7 @@ class ClienteController extends Controller
             'ent_nombres' => 'required|string',
             'ent_apellidos' => 'required|string',
             'ubi_id' => 'nullable|integer',
-            'cat_id' => 'required|integer',
+            'cat_id' => 'nullable|integer', // crm.fn_cliente_validaciones lo defaultea a catcliente.cat_pordefecto (cat_id=1)
             'pol_id' => 'required|integer',
             'emp_id' => 'required|integer',
             'tipos_pago' => 'required|array|min:1',
@@ -199,16 +199,127 @@ class ClienteController extends Controller
                 'tiposTelefono' => DB::select("SELECT tte_id, tte_nombre FROM tipo_telefono ORDER BY tte_nombre"),
                 'ubicaciones' => DB::select("SELECT ubi_id, ubi_nombre FROM ubicacion WHERE ubi_activo = true ORDER BY ubi_nombre"),
                 'titulos' => DB::select("SELECT tit_id, tit_nombre FROM titulo WHERE tit_activo = true ORDER BY tit_nombre"),
-                'cantones' => DB::select("SELECT ctn_id, ctn_nombre FROM canton ORDER BY ctn_nombre"),
+                'cantones' => DB::select("SELECT ctn_id, ctn_nombre, prv_id FROM canton ORDER BY ctn_nombre"),
+                'provincias' => DB::select("SELECT prv_id, prv_nombre FROM provincia ORDER BY prv_nombre"),
+                'tiposDireccion' => DB::select("SELECT id, nombre FROM crm.fn_tipo_direccion_listar()"),
                 'parametrosAnexo' => DB::select("SELECT pane_id, pane_grupo_codigo, pane_nombre, pane_principal, pane_cod_dinardap
                     FROM parametro_anexo
                     WHERE pane_grupo_codigo BETWEEN 2 AND 10
                     ORDER BY pane_grupo_codigo, pane_nombre"),
             ];
 
+            // Defaults para precargar los inputs del selector-modal ({id, label}), resueltos server-side.
+            // Piloto: agente, canal, forma de pago. Agente y forma de pago no tienen flag _pordefecto -> menor id.
+            $data->defaults = (object) [
+                'emp_id' => DB::selectOne("SELECT emp.emp_id AS id, TRIM(COALESCE(ent.ent_nombres,'') || ' ' || COALESCE(ent.ent_apellidos,'')) AS label
+                    FROM empleado emp INNER JOIN entidad ent ON ent.ent_id = emp.ent_id
+                    WHERE emp.emp_activo = true ORDER BY emp.emp_id LIMIT 1"),
+                'can_id' => DB::selectOne("SELECT can_id AS id, can_nombre AS label FROM canal
+                    WHERE can_activo = true AND can_id = (SELECT to_number(par_texto,'999999')::integer FROM parametro WHERE par_abreviacion='CAN' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1")
+                    ?? DB::selectOne("SELECT can_id AS id, can_nombre AS label FROM canal WHERE can_activo = true ORDER BY can_id LIMIT 1"),
+                // Forma de pago fija/default del cliente: 'SIN UTILIZACION DEL SISTEMA FINANCIERO' (sfp_id=1).
+                // El tab "Tipo de Pago" se quitó del modal; esto va transparente por detrás en el payload.
+                'sfp_id' => DB::selectOne("SELECT sfp_id AS id, sfp_nombre AS label FROM sri_formas_pago
+                    WHERE UPPER(TRIM(sfp_nombre)) = 'SIN UTILIZACION DEL SISTEMA FINANCIERO' LIMIT 1")
+                    ?? DB::selectOne("SELECT sfp_id AS id, sfp_nombre AS label FROM sri_formas_pago ORDER BY sfp_id LIMIT 1"),
+                // Ubicación por defecto del cliente: parámetro UBI/CLI (ubi_id 10150 = CUENCA).
+                'ubi_id' => DB::selectOne("SELECT ubi_id AS id, ubi_nombre AS label FROM ubicacion
+                    WHERE ubi_activo = true AND ubi_id = (SELECT to_number(par_texto,'999999')::integer FROM parametro WHERE par_abreviacion='UBI' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1"),
+                // Categoría por defecto: catcliente.cat_pordefecto (cat_id=1 = CLIENTES). Mismo default que aplica PG.
+                'cat_id' => DB::selectOne("SELECT cat_id AS id, cat_nombre AS label FROM catcliente
+                    WHERE cat_pordefecto = true AND cat_tipocli = 1 LIMIT 1"),
+                // Provincia por defecto para la cascada provincia->cantón->parroquia: AZUAY.
+                'prv_id' => DB::selectOne("SELECT prv_id AS id, prv_nombre AS label FROM provincia
+                    WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' LIMIT 1"),
+                // Nacionalidad por defecto: ECUADOR (parámetro PAI/CLI; fallback por nombre).
+                'pai_id' => DB::selectOne("SELECT pai_id AS id, pai_nombre AS label FROM pais
+                    WHERE pai_codigo = (SELECT par_texto FROM parametro WHERE par_abreviacion='PAI' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1")
+                    ?? DB::selectOne("SELECT pai_id AS id, pai_nombre AS label FROM pais WHERE UPPER(TRIM(pai_nombre))='ECUADOR' LIMIT 1"),
+                // Título por defecto: primera opción (orden alfabético).
+                'tit_id' => DB::selectOne("SELECT tit_id AS id, tit_nombre AS label FROM titulo WHERE tit_activo=true ORDER BY tit_nombre LIMIT 1"),
+                // Tipo de teléfono por defecto: CELULAR.
+                'tte_id' => DB::selectOne("SELECT tte_id AS id, tte_nombre AS label FROM tipo_telefono WHERE UPPER(TRIM(tte_nombre))='CELULAR' LIMIT 1"),
+                // Defaults demográficos/actividad (parametro_anexo). Sexo/Nivel/Vivienda/Sit.Laboral/Tipo Empresa
+                // = el "principal" del ERP (pane_principal=true). Estado Civil = SOLTERO (decisión del usuario;
+                // el "principal" del ERP es CASADO, se sobreescribe a propósito).
+                'pane_id_sex' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=2 AND pane_principal=true LIMIT 1"),
+                'pane_id_eci' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=3 AND UPPER(TRIM(pane_nombre))='SOLTERO' LIMIT 1"),
+                'pane_id_nes' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=4 AND pane_principal=true LIMIT 1"),
+                'pane_id_tvi' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=5 AND pane_principal=true LIMIT 1"),
+                'pane_id_sla' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=6 AND pane_principal=true LIMIT 1"),
+                'pane_id_tem' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=7 AND pane_principal=true LIMIT 1"),
+                // Parentesco/relación por defecto de las referencias: la primera opción del catálogo
+                // (en mayúsculas, igual que crm.fn_parentesco_listar_paginacion).
+                'parentesco' => DB::selectOne("SELECT UPPER(TRIM(nombre)) AS label FROM crm.parentesco ORDER BY nombre LIMIT 1"),
+            ];
+
             return response()->json(RespuestaApi::returnResultado('success', 'Catálogos cargados con éxito', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los catálogos', $th->getMessage()));
+        }
+    }
+
+    // Catálogo paginado server-side para el selector-modal del formulario. Cada función PG devuelve
+    // (id, label, total_registros). El match solo elige el NOMBRE de la función fija (no concatena
+    // input al SQL) — si la clave no está mapeada, se rechaza.
+    public function catalogoPaginado(Request $request)
+    {
+        $catalogo = (string) $request->query('catalogo', '');
+        $pagina   = max((int) $request->query('pagina', 1), 1);
+        $tamanio  = max((int) $request->query('tamanio', 10), 1);
+        $busqueda = trim((string) $request->query('busqueda', ''));
+        // p_filtro: solo lo usa parroquias (ctn_id); el resto de funciones lo ignoran. null si no viene.
+        $filtroRaw = $request->query('filtro');
+        $filtro = ($filtroRaw === null || $filtroRaw === '') ? null : (int) $filtroRaw;
+
+        $funcion = match ($catalogo) {
+            'agentes'               => 'crm.fn_agente_listar_paginacion',
+            'canales'               => 'crm.fn_canal_listar_paginacion',
+            'formasPago'            => 'crm.fn_forma_pago_listar_paginacion',
+            'titulos'               => 'crm.fn_titulo_listar_paginacion',
+            'paises'                => 'crm.fn_pais_listar_paginacion',
+            'provincias'            => 'crm.fn_provincia_listar_paginacion',
+            'cantones'              => 'crm.fn_canton_listar_paginacion',
+            'parroquias'            => 'crm.fn_parroquia_listar_paginacion',
+            'actividadesEconomicas' => 'crm.fn_actividad_economica_listar_paginacion',
+            'companias'             => 'crm.fn_compania_listar_paginacion',
+            'ubicaciones'           => 'crm.fn_ubicacion_listar_paginacion',
+            'zonas'                 => 'crm.fn_zona_listar_paginacion',
+            'listasPrecio'          => 'crm.fn_lista_precio_listar_paginacion',
+            'categorias'            => 'crm.fn_categoria_cliente_listar_paginacion',
+            'tiposTelefono'         => 'crm.fn_tipo_telefono_listar_paginacion',
+            'parentescos'           => 'crm.fn_parentesco_listar_paginacion',
+            default                 => null,
+        };
+
+        if ($funcion === null) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Catálogo no válido', null));
+        }
+
+        try {
+            $registros = DB::select("SELECT * FROM {$funcion}(?, ?, ?, ?)", [$pagina, $tamanio, $busqueda, $filtro]);
+            $total = $registros[0]->total_registros ?? 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Catálogo listado con éxito', [
+                'registros' => $registros,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo listar el catálogo', $th->getMessage()));
+        }
+    }
+
+    // Árbol completo de ubicaciones (provincia → cantón → parroquia) para el modal del tab Dinardap.
+    // Devuelve la lista plana; el front la arma como árbol con ubi_reporta. Solo las hojas son seleccionables.
+    public function ubicacionArbol()
+    {
+        try {
+            $nodos = DB::select("SELECT * FROM crm.fn_ubicacion_arbol()");
+            return response()->json(RespuestaApi::returnResultado('success', 'Árbol de ubicaciones cargado con éxito', $nodos));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el árbol de ubicaciones', $th->getMessage()));
         }
     }
 
@@ -220,6 +331,29 @@ class ClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Parroquias cargadas con éxito', $parroquias));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar las parroquias', $th->getMessage()));
+        }
+    }
+
+    // Dirección y teléfono de una empresa (compania) — SOLO VISUAL en el modal de cliente (tab Actividad).
+    // El cliente solo guarda la referencia com_id; estos datos pertenecen a la compania y no se persisten.
+    public function empresaInfo($comId)
+    {
+        try {
+            $empresa = DB::selectOne("SELECT com_id, com_nombre, com_direccion, com_telefono1, com_telefono2 FROM compania WHERE com_id = ?", [$comId]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Datos de la empresa', $empresa));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los datos de la empresa', $th->getMessage()));
+        }
+    }
+
+    // Cantones filtrados por provincia (cascada provincia -> cantón -> parroquia)
+    public function cantonesByProvincia($prvId)
+    {
+        try {
+            $cantones = DB::select("SELECT ctn_id, ctn_nombre FROM canton WHERE prv_id = ? ORDER BY ctn_nombre", [$prvId]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Cantones cargados con éxito', $cantones));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los cantones', $th->getMessage()));
         }
     }
 
@@ -316,13 +450,16 @@ class ClienteController extends Controller
                 $cliente
             ));
         } catch (QueryException $e) {
+            // La identificación inválida (crm.fn_validar_identificacion_ecuador → IDENTIFICACION_INVALIDA) y
+            // cualquier otro fallo de la consulta se devuelven con HTTP 500, para que el front lo trate por la
+            // rama de error (marca el campo Identificación en rojo).
             foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
                 if (strpos($e->getMessage(), $codigo) !== false) {
-                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null), 500);
                 }
             }
 
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo buscar el cliente', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo buscar el cliente', $e->getMessage()), 500);
         }
     }
 }
