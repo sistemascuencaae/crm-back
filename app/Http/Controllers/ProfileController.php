@@ -89,7 +89,7 @@ class ProfileController extends Controller
         $sql = "SELECT u.id,u.name,u.surname,u.login,u.profile_id,
                     a.menu_id,
                     m.code,m.module,m.name,m.url,m.icon,
-                    a.create,a.edit,a.delete,a.report,a.cerrar_actividad,a.cerrar_reagendar_actividad,a.ejecutar
+                    a.create,a.edit,a.delete,a.report,a.cerrar_actividad,a.cerrar_reagendar_actividad,a.audit,a.solicitud_credito,a.ejecutar
                 FROM crm.users u
                 INNER JOIN access a on u.profile_id=a.profile_id
                 INNER JOIN menu m on a.menu_id=m.id
@@ -214,6 +214,8 @@ class ProfileController extends Controller
                         'ejecutar' => 0,
                         'cerrar_actividad' => 0,
                         'cerrar_reagendar_actividad' => 0,
+                        'audit' => 0,
+                        'solicitud_credito' => 0,
                         'created_at' => null,
                         'updated_at' => null,
                         'menu' => $menuData // Agregar el objeto Menu relacionado

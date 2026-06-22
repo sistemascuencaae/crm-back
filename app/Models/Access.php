@@ -22,8 +22,9 @@ class Access extends Model
         'report',
         'cerrar_actividad',
         'cerrar_reagendar_actividad',
-        // 'other',
-        'ejecutar'
+        'audit',
+        'solicitud_credito',
+        'ejecutar',
     ];
 
     // protected $hidden = [

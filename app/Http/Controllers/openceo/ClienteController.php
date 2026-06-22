@@ -42,6 +42,7 @@ class ClienteController extends Controller
         'REQUIERE_EGRESOSACTIVIDAD' => 'Debe ingresar los egresos mensuales.',
         'IDENTIFICACION_INVALIDA' => 'La identificación ingresada no es válida.',
         'IDENTIFICACION_DUPLICADA' => 'Ya existe un cliente con esa identificación.',
+        'CODIGO_DUPLICADO' => 'Ya existe un cliente con ese código.',
         'CLIENTE_NO_ENCONTRADO' => 'No se encontró el cliente a modificar.',
         'POLITICA_INVALIDA' => 'La política seleccionada no es válida.',
         'EMAILINCO' => 'El email es requerido para clientes a crédito.',
@@ -121,9 +122,10 @@ class ClienteController extends Controller
         }
 
         $payload = $request->only(self::CAMPOS_PAYLOAD);
-        // usuario_id: lo setea el servidor (no viene del request) para que la función PG llene
+        // usuario_auditoria: lo setea el servidor (no viene del request) para que la función PG llene
         // cliente.created_by/updated_by. auth('api') es el guard JWT usado en este controller.
-        $payload['usuario_id'] = auth('api')->id();
+        // Se guarda la etiqueta "usu_alias - APELLIDOS NOMBRES" (no el id).
+        $payload['usuario_auditoria'] = $this->etiquetaUsuarioAuditoria();
 
         try {
             $resultado = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload)]);
@@ -169,7 +171,8 @@ class ClienteController extends Controller
         }
 
         $payload = $request->only(self::CAMPOS_PAYLOAD);
-        $payload['usuario_id'] = auth('api')->id();
+        // Etiqueta "usu_alias - APELLIDOS NOMBRES" del usuario JWT, para cliente.updated_by.
+        $payload['usuario_auditoria'] = $this->etiquetaUsuarioAuditoria();
 
         // Snapshot del estado ANTES de modificar (old_values de la auditoría). Reusa el buscador que ya
         // devuelve el cliente completo en JSON. Best-effort: si falla, la modificación igual procede.
@@ -193,6 +196,20 @@ class ClienteController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error al modificar el cliente', $e->getMessage()));
         }
+    }
+
+    // Etiqueta del usuario autenticado para cliente.created_by/updated_by (varchar(100)):
+    // "usu_alias - APELLIDOS NOMBRES" (surname antes que name). Se trunca a 100 por la columna.
+    private function etiquetaUsuarioAuditoria(): ?string
+    {
+        $u = auth('api')->user();
+        if (!$u) {
+            return null;
+        }
+
+        $etiqueta = trim(trim($u->usu_alias) . ' - ' . trim($u->surname) . ' ' . trim($u->name));
+
+        return mb_substr($etiqueta, 0, 100);
     }
 
     // Trae el estado actual del cliente (JSON) para usarlo como old_values en la auditoría de modificar().
@@ -441,6 +458,38 @@ class ClienteController extends Controller
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los clientes', $th->getMessage()));
+        }
+    }
+
+    // Auditoría de UN cliente (modal desde el listado). Combina dos fuentes:
+    //   resumen -> crm.fn_cliente_auditoria_resumen (created_by/updated_by/fechas de public.cliente)
+    //   eventos -> crm.fn_cliente_auditoria_listar_paginacion (historial paginado de crm.audits)
+    // El acceso se gatea en el front con el permiso crm.access.audit.
+    public function clienteAuditoria(Request $request)
+    {
+        try {
+            $cliId = (int) $request->query('cli_id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($cliId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no válido', null));
+            }
+
+            $resumen = DB::selectOne('SELECT * FROM crm.fn_cliente_auditoria_resumen(?)', [$cliId]);
+            $eventos = DB::select('SELECT * FROM crm.fn_cliente_auditoria_listar_paginacion(?, ?, ?, ?)', [$cliId, $pagina, $tamanio, $busqueda]);
+            $total = $eventos[0]->total_registros ?? 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del cliente', $th->getMessage()));
         }
     }
 
