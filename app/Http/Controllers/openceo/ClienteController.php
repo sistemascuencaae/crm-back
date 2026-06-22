@@ -4,6 +4,9 @@ namespace App\Http\Controllers\openceo;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Audits;
+use App\Models\openceo\Cliente;
+use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -118,9 +121,14 @@ class ClienteController extends Controller
         }
 
         $payload = $request->only(self::CAMPOS_PAYLOAD);
+        // usuario_id: lo setea el servidor (no viene del request) para que la función PG llene
+        // cliente.created_by/updated_by. auth('api') es el guard JWT usado en este controller.
+        $payload['usuario_id'] = auth('api')->id();
 
         try {
             $resultado = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload)]);
+
+            $this->registrarAuditoria($request, 'created', 'crearCliente', $resultado->cli_id, null, $payload);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Cliente creado con éxito', ['cli_id' => $resultado->cli_id]));
         } catch (QueryException $e) {
@@ -161,9 +169,19 @@ class ClienteController extends Controller
         }
 
         $payload = $request->only(self::CAMPOS_PAYLOAD);
+        $payload['usuario_id'] = auth('api')->id();
+
+        // Snapshot del estado ANTES de modificar (old_values de la auditoría). Reusa el buscador que ya
+        // devuelve el cliente completo en JSON. Best-effort: si falla, la modificación igual procede.
+        $oldValues = $this->snapshotCliente(
+            $request->input('ent_identificacion'),
+            $request->input('ent_tipo_identificacion')
+        );
 
         try {
             $resultado = DB::selectOne('SELECT crm.fn_clientes_modificar(?::jsonb) AS cli_id', [json_encode($payload)]);
+
+            $this->registrarAuditoria($request, 'updated', 'modificarCliente', $resultado->cli_id, $oldValues, $payload);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Cliente modificado con éxito', ['cli_id' => $resultado->cli_id]));
         } catch (QueryException $e) {
@@ -174,6 +192,47 @@ class ClienteController extends Controller
             }
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error al modificar el cliente', $e->getMessage()));
+        }
+    }
+
+    // Trae el estado actual del cliente (JSON) para usarlo como old_values en la auditoría de modificar().
+    // Best-effort: devuelve null si la identificación es inválida o no se encuentra (no debe frenar el flujo).
+    private function snapshotCliente($identificacion, $tipoIdentificacion): ?array
+    {
+        try {
+            $fila = DB::selectOne(
+                'SELECT datos FROM crm.fn_cliente_buscar_por_identificacion(?, ?)',
+                [$identificacion, $tipoIdentificacion]
+            );
+
+            return $fila && $fila->datos ? json_decode($fila->datos, true) : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    // Registra un evento de auditoría en crm.audits (mismo patrón manual que ComentariosController).
+    // Es best-effort: un fallo aquí NO debe revertir ni romper la creación/modificación del cliente
+    // (que ya se ejecutó en su propia transacción dentro de la función PG).
+    private function registrarAuditoria(Request $request, string $event, string $accion, $cliId, $oldValues, $newValues): void
+    {
+        try {
+            $audit = new Audits();
+            $audit->user_id = auth('api')->id();
+            $audit->event = $event;
+            $audit->auditable_type = Cliente::class;
+            $audit->auditable_id = $cliId;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip();
+            $audit->url = $request->fullUrl();
+            $audit->old_values = json_encode($oldValues ?? []);
+            $audit->new_values = json_encode($newValues ?? []);
+            $audit->user_agent = $request->header('User-Agent');
+            $audit->accion = $accion;
+            $audit->save();
+        } catch (\Throwable $e) {
+            // No interrumpir el flujo principal por un fallo de auditoría; solo se deja constancia en el log.
+            \Illuminate\Support\Facades\Log::warning('No se pudo registrar auditoría de cliente: ' . $e->getMessage());
         }
     }
 
@@ -273,23 +332,23 @@ class ClienteController extends Controller
         $filtro = ($filtroRaw === null || $filtroRaw === '') ? null : (int) $filtroRaw;
 
         $funcion = match ($catalogo) {
-            'agentes'               => 'crm.fn_agente_listar_paginacion',
-            'canales'               => 'crm.fn_canal_listar_paginacion',
-            'formasPago'            => 'crm.fn_forma_pago_listar_paginacion',
-            'titulos'               => 'crm.fn_titulo_listar_paginacion',
-            'paises'                => 'crm.fn_pais_listar_paginacion',
-            'provincias'            => 'crm.fn_provincia_listar_paginacion',
-            'cantones'              => 'crm.fn_canton_listar_paginacion',
-            'parroquias'            => 'crm.fn_parroquia_listar_paginacion',
+            'agentes' => 'crm.fn_agente_listar_paginacion',
+            'canales' => 'crm.fn_canal_listar_paginacion',
+            'formasPago' => 'crm.fn_forma_pago_listar_paginacion',
+            'titulos' => 'crm.fn_titulo_listar_paginacion',
+            'paises' => 'crm.fn_pais_listar_paginacion',
+            'provincias' => 'crm.fn_provincia_listar_paginacion',
+            'cantones' => 'crm.fn_canton_listar_paginacion',
+            'parroquias' => 'crm.fn_parroquia_listar_paginacion',
             'actividadesEconomicas' => 'crm.fn_actividad_economica_listar_paginacion',
-            'companias'             => 'crm.fn_compania_listar_paginacion',
-            'ubicaciones'           => 'crm.fn_ubicacion_listar_paginacion',
-            'zonas'                 => 'crm.fn_zona_listar_paginacion',
-            'listasPrecio'          => 'crm.fn_lista_precio_listar_paginacion',
-            'categorias'            => 'crm.fn_categoria_cliente_listar_paginacion',
-            'tiposTelefono'         => 'crm.fn_tipo_telefono_listar_paginacion',
-            'parentescos'           => 'crm.fn_parentesco_listar_paginacion',
-            default                 => null,
+            'companias' => 'crm.fn_compania_listar_paginacion',
+            'ubicaciones' => 'crm.fn_ubicacion_listar_paginacion',
+            'zonas' => 'crm.fn_zona_listar_paginacion',
+            'listasPrecio' => 'crm.fn_lista_precio_listar_paginacion',
+            'categorias' => 'crm.fn_categoria_cliente_listar_paginacion',
+            'tiposTelefono' => 'crm.fn_tipo_telefono_listar_paginacion',
+            'parentescos' => 'crm.fn_parentesco_listar_paginacion',
+            default => null,
         };
 
         if ($funcion === null) {
@@ -414,6 +473,15 @@ class ClienteController extends Controller
             }
 
             $data = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito(?, ?)', [$cliId, $usuId]);
+
+            // Guarda un snapshot de la solicitud cada vez que se imprime (header + referencias). Best-effort:
+            // si falla el guardado, no debe impedir que se genere/imprima el reporte. CONTADO (sin datos)
+            // no persiste nada (la función devuelve NULL internamente).
+            try {
+                DB::selectOne('SELECT crm.fn_solicitud_credito_guardar(?, ?) AS impresion_id', [$cliId, $usuId]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo guardar el historial de solicitud de crédito: ' . $e->getMessage());
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Solicitud de crédito generada con éxito', $data));
         } catch (\Throwable $th) {
