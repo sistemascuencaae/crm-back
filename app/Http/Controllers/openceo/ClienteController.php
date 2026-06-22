@@ -478,7 +478,7 @@ class ClienteController extends Controller
             // si falla el guardado, no debe impedir que se genere/imprima el reporte. CONTADO (sin datos)
             // no persiste nada (la función devuelve NULL internamente).
             try {
-                DB::selectOne('SELECT crm.fn_solicitud_credito_guardar(?, ?) AS impresion_id', [$cliId, $usuId]);
+                DB::selectOne('SELECT crm.fn_solicitud_credito_guardar(?, ?, ?) AS impresion_id', [$cliId, $usuId, auth('api')->id()]);
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('No se pudo guardar el historial de solicitud de crédito: ' . $e->getMessage());
             }
