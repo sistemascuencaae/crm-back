@@ -71,6 +71,7 @@ class ClienteController extends Controller
         'cli_observacion',
         'cli_cupo',
         'pol_id',
+        'cli_credito',
         'lpr_id',
         'cli_impuesto',
         'cli_bloqueo',
