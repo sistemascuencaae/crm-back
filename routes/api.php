@@ -1379,6 +1379,7 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/solicitudCreditoCliente/{cliId}', [Cliente2Controller::class, 'solicitudCredito']);
     Route::get('/buscarClienteIdentificacion', [Cliente2Controller::class, 'buscarPorIdentificacion']);
     Route::get('/clienteAuditoria', [Cliente2Controller::class, 'clienteAuditoria']);
+    Route::get('/clienteSolicitudCreditoHistorial', [Cliente2Controller::class, 'solicitudCreditoHistorial']);
 });
 
 Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {

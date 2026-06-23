@@ -493,6 +493,42 @@ class ClienteController extends Controller
         }
     }
 
+    // Historial de impresiones de la "Solicitud de Crédito" de UN cliente (modal desde el listado).
+    // Cada fila = una impresión (crm.solicitudes_credito) con referencias/telefonos/direcciones como
+    // jsonb anidado (se decodifican aquí para que el front reciba arreglos). Paginado server-side.
+    // El acceso se gatea en el front con el permiso crm.access.solicitud_credito.
+    public function solicitudCreditoHistorial(Request $request)
+    {
+        try {
+            $cliId = (int) $request->query('cli_id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = $request->query('busqueda');
+
+            if ($cliId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no válido', null));
+            }
+
+            $registros = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito_listar_paginacion(?, ?, ?, ?)', [$cliId, $pagina, $tamanio, $busqueda]);
+            $total = $registros[0]->total_registros ?? 0;
+
+            foreach ($registros as $r) {
+                $r->referencias = $r->referencias ? json_decode($r->referencias, true) : [];
+                $r->telefonos = $r->telefonos ? json_decode($r->telefonos, true) : [];
+                $r->direcciones = $r->direcciones ? json_decode($r->direcciones, true) : [];
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Historial de solicitudes cargado con éxito', [
+                'registros' => $registros,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el historial de solicitudes de crédito', $th->getMessage()));
+        }
+    }
+
     // Reporte "Solicitud de Cupo y Aceptación de Cesión de Derechos del Crédito" vía crm.fn_cliente_solicitud_credito.
     // Resuelve el usu_id del ERP comparando UPPER(usu_alias) del usuario logueado contra UPPER(usu_alias) del ERP.
     // Si no hay coincidencia, cae al usu_id del agente (empleado) asignado al cliente.
