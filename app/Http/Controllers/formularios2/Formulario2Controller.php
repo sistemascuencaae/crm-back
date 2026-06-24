@@ -189,7 +189,8 @@ class Formulario2Controller extends Controller
     {
         try {
             // $data = DB::selectOne("SELECT cli_id, ent_id, ent_identificacion, ent_nombre_comercial, ent_nombre, ent_apellidos, direccion, calle_secundaria, numero_casa, telefono_domicilio, prv_nombre, ctn_nombre, ent_email FROM public.aav_migracion_cliente where ent_identificacion = '$identificacion'");
-            $data = DB::selectOne("SELECT * FROM crm.av_cliente_completo where identificacion = '$identificacion'");
+            $identificacionBusqueda = substr($identificacion, 0, 10);
+            $data = DB::selectOne("SELECT * FROM crm.av_cliente_completo where SUBSTRING(TRIM(identificacion), 1, 10) = ? ORDER BY cli_id ASC LIMIT 1", [$identificacionBusqueda]);
 
             if (!$data) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no existe con la identificación ' . $identificacion, ''));
