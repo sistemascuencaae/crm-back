@@ -423,6 +423,72 @@ class ClienteController extends Controller
         }
     }
 
+    // ─── EMPRESA (compania): crear / editar desde el modal de cliente ───────────
+    // Campos básicos que acepta el modal de empresa (se mandan a crm.fn_compania_crear/modificar como jsonb).
+    private const CAMPOS_COMPANIA = [
+        'com_id', 'com_nombre', 'com_ruc', 'com_direccion',
+        'com_telefono1', 'com_telefono2', 'com_actividad', 'com_contacto', 'ctn_id',
+    ];
+
+    public function companiaCrear(Request $request)
+    {
+        $validator = Validator::make($request->all(), ['com_nombre' => 'required|string']);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Validación de datos', $validator->errors()));
+        }
+        try {
+            $payload = $request->only(self::CAMPOS_COMPANIA);
+            $resultado = DB::selectOne('SELECT crm.fn_compania_crear(?::jsonb) AS com_id', [json_encode($payload)]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Empresa creada con éxito', ['com_id' => $resultado->com_id]));
+        } catch (QueryException $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear la empresa', $e->getMessage()));
+        }
+    }
+
+    public function companiaModificar(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'com_id' => 'required|integer',
+            'com_nombre' => 'required|string',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Validación de datos', $validator->errors()));
+        }
+        try {
+            $payload = $request->only(self::CAMPOS_COMPANIA);
+            DB::statement('SELECT crm.fn_compania_modificar(?::jsonb)', [json_encode($payload)]);
+            return response()->json(RespuestaApi::returnResultado('success', 'Empresa modificada con éxito', ['com_id' => (int) $request->input('com_id')]));
+        } catch (QueryException $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al modificar la empresa', $e->getMessage()));
+        }
+    }
+
+    // Datos de una empresa para precargar el modal de editar.
+    public function companiaBuscar($comId)
+    {
+        try {
+            $fila = DB::selectOne('SELECT crm.fn_compania_buscar(?) AS datos', [$comId]);
+            $datos = $fila && $fila->datos ? json_decode($fila->datos, true) : null;
+            return response()->json(RespuestaApi::returnResultado('success', 'Datos de la empresa', $datos));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la empresa', $th->getMessage()));
+        }
+    }
+
+    // true si la empresa la usa solo el cliente actual (o ninguno) -> editable. cli_id opcional (cliente nuevo = null).
+    public function companiaEsEditable(Request $request)
+    {
+        try {
+            $comId = (int) $request->query('com_id');
+            $cliRaw = $request->query('cli_id');
+            $cliId = ($cliRaw === null || $cliRaw === '') ? null : (int) $cliRaw;
+            $fila = DB::selectOne('SELECT crm.fn_compania_es_editable(?, ?) AS editable', [$comId, $cliId]);
+            return response()->json(RespuestaApi::returnResultado('success', 'OK', ['editable' => (bool) $fila->editable]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo verificar la empresa', $th->getMessage()));
+        }
+    }
+
     // Cantones filtrados por provincia (cascada provincia -> cantón -> parroquia)
     public function cantonesByProvincia($prvId)
     {

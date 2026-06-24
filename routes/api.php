@@ -1377,6 +1377,11 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/parroquiasByCanton/{ctnId}', [Cliente2Controller::class, 'parroquiasByCanton']);
     Route::get('/cantonesByProvincia/{prvId}', [Cliente2Controller::class, 'cantonesByProvincia']);
     Route::get('/empresaInfo/{comId}', [Cliente2Controller::class, 'empresaInfo']);
+    // EMPRESA (compania): crear/editar desde el modal de cliente
+    Route::post('/companiaCrear', [Cliente2Controller::class, 'companiaCrear']);
+    Route::post('/companiaModificar', [Cliente2Controller::class, 'companiaModificar']);
+    Route::get('/companiaBuscar/{comId}', [Cliente2Controller::class, 'companiaBuscar']);
+    Route::get('/companiaEsEditable', [Cliente2Controller::class, 'companiaEsEditable']);
     Route::get('/listarClientesDynamo', [Cliente2Controller::class, 'listar']);
     Route::get('/solicitudCreditoCliente/{cliId}', [Cliente2Controller::class, 'solicitudCredito']);
     Route::get('/buscarClienteIdentificacion', [Cliente2Controller::class, 'buscarPorIdentificacion']);
