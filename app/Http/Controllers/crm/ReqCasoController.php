@@ -474,6 +474,9 @@ class ReqCasoController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Verifique que el cliente sea a CRÉDITO y tenga toda su información completa.', ''));
             }
 
+            // Teléfonos ACTIVOS del cliente (principal + adicionales) para la tabla "4) TELÉFONOS".
+            $telefonos = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito_telefonos(?)', [$cliId]);
+
             $impresionId = optional(DB::selectOne(
                 'SELECT crm.fn_solicitud_credito_guardar(?, ?, ?) AS impresion_id',
                 [$cliId, $usuId, auth('api')->id()]
@@ -511,6 +514,7 @@ class ReqCasoController extends Controller
             $data = (object) [
                 'reqCaso'      => $requerimientosCaso,
                 'solicitud'    => $solicitud,
+                'telefonos'    => $telefonos,
                 'impresion_id' => $impresionId,
             ];
 

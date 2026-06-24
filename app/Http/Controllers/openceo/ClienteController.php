@@ -626,6 +626,9 @@ class ClienteController extends Controller
 
             $data = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito(?, ?)', [$cliId, $usuId]);
 
+            // Teléfonos ACTIVOS del cliente (principal + adicionales) para la tabla "4) TELÉFONOS".
+            $telefonos = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito_telefonos(?)', [$cliId]);
+
             // Guarda un snapshot de la solicitud cada vez que se imprime (header + referencias). Best-effort:
             // si falla el guardado, no debe impedir que se genere/imprima el reporte. CONTADO (sin datos)
             // no persiste nada (la función devuelve NULL internamente).
@@ -635,7 +638,10 @@ class ClienteController extends Controller
                 \Illuminate\Support\Facades\Log::warning('No se pudo guardar el historial de solicitud de crédito: ' . $e->getMessage());
             }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Solicitud de crédito generada con éxito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Solicitud de crédito generada con éxito', [
+                'filas' => $data,
+                'telefonos' => $telefonos,
+            ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo generar la solicitud de crédito', $th->getMessage()));
         }
