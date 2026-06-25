@@ -568,9 +568,30 @@ class ClienteController extends Controller
     {
         try {
             $cliId = (int) $request->query('cli_id', 0);
+            $identificacion = $request->query('identificacion');
             $pagina = max((int) $request->query('pagina', 1), 1);
             $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = $request->query('busqueda');
+
+            // Alternativa por identificación (p.ej. desde el caso del CRM, que no tiene cli_id):
+            // se resuelve el cli_id de public.cliente. Si el cliente no existe en public.cliente,
+            // no hay historial -> se devuelve vacío (no es un error).
+            if ($cliId <= 0 && !empty($identificacion)) {
+                $row = DB::selectOne(
+                    'SELECT c.cli_id FROM public.cliente c INNER JOIN public.entidad e ON e.ent_id = c.ent_id WHERE e.ent_identificacion = ? LIMIT 1',
+                    [$identificacion]
+                );
+                $cliId = (int) ($row->cli_id ?? 0);
+
+                if ($cliId <= 0) {
+                    return response()->json(RespuestaApi::returnResultado('success', 'Sin historial de solicitudes de crédito', [
+                        'registros' => [],
+                        'total' => 0,
+                        'pagina' => $pagina,
+                        'tamanio' => $tamanio,
+                    ]));
+                }
+            }
 
             if ($cliId <= 0) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no válido', null));

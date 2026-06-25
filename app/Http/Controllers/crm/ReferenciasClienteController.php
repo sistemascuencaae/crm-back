@@ -268,7 +268,7 @@ class ReferenciasClienteController extends Controller
                                             refane.refane_numero_telefono AS telefono1,
 		                                    refane.refane_descripcion AS relacion,
                                             refane.refane_direccion AS direccion
-                                        FROMM public.entidad ent
+                                        FROM public.entidad ent
                                         INNER JOIN public.referencias_anexo refane ON refane.ent_id = ent.ent_id
                                         WHERE ent.ent_identificacion = ?
                                         AND refane.refane_activo = true",[$identificacion]);
