@@ -572,6 +572,10 @@ class ClienteController extends Controller
             $pagina = max((int) $request->query('pagina', 1), 1);
             $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = $request->query('busqueda');
+            // Filtro opcional por caso (lo manda el botón de informacion-caso): solo las solicitudes
+            // generadas en ESE caso. Si no viene, NULL -> la función no filtra (historial completo del cliente).
+            $casoId = $request->query('caso_id');
+            $casoId = ($casoId !== null && $casoId !== '') ? (int) $casoId : null;
 
             // Alternativa por identificación (p.ej. desde el caso del CRM, que no tiene cli_id):
             // se resuelve el cli_id de public.cliente. Si el cliente no existe en public.cliente,
@@ -597,7 +601,7 @@ class ClienteController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no válido', null));
             }
 
-            $registros = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito_listar_paginacion(?, ?, ?, ?)', [$cliId, $pagina, $tamanio, $busqueda]);
+            $registros = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito_listar_paginacion(?, ?, ?, ?, ?)', [$cliId, $pagina, $tamanio, $busqueda, $casoId]);
             $total = $registros[0]->total_registros ?? 0;
 
             foreach ($registros as $r) {

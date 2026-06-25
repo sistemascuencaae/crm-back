@@ -478,9 +478,16 @@ class ReqCasoController extends Controller
             $telefonos = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito_telefonos(?)', [$cliId]);
 
             $impresionId = optional(DB::selectOne(
-                'SELECT crm.fn_solicitud_credito_guardar(?, ?, ?) AS impresion_id',
-                [$cliId, $usuId, auth('api')->id()]
+                'SELECT crm.fn_solicitud_credito_guardar(?, ?, ?, ?) AS impresion_id',
+                [$cliId, $usuId, auth('api')->id(), $casoId]
             ))->impresion_id;
+
+            // El reporte en vivo no trae caso ni id de impresión; se inyectan para que la impresión muestre
+            // "N°: <caso_id> - <id solicitud>" en la esquina sup. derecha.
+            foreach ($solicitud as $s) {
+                $s->caso_id = $casoId;
+                $s->solicitud_id = $impresionId;
+            }
 
             $reqCaso = RequerimientoCaso::find($reqId);
             if (!$reqCaso) {
