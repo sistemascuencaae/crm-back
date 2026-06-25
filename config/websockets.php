@@ -76,6 +76,8 @@ return [
                 // env('LARAVEL_WEBSOCKETS_DOMAIN'),
                 'crm.almacenesespana.com.ec', // ? Dominio del frontend (SIN https://)
                 'api.almacenesespana.com.ec', // ? Tu API (SIN https://)
+                'crmpruebas.almacenesespana.com.ec', // ? Dominio del frontend (SIN https://)
+                'apipruebas.almacenesespana.com.ec', // ? Tu API (SIN https://)
                 'localhost',
                 '192.168.1.142',
                 '192.168.1.141',
