@@ -74,8 +74,8 @@ return [
             'enable_statistics' => true,
             'allowed_origins' => [
                 // env('LARAVEL_WEBSOCKETS_DOMAIN'),
-                'https://crm.almacenesespana.com.ec', // ? Agregar dominio de tu frontend
-                'https://api.almacenesespana.com.ec', // ? Tu API
+                'crm.almacenesespana.com.ec', // ? Dominio del frontend (SIN https://)
+                'api.almacenesespana.com.ec', // ? Tu API (SIN https://)
                 'localhost',
                 '192.168.1.142',
                 '192.168.1.141',
