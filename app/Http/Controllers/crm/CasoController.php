@@ -2458,13 +2458,12 @@ class CasoController extends Controller
 
                 $caso->save();
 
-                for ($i = 0; $i < sizeof($miembros); $i++) {
-                    $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
-                    if (!$mieExixte) {
-                        $miembro = new Miembros();
-                        $miembro->user_id = $miembros[$i];
-                        $caso->miembros()->save($miembro);
-                    }
+                // El caso es nuevo: no tiene miembros previos, así que no hace falta consultar
+                // duplicados (esa consulta escaneaba toda la tabla miembros). Basta deduplicar el array.
+                foreach (array_unique($miembros) as $userId) {
+                    $miembro = new Miembros();
+                    $miembro->user_id = $userId;
+                    $caso->miembros()->save($miembro);
                 }
 
                 // addRequerimientosFase se traga su error y devuelve un JsonResponse; si pasa eso,
