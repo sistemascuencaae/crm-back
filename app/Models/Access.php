@@ -25,6 +25,7 @@ class Access extends Model
         'audit',
         'solicitud_credito',
         'ejecutar',
+        'revertir',
     ];
 
     // protected $hidden = [

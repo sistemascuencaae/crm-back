@@ -34,6 +34,32 @@ class DdocumentoHistorial extends Model
         'factura_cambio',
         'cuota_cambio',
         'fecha_cambio',
+
+        // Snapshot DESPUÉS (sufijo _2)
+        'ddo_id_2',
+        'ddo_transacc_2',
+        'ccm_id_2',
+        'ddo_num_pago_2',
+        'ddo_debcre_2',
+        'ddo_monto_2',
+        'ddo_fechaven_2',
+        'cli_id_2',
+        'ddo_cancelado_2',
+        'ddo_monto_cancelado_2',
+        'ddo_agente_2',
+        'locked_2',
+        'ddo_fecha_emision_2',
+        'ddo_doctran_2',
+        'dco_id_2',
+        'ddo_numfac_2',
+        'ddo_emisor_2',
+        'ddo_nrocuenta_2',
+        'ddo_observacion_2',
+
+        // Trazabilidad del workflow de solicitud
+        'id_solicitud',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -44,6 +70,13 @@ class DdocumentoHistorial extends Model
         'ddo_fechaven' => 'datetime',
         'ddo_fecha_emision' => 'date',
         'fecha_cambio' => 'datetime',
+
+        'ddo_cancelado_2' => 'boolean',
+        'locked_2' => 'boolean',
+        'ddo_monto_2' => 'decimal:4',
+        'ddo_monto_cancelado_2' => 'decimal:4',
+        'ddo_fechaven_2' => 'datetime',
+        'ddo_fecha_emision_2' => 'date',
     ];
 
     public function setCreatedAtAttribute($value)

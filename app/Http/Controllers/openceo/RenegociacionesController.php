@@ -4,6 +4,8 @@ namespace App\Http\Controllers\openceo;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\renegociaciones\RenegociacionSolicitud;
+use App\Services\RenegociacionService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -238,10 +240,10 @@ class RenegociacionesController extends Controller
                             'fecha_cambio' => $a['fecha_cambio'],
                             'motivos' => [
                                 "La factura {$factura} aparece " . count($apariciones)
-                                . " veces en el archivo: {$resumen}. "
-                                . "Cada factura debe aparecer SOLO UNA VEZ — sube la cuota "
-                                . "más temprana que quieras cambiar; las posteriores se "
-                                . "recalculan automáticamente por la propagación."
+                                    . " veces en el archivo: {$resumen}. "
+                                    . "Cada factura debe aparecer SOLO UNA VEZ — sube la cuota "
+                                    . "más temprana que quieras cambiar; las posteriores se "
+                                    . "recalculan automáticamente por la propagación."
                             ],
                         ];
                         $idxsAQuitar[] = $a['idx'];
@@ -339,15 +341,17 @@ class RenegociacionesController extends Controller
                 ];
             }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Renegociación masiva aplicada con exito.',
-                    [
-                        'codigo_lote' => $codigoLote,
-                        'user_id' => $userId,
-                        'totalFilas' => count($items),
-                        'filasProcesadas' => count($items),
-                        'facturas' => $facturas,
-                    ]));
-
+            return response()->json(RespuestaApi::returnResultado(
+                'success',
+                'Renegociación masiva aplicada con exito.',
+                [
+                    'codigo_lote' => $codigoLote,
+                    'user_id' => $userId,
+                    'totalFilas' => count($items),
+                    'filasProcesadas' => count($items),
+                    'facturas' => $facturas,
+                ]
+            ));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
@@ -626,5 +630,500 @@ class RenegociacionesController extends Controller
             }
         }
         return true;
+    }
+
+    // =====================================================================
+    // RENEGOCIACIÓN CON SOLICITUD + APROBACIÓN (workflow 2 usuarios)
+    // ---------------------------------------------------------------------
+    // Usuario A (Cartera) crea la solicitud; Usuario B (Sistemas) aprueba y
+    // ejecuta (aprobar = ejecutar). Cada línea se aplica en su propia
+    // transacción reutilizando RenegociacionService::aplicarLinea (misma
+    // propagación +1 mes que el masivo). NO toca el método masivo por Excel.
+    // =====================================================================
+
+    // Tipo auditable (crm.audits.auditable_type) de la solicitud de renegociación.
+    private const AUDITABLE_TYPE = 'App\\Models\\crm\\renegociaciones\\RenegociacionSolicitud';
+
+    // Helper: ejecuta una función de la BD que devuelve jsonb y la decodifica a array.
+    private function llamarFn(string $sql, array $bindings = []): array
+    {
+        $row = DB::selectOne("SELECT {$sql} AS r", $bindings);
+        return $row && $row->r !== null ? (json_decode($row->r, true) ?? []) : [];
+    }
+
+    // Registra una fila de auditoría en crm.audits (mismo esquema que owen-it/laravel-auditing
+    // + columnas propias del CRM: accion/user_agent). Captura usuario / IP / url del request.
+    // Nunca rompe la operación principal: cualquier fallo se traga.
+    private function auditar(string $event, string $accion, int $solicitudId, ?array $old, ?array $new): void
+    {
+        try {
+            $req = request();
+            $now = Carbon::now('America/Guayaquil');
+            DB::table('crm.audits')->insert([
+                'user_type' => 'App\\Models\\User',
+                'user_id' => auth()->id(),
+                'event' => $event,
+                'auditable_type' => self::AUDITABLE_TYPE,
+                'auditable_id' => $solicitudId,
+                'old_values' => $old !== null ? json_encode($old, JSON_UNESCAPED_UNICODE) : null,
+                'new_values' => json_encode($new ?? [], JSON_UNESCAPED_UNICODE),
+                'url' => $req ? $req->fullUrl() : null,
+                'ip_address' => $req ? $req->ip() : null,
+                'user_agent' => $req ? $req->userAgent() : null,
+                'accion' => $accion,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        } catch (\Throwable $e) {
+            // La auditoría es best-effort: no debe afectar la operación principal.
+        }
+    }
+
+    // Auditoría de UNA solicitud: resumen (creó/modificó) + eventos paginados de crm.audits
+    // con el detalle de cuotas (antes -> después) por evento. Espejo de clienteAuditoria.
+    public function auditoriaSolicitud(Request $request, $id)
+    {
+        try {
+            $id = (int) $id;
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            $resumen = DB::selectOne('SELECT * FROM crm.fn_reneg_auditoria_resumen(?)', [$id]);
+            $eventos = DB::select('SELECT * FROM crm.fn_reneg_auditoria_listar(?, ?, ?, ?, ?)', [$id, self::AUDITABLE_TYPE, $pagina, $tamanio, $busqueda !== '' ? $busqueda : null]);
+            $total = $eventos[0]->total_registros ?? 0;
+
+            // cuotas viene como jsonb -> array para el front.
+            foreach ($eventos as $e) {
+                $e->cuotas = $e->cuotas ? json_decode($e->cuotas, true) : [];
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría de la solicitud.', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // Cédula -> nombre del cliente + facturas renegociables (las que tienen cuotas en ddocumento).
+    public function facturasPorCedula($cedula)
+    {
+        try {
+            $cedula = trim((string) $cedula);
+            if ($cedula === '') {
+                return response()->json(RespuestaApi::returnResultado('error', 'Debes enviar una identificación.', []), 422);
+            }
+
+            $data = $this->llamarFn('crm.fn_reneg_facturas_por_cedula(?)', [$cedula]);
+            $msg = !empty($data['facturas'])
+                ? 'Cliente y facturas encontradas.'
+                : 'No se encontraron facturas con cuotas para esa identificación.';
+
+            return response()->json(RespuestaApi::returnResultado('success', $msg, $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // doctran (numero_factura) -> fecha de la factura + productos (informativo) + cuotas.
+    public function productosPorFactura($doctran)
+    {
+        try {
+            $doctran = strtoupper(trim((string) $doctran));
+            if ($doctran === '') {
+                return response()->json(RespuestaApi::returnResultado('error', 'Debes enviar el número de factura.', []), 422);
+            }
+
+            $data = $this->llamarFn('crm.fn_reneg_productos_por_factura(?)', [$doctran]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Datos de la factura.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // Usuario A: crea la solicitud (aprobado=false, ejecutado=false). No aplica nada todavía.
+    public function crearSolicitud(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'identificacion' => 'required|string|max:20',
+            'numero_factura' => 'required|string|max:100',
+            'numero_cuota' => 'required|integer|min:1',
+            'fecha_cambio' => 'required|date',
+            'motivo_cambio' => 'nullable|string|max:60',
+            'nombre_cliente' => 'nullable|string|max:255',
+            'fecha_factura' => 'nullable|date',
+            'codigo_producto' => 'nullable|string|max:100',
+            'descripcion_producto' => 'nullable|string|max:255',
+            'tipo_factura' => 'nullable|string|max:40',
+            'observacion_cartera' => 'nullable|string',
+        ], [
+            'identificacion.required' => 'La identificación es obligatoria.',
+            'numero_factura.required' => 'El número de factura es obligatorio.',
+            'numero_cuota.required' => 'El número de cuota es obligatorio.',
+            'numero_cuota.integer' => 'El número de cuota debe ser un entero.',
+            'numero_cuota.min' => 'El número de cuota debe ser mayor a cero.',
+            'fecha_cambio.required' => 'La fecha a cambiar es obligatoria.',
+            'fecha_cambio.date' => 'La fecha a cambiar no es válida.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), ['errores' => $validator->errors()->all()]), 422);
+        }
+
+        try {
+            $usuario = auth()->user();
+
+            // Toda la lógica (validar cuota, derivar tipo, insertar) vive en la función BD.
+            $data = $this->llamarFn(
+                'crm.fn_reneg_solicitud_crear(?,?,?,?::date,?,?,?,?::date,?,?,?,?)',
+                [
+                    trim($request->input('identificacion')),
+                    $request->input('nombre_cliente'),
+                    strtoupper(trim($request->input('numero_factura'))),
+                    $request->input('fecha_factura'),
+                    $request->input('codigo_producto'),
+                    $request->input('descripcion_producto'),
+                    (int) $request->input('numero_cuota'),
+                    $request->input('fecha_cambio'),
+                    $request->input('motivo_cambio'),
+                    $request->filled('tipo_factura') ? trim($request->input('tipo_factura')) : null,
+                    $request->input('observacion_cartera'),
+                    RenegociacionService::etiquetaUsuario($usuario),
+                ]
+            );
+
+            if (!($data['ok'] ?? false)) {
+                return response()->json(RespuestaApi::returnResultado('error', $data['message'] ?? 'No se pudo crear la solicitud.', ['errores' => $data['motivos'] ?? []]), $data['code'] ?? 422);
+            }
+
+            $sol = $data['data'];
+            $this->auditar('created', 'Creó solicitud de renegociación', (int) $sol['id'], null, [
+                'identificacion' => $sol['identificacion'] ?? null,
+                'nombre_cliente' => $sol['nombre_cliente'] ?? null,
+                'numero_factura' => $sol['numero_factura'] ?? null,
+                'numero_cuota' => $sol['numero_cuota'] ?? null,
+                'fecha_cambio' => $sol['fecha_cambio'] ?? null,
+                'motivo_cambio' => $sol['motivo_cambio'] ?? null,
+                'tipo_factura' => $sol['tipo_factura'] ?? null,
+                'observacion_cartera' => $sol['observacion_cartera'] ?? null,
+            ]);
+
+            return response()->json(RespuestaApi::returnResultado('success', $data['message'], $data['data']));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // Listado de solicitudes con filtros de estado y rango de fechas (FECHA SOLICITUD = created_at).
+    public function listarSolicitudes(Request $request)
+    {
+        try {
+            $query = RenegociacionSolicitud::query();
+
+            // estado: pendiente | aprobado | ejecutado | no_ejecutado
+            switch ($request->input('estado')) {
+                case 'pendiente':
+                    $query->where('aprobado', false);
+                    break;
+                case 'aprobado':
+                    $query->where('aprobado', true);
+                    break;
+                case 'ejecutado':
+                    $query->where('ejecutado', true);
+                    break;
+                case 'no_ejecutado':
+                    $query->where('aprobado', true)->where('ejecutado', false);
+                    break;
+            }
+
+            if ($request->filled('desde')) {
+                $query->whereDate('created_at', '>=', $request->input('desde'));
+            }
+            if ($request->filled('hasta')) {
+                $query->whereDate('created_at', '<=', $request->input('hasta'));
+            }
+            if ($request->filled('numero_factura')) {
+                $query->where('numero_factura', strtoupper(trim($request->input('numero_factura'))));
+            }
+            if ($request->filled('identificacion')) {
+                $query->where('identificacion', trim($request->input('identificacion')));
+            }
+
+            $solicitudes = $query->orderBy('created_at', 'desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado de solicitudes.', $solicitudes));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // Listado PAGINADO (Usuario A): pendientes primero. Usa la función
+    // crm.fn_renegociacion_solicitud_listar (COUNT(*) OVER() + LIMIT/OFFSET).
+    // Devuelve { registros, total }. Tamaños permitidos: 10/20/30/50/100.
+    public function listarSolicitudesPaginado(Request $request)
+    {
+        try {
+            $pagina = max(1, (int) $request->input('pagina', 1));
+            $tamanio = (int) $request->input('tamanio', 10);
+            if (!in_array($tamanio, [10, 20, 30, 50, 100], true)) {
+                $tamanio = 10;
+            }
+            $busqueda = trim((string) $request->input('busqueda', ''));
+            $estado = trim((string) $request->input('estado', ''));
+            $desde = trim((string) $request->input('desde', ''));
+            $hasta = trim((string) $request->input('hasta', ''));
+
+            $rows = DB::select(
+                'SELECT * FROM crm.fn_renegociacion_solicitud_listar(?, ?, ?, ?, ?, ?)',
+                [
+                    $pagina,
+                    $tamanio,
+                    $busqueda !== '' ? $busqueda : null,
+                    $estado !== '' ? $estado : null,
+                    $desde !== '' ? $desde : null,
+                    $hasta !== '' ? $hasta : null,
+                ]
+            );
+
+            $total = $rows ? (int) $rows[0]->total_registros : 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Listado de solicitudes.', [
+                'registros' => $rows,
+                'total' => $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // Usuario A: edita una solicitud SOLO mientras está pendiente (aprobado=false).
+    // No toca updated_by (ese queda para quien aprueba/ejecuta = Usuario B).
+    public function editarSolicitud(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'identificacion' => 'required|string|max:20',
+            'numero_factura' => 'required|string|max:100',
+            'numero_cuota' => 'required|integer|min:1',
+            'fecha_cambio' => 'required|date',
+            'motivo_cambio' => 'nullable|string|max:60',
+            'nombre_cliente' => 'nullable|string|max:255',
+            'fecha_factura' => 'nullable|date',
+            'codigo_producto' => 'nullable|string|max:100',
+            'descripcion_producto' => 'nullable|string|max:255',
+            'tipo_factura' => 'nullable|string|max:40',
+            'observacion_cartera' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), ['errores' => $validator->errors()->all()]), 422);
+        }
+
+        try {
+            // Estado ANTES (para el diff de auditoría); solo campos relevantes.
+            $antes = DB::table('crm.renegociacion_solicitud')
+                ->select('identificacion', 'nombre_cliente', 'numero_factura', 'numero_cuota', 'fecha_cambio', 'motivo_cambio', 'tipo_factura', 'observacion_cartera')
+                ->where('id', (int) $id)->first();
+
+            // Validar pendiente + cuota + derivar tipo + actualizar: todo en la función BD.
+            $data = $this->llamarFn(
+                'crm.fn_reneg_solicitud_editar(?,?,?,?,?::date,?,?,?,?::date,?,?,?)',
+                [
+                    (int) $id,
+                    trim($request->input('identificacion')),
+                    $request->input('nombre_cliente'),
+                    strtoupper(trim($request->input('numero_factura'))),
+                    $request->input('fecha_factura'),
+                    $request->input('codigo_producto'),
+                    $request->input('descripcion_producto'),
+                    (int) $request->input('numero_cuota'),
+                    $request->input('fecha_cambio'),
+                    $request->input('motivo_cambio'),
+                    $request->filled('tipo_factura') ? trim($request->input('tipo_factura')) : null,
+                    $request->input('observacion_cartera'),
+                ]
+            );
+
+            if (!($data['ok'] ?? false)) {
+                return response()->json(RespuestaApi::returnResultado('error', $data['message'] ?? 'No se pudo editar la solicitud.', ['errores' => $data['motivos'] ?? []]), $data['code'] ?? 422);
+            }
+
+            $sol = $data['data'];
+            $this->auditar('updated', 'Editó solicitud de renegociación', (int) $id,
+                $antes ? (array) $antes : null,
+                [
+                    'identificacion' => $sol['identificacion'] ?? null,
+                    'nombre_cliente' => $sol['nombre_cliente'] ?? null,
+                    'numero_factura' => $sol['numero_factura'] ?? null,
+                    'numero_cuota' => $sol['numero_cuota'] ?? null,
+                    'fecha_cambio' => $sol['fecha_cambio'] ?? null,
+                    'motivo_cambio' => $sol['motivo_cambio'] ?? null,
+                    'tipo_factura' => $sol['tipo_factura'] ?? null,
+                    'observacion_cartera' => $sol['observacion_cartera'] ?? null,
+                ]);
+
+            return response()->json(RespuestaApi::returnResultado('success', $data['message'], $data['data']));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // PREVIEW para el modal de aprobación: cómo quedarían las cuotas (vence actual ->
+    // vence nueva) si se ejecuta esta solicitud. NO escribe nada. Incluye validación
+    // (existe / no cancelada) para avisar antes de confirmar.
+    public function previsualizarSolicitud($id)
+    {
+        try {
+            $data = $this->llamarFn('crm.fn_reneg_solicitud_previsualizar(?)', [(int) $id]);
+
+            if (!($data['ok'] ?? false)) {
+                return response()->json(RespuestaApi::returnResultado('error', $data['message'] ?? 'No existe la solicitud.', []), $data['code'] ?? 422);
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Previsualización de la renegociación.', [
+                'solicitud' => $data['solicitud'],
+                'cuotas' => $data['cuotas'],
+                'valido' => $data['valido'],
+                'motivos' => $data['motivos'],
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // Usuario B: aprobar = ejecutar. Recibe un array de líneas; cada aprobada se aplica
+    // en su propia transacción (si una falla, las demás siguen y el error va a observacion_sistemas).
+    public function ejecutarSolicitudes(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'solicitudes' => 'required|array|min:1',
+            'solicitudes.*.id' => 'required|integer',
+            'solicitudes.*.aprobado' => 'required|boolean',
+            'solicitudes.*.observacion_sistemas' => 'nullable|string',
+        ], [
+            'solicitudes.required' => 'Debes enviar al menos una solicitud.',
+            'solicitudes.array' => 'El campo solicitudes debe ser un arreglo.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), ['errores' => $validator->errors()->all()]), 422);
+        }
+
+        try {
+            $usuario = auth()->user();
+            $etiqueta = RenegociacionService::etiquetaUsuario($usuario);
+            $userId = auth()->id();
+
+            $resultados = [];
+
+            // Cada línea se ejecuta en su propia función BD: maneja idempotencia,
+            // no-aprobada, validación, propagación+snapshot y captura de errores
+            // (la propagación se revierte sola si falla; la fila queda con el error).
+            foreach ($request->input('solicitudes') as $linea) {
+                $id = (int) ($linea['id'] ?? 0);
+                $aprobado = (bool) ($linea['aprobado'] ?? false);
+                $obsSistemas = $linea['observacion_sistemas'] ?? null;
+                $codigoLote = (string) Str::uuid();
+
+                $res = $this->llamarFn(
+                    'crm.fn_reneg_solicitud_ejecutar_linea(?,?,?,?,?,?::uuid)',
+                    [$id, $aprobado ? 'true' : 'false', $obsSistemas, $etiqueta, $userId, $codigoLote]
+                );
+                $resultados[] = $res;
+
+                // Auditar solo las líneas efectivamente ejecutadas (aplicaron cambios en cuotas).
+                if (($res['ok'] ?? false) && ($res['ejecutado'] ?? false) && !empty($res['codigo_lote'])) {
+                    $this->auditar('ejecutado', 'Ejecutó (aprobó) renegociación', $id, null, [
+                        'codigo_lote' => $res['codigo_lote'],
+                        'cuotas_actualizadas' => $res['cuotas_actualizadas'] ?? null,
+                    ]);
+                }
+            }
+
+            $okCount = count(array_filter($resultados, fn($r) => $r['ok'] ?? false));
+
+            return response()->json(RespuestaApi::returnResultado(
+                'success',
+                "Proceso finalizado: {$okCount} de " . count($resultados) . ' líneas correctas.',
+                ['resultados' => $resultados]
+            ));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // PREVIEW de REVERSIÓN: cómo quedarían las cuotas si se revierte una solicitud
+    // ya ejecutada (fecha aplicada -> fecha original). NO escribe nada. Incluye la
+    // regla de seguridad: si alguna cuota cambió de fecha después de esta
+    // renegociación, marca conflicto y valido=false.
+    public function previsualizarReversion($id)
+    {
+        try {
+            $usuario = auth()->user();
+
+            // Permiso (delete del menú) + validación + análisis de reversión: todo en la función BD.
+            $data = $this->llamarFn(
+                'crm.fn_reneg_solicitud_previsualizar_reversion(?,?)',
+                [(int) $id, $usuario->profile_id ?? null]
+            );
+
+            if (!($data['ok'] ?? false)) {
+                return response()->json(RespuestaApi::returnResultado('error', $data['message'] ?? 'No se pudo previsualizar la reversión.', []), $data['code'] ?? 422);
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Previsualización de la reversión.', [
+                'solicitud' => $data['solicitud'],
+                'cuotas' => $data['cuotas'],
+                'valido' => $data['valido'],
+                'motivos' => $data['motivos'],
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
+    }
+
+    // Revierte una solicitud ejecutada: restaura las cuotas a su fecha original
+    // (solo si sigue siendo el último cambio). Limitado por permiso "eliminar" del
+    // menú de aprobación. Deja la solicitud en estado pendiente con la marca de
+    // quién/cuándo revirtió en observacion_sistemas.
+    public function revertirSolicitud($id)
+    {
+        try {
+            $usuario = auth()->user();
+            $etiqueta = RenegociacionService::etiquetaUsuario($usuario);
+
+            // Lote ANTES de revertir (la función lo pone a NULL); se usa para enlazar
+            // las cuotas afectadas en la auditoría.
+            $loteRevertido = DB::table('crm.renegociacion_solicitud')->where('id', (int) $id)->value('codigo_lote');
+
+            // Permiso + regla de seguridad + restaurar fechas + marca de auditoría: todo en la función BD.
+            $data = $this->llamarFn(
+                'crm.fn_reneg_solicitud_revertir(?,?,?)',
+                [(int) $id, $usuario->profile_id ?? null, $etiqueta]
+            );
+
+            if (!($data['ok'] ?? false)) {
+                return response()->json(RespuestaApi::returnResultado('error', $data['message'] ?? 'No se pudo revertir.', []), $data['code'] ?? 422);
+            }
+
+            $this->auditar('revertido', 'Revirtió renegociación', (int) $id, null, [
+                'codigo_lote' => $loteRevertido,
+                'cuotas_revertidas' => $data['cuotas_revertidas'] ?? 0,
+            ]);
+
+            return response()->json(RespuestaApi::returnResultado('success', $data['message'], [
+                'id' => $data['id'] ?? (int) $id,
+                'cuotas_revertidas' => $data['cuotas_revertidas'] ?? 0,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
+        }
     }
 }

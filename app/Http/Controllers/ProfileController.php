@@ -216,6 +216,7 @@ class ProfileController extends Controller
                         'cerrar_reagendar_actividad' => 0,
                         'audit' => 0,
                         'solicitud_credito' => 0,
+                        'revertir' => 0,
                         'created_at' => null,
                         'updated_at' => null,
                         'menu' => $menuData // Agregar el objeto Menu relacionado

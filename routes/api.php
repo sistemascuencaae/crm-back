@@ -745,6 +745,19 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/validarFacturaRenegociacion', [DdocumentoController::class, 'validarFacturaRenegociacion']);
     Route::post('/renegociaciones/renegociacionesJuanNarvaezMasivo', [RenegociacionesController::class, 'renegociacionesJuanNarvaezMasivo']);
 
+    // RENEGOCIACION CON SOLICITUD + APROBACION (workflow 2 usuarios)
+    Route::get('/renegociaciones/facturasPorCedula/{cedula}', [RenegociacionesController::class, 'facturasPorCedula']);
+    Route::get('/renegociaciones/productosPorFactura/{doctran}', [RenegociacionesController::class, 'productosPorFactura']);
+    Route::post('/renegociaciones/solicitud/crear', [RenegociacionesController::class, 'crearSolicitud']);
+    Route::post('/renegociaciones/solicitud/editar/{id}', [RenegociacionesController::class, 'editarSolicitud']);
+    Route::get('/renegociaciones/solicitud/listar', [RenegociacionesController::class, 'listarSolicitudes']);
+    Route::get('/renegociaciones/solicitud/listar-paginado', [RenegociacionesController::class, 'listarSolicitudesPaginado']);
+    Route::get('/renegociaciones/solicitud/previsualizar/{id}', [RenegociacionesController::class, 'previsualizarSolicitud']);
+    Route::post('/renegociaciones/solicitud/ejecutar', [RenegociacionesController::class, 'ejecutarSolicitudes']);
+    Route::get('/renegociaciones/solicitud/previsualizar-reversion/{id}', [RenegociacionesController::class, 'previsualizarReversion']);
+    Route::post('/renegociaciones/solicitud/revertir/{id}', [RenegociacionesController::class, 'revertirSolicitud']);
+    Route::get('/renegociaciones/solicitud/auditoria/{id}', [RenegociacionesController::class, 'auditoriaSolicitud']);
+
     // PAGARE
     Route::post('/addHistorialPagare', [RenegociacionController::class, 'addHistorialPagare']); // add los doctran de openceo al crm
     Route::get('/listHistorialPagare/{ddo_doctran}', [RenegociacionController::class, 'listHistorialPagare']); // listar doctran del crm
