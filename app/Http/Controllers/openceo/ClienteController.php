@@ -312,8 +312,8 @@ class ClienteController extends Controller
                 'pai_id' => DB::selectOne("SELECT pai_id AS id, pai_nombre AS label FROM pais
                     WHERE pai_codigo = (SELECT par_texto FROM parametro WHERE par_abreviacion='PAI' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1")
                     ?? DB::selectOne("SELECT pai_id AS id, pai_nombre AS label FROM pais WHERE UPPER(TRIM(pai_nombre))='ECUADOR' LIMIT 1"),
-                // Título por defecto: primera opción (orden alfabético).
-                'tit_id' => DB::selectOne("SELECT tit_id AS id, tit_nombre AS label FROM titulo WHERE tit_activo=true ORDER BY tit_nombre LIMIT 1"),
+                // Título por defecto: SEÑOR(A) (tit_id=2); si no está activo, cae a la primera opción alfabética.
+                'tit_id' => DB::selectOne("SELECT tit_id AS id, tit_nombre AS label FROM titulo WHERE tit_activo=true ORDER BY (tit_id = 2) DESC, tit_nombre LIMIT 1"),
                 // Tipo de teléfono por defecto: CELULAR.
                 'tte_id' => DB::selectOne("SELECT tte_id AS id, tte_nombre AS label FROM tipo_telefono WHERE UPPER(TRIM(tte_nombre))='CELULAR' LIMIT 1"),
                 // Defaults demográficos/actividad (parametro_anexo). Sexo/Nivel/Vivienda/Sit.Laboral/Tipo Empresa
