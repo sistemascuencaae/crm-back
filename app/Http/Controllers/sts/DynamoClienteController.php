@@ -10,21 +10,22 @@ use App\Models\openceo\Entidad;
 use App\Models\openceo\Telefono;
 use App\Models\sts\ClientesMultinivel;
 use App\Servicios\ValidacionCedulaRucService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Exception;
 use Illuminate\Http\JsonResponse;
-use Validator;
+use Illuminate\Support\Facades\Validator;
 
 class DynamoClienteController extends Controller
 {
-    // Version 2.0
+    // Version 1.0
     public function verificarClienteDynamo(Request $request)
     {
         try {
             $tipoidentificacion = trim($request->input('tipoidentificacion'));
-            $identificacion     = trim($request->input('identificacion'));
+            $identificacion = trim($request->input('identificacion'));
 
             if (empty($identificacion)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar una identificación.', null));
@@ -33,12 +34,18 @@ class DynamoClienteController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar el tipo de identificación.', null));
             }
 
-            // Extraer usuario_netos del token cifrado (igual que addDynamoCliente)
+            // Extraer el corredor del token cifrado (igual que addDynamoCliente)
             $tokenData = $this->validarTokenEnlace($request);
             if ($tokenData instanceof JsonResponse) {
                 return $tokenData;
             }
-            $usuarioNetos = $tokenData['usuario_netos'];
+            $corredor = trim($tokenData['corredor']);
+
+            // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR)
+            $diasCorredor = $this->obtenerDiasParametroCorredor();
+            if ($diasCorredor instanceof JsonResponse) {
+                return $diasCorredor;
+            }
 
             if ($tipoidentificacion == 1) {
                 if (!ValidacionCedulaRucService::esCedulaValida($identificacion)) {
@@ -52,15 +59,18 @@ class DynamoClienteController extends Controller
 
             $identificacionBusqueda = substr($identificacion, 0, 10);
 
-            // LEFT JOIN: netos_vinculado = null si el cliente existe pero no tiene multinivel
+            // LEFT JOIN: corredor_vinculado = null si el cliente existe pero no tiene
+            // vinculación VIGENTE (activo = true y fecha_desvinculacion NULL)
             $resultado = DB::selectOne("SELECT c.cli_id, c.cli_codigo,
                                             e.ent_id, e.ent_nombres, e.ent_apellidos, e.ent_email, e.ent_tipo_identificacion,
                                             t.tel_numero,
                                             d.dir_calle_principal, d.dir_calle_secundaria,
-                                            cm.usuario_netos AS netos_vinculado
+                                            cm.corredor AS corredor_vinculado
                                         FROM public.cliente c
                                         JOIN public.entidad e ON e.ent_id = c.ent_id
                                         LEFT JOIN public.clientes_multinivel cm ON cm.cli_id = c.cli_id
+                                            AND cm.activo = true
+                                            AND cm.fecha_desvinculacion IS NULL
                                         LEFT JOIN public.direccion d ON d.dir_id = e.ent_direccion_principal
                                         LEFT JOIN public.telefono t ON t.tel_id = e.ent_telefono_principal
                                         WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
@@ -73,13 +83,20 @@ class DynamoClienteController extends Controller
                 return response()->json(RespuestaApi::returnResultado('success', 'El cliente no existe', null));
             }
 
-            // Escenario 3: cliente existe pero pertenece a otro vendedor
-            if ($resultado->netos_vinculado !== null && $resultado->netos_vinculado !== $usuarioNetos) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece al corredor: ' . $resultado->netos_vinculado, null));
+            // Validación previa a los 4 escenarios: si la vinculación vigente ya
+            // cumplió los días del parámetro CLICOR se desvincula (activo = false)
+            // y el cliente se evalúa como libre
+            if ($resultado->corredor_vinculado !== null && $this->desvincularCorredorSiExpiro($resultado->cli_id, $diasCorredor)) {
+                $resultado->corredor_vinculado = null;
             }
 
-            // Escenarios 1 y 2: cliente libre o ya vinculado al mismo vendedor
-            $mensaje = $resultado->netos_vinculado === $usuarioNetos
+            // Escenario 3: cliente existe pero pertenece a otro corredor
+            if ($resultado->corredor_vinculado !== null && $resultado->corredor_vinculado !== $corredor) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece al corredor: ' . $resultado->corredor_vinculado, null));
+            }
+
+            // Escenarios 1 y 2: cliente libre o ya vinculado al mismo corredor
+            $mensaje = $resultado->corredor_vinculado === $corredor
                 ? 'El cliente ya existe'
                 : 'El cliente existe y está disponible';
 
@@ -90,7 +107,7 @@ class DynamoClienteController extends Controller
     }
 
 
-    // Version 2.0
+    // Version 1.0
     public function updateDynamoCliente(Request $request)
     {
         try {
@@ -98,57 +115,68 @@ class DynamoClienteController extends Controller
             if ($tokenData instanceof JsonResponse) {
                 return $tokenData;
             }
-            $usuarioNetos = $tokenData['usuario_netos'];
+            $corredor = trim($tokenData['corredor']);
 
-            $identificacion      = mb_strtoupper(trim($request->input('identificacion')));
-            $nombres             = mb_strtoupper(trim($request->input('nombres')));
-            $apellidos           = mb_strtoupper(trim($request->input('apellidos')));
-            $email               = mb_strtolower(trim($request->input('email')));
-            $telefono            = trim($request->input('telefono'));
-            $direccion           = mb_strtoupper(trim($request->input('direccion')));
+            // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR)
+            $diasCorredor = $this->obtenerDiasParametroCorredor();
+            if ($diasCorredor instanceof JsonResponse) {
+                return $diasCorredor;
+            }
+
+            $identificacion = mb_strtoupper(trim($request->input('identificacion')));
+            $nombres = mb_strtoupper(trim($request->input('nombres')));
+            $apellidos = mb_strtoupper(trim($request->input('apellidos')));
+            $email = mb_strtolower(trim($request->input('email')));
+            $telefono = trim($request->input('telefono'));
+            $direccion = mb_strtoupper(trim($request->input('direccion')));
             $direccionSecundaria = mb_strtoupper(trim($request->input('dir_calle_secundaria') ?? ''));
 
             if (
                 empty($identificacion) || empty($nombres) || empty($apellidos)
-                || empty($email) || empty($telefono) || empty($direccion)
-                || empty($direccionSecundaria)
+                || empty($email) || empty($telefono) || empty($direccion) || empty($direccionSecundaria)
             ) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Todos los campos son requeridos.', null));
             }
 
             $identificacionBusqueda = substr($identificacion, 0, 10);
 
-            // ent_telefono_principal y ent_direccion_principal son FKs a tel_id y dir_id
-            $resultado = DB::selectOne(
-                "SELECT c.cli_id, e.ent_id,
-                        e.ent_telefono_principal  AS tel_id,
-                        e.ent_direccion_principal AS dir_id,
-                        cm.usuario_netos AS netos_vinculado
-                 FROM public.cliente c
-                 JOIN public.entidad e ON e.ent_id = c.ent_id
-                 LEFT JOIN public.clientes_multinivel cm ON cm.cli_id = c.cli_id
-                 WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
-                   AND c.cli_tipocli = 1
-                 ORDER BY c.cli_id ASC
-                 LIMIT 1",
-                [$identificacionBusqueda]
-            );
+            // ent_telefono_principal y ent_direccion_principal son FKs a tel_id y dir_id.
+            // Solo se considera la vinculación VIGENTE (activo = true y fecha_desvinculacion NULL)
+            $resultado = DB::selectOne("SELECT c.cli_id, e.ent_id,
+                                            e.ent_telefono_principal  AS tel_id,
+                                            e.ent_direccion_principal AS dir_id,
+                                            cm.corredor AS corredor_vinculado
+                                        FROM public.cliente c
+                                            JOIN public.entidad e ON e.ent_id = c.ent_id
+                                            LEFT JOIN public.clientes_multinivel cm ON cm.cli_id = c.cli_id
+                                                AND cm.activo = true
+                                                AND cm.fecha_desvinculacion IS NULL
+                                        WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
+                                            AND c.cli_tipocli = 1
+                                        ORDER BY c.cli_id ASC
+                                        LIMIT 1", [$identificacionBusqueda]);
 
             if (!$resultado) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontró el cliente para actualizar.', null));
             }
 
-            if ($resultado->netos_vinculado !== null && $resultado->netos_vinculado !== $usuarioNetos) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro vendedor.', null));
+            // Si la vinculación vigente ya cumplió los días del parámetro CLICOR
+            // se desvincula (activo = false) y el cliente se trata como libre
+            if ($resultado->corredor_vinculado !== null && $this->desvincularCorredorSiExpiro($resultado->cli_id, $diasCorredor)) {
+                $resultado->corredor_vinculado = null;
+            }
+
+            if ($resultado->corredor_vinculado !== null && $resultado->corredor_vinculado !== $corredor) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
             }
 
             DB::beginTransaction();
 
             // Actualizar datos de la entidad (solo campos propios, no los FKs)
             Entidad::where('ent_id', $resultado->ent_id)->update([
-                'ent_nombres'   => trim($nombres),
+                'ent_nombres' => trim($nombres),
                 'ent_apellidos' => trim($apellidos),
-                'ent_email'     => trim($email),
+                'ent_email' => trim($email),
             ]);
 
             // Actualizar nombre comercial en la tabla cliente
@@ -158,10 +186,7 @@ class DynamoClienteController extends Controller
 
             // Actualizar el registro de teléfono usando el FK tel_id
             if ($resultado->tel_id) {
-                DB::update(
-                    "UPDATE public.telefono SET tel_numero = ? WHERE tel_id = ?",
-                    [trim($telefono), $resultado->tel_id]
-                );
+                DB::update("UPDATE public.telefono SET tel_numero = ? WHERE tel_id = ?", [trim($telefono), $resultado->tel_id]);
             }
 
             // Actualizar el registro de dirección usando el FK dir_id
@@ -172,11 +197,14 @@ class DynamoClienteController extends Controller
                 );
             }
 
-            // Escenario 1: cliente libre → vincularlo al vendedor
-            if ($resultado->netos_vinculado === null) {
+            // Escenario 1: cliente libre → vincularlo al corredor,
+            // guardando los días vigentes del parámetro CLICOR
+            if ($resultado->corredor_vinculado === null) {
                 ClientesMultinivel::create([
-                    'cli_id'        => $resultado->cli_id,
-                    'usuario_netos' => $usuarioNetos,
+                    'cli_id' => $resultado->cli_id,
+                    'corredor' => $corredor,
+                    'dias_parametro' => $diasCorredor,
+                    'activo' => true,
                 ]);
             }
 
@@ -185,6 +213,11 @@ class DynamoClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Cliente actualizado con éxito', null));
         } catch (Exception $e) {
             DB::rollBack();
+
+            if ($this->esCarreraVinculacion($e)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
+            }
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar el cliente', $e->getMessage()));
         }
     }
@@ -198,13 +231,20 @@ class DynamoClienteController extends Controller
     {
         try {
             // 0. Descifrar y validar el token de la URL (caducidad + integridad).
-            // El usuario_netos sale de aquí, NO del formulario.
+            // El corredor sale de aquí, NO del formulario.
             $credenciales = $this->validarTokenEnlace($request);
             if ($credenciales instanceof JsonResponse) {
                 return $credenciales;
             }
 
-            $usuarioNetos = trim($credenciales['usuario_netos']);
+            $corredor = trim($credenciales['corredor']);
+
+            // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR);
+            // se guardan en dias_parametro al vincular
+            $diasCorredor = $this->obtenerDiasParametroCorredor();
+            if ($diasCorredor instanceof JsonResponse) {
+                return $diasCorredor;
+            }
 
             $identificacion = trim($request->input('identificacion'));
             $tipoidentificacion = trim($request->input('tipoidentificacion'));
@@ -230,13 +270,13 @@ class DynamoClienteController extends Controller
 
             // 2. Validamos todos los campos del formulario
             $validator = Validator::make($request->all(), [
-                'tipoidentificacion'  => 'required|string',
-                'identificacion'      => 'required|string',
-                'nombres'             => 'required|string',
-                'apellidos'           => 'required|string',
-                'email'               => 'required|string',
-                'telefono'            => 'required|string',
-                'direccion'           => 'required|string',
+                'tipoidentificacion' => 'required|string',
+                'identificacion' => 'required|string',
+                'nombres' => 'required|string',
+                'apellidos' => 'required|string',
+                'email' => 'required|string',
+                'telefono' => 'required|string',
+                'direccion' => 'required|string',
                 'dir_calle_secundaria' => 'required|string',
             ]);
 
@@ -261,7 +301,7 @@ class DynamoClienteController extends Controller
                                         WHERE SUBSTRING(TRIM(e.ent_identificacion), 1, 10) = ?", [$identificacionBusqueda]);
 
             // 6. Crear cliente básico
-            DB::transaction(function () use ($request, $entidad, $usuarioNetos) {
+            DB::transaction(function () use ($request, $entidad, $corredor, $diasCorredor) {
                 $direccion = mb_strtoupper(trim($request->input('direccion')));
                 $direccionSecundaria = mb_strtoupper(trim($request->input('dir_calle_secundaria')));
                 $telefono = trim($request->input('telefono'));
@@ -406,15 +446,21 @@ class DynamoClienteController extends Controller
                 }
 
                 // 6.8: Registrar el cliente al corredor Netos en Dynamo
-                // ($usuarioNetos proviene del token cifrado, no del formulario)
+                // ($corredor proviene del token cifrado, no del formulario)
                 $clienteMultinivel = new ClientesMultinivel();
                 $clienteMultinivel->cli_id = $newCliente->cli_id;
-                $clienteMultinivel->usuario_netos = $usuarioNetos;
+                $clienteMultinivel->corredor = $corredor;
+                $clienteMultinivel->dias_parametro = $diasCorredor;
+                $clienteMultinivel->activo = true;
                 $clienteMultinivel->save();
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Cliente creado con éxito', null));
         } catch (Exception $e) {
+            if ($this->esCarreraVinculacion($e)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
+            }
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
@@ -427,14 +473,14 @@ class DynamoClienteController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'usuario_netos' => 'required|string',
+                'corredor' => 'required|string',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Validación datos incorrectos', $validator->errors()));
             }
 
-            $usuarioNetos = trim($request->input('usuario_netos'));
+            $corredor = trim($request->input('corredor'));
 
             $parametro = DB::table('crm.parametro')
                 ->where('abreviacion', 'URL-FRONTEND')
@@ -468,7 +514,7 @@ class DynamoClienteController extends Controller
 
             // Credenciales cifrado y autenticado: nadie puede leerlo ni manipularlo
             $t = Crypt::encryptString(json_encode([
-                'usuario_netos' => $usuarioNetos,
+                'corredor' => $corredor,
                 'expires' => $expires,
             ]));
 
@@ -505,8 +551,68 @@ class DynamoClienteController extends Controller
 
 
 
+    // Version 1.0
+    // Lee el parámetro CLICOR (días de vigencia de la vinculación cliente-corredor)
+    // y devuelve su valor como entero. Si no está configurado o no es un número
+    // válido, devuelve un JsonResponse de error.
+    private function obtenerDiasParametroCorredor()
+    {
+        $parametro = DB::table('crm.parametro')
+            ->where('abreviacion', 'CLICOR')
+            ->first();
+
+        $valor = $parametro ? trim((string) $parametro->valor) : '';
+
+        // Error si el parámetro no existe, su valor es NULL/vacío o es negativo.
+        // Se acepta 0 o más días (0 = la vinculación expira de inmediato)
+        if ($valor === '' || (int) $valor < 0) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No está configurado el parámetro, comuniquese con el administrador.', null));
+        }
+
+        return (int) $valor;
+    }
+
+
+
+
+    // Version 1.0
+    // Detecta la violación del índice único parcial uq_clientes_multinivel_vigente
+    // (SQLSTATE 23505): otro corredor vinculó al mismo cliente en paralelo
+    // (carrera entre el SELECT de verificación y el COMMIT del guardado).
+    private function esCarreraVinculacion(Exception $e): bool
+    {
+        return $e instanceof QueryException
+            && ($e->errorInfo[0] ?? null) === '23505'
+            && strpos($e->getMessage(), 'uq_clientes_multinivel_vigente') !== false;
+    }
+
+
+
+
+    // Version 1.0
+    // Si la vinculación vigente del cliente (activo = true y fecha_desvinculacion NULL)
+    // ya cumplió los días del parámetro CLICOR (created_at + días <= hoy), la desactiva:
+    // activo = false + fecha_desvinculacion = NOW().
+    // Devuelve true si se desvinculó (el cliente queda libre para un nuevo corredor).
+    private function desvincularCorredorSiExpiro($cliId, int $dias): bool
+    {
+        $filas = DB::update("UPDATE public.clientes_multinivel
+                                SET activo = false,
+                                    fecha_desvinculacion = NOW(),
+                                    updated_at = NOW()
+                            WHERE cli_id = ?
+                                AND activo = true
+                                AND fecha_desvinculacion IS NULL
+                                AND created_at <= ?", [$cliId, now()->subDays($dias)]);
+
+        return $filas > 0;
+    }
+
+
+
+
     // Descifra y valida el token ?t= del enlace (caducidad + integridad).
-    // Devuelve el array de las credenciales (['usuario_netos' => ..., 'expires' => ...])
+    // Devuelve el array de las credenciales (['corredor' => ..., 'expires' => ...])
     // Metodo privado que se usa para validar si la url es correcta en el metodo addDynamoCliente
     private function validarTokenEnlace(Request $request)
     {
@@ -522,7 +628,7 @@ class DynamoClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Enlace no válido.', null));
         }
 
-        if (!is_array($credenciales) || empty($credenciales['usuario_netos']) || empty($credenciales['expires'])) {
+        if (!is_array($credenciales) || empty($credenciales['corredor']) || empty($credenciales['expires'])) {
             return response()->json(RespuestaApi::returnResultado('error', 'Enlace no válido.', null));
         }
 
@@ -531,5 +637,65 @@ class DynamoClienteController extends Controller
         }
 
         return $credenciales;
+    }
+
+
+
+
+
+
+
+    // Version 1.0
+    // LISTADO GENERAL DE CLIENTES CON EL RESPECTIVO CORREDOR
+    // Devuelve las vinculaciones VIGENTES (activo = true y fecha_desvinculacion NULL)
+    // con los datos del cliente, filtradas por rango de fecha de registro
+    // (BETWEEN sobre cm.created_at). fecha_inicio y fecha_fin son requeridas (YYYY-MM-DD).
+    public function listClientesCorredor(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'fecha_inicio' => 'required|date',
+                'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
+            ], [
+                'fecha_inicio.required' => 'Debe ingresar la fecha de inicio.',
+                'fecha_inicio.date' => 'La fecha de inicio no es válida.',
+                'fecha_fin.required' => 'Debe ingresar la fecha de fin.',
+                'fecha_fin.date' => 'La fecha de fin no es válida.',
+                'fecha_fin.after_or_equal' => 'La fecha de fin debe ser mayor o igual a la fecha de inicio.',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+            }
+
+            $fechaInicio = trim($request->input('fecha_inicio'));
+            $fechaFin = trim($request->input('fecha_fin'));
+
+            // created_at es timestamp: se castea a date para que el BETWEEN
+            // incluya los registros de todo el día de fechaFin
+            $resultado = DB::select("SELECT
+                                        cm.corredor,
+                                        cm.created_at AS fecha_registro,
+                                        c.cli_codigo AS identificacion,
+                                        e.ent_nombres AS nombres,
+                                        e.ent_apellidos AS apellidos,
+                                        e.ent_email AS email,
+                                        t.tel_numero AS telefono,
+                                        d.dir_calle_principal AS calle_principal,
+                                        d.dir_calle_secundaria AS calle_secundaria
+                                    FROM public.clientes_multinivel cm
+                                        JOIN public.cliente c ON c.cli_id = cm.cli_id
+                                        JOIN public.entidad e ON e.ent_id = c.ent_id
+                                        LEFT JOIN public.telefono t ON t.tel_id = e.ent_telefono_principal
+                                        LEFT JOIN public.direccion d ON d.dir_id = e.ent_direccion_principal
+                                    WHERE cm.activo = true
+                                        AND cm.fecha_desvinculacion IS NULL
+                                        AND cm.created_at::date BETWEEN ? AND ?
+                                    ORDER BY cm.created_at ASC", [$fechaInicio, $fechaFin]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
     }
 }

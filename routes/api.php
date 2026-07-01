@@ -81,6 +81,7 @@ use App\Http\Controllers\formularios2\Formulario2UsuariosController;
 use App\Http\Controllers\gestiones\GestionController;
 use App\Http\Controllers\MigracionNovasoft\MigracionController;
 use App\Http\Controllers\openceo\BodegaController;
+use App\Http\Controllers\openceo\ClienteController as Cliente2Controller;
 use App\Http\Controllers\openceo\EntidadDynamoController;
 use App\Http\Controllers\reportes\ReporteLinkController;
 use App\Http\Controllers\reportes\ReporteLinkUsuariosController;
@@ -744,6 +745,19 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/validarFacturaRenegociacion', [DdocumentoController::class, 'validarFacturaRenegociacion']);
     Route::post('/renegociaciones/renegociacionesJuanNarvaezMasivo', [RenegociacionesController::class, 'renegociacionesJuanNarvaezMasivo']);
 
+    // RENEGOCIACION CON SOLICITUD + APROBACION (workflow 2 usuarios)
+    Route::get('/renegociaciones/facturasPorCedula/{cedula}', [RenegociacionesController::class, 'facturasPorCedula']);
+    Route::get('/renegociaciones/productosPorFactura/{doctran}', [RenegociacionesController::class, 'productosPorFactura']);
+    Route::post('/renegociaciones/solicitud/crear', [RenegociacionesController::class, 'crearSolicitud']);
+    Route::post('/renegociaciones/solicitud/editar/{id}', [RenegociacionesController::class, 'editarSolicitud']);
+    Route::get('/renegociaciones/solicitud/listar', [RenegociacionesController::class, 'listarSolicitudes']);
+    Route::get('/renegociaciones/solicitud/listar-paginado', [RenegociacionesController::class, 'listarSolicitudesPaginado']);
+    Route::get('/renegociaciones/solicitud/previsualizar/{id}', [RenegociacionesController::class, 'previsualizarSolicitud']);
+    Route::post('/renegociaciones/solicitud/ejecutar', [RenegociacionesController::class, 'ejecutarSolicitudes']);
+    Route::get('/renegociaciones/solicitud/previsualizar-reversion/{id}', [RenegociacionesController::class, 'previsualizarReversion']);
+    Route::post('/renegociaciones/solicitud/revertir/{id}', [RenegociacionesController::class, 'revertirSolicitud']);
+    Route::get('/renegociaciones/solicitud/auditoria/{id}', [RenegociacionesController::class, 'auditoriaSolicitud']);
+
     // PAGARE
     Route::post('/addHistorialPagare', [RenegociacionController::class, 'addHistorialPagare']); // add los doctran de openceo al crm
     Route::get('/listHistorialPagare/{ddo_doctran}', [RenegociacionController::class, 'listHistorialPagare']); // listar doctran del crm
@@ -842,6 +856,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listAllReqCaso/{casoId}', [ReqCasoController::class, 'listAll']);
     Route::post('/editReqTipoFile', [ReqCasoController::class, 'editReqTipoFile']);
     Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
+    Route::post('/solicitudCreditoVendedorGenerar', [ReqCasoController::class, 'solicitudCreditoVendedorGenerar']);
+    Route::post('/solicitudCreditoVendedorReimprimir', [ReqCasoController::class, 'solicitudCreditoVendedorReimprimir']);
     Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']); //
     Route::get('/listReqCasoId/{casoId}', [ReqCasoController::class, 'listReqCasoId']);
 
@@ -1364,6 +1380,26 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/listAllMenusDynamo', [EntidadDynamoController::class, 'listAllMenusDynamo']);
     Route::get('/listEmpleadoByIdentificacion/{identificacion}', [EntidadDynamoController::class, 'listEmpleadoByIdentificacion']);
     Route::get('/listBodegas', [BodegaController::class, 'listBodegas']);
+
+    // CLIENTE (réplica mntClienteAux vía crm.fn_clientes_registrar / crm.fn_clientes_modificar)
+    Route::post('/crearCliente', [Cliente2Controller::class, 'crear']);
+    Route::post('/modificarCliente', [Cliente2Controller::class, 'modificar']);
+    Route::get('/catalogosCliente', [Cliente2Controller::class, 'catalogos']);
+    Route::get('/catalogoPaginado', [Cliente2Controller::class, 'catalogoPaginado']);
+    Route::get('/ubicacionArbol', [Cliente2Controller::class, 'ubicacionArbol']);
+    Route::get('/parroquiasByCanton/{ctnId}', [Cliente2Controller::class, 'parroquiasByCanton']);
+    Route::get('/cantonesByProvincia/{prvId}', [Cliente2Controller::class, 'cantonesByProvincia']);
+    Route::get('/empresaInfo/{comId}', [Cliente2Controller::class, 'empresaInfo']);
+    // EMPRESA (compania): crear/editar desde el modal de cliente
+    Route::post('/companiaCrear', [Cliente2Controller::class, 'companiaCrear']);
+    Route::post('/companiaModificar', [Cliente2Controller::class, 'companiaModificar']);
+    Route::get('/companiaBuscar/{comId}', [Cliente2Controller::class, 'companiaBuscar']);
+    Route::get('/companiaEsEditable', [Cliente2Controller::class, 'companiaEsEditable']);
+    Route::get('/listarClientesDynamo', [Cliente2Controller::class, 'listar']);
+    Route::get('/solicitudCreditoCliente/{cliId}', [Cliente2Controller::class, 'solicitudCredito']);
+    Route::get('/buscarClienteIdentificacion', [Cliente2Controller::class, 'buscarPorIdentificacion']);
+    Route::get('/clienteAuditoria', [Cliente2Controller::class, 'clienteAuditoria']);
+    Route::get('/clienteSolicitudCreditoHistorial', [Cliente2Controller::class, 'solicitudCreditoHistorial']);
 });
 
 Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {

@@ -15,6 +15,7 @@ use App\Models\mail\SendMailAutorizacionDatos;
 use App\Models\mail\sendMailCambioFase;
 use App\Models\mail\SendMailComite;
 use App\Models\mail\sendMailLinkEnrolamiento;
+use App\Models\mail\SendMailMultinivel;
 use App\Models\mail\TestMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
@@ -403,6 +404,33 @@ class EmailController extends Controller
     }
 
 
+
+    // ---------------------------------------------------------------------------------------------
+    // Version 1.0
+    // Envia un correo con la cuenta secundaria (mailer 'smtp2', variables MAIL_*_2 del .env).
+    // Recibe todo el body como un solo objeto: 'email' es el destinatario y el resto de campos
+    // quedan disponibles en la vista mail.send_multinivel ($object->campo_que_queremos_mostrar)
+    public function send_emailMultinivel(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $object = (object) $request->all();
+
+            if (empty($object->email)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar el correo del destinatario.', null));
+            }
+
+            Mail::mailer('smtp2')->to($object->email)->send(new SendMailMultinivel($object));
+
+            $log->logInfo(EmailController::class, 'Correo electrónico enviado correctamente a ' . $object->email);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Correo electrónico enviado correctamente a ' . $object->email, null));
+        } catch (Exception $e) {
+            $log->logError(EmailController::class, 'Error al enviar el correo electrónico', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al enviar el correo', $e->getMessage()));
+        }
+    }
 
     // ---------------------------------------------------------------------------------------------
     // Enviar correo de prueba

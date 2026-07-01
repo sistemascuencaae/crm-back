@@ -14,7 +14,10 @@ class ClientesMultinivel extends Model
 
     protected $fillable = [
 	"cli_id",
-	"usuario_netos",
+	"corredor",
+	"dias_parametro",
+	"activo",
+	"fecha_desvinculacion",
     ];
 
     public function setCreatedAtAttribute($value)

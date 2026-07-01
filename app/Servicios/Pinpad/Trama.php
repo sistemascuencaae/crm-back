@@ -19,7 +19,8 @@ use App\Servicios\Pinpad\CifradoTramas;
  *   FILLER (adquirente):  Admon=0  Datafast=1  Medianet=2  Austro=3
  *   PP TXN:               Corriente=01  Diferido=02  Anulacion=03  Reverso=04  Maxidolar=07
  *   PP MOD (corriente):   00
- *   PP MOD (diferido):    01..06,08 segun tipo (Normal/Gracia/Mes/Especial x Con/Sin interes)
+ *   PP MOD (diferido):    01..07 segun catalogo Medianet (01-03 con interes: normal/gracia/mes;
+ *                         04-07 sin interes: normal/gracia/mes/especial)
  */
 final class Trama
 {
@@ -130,22 +131,33 @@ final class Trama
 
     /**
      * Mapeo de modalidades a TXN/MOD.
-     * Para diferidos, $diferidoTipo escoge el subtipo (01-08).
+     * Para diferidos, $diferidoTipo escoge el subtipo (01-07).
+     *
+     * Los MOD vienen del catalogo oficial de diferidos Medianet
+     * (MEDIANET/GSMedianet (2)/.../Diferidos_Homologados_Red.pdf y
+     * Diferidos_Medianet.jpg): 01-03 con interes, 04-07 sin interes.
+     * Confirmado ademas contra el bytecode del viewmodel PP de la
+     * libreria oficial V1.2 (enum util.c$g): Especial Sin interes = 07.
+     * "Especial Con interes" = 08 segun la libreria, pero NO esta
+     * homologado para Medianet en el catalogo, por eso no se expone.
+     * Tambien existe 51 = Cuota Facil con intereses, no expuesto.
+     *
+     * Maxidolar: manual v1.4 "Personalizacion - MAXIDOLAR": Codigo de
+     * Diferido 00 = CONSULTA, 50 = PAGO. "Otros valores no permitidos".
      */
     public const PP_MODS = [
         'corriente'                  => ['txn' => '01', 'mod' => '00'],
         'diferido_normal_con'        => ['txn' => '02', 'mod' => '01'],
         'diferido_gracia_con'        => ['txn' => '02', 'mod' => '02'],
         'diferido_mes_a_mes_con'     => ['txn' => '02', 'mod' => '03'],
-        'diferido_especial_con'      => ['txn' => '02', 'mod' => '08'],
         'diferido_normal_sin'        => ['txn' => '02', 'mod' => '04'],
         'diferido_gracia_sin'        => ['txn' => '02', 'mod' => '05'],
         'diferido_mes_a_mes_sin'     => ['txn' => '02', 'mod' => '06'],
-        'diferido_especial_sin'      => ['txn' => '02', 'mod' => '08'],
+        'diferido_especial_sin'      => ['txn' => '02', 'mod' => '07'],
         'anulacion'                  => ['txn' => '03', 'mod' => '00'],
         'reverso'                    => ['txn' => '04', 'mod' => '00'],
         'maxidolar_consulta'         => ['txn' => '07', 'mod' => '00'],
-        'maxidolar_pago'             => ['txn' => '07', 'mod' => '01'],
+        'maxidolar_pago'             => ['txn' => '07', 'mod' => '50'],
     ];
 
     /**
@@ -252,9 +264,14 @@ final class Trama
         // date('Ymd') de PHP. CRITICO: 4 digitos de anio, no 2.
         $date  = $p['date']  ?? date('Ymd');
 
-        // AUTH/PLAZO (6 chars, '0' a la izq) = numero de autorizacion
-        // (para anulaciones) o "000000" para corriente.
-        $plazo = self::padL0((string)($p['plazo']      ?? '0'), 6);
+        // AUTH (6 chars) = "Numero de Autorizacion" (manual p.6, 6 AN):
+        // en ANULACIONES debe llevar la autorizacion de la compra original
+        // (el cajero la saca de detalle.autorizacion del cobro o del voucher).
+        // Para el resto de transacciones el manual pide blancos; mantenemos
+        // el plazo padded historico porque el switch lo acepta (probado).
+        $auth = (isset($p['autorizacion']) && trim((string)$p['autorizacion']) !== '')
+            ? self::padR(strtoupper(trim((string)$p['autorizacion'])), 6)
+            : self::padL0((string)($p['plazo'] ?? '0'), 6);
 
         // ===== IDENTIFICADORES (38 chars: 15+8+15) =====
 
@@ -273,7 +290,7 @@ final class Trama
         // Linea 2 (84 chars): 7 montos x 12
         $body .= $total . $base15 . $base0 . $iva . $servicio . $propina . $fijo;
         // Linea 3 (26 chars): refs + timestamps
-        $body .= $ref . $time . $date . $plazo;
+        $body .= $ref . $time . $date . $auth;
         // Linea 4 (38 chars): MID + TID + CID
         $body .= $mid . $tid . $cidTerm;
         // Linea 5 (20 chars): filler de espacios (campo "Filler 20 AN" del manual)
@@ -521,15 +538,16 @@ final class Trama
 
         // MOD code: cuando es diferido, escoge subtipo (con/sin interes,
         // normal/gracia/mes a mes/especial). Para corriente/anulacion/reverso = "00".
+        // Mismos MOD del catalogo oficial Medianet que PP_MODS (no hay
+        // "especial con interes" homologado para Medianet).
         $modCodes = [
-            'normal_con'        => '01',  // Normal Con Interes
+            'normal_con'        => '01',  // Cuota Fija Con Interes
             'gracia_con'        => '02',  // Meses de Gracia Con Interes
             'mes_a_mes_con'     => '03',  // Pago Mes a Mes Con Interes
-            'especial_con'      => '08',  // Especial Con Interes
-            'normal_sin'        => '04',  // Normal Sin Interes
+            'normal_sin'        => '04',  // Cuota Fija Sin Interes
             'gracia_sin'        => '05',  // Meses de Gracia Sin Interes
             'mes_a_mes_sin'     => '06',  // Pago Mes a Mes Sin Interes
-            'especial_sin'      => '08',  // Especial Sin Interes (mismo code que con interes)
+            'especial_sin'      => '07',  // Especial Sin Intereses
         ];
         $mod = '00';
         // Solo para diferido leemos el subtipo. Si no esta en el mapa, queda "00".
@@ -611,11 +629,14 @@ final class Trama
             'len_hex'       => null,     // los 4 chars hex de longitud
             'len'           => null,     // longitud parseada (decimal)
             'body'          => null,     // cuerpo SIN prefijo y SIN hash final
-            'tipo'          => null,     // primeros 4 chars del cuerpo (ej: "PP00")
+            'tipo'          => null,     // 2 chars del tipo de mensaje (ej: "PP", "LT", "CT")
+            'cod_pinpad'    => null,     // solo PP: Codigo Respuesta del PINPAD (pos 2-3, ej: "00"=OK, "TO"=timeout)
+            'cod_red'       => null,     // solo PP: Codigo Red Adquirente (pos 4-5, ej: "02"=Medianet)
             'mensaje'       => null,     // mensaje humano detectado (ej: "AUTORIZACION OK")
             'hash_recibido' => null,     // los 32 chars hex del final
-            'cod_resp'      => null,     // codigo deducido (ej: "00", "51", "@B")
+            'cod_resp'      => null,     // Codigo Respuesta del Autorizador (banco), ej: "00", "62", "@B"
             'cod_resp_desc' => null,     // descripcion humana del codigo
+            'detalle'       => null,     // solo PP: los 31 campos posicionales del manual (p.8-10)
         ];
 
         // Validacion minima: necesitamos al menos los 4 chars del prefijo.
@@ -630,18 +651,34 @@ final class Trama
         // Tomamos exactamente $len chars despues del prefijo.
         $body           = substr($resp, 4, $out['len']);
 
-        // ===== Paso 2: separar el hash 3DES del final =====
-        // Si los ultimos 32 chars del cuerpo son hex puro (0-9, A-F), es el hash.
-        // Lo separamos para que el resto del cuerpo no se contamine.
-        if (strlen($body) >= 32 && preg_match('/^[0-9A-Fa-f]{32}$/', substr($body, -32))) {
+        // ===== Paso 2: separar la llave 3DES (hash) =====
+        // En las RESPUESTAS la talla NO incluye la llave: los 32 chars hex
+        // viajan DESPUES del cuerpo declarado. Verificado con tramas reales:
+        // talla "0202"=514 chars de campos + 32 de llave = 550 recibidos.
+        $tail = substr($resp, 4 + $out['len'], 32);
+        if (strlen($tail) === 32 && preg_match('/^[0-9A-Fa-f]{32}$/', $tail)) {
+            $out['hash_recibido'] = $tail;
+        } elseif (strlen($body) >= 32 && preg_match('/^[0-9A-Fa-f]{32}$/', substr($body, -32))) {
+            // Fallback: si algun tipo de mensaje incluyera la llave DENTRO de
+            // la talla, la separamos del cuerpo para no contaminarlo.
             $out['hash_recibido'] = substr($body, -32);
             $body = substr($body, 0, -32);
         }
         $out['body'] = $body;
 
-        // Los primeros 4 chars del cuerpo son el "tipo" (ej: "PP00", "CT01").
-        // trim() por si el formato deja espacios.
-        $out['tipo'] = trim(substr($body, 0, 4));
+        // Los primeros 2 chars del cuerpo son el "tipo" (ej: "PP", "LT", "CT").
+        // RFC v1.4 p.3/4/8/13/15: Tipo de Mensaje = 2 AN en todos los mensajes.
+        $out['tipo'] = trim(substr($body, 0, 2));
+
+        // Para PP, los campos intermedios per RFC v1.4 p.8:
+        //   [TIPO:2][COD_PINPAD:2][COD_RED:2][COD_AUTORIZADOR:2][MENSAJE:20][...]
+        if (strtoupper($out['tipo']) === 'PP') {
+            $out['cod_pinpad'] = substr($body, 2, 2); // generado por el pinpad
+            $out['cod_red']    = substr($body, 4, 2); // 01=DF, 02=Medianet, 03=Austro
+            // Desglose posicional completo (secuencial, lote, autorizacion,
+            // tarjeta, EMV...). Ver parsePpResponse() abajo.
+            $out['detalle']    = self::parsePpResponse($body);
+        }
 
         // ===== Paso 3: detectar el codigo de respuesta por TEXTO =====
         // El cuerpo tiene un mensaje humano en alguna posicion (ej: "AUTORIZACION OK").
@@ -683,11 +720,16 @@ final class Trama
         }
 
         // ===== Paso 4: fallback - leer cod_resp por posicion fija =====
-        // Si no encontramos por texto, intentamos leer los 2 chars en posicion
-        // 4 del cuerpo (despues del tipo "PP01" -> el codigo va en bytes 4-5).
+        // Layout por RFC v1.4 Mensajeria Caja Pinpad:
+        //
+        //   PP respuesta (p.8): [TIPO:2][COD_PINPAD:2][COD_RED:2][COD_AUTORIZADOR:2][MENSAJE:20]
+        //   LT/CT/PC/CP:        [TIPO:2][COD_RESP:2][resto...]
+        //
+        // Para PP el codigo que importa (del autorizador/banco) esta en posicion 6-7.
+        // Para los demas tipos esta en posicion 2-3 (inmediatamente tras el tipo).
         if ($out['cod_resp'] === null) {
-            $candidato = trim(substr($body, 4, 2));
-            // Validamos que sean 2 chars alfanumericos validos antes de aceptarlo.
+            $offset    = (strtoupper($out['tipo']) === 'PP') ? 6 : 2;
+            $candidato = trim(substr($body, $offset, 2));
             if (preg_match('/^[0-9A-Z@]{2}$/i', $candidato)) {
                 $out['cod_resp'] = $candidato;
             }
@@ -698,6 +740,86 @@ final class Trama
         $out['cod_resp_desc'] = $out['cod_resp']
             ? self::descripcionCodigoRespuesta($out['cod_resp'])
             : null;
+
+        return $out;
+    }
+
+    /**
+     * parsePpResponse() - desglose posicional COMPLETO de una respuesta PP.
+     *
+     * Layout oficial: manual "Mensajeria Caja Pinpad v1.4", seccion
+     * "Respuesta de proceso de pago" (pags. 8-10). Son 31 campos posicionales
+     * de longitud fija que suman exactamente 514 chars (la talla "0202" de las
+     * respuestas PP). La llave de 32 chars viaja despues de la talla y NO
+     * forma parte de este cuerpo.
+     *
+     * Los campos en blanco (solo espacios) se devuelven como null.
+     *
+     * @param string $body  cuerpo de la respuesta (sin talla y sin llave)
+     * @return array        campos nombrados segun el manual
+     */
+    public static function parsePpResponse(string $body): array
+    {
+        // [clave => longitud] en el ORDEN EXACTO del manual. No reordenar.
+        $layout = [
+            'tipo'               => 2,   // "PP"
+            'cod_pinpad'         => 2,   // 00 OK / 01 trama / 02 inicio dia / 20 proceso / TO / ER
+            'cod_red'            => 2,   // 01 Datafast / 02 Medianet / 03 Austro
+            'cod_autorizador'    => 2,   // codigo del banco (00/08 aprobada, 51 fondos...)
+            'mensaje'            => 20,  // texto parametrizado en el pinpad
+            'secuencial'         => 6,   // la "referencia" que pide una anulacion
+            'lote'               => 6,   // lote asignado (conciliar con cierre PC)
+            'hora'               => 6,   // HHMMSS
+            'fecha'              => 8,   // AAAAMMDD
+            'autorizacion'       => 6,   // numero del banco (blancos si declinada)
+            'terminal_id'        => 8,   // TID devuelto por la red adquirente
+            'merchant_id'        => 15,  // MID devuelto por la red adquirente
+            'interes'            => 12,  // solo diferidos con interes
+            'publicidad'         => 80,  // mensaje premios/publicidad para el voucher
+            'banco_adquirente'   => 3,
+            'banco_emisor'       => 30,
+            'grupo_tarjeta'      => 25,  // marca/franquicia (ej: "UNIONPAY BB")
+            'modo_lectura'       => 2,   // ver $modos abajo
+            'tarjetahabiente'    => 40,  // del Track 1 / chip, formato APELLIDO/NOMBRE
+            'monto_fijo'         => 12,  // solo gasolineras
+            'emv_label'          => 20,  // Application Label (imprimir en voucher)
+            'emv_aid'            => 20,
+            'emv_criptograma'    => 22,
+            'emv_pin'            => 15,  // verificacion de PIN
+            'emv_arqc'           => 16,
+            'emv_tvr'            => 10,
+            'emv_tsi'            => 4,
+            'tarjeta_truncada'   => 25,
+            'vencimiento'        => 4,   // AAMM (ej: "2909" = sept 2029)
+            'tarjeta_encriptada' => 64,  // PAN encriptado
+            'filler'             => 27,  // reservado por Medianet
+        ];
+
+        $out = [];
+        $ofs = 0;
+        foreach ($layout as $campo => $len) {
+            // Si la respuesta vino corta, los campos faltantes quedan null.
+            $val = ($ofs < strlen($body)) ? trim(substr($body, $ofs, $len)) : '';
+            $out[$campo] = ($val === '') ? null : $val;
+            $ofs += $len;
+        }
+        unset($out['filler']);
+
+        // Un "/" solo en tarjetahabiente es el separador APELLIDO/NOMBRE sin
+        // contenido (tipico en contactless): no aporta nada.
+        if ($out['tarjetahabiente'] === '/') {
+            $out['tarjetahabiente'] = null;
+        }
+
+        // Descripciones humanas de los codigos, listas para mostrar en UI.
+        $redes = ['01' => 'Datafast', '02' => 'Medianet', '03' => 'Austro'];
+        $modos = [
+            '01' => 'Manual', '02' => 'Banda', '03' => 'Chip',
+            '04' => 'Fallback Manual (Chip)', '05' => 'Fallback Banda (Chip)',
+            '07' => 'Contactless',
+        ];
+        $out['cod_red_desc']      = $redes[$out['cod_red']] ?? null;
+        $out['modo_lectura_desc'] = $modos[$out['modo_lectura']] ?? null;
 
         return $out;
     }

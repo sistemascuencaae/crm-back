@@ -264,13 +264,14 @@ class ReferenciasClienteController extends Controller
     {
         try {
             $respuesta = DB::SELECT("SELECT
-		                                        refane.refane_nombre as nombre_completo,
-                                                refane.refane_numero_telefono as telefono1,
-		                                        refane.refane_descripcion as relacion,
-                                                refane.refane_direccion as direccion
-                                                from public.entidad ent
-                                                inner join public.referencias_anexo refane on refane.ent_id = ent.ent_id
-                                                where ent.ent_identificacion = ?",[$identificacion]);
+		                                    refane.refane_nombre AS nombre_completo,
+                                            refane.refane_numero_telefono AS telefono1,
+		                                    refane.refane_descripcion AS relacion,
+                                            refane.refane_direccion AS direccion
+                                        FROM public.entidad ent
+                                        INNER JOIN public.referencias_anexo refane ON refane.ent_id = ent.ent_id
+                                        WHERE ent.ent_identificacion = ?
+                                        AND refane.refane_activo = true",[$identificacion]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {

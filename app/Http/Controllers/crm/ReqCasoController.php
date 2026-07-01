@@ -433,4 +433,147 @@ class ReqCasoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
         }
     }
+
+    // Resuelve el usu_id del ERP del usuario logueado (por usu_alias); si no hay coincidencia, cae al
+    // usu_id del agente (empleado) asignado al cliente. Mismo patrón que ClienteController::solicitudCredito.
+    private function resolverUsuIdSolicitud($cliId)
+    {
+        $usuAlias = optional(auth('api')->user())->usu_alias;
+        $usuId = null;
+        if ($usuAlias) {
+            $u = DB::selectOne('SELECT usu_id FROM usuario WHERE UPPER(usu_alias) = UPPER(?) LIMIT 1', [$usuAlias]);
+            $usuId = $u->usu_id ?? null;
+        }
+        if (!$usuId) {
+            $a = DB::selectOne(
+                'SELECT emp.usu_id FROM cliente cli INNER JOIN empleado emp ON emp.emp_id = cli.emp_id WHERE cli.cli_id = ?',
+                [$cliId]
+            );
+            $usuId = $a->usu_id ?? null;
+        }
+        return $usuId;
+    }
+
+    // Requerimiento "solicitud credito vendedor": tras guardar el cliente (a crédito) en el modal de edición,
+    // genera la solicitud (crm.fn_cliente_solicitud_credito = datos para imprimir), guarda el snapshot en la
+    // auditoría de impresiones del cliente (crm.fn_solicitud_credito_guardar -> id) y marca el requerimiento
+    // (marcado=true, valor_int = id de la solicitud). Crea un registro 'editRequerimiento' en crm.audits para
+    // que aparezca en la bitácora. Devuelve { reqCaso (lista del caso), solicitud (filas a imprimir), impresion_id }.
+    public function solicitudCreditoVendedorGenerar(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $casoId = $request->input('caso_id');
+            $cliId  = $request->input('cli_id');
+            $reqId  = $request->input('id');
+
+            $usuId = $this->resolverUsuIdSolicitud($cliId);
+
+            $solicitud = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito(?, ?)', [$cliId, $usuId]);
+            if (empty($solicitud)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Verifique que el cliente sea a CRÉDITO y tenga toda su información completa.', ''));
+            }
+
+            // Teléfonos ACTIVOS del cliente (principal + adicionales) para la tabla "4) TELÉFONOS".
+            $telefonos = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito_telefonos(?)', [$cliId]);
+
+            $impresionId = optional(DB::selectOne(
+                'SELECT crm.fn_solicitud_credito_guardar(?, ?, ?, ?) AS impresion_id',
+                [$cliId, $usuId, auth('api')->id(), $casoId]
+            ))->impresion_id;
+
+            // El reporte en vivo no trae caso ni id de impresión; se inyectan para que la impresión muestre
+            // "N°: <caso_id> - <id solicitud>" en la esquina sup. derecha.
+            foreach ($solicitud as $s) {
+                $s->caso_id = $casoId;
+                $s->solicitud_id = $impresionId;
+            }
+
+            $reqCaso = RequerimientoCaso::find($reqId);
+            if (!$reqCaso) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento no existe.', $reqId));
+            }
+
+            $audit = new Audits();
+            $audit->old_values = json_encode($reqCaso);
+
+            $reqCaso->marcado = true;
+            $reqCaso->valor_int = $impresionId;
+            $reqCaso->save();
+
+            // Auditoría (bitácora). accion 'editRequerimiento' + tipo_campo 'solicitud credito vendedor':
+            // la bitácora detecta el tipo y muestra solo el mensaje resumido (sin old/new values).
+            $audit->user_id = Auth::id();
+            $audit->event = 'updated';
+            $audit->auditable_type = RequerimientoCaso::class;
+            $audit->auditable_id = $reqCaso->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip();
+            $audit->url = $request->fullUrl();
+            $audit->new_values = json_encode($reqCaso);
+            $audit->user_agent = $request->header('User-Agent');
+            $audit->accion = 'editRequerimiento';
+            $audit->caso_id = $casoId;
+            $audit->save();
+
+            $requerimientosCaso = RequerimientoCaso::where('caso_id', $casoId)->orderBy('id', 'asc')->get();
+
+            $data = (object) [
+                'reqCaso'      => $requerimientosCaso,
+                'solicitud'    => $solicitud,
+                'telefonos'    => $telefonos,
+                'impresion_id' => $impresionId,
+            ];
+
+            $log->logInfo(ReqCasoController::class, 'Solicitud crédito vendedor generada en el caso #' . $casoId . ', impresion_id ' . $impresionId);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Solicitud generada con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(ReqCasoController::class, 'Error al generar la solicitud crédito vendedor', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
+        }
+    }
+
+    // Reimpresión: trae el snapshot guardado (crm.solicitudes_credito) por su id, en el mismo shape que el
+    // historial de solicitudes (reusa crm.fn_cliente_solicitud_credito_listar_paginacion), para reimprimir SOLO
+    // esa solicitud. Los jsonb (referencias/telefonos/direcciones) se decodifican para el front.
+    public function solicitudCreditoVendedorReimprimir(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $solicitudId = (int) $request->input('solicitud_id');
+
+            $cab = DB::selectOne('SELECT cli_id FROM crm.solicitudes_credito WHERE id = ?', [$solicitudId]);
+            if (!$cab) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró la solicitud guardada.', ''));
+            }
+
+            $regs = DB::select(
+                'SELECT * FROM crm.fn_cliente_solicitud_credito_listar_paginacion(?, ?, ?, ?)',
+                [$cab->cli_id, 1, 100000, null]
+            );
+
+            $snap = null;
+            foreach ($regs as $r) {
+                if ((int) $r->id === $solicitudId) {
+                    $snap = $r;
+                    break;
+                }
+            }
+            if (!$snap) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró el snapshot de la solicitud.', ''));
+            }
+
+            $snap->referencias  = json_decode($snap->referencias);
+            $snap->telefonos    = json_decode($snap->telefonos);
+            $snap->direcciones  = json_decode($snap->direcciones);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Solicitud obtenida', $snap));
+        } catch (Exception $e) {
+            $log->logError(ReqCasoController::class, 'Error al reimprimir la solicitud crédito vendedor', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
+        }
+    }
 }

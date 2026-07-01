@@ -69,6 +69,9 @@ final class Conexion
         //   - ya tenemos la trama completa (segun su prefijo de longitud).
         $resp = '';
         $deadline = microtime(true) + ($timeoutMs / 1000);
+        // Flag: ya recortamos el timeout del socket para esperar SOLO la
+        // llave final (ver optimizacion abajo).
+        $graciaActivada = false;
 
         while (!feof($sock) && microtime(true) < $deadline) {
             // Leer hasta 1024 bytes en este intento.
@@ -90,9 +93,22 @@ final class Conexion
 
             // Optimizacion: si ya leimos suficiente segun el prefijo de
             // longitud (4 chars hex al inicio), podemos salir antes de timeout.
+            // OJO: en las respuestas la talla NO incluye la llave de 32 chars
+            // que viaja al final (talla + 4 + 32 = trama completa).
             if (strlen($resp) >= 4) {
                 $declared = @hexdec(substr($resp, 0, 4));
-                if ($declared > 0 && strlen($resp) >= $declared + 4) break;
+                if ($declared > 0) {
+                    // Cuerpo + llave completos: no hay nada mas que esperar.
+                    if (strlen($resp) >= $declared + 4 + 32) break;
+                    // Cuerpo completo pero la llave aun no llega: le damos una
+                    // ventana corta (300ms) por si viene en otro paquete TCP.
+                    // Si no llega, el proximo fread sale por timed_out y
+                    // devolvemos lo leido (la llave es solo informativa).
+                    if (strlen($resp) >= $declared + 4 && !$graciaActivada) {
+                        stream_set_timeout($sock, 0, 300000);
+                        $graciaActivada = true;
+                    }
+                }
             }
         }
         fclose($sock);

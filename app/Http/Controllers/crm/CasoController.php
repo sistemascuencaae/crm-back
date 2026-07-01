@@ -2420,10 +2420,7 @@ class CasoController extends Controller
             }
         }
 
-        // $miembros = $request->input('miembros');
         $miembros2 = $request->input('miembros');
-        //datos formulario estatico creacion de usuario
-        $dataFormStatic = $request->input('form_estatico');
         // Verificar si $miembros2 es un string
         if (is_string($miembros2)) {
             // Convertir la cadena en un array usando la coma como delimitador
@@ -2431,99 +2428,119 @@ class CasoController extends Controller
         } else {
             $miembros = $miembros2;
         }
-        //try {
+        // id del formulario dinámico (cform) creado en el request previo addCDFormulario
+        $formId2 = $request->input('form_id2');
 
-        $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request, $dataFormStatic) {
+        try {
+            $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
 
-            $caso = new Caso($casoInput);
-            $caso->save();
+                $caso = new Caso($casoInput);
+                $caso->save();
 
-            if ($dataFormStatic) {
-                $this->crearFormularioStatico($dataFormStatic, $caso->id);
-            }
+                $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
 
-            $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
+                //--------------------
+                $caso->estado_2 = $estadoInicial->id;
+                $caso->nombre = 'CASO # ' . $caso->id;
+                $caso->user_creador_id = $request->user_creador_id;
 
-            //--------------------
-            $caso->estado_2 = $estadoInicial->id;
-            $caso->nombre = 'CASO # ' . $caso->id;
-            $caso->user_creador_id = $request->user_creador_id;
-
-            if ($caso->cliente_id) {
-                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
-            } else {
+                // cliente/entidad por defecto (este flujo no maneja solicitud de crédito)
                 $caso->cliente_id = 29; // ID del cliente default del crm
                 $caso->ent_id = 999; // ID del cliente default de dynamo
-            }
 
-            // Buscar id_zona_agencia por codigo_agencia
-            if ($caso->codigo_agencia) {
-                $agencia = Agencia::where('codigo', $caso->codigo_agencia)->first();
-                if ($agencia) {
-                    $caso->id_zona_agencia = $agencia->id_zona_agencia;
+                // Buscar id_zona_agencia por codigo_agencia
+                if ($caso->codigo_agencia) {
+                    $agencia = Agencia::where('codigo', $caso->codigo_agencia)->first();
+                    if ($agencia) {
+                        $caso->id_zona_agencia = $agencia->id_zona_agencia;
+                    }
                 }
-            }
 
-            $caso->save();
+                $caso->save();
 
-            for ($i = 0; $i < sizeof($miembros); $i++) {
-                $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
-                if (!$mieExixte) {
+                // El caso es nuevo: no tiene miembros previos, así que no hace falta consultar
+                // duplicados (esa consulta escaneaba toda la tabla miembros). Basta deduplicar el array.
+                foreach (array_unique($miembros) as $userId) {
                     $miembro = new Miembros();
-                    $miembro->user_id = $miembros[$i];
+                    $miembro->user_id = $userId;
                     $caso->miembros()->save($miembro);
                 }
+
+                // addRequerimientosFase se traga su error y devuelve un JsonResponse; si pasa eso,
+                // lanzamos excepción para que la transacción revierta todo.
+                $resReq = $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
+                if ($resReq instanceof \Illuminate\Http\JsonResponse) {
+                    throw new \Exception('Fallo al agregar los requerimientos de la fase');
+                }
+
+                $ccm_id_input = $request->input('ccm_id');
+                if ($ccm_id_input) {
+                    CasoComprobante::create([
+                        'caso_id' => $caso->id,
+                        'ccm_id' => $ccm_id_input,
+                    ]);
+                }
+
+                // getCaso también se traga su error y devuelve un JsonResponse; lo relanzamos.
+                $casoCreado = $this->getCaso($caso->id);
+                if ($casoCreado instanceof \Illuminate\Http\JsonResponse) {
+                    throw new \Exception('Fallo al obtener el caso creado');
+                }
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                $audit->user_id = Auth::id();
+                $audit->event = 'created';
+                $audit->auditable_type = Caso::class;
+                $audit->auditable_id = $casoCreado->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
+                $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->estado_caso = $casoCreado->estadodos->nombre;
+                $audit->estado_caso_id = $casoCreado->estado_2;
+                $audit->accion = 'addCaso';
+                $audit->caso_id = $casoCreado->id;
+                $audit->save();
+                // END Auditoria
+
+                // le mando uno porque es la primera vez q se crea el caso
+                $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+                // calcularTiemposCaso se traga su error y devuelve un JsonResponse; si pasa eso,
+                // lanzamos excepción para que la transacción revierta todo.
+                $resTiempo = $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
+                if ($resTiempo instanceof \Illuminate\Http\JsonResponse) {
+                    throw new \Exception('Fallo al calcular los tiempos del caso');
+                }
+
+                // Broadcast como ÚLTIMO paso DENTRO de la transacción: si el WebSocket falla,
+                // la excepción revierte TODO el caso (y el catch revierte el formulario dinámico).
+                broadcast(new TableroEvent($casoCreado));
+
+                return $casoCreado;
+            });
+        } catch (\Throwable $e) {
+            // La creación falló: la transacción ya revirtió las filas del caso.
+            // El formulario dinámico (cform/dform) se guardó en un request previo (addCDFormulario)
+            // y quedó huérfano -> lo borramos aquí (rollback compensatorio).
+            // El guard evita romper la FK si otro caso comparte el mismo cform.
+            if ($formId2 && $formId2 != 1) {
+                $compartido = DB::table('crm.caso')->where('form_id2', $formId2)->exists();
+                if (!$compartido) {
+                    DB::table('crm.dform')->where('cform_id', $formId2)->delete();
+                    DB::table('crm.cform')->where('id', $formId2)->delete();
+                }
             }
 
-            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
+            $log->logError(CasoController::class, 'Error al crear el caso; se revirtió el formulario dinámico (cform ' . $formId2 . ')', $e);
 
-            $soporteController = new SoporteController();
-            $soporteController->addGaleriaArchivos($request, $caso->id);
-
-            $ccm_id_input = $request->input('ccm_id');
-            if ($ccm_id_input) {
-                CasoComprobante::create([
-                    'caso_id' => $caso->id,
-                    'ccm_id' => $ccm_id_input,
-                ]);
-            }
-
-            return $this->getCaso($caso->id);
-        });
-
-        $dataFormSopo = $request->input('valoresFormulario');
-        if ($dataFormSopo) {
-            $this->formularioSoporte($request, $casoCreado['id']);
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo crear el caso: ' . $e->getMessage(), null));
         }
 
-        // START Bloque de código que genera un registro de auditoría manualmente
-        $audit = new Audits();
-        $audit->user_id = Auth::id();
-        $audit->event = 'created';
-        $audit->auditable_type = Caso::class;
-        $audit->auditable_id = $casoCreado->id;
-        $audit->user_type = User::class;
-        $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-        $audit->url = $request->fullUrl();
-        // Establecer old_values y new_values
-        $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
-        $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
-        $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-        $audit->estado_caso = $casoCreado->estadodos->nombre;
-        $audit->estado_caso_id = $casoCreado->estado_2;
-        $audit->accion = 'addCaso';
-        $audit->caso_id = $casoCreado->id;
-        $audit->save();
-        // END Auditoria
-
-        // le mando uno porque es la primera vez q se crea el caso
-        $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
-
-        $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
-
         $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
-
-        broadcast(new TableroEvent($casoCreado));
 
         return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
     }

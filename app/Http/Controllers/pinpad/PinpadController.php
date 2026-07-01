@@ -63,7 +63,7 @@ class PinpadController extends Controller
     {
         try {
             // Lee config/pinpad.php (que a su vez lee del .env).
-            $ip   = config('pinpad.ip');
+            $ip = config('pinpad.ip');
             $port = (int) config('pinpad.port');
 
             // Conexion::probe abre socket con timeout de 3s y cierra inmediato.
@@ -71,11 +71,13 @@ class PinpadController extends Controller
             $ok = Conexion::probe($ip, $port, 3000);
 
             $data = [
-                'pinpad'    => "$ip:$port",
+                'pinpad' => "$ip:$port",
                 'reachable' => $ok,
-                // Mostramos al admin el host del switch Medianet (informativo).
-                // No lo usamos directamente — el Pin Pad sale a el por su cuenta.
                 'host_medianet' => config('pinpad.host_medianet') . ' (uso interno del Pin Pad)',
+                // Devueltos al frontend para el encabezado del voucher.
+                'mid' => config('pinpad.mid'),
+                'tid' => config('pinpad.tid'),
+                'comercio' => config('pinpad.comercio'),
             ];
             $estado = $ok ? 'success' : 'error';
             $msg = $ok ? "Pin Pad accesible en $ip:$port" : "Pin Pad NO accesible en $ip:$port";
@@ -99,9 +101,9 @@ class PinpadController extends Controller
         try {
             $h = CifradoTramas::getHash();
             return response()->json(RespuestaApi::returnResultado('success', 'Hash generado', [
-                'hash'   => $h,                                  // los 32 chars hex
-                'len'    => strlen($h),                          // siempre debe ser 32
-                'valido' => CifradoTramas::validateHash($h),     // round-trip check
+                'hash' => $h, // los 32 chars hex
+                'len' => strlen($h), // siempre debe ser 32
+                'valido' => CifradoTramas::validateHash($h), // round-trip check
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('exception', $th->getMessage(), null));
@@ -153,12 +155,12 @@ class PinpadController extends Controller
     public function cobrar(Request $req)
     {
         return $this->enviarPp('corriente', $req, [
-            'total'    => 'required|numeric|min:0.01',
-            'base15'   => 'required|numeric|min:0',
-            'base0'    => 'required|numeric|min:0',
-            'iva'      => 'required|numeric|min:0',
+            'total' => 'required|numeric|min:0.01',
+            'base15' => 'required|numeric|min:0',
+            'base0' => 'required|numeric|min:0',
+            'iva' => 'required|numeric|min:0',
             'servicio' => 'nullable|numeric|min:0',
-            'propina'  => 'nullable|numeric|min:0',
+            'propina' => 'nullable|numeric|min:0',
         ]);
     }
 
@@ -176,15 +178,15 @@ class PinpadController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'modalidad debe ser diferido_*', null));
         }
         return $this->enviarPp($modalidad, $req, [
-            'modalidad'    => 'required|string|in:' . implode(',', array_keys(Trama::PP_MODS)),
-            'total'        => 'required|numeric|min:0.01',
-            'base15'       => 'required|numeric|min:0',
-            'base0'        => 'required|numeric|min:0',
-            'iva'          => 'required|numeric|min:0',
-            'plazo'        => 'required|integer|min:1|max:99',
+            'modalidad' => 'required|string|in:' . implode(',', array_keys(Trama::PP_MODS)),
+            'total' => 'required|numeric|min:0.01',
+            'base15' => 'required|numeric|min:0',
+            'base0' => 'required|numeric|min:0',
+            'iva' => 'required|numeric|min:0',
+            'plazo' => 'required|integer|min:1|max:99',
             'gracia_meses' => 'nullable|integer|min:0|max:99',
-            'servicio'     => 'nullable|numeric|min:0',
-            'propina'      => 'nullable|numeric|min:0',
+            'servicio' => 'nullable|numeric|min:0',
+            'propina' => 'nullable|numeric|min:0',
         ]);
     }
 
@@ -192,14 +194,17 @@ class PinpadController extends Controller
      * anular() - POST /pinpad/anular
      * PP Anulacion: cancela una transaccion del MISMO DIA.
      *
-     * Para anular se requiere el numero de referencia de la transaccion
-     * original (que el cajero anota al cobrar). Los montos van en cero
-     * automaticamente (el switch ya los conoce).
+     * Para anular se requiere el numero de referencia (secuencial) de la
+     * transaccion original y, segun el manual p.6, el numero de autorizacion
+     * que el banco devolvio en esa compra (ambos vienen en data.detalle del
+     * cobro y en el voucher impreso). Los montos van en cero automaticamente
+     * (el switch ya los conoce).
      */
     public function anular(Request $req)
     {
         return $this->enviarPp('anulacion', $req, [
             'referencia' => 'required|string',
+            'autorizacion' => 'nullable|string|max:6',
         ]);
     }
 
@@ -260,7 +265,7 @@ class PinpadController extends Controller
         return response()->json(RespuestaApi::returnResultado('success', 'Estado del cache', [
             // hasReverso() solo chequea si EXISTE la entrada (no la trae).
             'disponible' => TramaCache::hasReverso($tid),
-            'tid'        => $tid,
+            'tid' => $tid,
         ]));
     }
 
@@ -278,7 +283,7 @@ class PinpadController extends Controller
         $modalidad = $req->input('modalidad', 'maxidolar_consulta');
         return $this->enviarPp($modalidad, $req, [
             'modalidad' => 'required|string|in:maxidolar_consulta,maxidolar_pago',
-            'total'     => 'nullable|numeric|min:0',
+            'total' => 'nullable|numeric|min:0',
         ]);
     }
 
@@ -300,8 +305,8 @@ class PinpadController extends Controller
             // Mergeamos los datos del frontend con los IDs del comercio (.env).
             // El cajero NUNCA envia MID/TID por seguridad — vienen del backend.
             $payload = array_merge($data, [
-                'mid'          => config('pinpad.mid'),
-                'tid'          => config('pinpad.tid'),
+                'mid' => config('pinpad.mid'),
+                'tid' => config('pinpad.tid'),
                 'cid_terminal' => config('pinpad.cid_terminal'),
             ]);
 
@@ -310,7 +315,15 @@ class PinpadController extends Controller
 
             // Pasamos 'operacion' al helper para incluirla en la respuesta.
             // El frontend usa esto para saber que tipo de transaccion fue.
-            return response()->json($this->enviarYParsear($trama, ['operacion' => $modalidad]));
+            $extra = ['operacion' => $modalidad];
+
+            // Eco de plazo/gracia para diferidos: la respuesta del pinpad NO
+            // trae campo de cuotas (manual p.8-10), asi que devolvemos lo
+            // enviado para que el frontend pueda mostrarlo al cajero.
+            if (isset($data['plazo'])) $extra['plazo'] = (int) $data['plazo'];
+            if (isset($data['gracia_meses'])) $extra['gracia_meses'] = (int) $data['gracia_meses'];
+
+            return response()->json($this->enviarYParsear($trama, $extra));
         } catch (\Throwable $th) {
             Log::error("Pinpad/$modalidad: " . $th->getMessage());
             return response()->json(RespuestaApi::returnResultado('exception', $th->getMessage(), null));
@@ -388,18 +401,18 @@ class PinpadController extends Controller
     {
         try {
             $data = $req->validate([
-                'ip'              => 'required|ip',
-                'mask'            => 'required|string',
-                'gateway'         => 'required|ip',
-                'listening_port'  => 'required|integer',
-                'ip_host1'        => 'nullable|ip',
-                'port_host1'      => 'nullable|integer',
-                'ip_alt_host1'    => 'nullable|ip',
-                'port_alt_host1'  => 'nullable|integer',
-                'ip_host2'        => 'nullable|ip',
-                'port_host2'      => 'nullable|integer',
-                'ip_alt_host2'    => 'nullable|ip',
-                'port_alt_host2'  => 'nullable|integer',
+                'ip' => 'required|ip',
+                'mask' => 'required|string',
+                'gateway' => 'required|ip',
+                'listening_port' => 'required|integer',
+                'ip_host1' => 'nullable|ip',
+                'port_host1' => 'nullable|integer',
+                'ip_alt_host1' => 'nullable|ip',
+                'port_alt_host1' => 'nullable|integer',
+                'ip_host2' => 'nullable|ip',
+                'port_host2' => 'nullable|integer',
+                'ip_alt_host2' => 'nullable|ip',
+                'port_alt_host2' => 'nullable|integer',
             ]);
             $trama = Trama::buildCambioParametros($data);
             return response()->json($this->enviarYParsear($trama, ['operacion' => 'cambio_parametros']));
@@ -424,12 +437,12 @@ class PinpadController extends Controller
     {
         try {
             $data = $req->validate([
-                'batch'     => 'nullable|integer',
+                'batch' => 'nullable|integer',
                 'reference' => 'nullable|integer',
             ]);
             $payload = array_merge($data, [
-                'mid'          => config('pinpad.mid'),
-                'tid'          => config('pinpad.tid'),
+                'mid' => config('pinpad.mid'),
+                'tid' => config('pinpad.tid'),
                 'cid_terminal' => config('pinpad.cid_terminal'),
             ]);
             $trama = Trama::buildProcesoControl($payload);
@@ -456,15 +469,15 @@ class PinpadController extends Controller
     {
         try {
             $data = $req->validate([
-                'modalidad'      => 'required|string|in:corriente,diferido,anulacion,reverso',
-                'serial'         => 'required|string|min:10|max:15|regex:/^[A-Za-z0-9]+$/',
-                'base'           => 'nullable|numeric|min:0',
-                'total'          => 'nullable|numeric|min:0',
-                'referencia'     => 'nullable|string|max:6',
-                'plazo'          => 'nullable|integer|min:0|max:99',
-                'gracia'         => 'nullable|integer|min:0|max:99',
-                'diferido_tipo'  => 'nullable|string|in:normal_con,gracia_con,mes_a_mes_con,especial_con,normal_sin,gracia_sin,mes_a_mes_sin,especial_sin',
-                'adquirente_code'=> 'nullable|string|max:6',
+                'modalidad' => 'required|string|in:corriente,diferido,anulacion,reverso',
+                'serial' => 'required|string|min:10|max:15|regex:/^[A-Za-z0-9]+$/',
+                'base' => 'nullable|numeric|min:0',
+                'total' => 'nullable|numeric|min:0',
+                'referencia' => 'nullable|string|max:6',
+                'plazo' => 'nullable|integer|min:0|max:99',
+                'gracia' => 'nullable|integer|min:0|max:99',
+                'diferido_tipo' => 'nullable|string|in:normal_con,gracia_con,mes_a_mes_con,normal_sin,gracia_sin,mes_a_mes_sin,especial_sin',
+                'adquirente_code' => 'nullable|string|max:6',
             ]);
 
             // Validacion adicional segun modalidad (manual 4.1.6)
@@ -504,8 +517,8 @@ class PinpadController extends Controller
     private function enviarYParsear(string $trama, array $extra = []): array
     {
         // Lee config: hacia donde mandar y por cuanto tiempo esperar respuesta.
-        $ip      = config('pinpad.ip');
-        $port    = (int) config('pinpad.port');
+        $ip = config('pinpad.ip');
+        $port = (int) config('pinpad.port');
         $timeout = (int) config('pinpad.timeout_ms');
 
         // Log antes de enviar (util para auditoria y debug).
@@ -529,15 +542,18 @@ class PinpadController extends Controller
         // que parseamos. El frontend recibe TODOS los campos para mostrar
         // diagnostico al cajero si algo sale mal.
         $data = array_merge($extra, [
-            'trama_enviada'  => $trama,                      // lo que mandamos
-            'trama_recibida' => $parsed['raw'],              // lo que vino crudo
-            'longitud'       => $parsed['len'],              // longitud declarada
-            'tipo'           => $parsed['tipo'],             // primeros 4 chars
-            'cuerpo'         => $parsed['body'],             // cuerpo sin hash
-            'mensaje_pinpad' => $parsed['mensaje'],          // texto humano (ej: "AUTORIZACION OK")
-            'hash_recibido'  => $parsed['hash_recibido'],    // 32 chars hex del hash
-            'cod_resp'       => $parsed['cod_resp'],         // codigo deducido
-            'cod_resp_desc'  => $parsed['cod_resp_desc'],    // descripcion humana
+            'trama_enviada' => $trama, // lo que mandamos
+            'trama_recibida' => $parsed['raw'], // lo que vino crudo
+            'longitud' => $parsed['len'], // longitud declarada
+            'tipo' => $parsed['tipo'], // tipo de mensaje (2 chars: PP, LT, CT...)
+            'cod_pinpad' => $parsed['cod_pinpad'], // solo PP: codigo del pinpad (00=OK, TO, ER...)
+            'cod_red' => $parsed['cod_red'], // solo PP: red adquirente (02=Medianet)
+            'cuerpo' => $parsed['body'], // cuerpo sin hash
+            'mensaje_pinpad' => $parsed['mensaje'], // texto humano (ej: "AUTORIZACION OK")
+            'hash_recibido' => $parsed['hash_recibido'], // 32 chars hex del hash
+            'cod_resp' => $parsed['cod_resp'], // codigo del autorizador/banco
+            'cod_resp_desc' => $parsed['cod_resp_desc'], // descripcion humana
+            'detalle' => $parsed['detalle'], // solo PP: 31 campos posicionales (secuencial, lote, autorizacion, tarjeta, EMV...)
         ]);
 
         // ===== 4) DECIDIR ESTADO Y MENSAJE =====
@@ -566,11 +582,17 @@ class PinpadController extends Controller
         // mandar reverso porque no sabemos si el switch acepto o no).
         $op = $extra['operacion'] ?? '';
         $debeGuardarReverso = (
-            in_array($op, ['corriente', 'diferido_normal_con', 'diferido_gracia_con',
-                           'diferido_mes_a_mes_con', 'diferido_especial_con',
-                           'diferido_normal_sin', 'diferido_gracia_sin',
-                           'diferido_mes_a_mes_sin', 'diferido_especial_sin',
-                           'reimpresion'])
+            in_array($op, [
+                'corriente',
+                'diferido_normal_con',
+                'diferido_gracia_con',
+                'diferido_mes_a_mes_con',
+                'diferido_normal_sin',
+                'diferido_gracia_sin',
+                'diferido_mes_a_mes_sin',
+                'diferido_especial_sin',
+                'reimpresion'
+            ])
             && ($aprobada || in_array($parsed['cod_resp'], ['TO', '@B']))
         );
         if ($debeGuardarReverso) {
