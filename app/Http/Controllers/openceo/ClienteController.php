@@ -4,13 +4,11 @@ namespace App\Http\Controllers\openceo;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\Audits;
-use App\Models\openceo\Cliente;
-use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ClienteController extends Controller
 {
@@ -129,9 +127,9 @@ class ClienteController extends Controller
         $payload['usuario_auditoria'] = $this->etiquetaUsuarioAuditoria();
 
         try {
-            $resultado = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload)]);
-
-            $this->registrarAuditoria($request, 'created', 'crearCliente', $resultado->cli_id, null, $payload);
+            // El bloque 'auditoria' (usuario/IP/user agent/request_id) va dentro del jsonb;
+            // la función PG lo usa para la auditoría forense y NO lo persiste como dato del cliente.
+            $resultado = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Cliente creado con éxito', ['cli_id' => $resultado->cli_id]));
         } catch (QueryException $e) {
@@ -175,17 +173,11 @@ class ClienteController extends Controller
         // Etiqueta "usu_alias - APELLIDOS NOMBRES" del usuario JWT, para cliente.updated_by.
         $payload['usuario_auditoria'] = $this->etiquetaUsuarioAuditoria();
 
-        // Snapshot del estado ANTES de modificar (old_values de la auditoría). Reusa el buscador que ya
-        // devuelve el cliente completo en JSON. Best-effort: si falla, la modificación igual procede.
-        $oldValues = $this->snapshotCliente(
-            $request->input('ent_identificacion'),
-            $request->input('ent_tipo_identificacion')
-        );
-
         try {
-            $resultado = DB::selectOne('SELECT crm.fn_clientes_modificar(?::jsonb) AS cli_id', [json_encode($payload)]);
-
-            $this->registrarAuditoria($request, 'updated', 'modificarCliente', $resultado->cli_id, $oldValues, $payload);
+            // El bloque 'auditoria' (usuario/IP/user agent/request_id) va dentro del jsonb;
+            // la función PG lo usa para la auditoría forense (auditoria.logs_cambios, donde
+            // ella misma captura el ANTES) y NO lo persiste como dato del cliente.
+            $resultado = DB::selectOne('SELECT crm.fn_clientes_modificar(?::jsonb) AS cli_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Cliente modificado con éxito', ['cli_id' => $resultado->cli_id]));
         } catch (QueryException $e) {
@@ -213,45 +205,28 @@ class ClienteController extends Controller
         return mb_substr($etiqueta, 0, 100);
     }
 
-    // Trae el estado actual del cliente (JSON) para usarlo como old_values en la auditoría de modificar().
-    // Best-effort: devuelve null si la identificación es inválida o no se encuentra (no debe frenar el flujo).
-    private function snapshotCliente($identificacion, $tipoIdentificacion): ?array
-    {
-        try {
-            $fila = DB::selectOne(
-                'SELECT datos FROM crm.fn_cliente_buscar_por_identificacion(?, ?)',
-                [$identificacion, $tipoIdentificacion]
-            );
+    // NOTA: la auditoría de cliente ya NO escribe en crm.audits (quedó de lado).
+    // La única auditoría es la FORENSE en auditoria.logs_cambios: la escriben las
+    // funciones PG (crear/modificar) o el trigger trg_cliente_audit (cambios directos
+    // en BD), y el modal la lee vía crm.fn_cliente_auditoria_listar_paginacion.
 
-            return $fila && $fila->datos ? json_decode($fila->datos, true) : null;
-        } catch (\Throwable $e) {
-            return null;
-        }
-    }
-
-    // Registra un evento de auditoría en crm.audits (mismo patrón manual que ComentariosController).
-    // Es best-effort: un fallo aquí NO debe revertir ni romper la creación/modificación del cliente
-    // (que ya se ejecutó en su propia transacción dentro de la función PG).
-    private function registrarAuditoria(Request $request, string $event, string $accion, $cliId, $oldValues, $newValues): void
+    // Bloque de contexto que viaja DENTRO del jsonb hacia las funciones PG
+    // (fn_clientes_registrar / fn_clientes_modificar) para la auditoría FORENSE
+    // (auditoria.fn_registrar_evento — UNA sola fila por operación). Si la función se
+    // ejecuta directo en la BD sin este bloque, la auditoría registra al usuario de
+    // base de datos con la marca DIRECT_DB_OPERATION.
+    private function contextoAuditoriaForense(Request $request): array
     {
-        try {
-            $audit = new Audits();
-            $audit->user_id = auth('api')->id();
-            $audit->event = $event;
-            $audit->auditable_type = Cliente::class;
-            $audit->auditable_id = $cliId;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip();
-            $audit->url = $request->fullUrl();
-            $audit->old_values = json_encode($oldValues ?? []);
-            $audit->new_values = json_encode($newValues ?? []);
-            $audit->user_agent = $request->header('User-Agent');
-            $audit->accion = $accion;
-            $audit->save();
-        } catch (\Throwable $e) {
-            // No interrumpir el flujo principal por un fallo de auditoría; solo se deja constancia en el log.
-            \Illuminate\Support\Facades\Log::warning('No se pudo registrar auditoría de cliente: ' . $e->getMessage());
-        }
+        $u = auth('api')->user();
+
+        return [
+            'usuario_id' => $u->id ?? null,
+            'usuario_login' => $u->usu_alias ?? null,
+            'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'request_id' => (string) Str::uuid(),
+        ];
     }
 
     // Catálogos para poblar los combos del formulario (réplica de mntClienteAux.jsf)
