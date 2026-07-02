@@ -651,34 +651,6 @@ class RenegociacionesController extends Controller
         return $row && $row->r !== null ? (json_decode($row->r, true) ?? []) : [];
     }
 
-    // Registra una fila de auditoría en crm.audits (mismo esquema que owen-it/laravel-auditing
-    // + columnas propias del CRM: accion/user_agent). Captura usuario / IP / url del request.
-    // Nunca rompe la operación principal: cualquier fallo se traga.
-    private function auditar(string $event, string $accion, int $solicitudId, ?array $old, ?array $new): void
-    {
-        try {
-            $req = request();
-            $now = Carbon::now('America/Guayaquil');
-            DB::table('crm.audits')->insert([
-                'user_type' => 'App\\Models\\User',
-                'user_id' => auth()->id(),
-                'event' => $event,
-                'auditable_type' => self::AUDITABLE_TYPE,
-                'auditable_id' => $solicitudId,
-                'old_values' => $old !== null ? json_encode($old, JSON_UNESCAPED_UNICODE) : null,
-                'new_values' => json_encode($new ?? [], JSON_UNESCAPED_UNICODE),
-                'url' => $req ? $req->fullUrl() : null,
-                'ip_address' => $req ? $req->ip() : null,
-                'user_agent' => $req ? $req->userAgent() : null,
-                'accion' => $accion,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-        } catch (\Throwable $e) {
-            // La auditoría es best-effort: no debe afectar la operación principal.
-        }
-    }
-
     // Auditoría de UNA solicitud: resumen (creó/modificó) + eventos paginados de crm.audits
     // con el detalle de cuotas (antes -> después) por evento. Espejo de clienteAuditoria.
     public function auditoriaSolicitud(Request $request, $id)
@@ -747,30 +719,52 @@ class RenegociacionesController extends Controller
         }
     }
 
-    // Usuario A: crea la solicitud (aprobado=false, ejecutado=false). No aplica nada todavía.
-    public function crearSolicitud(Request $request)
+    // Reglas de crear/editar solicitud, espejo del form add-edit-renegociacion:
+    // todo required EXCEPTO observacion_cartera. motivo_cambio limitado a las 5
+    // opciones del ng-select; tipo_factura solo exige presencia (en edición el
+    // form admite valores legados fuera de la lista actual).
+    private static function reglasSolicitud()
     {
-        $validator = Validator::make($request->all(), [
+        return [
             'identificacion' => 'required|string|max:20',
+            'nombre_cliente' => 'required|string|max:255',
             'numero_factura' => 'required|string|max:100',
+            'fecha_factura' => 'required|date',
+            'codigo_producto' => 'required|string|max:100',
+            'descripcion_producto' => 'required|string|max:255',
             'numero_cuota' => 'required|integer|min:1',
             'fecha_cambio' => 'required|date',
-            'motivo_cambio' => 'nullable|string|max:60',
-            'nombre_cliente' => 'nullable|string|max:255',
-            'fecha_factura' => 'nullable|date',
-            'codigo_producto' => 'nullable|string|max:100',
-            'descripcion_producto' => 'nullable|string|max:255',
-            'tipo_factura' => 'nullable|string|max:40',
+            'motivo_cambio' => 'required|string|max:60|in:Moto no entregada,Moto entregada,servicio tecnico,Error en fecha de pagaré,Regularizacion',
+            'tipo_factura' => 'required|string|max:40',
             'observacion_cartera' => 'nullable|string',
-        ], [
+        ];
+    }
+
+    private static function mensajesSolicitud()
+    {
+        return [
             'identificacion.required' => 'La identificación es obligatoria.',
+            'nombre_cliente.required' => 'El nombre del cliente es obligatorio.',
             'numero_factura.required' => 'El número de factura es obligatorio.',
+            'fecha_factura.required' => 'La fecha de la factura es obligatoria.',
+            'fecha_factura.date' => 'La fecha de la factura no es válida.',
+            'codigo_producto.required' => 'El producto es obligatorio.',
+            'descripcion_producto.required' => 'La descripción del producto es obligatoria.',
             'numero_cuota.required' => 'El número de cuota es obligatorio.',
             'numero_cuota.integer' => 'El número de cuota debe ser un entero.',
             'numero_cuota.min' => 'El número de cuota debe ser mayor a cero.',
             'fecha_cambio.required' => 'La fecha a cambiar es obligatoria.',
             'fecha_cambio.date' => 'La fecha a cambiar no es válida.',
-        ]);
+            'motivo_cambio.required' => 'El motivo del cambio es obligatorio.',
+            'motivo_cambio.in' => 'El motivo del cambio no es una opción válida.',
+            'tipo_factura.required' => 'El tipo de factura es obligatorio.',
+        ];
+    }
+
+    // Usuario A: crea la solicitud (aprobado=false, ejecutado=false). No aplica nada todavía.
+    public function crearSolicitud(Request $request)
+    {
+        $validator = Validator::make($request->all(), self::reglasSolicitud(), self::mensajesSolicitud());
 
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), ['errores' => $validator->errors()->all()]), 422);
@@ -780,8 +774,10 @@ class RenegociacionesController extends Controller
             $usuario = auth()->user();
 
             // Toda la lógica (validar cuota, derivar tipo, insertar) vive en la función BD.
+            // Los últimos 6 parámetros son el contexto del usuario para la auditoría
+            // forense (auditoria.logs_cambios vía fn_registrar_evento).
             $data = $this->llamarFn(
-                'crm.fn_reneg_solicitud_crear(?,?,?,?::date,?,?,?,?::date,?,?,?,?)',
+                'crm.fn_reneg_solicitud_crear(?,?,?,?::date,?,?,?,?::date,?,?,?,?,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
                 [
                     trim($request->input('identificacion')),
                     $request->input('nombre_cliente'),
@@ -795,24 +791,18 @@ class RenegociacionesController extends Controller
                     $request->filled('tipo_factura') ? trim($request->input('tipo_factura')) : null,
                     $request->input('observacion_cartera'),
                     RenegociacionService::etiquetaUsuario($usuario),
+                    $usuario->id ?? null,
+                    $usuario->usu_alias ?? null,
+                    trim(($usuario->surname ?? '') . ' ' . ($usuario->name ?? '')) ?: null,
+                    $request->ip(),
+                    $request->userAgent(),
+                    (string) Str::uuid(),
                 ]
             );
 
             if (!($data['ok'] ?? false)) {
                 return response()->json(RespuestaApi::returnResultado('error', $data['message'] ?? 'No se pudo crear la solicitud.', ['errores' => $data['motivos'] ?? []]), $data['code'] ?? 422);
             }
-
-            $sol = $data['data'];
-            $this->auditar('created', 'Creó solicitud de renegociación', (int) $sol['id'], null, [
-                'identificacion' => $sol['identificacion'] ?? null,
-                'nombre_cliente' => $sol['nombre_cliente'] ?? null,
-                'numero_factura' => $sol['numero_factura'] ?? null,
-                'numero_cuota' => $sol['numero_cuota'] ?? null,
-                'fecha_cambio' => $sol['fecha_cambio'] ?? null,
-                'motivo_cambio' => $sol['motivo_cambio'] ?? null,
-                'tipo_factura' => $sol['tipo_factura'] ?? null,
-                'observacion_cartera' => $sol['observacion_cartera'] ?? null,
-            ]);
 
             return response()->json(RespuestaApi::returnResultado('success', $data['message'], $data['data']));
         } catch (Exception $e) {
@@ -908,33 +898,20 @@ class RenegociacionesController extends Controller
     // No toca updated_by (ese queda para quien aprueba/ejecuta = Usuario B).
     public function editarSolicitud(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'identificacion' => 'required|string|max:20',
-            'numero_factura' => 'required|string|max:100',
-            'numero_cuota' => 'required|integer|min:1',
-            'fecha_cambio' => 'required|date',
-            'motivo_cambio' => 'nullable|string|max:60',
-            'nombre_cliente' => 'nullable|string|max:255',
-            'fecha_factura' => 'nullable|date',
-            'codigo_producto' => 'nullable|string|max:100',
-            'descripcion_producto' => 'nullable|string|max:255',
-            'tipo_factura' => 'nullable|string|max:40',
-            'observacion_cartera' => 'nullable|string',
-        ]);
+        $validator = Validator::make($request->all(), self::reglasSolicitud(), self::mensajesSolicitud());
 
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), ['errores' => $validator->errors()->all()]), 422);
         }
 
         try {
-            // Estado ANTES (para el diff de auditoría); solo campos relevantes.
-            $antes = DB::table('crm.renegociacion_solicitud')
-                ->select('identificacion', 'nombre_cliente', 'numero_factura', 'numero_cuota', 'fecha_cambio', 'motivo_cambio', 'tipo_factura', 'observacion_cartera')
-                ->where('id', (int) $id)->first();
+            $usuario = auth()->user();
 
             // Validar pendiente + cuota + derivar tipo + actualizar: todo en la función BD.
+            // Los últimos 6 parámetros son el contexto del usuario para la auditoría
+            // forense (auditoria.logs_cambios vía fn_registrar_evento).
             $data = $this->llamarFn(
-                'crm.fn_reneg_solicitud_editar(?,?,?,?,?::date,?,?,?,?::date,?,?,?)',
+                'crm.fn_reneg_solicitud_editar(?,?,?,?,?::date,?,?,?,?::date,?,?,?,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
                 [
                     (int) $id,
                     trim($request->input('identificacion')),
@@ -948,26 +925,18 @@ class RenegociacionesController extends Controller
                     $request->input('motivo_cambio'),
                     $request->filled('tipo_factura') ? trim($request->input('tipo_factura')) : null,
                     $request->input('observacion_cartera'),
+                    $usuario->id ?? null,
+                    $usuario->usu_alias ?? null,
+                    trim(($usuario->surname ?? '') . ' ' . ($usuario->name ?? '')) ?: null,
+                    $request->ip(),
+                    $request->userAgent(),
+                    (string) Str::uuid(),
                 ]
             );
 
             if (!($data['ok'] ?? false)) {
                 return response()->json(RespuestaApi::returnResultado('error', $data['message'] ?? 'No se pudo editar la solicitud.', ['errores' => $data['motivos'] ?? []]), $data['code'] ?? 422);
             }
-
-            $sol = $data['data'];
-            $this->auditar('updated', 'Editó solicitud de renegociación', (int) $id,
-                $antes ? (array) $antes : null,
-                [
-                    'identificacion' => $sol['identificacion'] ?? null,
-                    'nombre_cliente' => $sol['nombre_cliente'] ?? null,
-                    'numero_factura' => $sol['numero_factura'] ?? null,
-                    'numero_cuota' => $sol['numero_cuota'] ?? null,
-                    'fecha_cambio' => $sol['fecha_cambio'] ?? null,
-                    'motivo_cambio' => $sol['motivo_cambio'] ?? null,
-                    'tipo_factura' => $sol['tipo_factura'] ?? null,
-                    'observacion_cartera' => $sol['observacion_cartera'] ?? null,
-                ]);
 
             return response()->json(RespuestaApi::returnResultado('success', $data['message'], $data['data']));
         } catch (Exception $e) {
@@ -1037,14 +1006,6 @@ class RenegociacionesController extends Controller
                     [$id, $aprobado ? 'true' : 'false', $obsSistemas, $etiqueta, $userId, $codigoLote]
                 );
                 $resultados[] = $res;
-
-                // Auditar solo las líneas efectivamente ejecutadas (aplicaron cambios en cuotas).
-                if (($res['ok'] ?? false) && ($res['ejecutado'] ?? false) && !empty($res['codigo_lote'])) {
-                    $this->auditar('ejecutado', 'Ejecutó (aprobó) renegociación', $id, null, [
-                        'codigo_lote' => $res['codigo_lote'],
-                        'cuotas_actualizadas' => $res['cuotas_actualizadas'] ?? null,
-                    ]);
-                }
             }
 
             $okCount = count(array_filter($resultados, fn($r) => $r['ok'] ?? false));
@@ -1099,10 +1060,6 @@ class RenegociacionesController extends Controller
             $usuario = auth()->user();
             $etiqueta = RenegociacionService::etiquetaUsuario($usuario);
 
-            // Lote ANTES de revertir (la función lo pone a NULL); se usa para enlazar
-            // las cuotas afectadas en la auditoría.
-            $loteRevertido = DB::table('crm.renegociacion_solicitud')->where('id', (int) $id)->value('codigo_lote');
-
             // Permiso + regla de seguridad + restaurar fechas + marca de auditoría: todo en la función BD.
             $data = $this->llamarFn(
                 'crm.fn_reneg_solicitud_revertir(?,?,?)',
@@ -1112,11 +1069,6 @@ class RenegociacionesController extends Controller
             if (!($data['ok'] ?? false)) {
                 return response()->json(RespuestaApi::returnResultado('error', $data['message'] ?? 'No se pudo revertir.', []), $data['code'] ?? 422);
             }
-
-            $this->auditar('revertido', 'Revirtió renegociación', (int) $id, null, [
-                'codigo_lote' => $loteRevertido,
-                'cuotas_revertidas' => $data['cuotas_revertidas'] ?? 0,
-            ]);
 
             return response()->json(RespuestaApi::returnResultado('success', $data['message'], [
                 'id' => $data['id'] ?? (int) $id,
