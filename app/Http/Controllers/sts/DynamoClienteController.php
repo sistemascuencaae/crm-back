@@ -116,6 +116,7 @@ class DynamoClienteController extends Controller
                 return $tokenData;
             }
             $corredor = trim($tokenData['corredor']);
+            $tipoCorredor = (int) $tokenData['tipo_corredor'];
 
             // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR)
             $diasCorredor = $this->obtenerDiasParametroCorredor();
@@ -203,6 +204,7 @@ class DynamoClienteController extends Controller
                 ClientesMultinivel::create([
                     'cli_id' => $resultado->cli_id,
                     'corredor' => $corredor,
+                    'tipo_corredor' => $tipoCorredor,
                     'dias_parametro' => $diasCorredor,
                     'activo' => true,
                 ]);
@@ -238,6 +240,7 @@ class DynamoClienteController extends Controller
             }
 
             $corredor = trim($credenciales['corredor']);
+            $tipoCorredor = (int) $credenciales['tipo_corredor'];
 
             // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR);
             // se guardan en dias_parametro al vincular
@@ -301,7 +304,7 @@ class DynamoClienteController extends Controller
                                         WHERE SUBSTRING(TRIM(e.ent_identificacion), 1, 10) = ?", [$identificacionBusqueda]);
 
             // 6. Crear cliente básico
-            DB::transaction(function () use ($request, $entidad, $corredor, $diasCorredor) {
+            DB::transaction(function () use ($request, $entidad, $corredor, $tipoCorredor, $diasCorredor) {
                 $direccion = mb_strtoupper(trim($request->input('direccion')));
                 $direccionSecundaria = mb_strtoupper(trim($request->input('dir_calle_secundaria')));
                 $telefono = trim($request->input('telefono'));
@@ -446,10 +449,11 @@ class DynamoClienteController extends Controller
                 }
 
                 // 6.8: Registrar el cliente al corredor Netos en Dynamo
-                // ($corredor proviene del token cifrado, no del formulario)
+                // ($corredor y $tipoCorredor provienen del token cifrado, no del formulario)
                 $clienteMultinivel = new ClientesMultinivel();
                 $clienteMultinivel->cli_id = $newCliente->cli_id;
                 $clienteMultinivel->corredor = $corredor;
+                $clienteMultinivel->tipo_corredor = $tipoCorredor;
                 $clienteMultinivel->dias_parametro = $diasCorredor;
                 $clienteMultinivel->activo = true;
                 $clienteMultinivel->save();
@@ -512,9 +516,12 @@ class DynamoClienteController extends Controller
 
             $expires = now()->addMinutes($minutos)->timestamp;
 
-            // Credenciales cifrado y autenticado: nadie puede leerlo ni manipularlo
+            // Credenciales cifrado y autenticado: nadie puede leerlo ni manipularlo.
+            // tipo_corredor va QUEMADO aquí (1. Corredor ALM; 2. Corredor STS;): todo link
+            // de este endpoint es tipo 1; ni el front ni el proveedor lo envían nunca.
             $t = Crypt::encryptString(json_encode([
                 'corredor' => $corredor,
+                'tipo_corredor' => 2,
                 'expires' => $expires,
             ]));
 
@@ -612,7 +619,7 @@ class DynamoClienteController extends Controller
 
 
     // Descifra y valida el token ?t= del enlace (caducidad + integridad).
-    // Devuelve el array de las credenciales (['corredor' => ..., 'expires' => ...])
+    // Devuelve el array de las credenciales (['corredor' => ..., 'tipo_corredor' => ..., 'expires' => ...])
     // Metodo privado que se usa para validar si la url es correcta en el metodo addDynamoCliente
     private function validarTokenEnlace(Request $request)
     {
@@ -628,7 +635,7 @@ class DynamoClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Enlace no válido.', null));
         }
 
-        if (!is_array($credenciales) || empty($credenciales['corredor']) || empty($credenciales['expires'])) {
+        if (!is_array($credenciales) || empty($credenciales['corredor']) || empty($credenciales['tipo_corredor']) || empty($credenciales['expires'])) {
             return response()->json(RespuestaApi::returnResultado('error', 'Enlace no válido.', null));
         }
 
