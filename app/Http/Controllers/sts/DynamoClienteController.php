@@ -518,7 +518,8 @@ class DynamoClienteController extends Controller
 
             // Credenciales cifrado y autenticado: nadie puede leerlo ni manipularlo.
             // tipo_corredor va QUEMADO aquí (1. Corredor ALM; 2. Corredor STS;): todo link
-            // de este endpoint es tipo 1; ni el front ni el proveedor lo envían nunca.
+            // de este endpoint es tipo 2 (STS); ni el front ni el proveedor lo envían nunca.
+            // El tipo 1 queda reservado para el flujo interno del CRM (sin link).
             $t = Crypt::encryptString(json_encode([
                 'corredor' => $corredor,
                 'tipo_corredor' => 2,
