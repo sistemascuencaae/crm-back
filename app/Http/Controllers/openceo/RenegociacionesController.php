@@ -658,8 +658,8 @@ class RenegociacionesController extends Controller
             $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = trim((string) $request->query('busqueda', ''));
 
-            $resumen = DB::selectOne('SELECT * FROM crm.fn_reneg_auditoria_resumen(?)', [$id]);
-            $eventos = DB::select('SELECT * FROM crm.fn_reneg_auditoria_listar(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda !== '' ? $busqueda : null]);
+            $resumen = DB::selectOne('SELECT * FROM crm.fn_renegociacion_auditoria_resumen(?)', [$id]);
+            $eventos = DB::select('SELECT * FROM crm.fn_renegociacion_auditoria_listar(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda !== '' ? $busqueda : null]);
             $total = $eventos[0]->total_registros ?? 0;
 
             // cuotas viene como jsonb -> array para el front.
@@ -688,7 +688,7 @@ class RenegociacionesController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Debes enviar una identificación.', []), 422);
             }
 
-            $data = $this->llamarFn('crm.fn_reneg_facturas_por_cedula(?)', [$cedula]);
+            $data = $this->llamarFn('crm.fn_renegociacion_facturas_por_cedula(?)', [$cedula]);
             $msg = !empty($data['facturas'])
                 ? 'Cliente y facturas encontradas.'
                 : 'No se encontraron facturas con cuotas para esa identificación.';
@@ -708,7 +708,7 @@ class RenegociacionesController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Debes enviar el número de factura.', []), 422);
             }
 
-            $data = $this->llamarFn('crm.fn_reneg_productos_por_factura(?)', [$doctran]);
+            $data = $this->llamarFn('crm.fn_renegociacion_productos_por_factura(?)', [$doctran]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Datos de la factura.', $data));
         } catch (Exception $e) {
@@ -774,7 +774,7 @@ class RenegociacionesController extends Controller
             // Los últimos 6 parámetros son el contexto del usuario para la auditoría
             // forense (auditoria.logs_cambios vía fn_registrar_evento).
             $data = $this->llamarFn(
-                'crm.fn_reneg_solicitud_crear(?,?,?,?::date,?,?,?,?::date,?,?,?,?,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
+                'crm.fn_renegociacion_solicitud_crear(?,?,?,?::date,?,?,?,?::date,?,?,?,?,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
                 [
                     trim($request->input('identificacion')),
                     $request->input('nombre_cliente'),
@@ -851,7 +851,7 @@ class RenegociacionesController extends Controller
     }
 
     // Listado PAGINADO (Usuario A): pendientes primero. Usa la función
-    // crm.fn_renegociacion_solicitud_listar (COUNT(*) OVER() + LIMIT/OFFSET).
+    // crm.fn_renegociacion_solicitud_listar_paginado (COUNT(*) OVER() + LIMIT/OFFSET).
     // Devuelve { registros, total }. Tamaños permitidos: 10/20/30/50/100.
     public function listarSolicitudesPaginado(Request $request)
     {
@@ -867,7 +867,7 @@ class RenegociacionesController extends Controller
             $hasta = trim((string) $request->input('hasta', ''));
 
             $rows = DB::select(
-                'SELECT * FROM crm.fn_renegociacion_solicitud_listar(?, ?, ?, ?, ?, ?)',
+                'SELECT * FROM crm.fn_renegociacion_solicitud_listar_paginado(?, ?, ?, ?, ?, ?)',
                 [
                     $pagina,
                     $tamanio,
@@ -908,7 +908,7 @@ class RenegociacionesController extends Controller
             // Los últimos 6 parámetros son el contexto del usuario para la auditoría
             // forense (auditoria.logs_cambios vía fn_registrar_evento).
             $data = $this->llamarFn(
-                'crm.fn_reneg_solicitud_editar(?,?,?,?,?::date,?,?,?,?::date,?,?,?,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
+                'crm.fn_renegociacion_solicitud_editar(?,?,?,?,?::date,?,?,?,?::date,?,?,?,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
                 [
                     (int) $id,
                     trim($request->input('identificacion')),
@@ -947,7 +947,7 @@ class RenegociacionesController extends Controller
     public function previsualizarSolicitud($id)
     {
         try {
-            $data = $this->llamarFn('crm.fn_reneg_solicitud_previsualizar(?)', [(int) $id]);
+            $data = $this->llamarFn('crm.fn_renegociacion_solicitud_previsualizar(?)', [(int) $id]);
 
             if (!($data['ok'] ?? false)) {
                 return response()->json(RespuestaApi::returnResultado('error', $data['message'] ?? 'No existe la solicitud.', []), $data['code'] ?? 422);
@@ -1005,7 +1005,7 @@ class RenegociacionesController extends Controller
                 $codigoLote = (string) Str::uuid();
 
                 $res = $this->llamarFn(
-                    'crm.fn_reneg_solicitud_ejecutar_linea(?,?,?,?,?,?::uuid,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
+                    'crm.fn_renegociacion_solicitud_ejecutar(?,?,?,?,?,?::uuid,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
                     [
                         $id, $aprobado ? 'true' : 'false', $obsSistemas, $etiqueta, $userId, $codigoLote,
                         $usuario->id ?? null,
@@ -1042,7 +1042,7 @@ class RenegociacionesController extends Controller
 
             // Permiso (delete del menú) + validación + análisis de reversión: todo en la función BD.
             $data = $this->llamarFn(
-                'crm.fn_reneg_solicitud_previsualizar_reversion(?,?)',
+                'crm.fn_renegociacion_solicitud_previsualizar_reversion(?,?)',
                 [(int) $id, $usuario->profile_id ?? null]
             );
 
@@ -1075,7 +1075,7 @@ class RenegociacionesController extends Controller
             // Los últimos 6 parámetros son el contexto del usuario para la auditoría
             // forense (auditoria.logs_cambios vía fn_registrar_evento, evento 'REVERTIDO').
             $data = $this->llamarFn(
-                'crm.fn_reneg_solicitud_revertir(?,?,?,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
+                'crm.fn_renegociacion_solicitud_revertir(?,?,?,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
                 [
                     (int) $id, $usuario->profile_id ?? null, $etiqueta,
                     $usuario->id ?? null,
