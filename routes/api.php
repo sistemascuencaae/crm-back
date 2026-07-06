@@ -126,6 +126,7 @@ use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\openceo\RenegociacionesController;
+use App\Http\Controllers\corredores\CorredorClienteController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
@@ -1676,4 +1677,12 @@ Route::group(['prefix' => 'crm/file-manager', 'middleware' => ['jwt.auth', 'usua
     Route::get('/file/{id}/versiones',                                   [FmArchivoController::class, 'versiones']);
     Route::get('/file/{id}/versiones/{versionId}/download',              [FmArchivoController::class, 'descargarVersion']);
     Route::post('/file/{id}/versiones/{versionId}/restaurar',            [FmArchivoController::class, 'restaurarVersion']);
+});
+
+// CORREDORES INTERNOS (Corredor ALM): formulario de clientes multinivel dentro
+// del CRM. Sin link cifrado: el corredor es el usuario JWT y tipo_corredor = 1
+// va quemado en el controller.
+Route::group(["prefix" => "corredores", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+    Route::post('/verificarClienteCorredor', [CorredorClienteController::class, 'verificarClienteCorredor']);
+    Route::post('/guardarClienteCorredor', [CorredorClienteController::class, 'guardarClienteCorredor']);
 });
