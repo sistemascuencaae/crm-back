@@ -641,9 +641,6 @@ class RenegociacionesController extends Controller
     // propagación +1 mes que el masivo). NO toca el método masivo por Excel.
     // =====================================================================
 
-    // Tipo auditable (crm.audits.auditable_type) de la solicitud de renegociación.
-    private const AUDITABLE_TYPE = 'App\\Models\\crm\\renegociaciones\\RenegociacionSolicitud';
-
     // Helper: ejecuta una función de la BD que devuelve jsonb y la decodifica a array.
     private function llamarFn(string $sql, array $bindings = []): array
     {
@@ -662,7 +659,7 @@ class RenegociacionesController extends Controller
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             $resumen = DB::selectOne('SELECT * FROM crm.fn_reneg_auditoria_resumen(?)', [$id]);
-            $eventos = DB::select('SELECT * FROM crm.fn_reneg_auditoria_listar(?, ?, ?, ?, ?)', [$id, self::AUDITABLE_TYPE, $pagina, $tamanio, $busqueda !== '' ? $busqueda : null]);
+            $eventos = DB::select('SELECT * FROM crm.fn_reneg_auditoria_listar(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda !== '' ? $busqueda : null]);
             $total = $eventos[0]->total_registros ?? 0;
 
             // cuotas viene como jsonb -> array para el front.
@@ -989,12 +986,18 @@ class RenegociacionesController extends Controller
             $usuario = auth()->user();
             $etiqueta = RenegociacionService::etiquetaUsuario($usuario);
             $userId = auth()->id();
+            // request_id único para todo el lote de esta llamada: enlaza en la
+            // auditoría forense todas las líneas ejecutadas en esta misma acción.
+            $requestId = (string) Str::uuid();
 
             $resultados = [];
 
             // Cada línea se ejecuta en su propia función BD: maneja idempotencia,
             // no-aprobada, validación, propagación+snapshot y captura de errores
             // (la propagación se revierte sola si falla; la fila queda con el error).
+            // Los últimos 6 parámetros son el contexto del usuario para la auditoría
+            // forense (auditoria.logs_cambios vía fn_registrar_evento; solo se
+            // registra evento 'EJECUTADO' cuando la línea se aplica con éxito).
             foreach ($request->input('solicitudes') as $linea) {
                 $id = (int) ($linea['id'] ?? 0);
                 $aprobado = (bool) ($linea['aprobado'] ?? false);
@@ -1002,8 +1005,16 @@ class RenegociacionesController extends Controller
                 $codigoLote = (string) Str::uuid();
 
                 $res = $this->llamarFn(
-                    'crm.fn_reneg_solicitud_ejecutar_linea(?,?,?,?,?,?::uuid)',
-                    [$id, $aprobado ? 'true' : 'false', $obsSistemas, $etiqueta, $userId, $codigoLote]
+                    'crm.fn_reneg_solicitud_ejecutar_linea(?,?,?,?,?,?::uuid,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
+                    [
+                        $id, $aprobado ? 'true' : 'false', $obsSistemas, $etiqueta, $userId, $codigoLote,
+                        $usuario->id ?? null,
+                        $usuario->usu_alias ?? null,
+                        trim(($usuario->surname ?? '') . ' ' . ($usuario->name ?? '')) ?: null,
+                        $request->ip(),
+                        $request->userAgent(),
+                        $requestId,
+                    ]
                 );
                 $resultados[] = $res;
             }
@@ -1054,16 +1065,26 @@ class RenegociacionesController extends Controller
     // (solo si sigue siendo el último cambio). Limitado por permiso "eliminar" del
     // menú de aprobación. Deja la solicitud en estado pendiente con la marca de
     // quién/cuándo revirtió en observacion_sistemas.
-    public function revertirSolicitud($id)
+    public function revertirSolicitud(Request $request, $id)
     {
         try {
             $usuario = auth()->user();
             $etiqueta = RenegociacionService::etiquetaUsuario($usuario);
 
             // Permiso + regla de seguridad + restaurar fechas + marca de auditoría: todo en la función BD.
+            // Los últimos 6 parámetros son el contexto del usuario para la auditoría
+            // forense (auditoria.logs_cambios vía fn_registrar_evento, evento 'REVERTIDO').
             $data = $this->llamarFn(
-                'crm.fn_reneg_solicitud_revertir(?,?,?)',
-                [(int) $id, $usuario->profile_id ?? null, $etiqueta]
+                'crm.fn_reneg_solicitud_revertir(?,?,?,?::bigint,?::varchar,?::varchar,?::inet,?::text,?::uuid)',
+                [
+                    (int) $id, $usuario->profile_id ?? null, $etiqueta,
+                    $usuario->id ?? null,
+                    $usuario->usu_alias ?? null,
+                    trim(($usuario->surname ?? '') . ' ' . ($usuario->name ?? '')) ?: null,
+                    $request->ip(),
+                    $request->userAgent(),
+                    (string) Str::uuid(),
+                ]
             );
 
             if (!($data['ok'] ?? false)) {
