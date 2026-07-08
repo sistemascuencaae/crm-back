@@ -91,6 +91,14 @@ class FmPermisosHelper
     }
 
     /**
+     * Acciones que una "carpeta pública" concede a CUALQUIER usuario autenticado
+     * (sin asignación explícita). Solo lectura: ver + descargar. El resto de
+     * acciones (subir, renombrar, mover, eliminar, gestionar permisos) sigue
+     * requiriendo permiso directo/heredado o ser admin global.
+     */
+    private const ACCIONES_PUBLICAS = ['ver', 'descargar'];
+
+    /**
      * Builder de archivos visibles en una carpeta dada para un usuario.
      */
     public static function archivosVisiblesEnCarpeta(int $carpetaId, ?int $userId = null): Builder
@@ -209,14 +217,19 @@ class FmPermisosHelper
             ->get()
             ->keyBy('archivo_id');
 
-        // --- Carpetas: directo OR herencia desde ancestros ---
+        // --- Carpetas: directo OR herencia desde ancestros (OR pública para ver/descargar) ---
         foreach ($subcarpetas as $c) {
             $ancestros = self::parsearIdsDesdePath($c->materialized_path);
             $cadena = array_merge([$c->id], $ancestros);
+            $esPublica = self::cadenaEsPublica($cadena);
 
             $flags = [];
             foreach (self::ACCIONES_CARPETA as $accion => $columna) {
-                $flags[$columna] = self::orEnCadena($permCarpeta, $cadena, $columna);
+                $valor = self::orEnCadena($permCarpeta, $cadena, $columna);
+                if (!$valor && $esPublica && in_array($accion, self::ACCIONES_PUBLICAS, true)) {
+                    $valor = true;
+                }
+                $flags[$columna] = $valor;
             }
             $resultadoCarpetas[$c->id] = $flags;
         }
@@ -233,6 +246,7 @@ class FmPermisosHelper
             }
 
             $directo = $permArchivo->get($a->id);
+            $esPublica = self::cadenaEsPublica($cadenaCarpetas);
 
             $flags = [];
             foreach (self::ACCIONES_ARCHIVO as $accion => $columna) {
@@ -240,6 +254,9 @@ class FmPermisosHelper
                 $efectivo =
                     ($directo && (bool) $directo->{$columna})
                     || ($columnaCarpeta && self::orEnCadena($permCarpeta, $cadenaCarpetas, $columnaCarpeta));
+                if (!$efectivo && $esPublica && in_array($accion, self::ACCIONES_PUBLICAS, true)) {
+                    $efectivo = true;
+                }
                 $flags[$columna] = $efectivo;
             }
             $resultadoArchivos[$a->id] = $flags;
@@ -265,6 +282,7 @@ class FmPermisosHelper
         }
 
         $cadena = array_merge([$carpetaId], self::parsearIdsDesdePath($carpeta->materialized_path));
+        $esPublica = self::cadenaEsPublica($cadena);
 
         $perm = FmCarpetaUsuario::where('user_id', $userId)
             ->whereIn('carpeta_id', $cadena)
@@ -273,7 +291,11 @@ class FmPermisosHelper
 
         $flags = [];
         foreach (self::ACCIONES_CARPETA as $accion => $columna) {
-            $flags[$columna] = self::orEnCadena($perm, $cadena, $columna);
+            $valor = self::orEnCadena($perm, $cadena, $columna);
+            if (!$valor && $esPublica && in_array($accion, self::ACCIONES_PUBLICAS, true)) {
+                $valor = true;
+            }
+            $flags[$columna] = $valor;
         }
         return $flags;
     }
@@ -302,6 +324,11 @@ class FmPermisosHelper
         $columna = self::ACCIONES_CARPETA[$accion] ?? null;
         if (!$columna) return false;
 
+        // Carpeta pública: ver/descargar concedidos a cualquier usuario, sin asignación.
+        if (in_array($accion, self::ACCIONES_PUBLICAS, true) && self::esPublicaConHerencia($carpetaId)) {
+            return true;
+        }
+
         // Permiso directo en la carpeta
         $directo = FmCarpetaUsuario::where('carpeta_id', $carpetaId)
             ->where('user_id', $userId)
@@ -326,6 +353,14 @@ class FmPermisosHelper
     {
         $columna = self::ACCIONES_ARCHIVO[$accion] ?? null;
         if (!$columna) return false;
+
+        // Carpeta pública del archivo: ver/descargar concedidos a cualquier usuario.
+        if (in_array($accion, self::ACCIONES_PUBLICAS, true)) {
+            $archivoPublico = FmArchivo::find($archivoId);
+            if ($archivoPublico && self::esPublicaConHerencia((int) $archivoPublico->carpeta_id)) {
+                return true;
+            }
+        }
 
         // Permiso directo al archivo
         $directo = FmArchivoUsuario::where('archivo_id', $archivoId)
@@ -367,9 +402,13 @@ class FmPermisosHelper
             ->where('puede_ver', true)
             ->pluck('carpeta_id');
 
-        if ($directaIds->isEmpty()) return collect();
+        // Carpetas públicas: alcanzables por TODOS (lectura), como si tuvieran
+        // puede_ver directo. Sus descendientes se agregan en el barrido de abajo.
+        $semillaIds = $directaIds->merge(self::idsPublicos())->unique();
 
-        $directas = FmCarpeta::whereIn('id', $directaIds)->get();
+        if ($semillaIds->isEmpty()) return collect();
+
+        $directas = FmCarpeta::whereIn('id', $semillaIds->all())->get();
 
         $alcanzables = collect();
         foreach ($directas as $c) {
@@ -441,5 +480,53 @@ class FmPermisosHelper
         $limpio = trim($path, '/');
         if ($limpio === '') return [];
         return array_map('intval', explode('/', $limpio));
+    }
+
+    // ------------------------------------------------------------------------
+    // Internos: carpetas públicas (lectura para todos)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Memo por request de las carpetas marcadas es_publica=true. Se consulta
+     * una sola vez; el set es chico (solo carpetas a nivel de raíz pueden serlo).
+     */
+    private static ?array $idsPublicosCache = null;
+
+    private static function idsPublicos(): array
+    {
+        if (self::$idsPublicosCache === null) {
+            self::$idsPublicosCache = FmCarpeta::where('es_publica', true)
+                ->pluck('id')
+                ->map(fn ($v) => (int) $v)
+                ->all();
+        }
+        return self::$idsPublicosCache;
+    }
+
+    /**
+     * ¿La carpeta (o alguno de sus ancestros) es pública? La publicidad se
+     * hereda por materialized_path, igual que los permisos.
+     */
+    private static function esPublicaConHerencia(int $carpetaId): bool
+    {
+        $publicos = self::idsPublicos();
+        if (empty($publicos)) return false;
+        if (in_array($carpetaId, $publicos, true)) return true;
+
+        $carpeta = FmCarpeta::find($carpetaId);
+        if (!$carpeta) return false;
+
+        return self::cadenaEsPublica(self::parsearIdsDesdePath($carpeta->materialized_path));
+    }
+
+    /**
+     * Variante en memoria: recibe la cadena de ids [carpeta + ancestros] ya
+     * calculada y devuelve si alguno es público (evita queries en el lote).
+     */
+    private static function cadenaEsPublica(array $cadenaIds): bool
+    {
+        $publicos = self::idsPublicos();
+        if (empty($publicos)) return false;
+        return !empty(array_intersect($cadenaIds, $publicos));
     }
 }

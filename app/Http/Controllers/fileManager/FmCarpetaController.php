@@ -326,10 +326,11 @@ class FmCarpetaController extends Controller
         $log = new Funciones();
 
         $validator = Validator::make($request->all(), [
-            'nombre'    => 'required|string|max:255',
-            'parent_id' => 'nullable|integer',
-            'color'     => 'nullable|string|max:20',
-            'icono'     => 'nullable|string|max:50',
+            'nombre'     => 'required|string|max:255',
+            'parent_id'  => 'nullable|integer',
+            'color'      => 'nullable|string|max:20',
+            'icono'      => 'nullable|string|max:50',
+            'es_publica' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -348,7 +349,19 @@ class FmCarpetaController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para crear subcarpetas en esta ubicación', null));
             }
 
-            $carpeta = DB::transaction(function () use ($request) {
+            // Carpeta pública (lectura para todos): solo el admin global puede marcarla
+            // y solo a nivel de raíz (hija directa de la raíz).
+            $esPublica = $request->boolean('es_publica');
+            if ($esPublica) {
+                if (!FmPermisosHelper::esAdmin()) {
+                    return response()->json(RespuestaApi::returnResultado('error', 'Solo un administrador puede crear carpetas públicas', null));
+                }
+                if ($parentIdValidacion !== self::RAIZ_ID) {
+                    return response()->json(RespuestaApi::returnResultado('error', 'Solo se puede marcar como pública una carpeta a nivel de raíz', null));
+                }
+            }
+
+            $carpeta = DB::transaction(function () use ($request, $esPublica) {
                 $parentId = $request->input('parent_id') ?? self::RAIZ_ID;
                 $parent = FmCarpeta::find($parentId);
                 if (!$parent) {
@@ -375,6 +388,7 @@ class FmCarpetaController extends Controller
                     'creado_por'        => Auth::id(),
                     'color'             => $request->input('color'),
                     'icono'             => $request->input('icono'),
+                    'es_publica'        => $esPublica,
                 ]);
 
                 // Creator gets editor: el creador recibe todos los permisos sobre la
@@ -422,9 +436,10 @@ class FmCarpetaController extends Controller
         $log = new Funciones();
 
         $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
-            'color'  => 'nullable|string|max:20',
-            'icono'  => 'nullable|string|max:50',
+            'nombre'     => 'required|string|max:255',
+            'color'      => 'nullable|string|max:20',
+            'icono'      => 'nullable|string|max:50',
+            'es_publica' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -434,6 +449,11 @@ class FmCarpetaController extends Controller
         try {
             if (!FmPermisosHelper::puedeRealizarAccion('renombrar', 'carpeta', (int) $id)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para renombrar esta carpeta', null));
+            }
+
+            // Cambiar el flag de carpeta pública solo lo puede hacer el admin global.
+            if ($request->has('es_publica') && !FmPermisosHelper::esAdmin()) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Solo un administrador puede cambiar el estado público de una carpeta', null));
             }
 
             $carpeta = DB::transaction(function () use ($id, $request) {
@@ -465,6 +485,14 @@ class FmCarpetaController extends Controller
                 }
                 if ($request->has('icono')) {
                     $payload['icono'] = $request->input('icono');
+                }
+                // Flag público: solo válido a nivel de raíz (hija directa de la raíz).
+                if ($request->has('es_publica')) {
+                    $esPublica = $request->boolean('es_publica');
+                    if ($esPublica && (int) $carpeta->parent_id !== self::RAIZ_ID) {
+                        throw new Exception('Solo se puede marcar como pública una carpeta a nivel de raíz');
+                    }
+                    $payload['es_publica'] = $esPublica;
                 }
                 $carpeta->update($payload);
 
@@ -549,6 +577,14 @@ class FmCarpetaController extends Controller
                 }
 
                 $antes = $carpeta->toArray();
+
+                // Una carpeta pública solo tiene sentido a nivel de raíz: si se mueve
+                // a otra ubicación, pierde el flag automáticamente.
+                if ($carpeta->es_publica && (int) $nuevoParentId !== self::RAIZ_ID) {
+                    $carpeta->es_publica = false;
+                    $carpeta->save();
+                }
+
                 FmArbolHelper::recalcularPathSubarbol($carpeta, $nuevoParent);
 
                 $carpeta->refresh();

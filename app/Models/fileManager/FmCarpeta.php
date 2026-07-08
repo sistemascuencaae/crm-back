@@ -23,10 +23,12 @@ class FmCarpeta extends Model
         'creado_por',
         'color',
         'icono',
+        'es_publica',
     ];
 
     protected $casts = [
-        'nivel' => 'integer',
+        'nivel'      => 'integer',
+        'es_publica' => 'boolean',
     ];
 
     public function setCreatedAtAttribute($value)
