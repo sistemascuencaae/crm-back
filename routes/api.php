@@ -859,6 +859,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
     Route::post('/solicitudCreditoVendedorGenerar', [ReqCasoController::class, 'solicitudCreditoVendedorGenerar']);
     Route::post('/solicitudCreditoVendedorReimprimir', [ReqCasoController::class, 'solicitudCreditoVendedorReimprimir']);
+    Route::post('/solicitudCreditoVendedorPdf', [ReqCasoController::class, 'solicitudCreditoVendedorPdf']);
+    Route::post('/solicitudCreditoVendedorGuardarPdf', [ReqCasoController::class, 'solicitudCreditoVendedorGuardarPdf']);
     Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']); //
     Route::get('/listReqCasoId/{casoId}', [ReqCasoController::class, 'listReqCasoId']);
 
