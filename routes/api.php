@@ -205,6 +205,11 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addCaso2', [CasoController::class, 'addCaso2']);
     Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
     Route::get('/getEstadoActualCaso/{caso_id}', [CasoController::class, 'getEstadoActualCaso']);
+
+    // API GEX (JAIRO) - Esto se conecta con el PRECIADOR para cuando cotizan un producto con GEX (Check "PRODUCTO GEX:")
+    Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
+    Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
+
 });
 
 Route::group(["prefix" => "formulario"], function ($router) {
@@ -892,10 +897,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
 
 
-
-
-    // ----------------------------------------------------------------------------------------
-    // ----------------------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------
     // ----------------------- START RUTAS JAIRO  ----------------------------------------------
 
     //Partes
@@ -1079,11 +1082,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/byProcComi/{comi}/{cumpli}/{almacen}', [ProcComiController::class, 'byProcComi']);
     Route::get('/eliminaProcComi/{comi}/{cumpli}/{almacen}', [ProcComiController::class, 'eliminaProcComi']);
 
-    //API GEX
-    Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
-    Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
-
-    // ----------------------- END RUTAS JAIRO  ----------------------------------------------
+    // ----------------------- END RUTAS JAIRO  -----------------------------------------------
     // ----------------------------------------------------------------------------------------
     // ----------------------------------------------------------------------------------------
 
