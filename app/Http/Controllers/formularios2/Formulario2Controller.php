@@ -458,10 +458,25 @@ class Formulario2Controller extends Controller
                     'form_id' => $input_form_id
                 ]);
 
+                // IDs de los campos tipo ARCHIVOS de este formulario. El front manda
+                // en 'dform' un item por cada campo (incluido ARCHIVOS con value vacío),
+                // pero el archivo real se guarda más abajo como su propia fila con la ruta.
+                // Por eso NO guardamos aquí el placeholder del campo ARCHIVOS: evita la
+                // "fila en blanco" que quedaba en crm.dform.
+                $archivosFieldIds = Field::where('form_id', $cForm->form_id)
+                    ->where('type', 'ARCHIVOS')
+                    ->pluck('id')
+                    ->all();
+
                 // Guardar los datos del formulario en la tabla DFormularios
                 if (count($input_dform) > 0) {
                     // Iteramos sobre los campos del formulario
                     foreach ($input_dform as $item) {
+                        // Saltar el placeholder del campo ARCHIVOS (se guarda abajo con su ruta).
+                        if (in_array($item['field_id'] ?? null, $archivosFieldIds)) {
+                            continue;
+                        }
+
                         // Asignamos el id del formulario recién creado
                         $item['cform_id'] = $cForm->id;
 
