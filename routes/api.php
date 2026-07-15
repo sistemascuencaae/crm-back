@@ -13,6 +13,7 @@ use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\TableauAuthController;
 use App\Http\Controllers\PowerBiRefreshDatasetController;
+use App\Http\Controllers\GoogleSheetsController;
 use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\configuracion\CodigoQrController;
@@ -413,6 +414,11 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // !Power BI
     Route::post('/refreshDataset', [PowerBiRefreshDatasetController::class, 'refreshDataset']);
     Route::post('/getRefreshStatus', [PowerBiRefreshDatasetController::class, 'getRefreshStatus']);
+    // !Google Sheets
+    Route::get('/googleSheets/read', [GoogleSheetsController::class, 'read']);
+    Route::post('/googleSheets/read', [GoogleSheetsController::class, 'read']);
+    Route::get('/googleSheets/batchRead', [GoogleSheetsController::class, 'batchRead']);
+    Route::post('/googleSheets/batchRead', [GoogleSheetsController::class, 'batchRead']);
 
     // GESTIONES
     Route::get('/listGestionByIdentificacion/{factura}', [GestionController::class, 'listGestionByIdentificacion']);
