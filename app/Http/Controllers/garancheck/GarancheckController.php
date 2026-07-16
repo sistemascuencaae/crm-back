@@ -40,8 +40,6 @@ class GarancheckController extends Controller
                 if (!ValidacionCedulaRucService::esRucValido($identificacion)) {
                     return response()->json(RespuestaApi::returnResultado('error', 'El RUC ingresado no es válido', null));
                 }
-                // Los primeros 10 dígitos del RUC corresponden a la cédula
-                $identificacionBusqueda = substr($identificacion, 0, 10);
             } else {
                 // Pasaporte: sin algoritmo de verificación, solo formato genérico
                 if (!preg_match('/^[A-Za-z0-9]{6,20}$/', $identificacion)) {
