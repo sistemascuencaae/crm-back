@@ -128,6 +128,7 @@ use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\openceo\DdocumentoController;
 use App\Http\Controllers\openceo\RenegociacionesController;
 use App\Http\Controllers\corredores\CorredorClienteController;
+use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
@@ -210,7 +211,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     // API GEX (JAIRO) - Esto se conecta con el PRECIADOR para cuando cotizan un producto con GEX (Check "PRODUCTO GEX:")
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
     Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
-
 });
 
 Route::group(["prefix" => "formulario"], function ($router) {
@@ -1162,6 +1162,12 @@ Route::group(["prefix" => "crm/audi", 'middleware' => ['jwt.auth', 'usuario.acti
 
 Route::group(["prefix" => "crm/robot", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/reasignarCaso/{estadoFormId}/{casoId}/{tableroActualId}/{banMostrarVistaCreditoAprobado?}', [RobotCasoController::class, 'reasignarCaso']);
+});
+
+// CONSULTA DE IDENTIDAD POR CEDULA (fuentes externas: SRI oficial + Ecuador Legal)
+Route::group(["prefix" => "consultas/identidad", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+    Route::get('/consultarRucSri/{identificacion}', [ConsultaIdentidadExternoController::class, 'consultarRucSri']);
+    Route::get('/consultarCedulaEcuadorLegal/{identificacion}', [ConsultaIdentidadExternoController::class, 'consultarCedulaEcuadorLegal']);
 });
 
 // FORMULARIOS FELIPE
