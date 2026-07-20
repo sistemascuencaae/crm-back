@@ -42,15 +42,16 @@ class ConsultaIdentidadExternoController extends Controller
             // Devolvemos tal cual todo lo que entrega el SRI para ese RUC.
             $resultado = $data[0];
 
-            // Separamos nombres y apellidos solo si es persona natural (una sociedad no tiene apellidos).
+            // El SRI nos dice si es persona o empresa en 'tipoContribuyente'.
             if (($resultado['tipoContribuyente'] ?? null) === 'PERSONA NATURAL') {
+                // Persona: convencion ecuatoriana (2 apellidos + nombres).
                 $partes = $this->separarNombreCompleto($resultado['razonSocial'] ?? '');
-                $resultado['apellidos'] = $partes['apellidos'];
-                $resultado['nombres'] = $partes['nombres'];
             } else {
-                $resultado['apellidos'] = null;
-                $resultado['nombres'] = null;
+                // Sociedad: no tiene apellidos, partimos la razon social en 2 mitades por palabras.
+                $partes = $this->partirRazonSocialEmpresa($resultado['razonSocial'] ?? '');
             }
+            $resultado['apellidos'] = $partes['apellidos'];
+            $resultado['nombres'] = $partes['nombres'];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
         } catch (\Throwable $th) {
@@ -171,6 +172,34 @@ class ConsultaIdentidadExternoController extends Controller
 
         $apellidos = implode(' ', array_slice($partes, 0, $i));
         $nombres = implode(' ', array_slice($partes, $i));
+
+        return [
+            'apellidos' => $apellidos !== '' ? mb_strtoupper($apellidos, 'UTF-8') : null,
+            'nombres' => $nombres !== '' ? mb_strtoupper($nombres, 'UTF-8') : null,
+        ];
+    }
+
+    // Separar razon social en apellidos y nombres
+    private function partirRazonSocialEmpresa($nombreCompleto)
+    {
+        // Normalizamos espacios multiples y bordes.
+        $nombreCompleto = trim(preg_replace('/\s+/', ' ', (string) $nombreCompleto));
+
+        if ($nombreCompleto === '') {
+            return ['apellidos' => null, 'nombres' => null];
+        }
+
+        $partes = explode(' ', $nombreCompleto);
+
+        // Una sola palabra: va toda en apellidos.
+        if (count($partes) === 1) {
+            return ['apellidos' => mb_strtoupper($partes[0], 'UTF-8'), 'nombres' => null];
+        }
+
+        // Punto de corte: primera mitad (redondeada hacia arriba) -> apellidos, resto -> nombres.
+        $corte = (int) ceil(count($partes) / 2);
+        $apellidos = implode(' ', array_slice($partes, 0, $corte));
+        $nombres = implode(' ', array_slice($partes, $corte));
 
         return [
             'apellidos' => $apellidos !== '' ? mb_strtoupper($apellidos, 'UTF-8') : null,
