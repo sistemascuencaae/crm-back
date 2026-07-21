@@ -35,7 +35,10 @@ class ValidacionCedulaRucService
             if ($tercerDigito >= 0 && $tercerDigito <= 5) {
                 return self::esRucPersonaNaturalValido($identificacion);
             } elseif ($tercerDigito === 6) {
-                return self::esRucSociedadPublicaValido($identificacion);
+                // Tercer dígito 6: puede ser RUC de persona natural NACIONALIZADO (cédula + '001') o sociedad
+                // pública. Se intenta primero como natural; si no valida, se evalúa como pública.
+                return self::esRucPersonaNaturalValido($identificacion)
+                    || self::esRucSociedadPublicaValido($identificacion);
             } elseif ($tercerDigito === 9) {
                 return self::esRucSociedadPrivadaValido($identificacion);
             }
