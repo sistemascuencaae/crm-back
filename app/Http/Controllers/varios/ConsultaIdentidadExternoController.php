@@ -4,7 +4,9 @@ namespace App\Http\Controllers\varios;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ConsultaIdentidadExternoController extends Controller
 {
@@ -53,6 +55,12 @@ class ConsultaIdentidadExternoController extends Controller
             $resultado['apellidos'] = $partes['apellidos'];
             $resultado['nombres'] = $partes['nombres'];
 
+            // Caché (log append-only: 1 fila por CADA consulta, con quién la hizo). Best-effort.
+            $this->cachearConsultaIdentidad('SRI', $identificacion, $resultado, auth('api')->id());
+            // Sella la fecha de última consulta en la entidad (si existe) YA, no al guardar: así el throttle
+            // es exacto aunque el usuario consulte y cancele, y el caché no se llena de re-consultas.
+            $this->marcarUltimaConsultaEntidad($identificacion);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Al consultar SRI', $th->getMessage()));
@@ -92,6 +100,12 @@ class ConsultaIdentidadExternoController extends Controller
                 'apellidos' => $partes['apellidos'],
                 'nombres' => $partes['nombres'],
             ];
+
+            // Caché (log append-only: 1 fila por CADA consulta, con quién la hizo). Best-effort.
+            $this->cachearConsultaIdentidad('ECUADOR_LEGAL', $identificacion, $resultado, auth('api')->id());
+            // Sella la fecha de última consulta en la entidad (si existe) YA, no al guardar: así el throttle
+            // es exacto aunque el usuario consulte y cancele, y el caché no se llena de re-consultas.
+            $this->marcarUltimaConsultaEntidad($identificacion);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
         } catch (\Throwable $th) {
@@ -205,5 +219,49 @@ class ConsultaIdentidadExternoController extends Controller
             'apellidos' => $apellidos !== '' ? mb_strtoupper($apellidos, 'UTF-8') : null,
             'nombres' => $nombres !== '' ? mb_strtoupper($nombres, 'UTF-8') : null,
         ];
+    }
+
+    // Caché de identidad: LOG APPEND-ONLY (un INSERT por CADA consulta a la fuente externa, no 1 fila por
+    // persona). tipo_consulta = 'SRI' | 'ECUADOR_LEGAL'; usu_id = usuario del CRM que la disparó. Columnas
+    // comunes planas (nombres, apellidos) + la respuesta COMPLETA en 'respuesta' jsonb (ahí caen los
+    // objetos/arrays anidados de cada fuente). ?::jsonb evita el error text->jsonb. Best-effort: si falla
+    // (p.ej. usu_id null con la columna NOT NULL), solo se loguea y NO rompe la consulta.
+    private function cachearConsultaIdentidad(string $tipo, string $identificacion, array $resultado, ?int $usuId): void
+    {
+        try {
+            DB::insert(
+                'INSERT INTO crm.consulta_identidad
+                   (tipo_consulta, identificacion, nombres, apellidos, respuesta, usu_id, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?::jsonb, ?, now(), now())',
+                [
+                    $tipo,
+                    $identificacion,
+                    $resultado['nombres'] ?? null,
+                    $resultado['apellidos'] ?? null,
+                    json_encode($resultado, JSON_UNESCAPED_UNICODE),
+                    $usuId,
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo cachear la consulta de identidad (' . $tipo . '): ' . $e->getMessage());
+        }
+    }
+
+    // Sella entidad.ent_fecha_ultima_consulta_identidad = now() para la(s) entidad(es) que coinciden en los
+    // primeros 10 dígitos (mismo criterio que el buscador cédula-vs-RUC). Es la fuente del throttle: al sellar
+    // aquí (al consultar, no al guardar) el cálculo "¿re-consulto?" es exacto aunque el usuario cancele.
+    // Si la identidad aún NO existe como entidad (alta nueva sin guardar), no actualiza nada (0 filas) y la
+    // fecha se sella al crear la entidad (fn_entidad_crear). Best-effort: si falla, no rompe la consulta.
+    private function marcarUltimaConsultaEntidad(string $identificacion): void
+    {
+        try {
+            DB::update(
+                'UPDATE entidad SET ent_fecha_ultima_consulta_identidad = now()
+                 WHERE substring(TRIM(ent_identificacion) from 1 for 10) = substring(TRIM(?) from 1 for 10)',
+                [$identificacion]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo sellar la fecha de última consulta en entidad: ' . $e->getMessage());
+        }
     }
 }

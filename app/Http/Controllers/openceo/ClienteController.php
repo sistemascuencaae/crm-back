@@ -77,6 +77,9 @@ class ClienteController extends Controller
         'cli_ilimitado',
         'cli_activo',
         'emp_id',
+        // Flag del front: true si en esta alta/edición se consultó una fuente externa (SRI/Ecuador Legal).
+        // fn_entidad_crear/modificar lo usan para sellar entidad.ent_fecha_ultima_consulta_identidad = now().
+        'consulto_identidad',
         'can_id',
         'ent_nombre_comercial',
         'ent_representante_legal',
