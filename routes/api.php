@@ -126,6 +126,7 @@ use App\Http\Controllers\formulario\FormAuthDatosCliController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\openceo\DdocumentoController;
+use App\Http\Controllers\openceo\DocumentacionClienteController;
 use App\Http\Controllers\openceo\RenegociacionesController;
 use App\Http\Controllers\corredores\CorredorClienteController;
 use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
@@ -1414,6 +1415,11 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/buscarClienteIdentificacion', [Cliente2Controller::class, 'buscarPorIdentificacion']);
     Route::get('/clienteAuditoria', [Cliente2Controller::class, 'clienteAuditoria']);
     Route::get('/clienteSolicitudCreditoHistorial', [Cliente2Controller::class, 'solicitudCreditoHistorial']);
+
+    // DOCUMENTACIÓN CLIENTE (listar casos por agencia para reimprimir documentos)
+    Route::get('/listar_casos_clientes_by_agencia', [DocumentacionClienteController::class, 'listar_casos_clientes_by_agencia']);
+    Route::get('/reimprimir_solicitud_cupo', [DocumentacionClienteController::class, 'reimprimir_solicitud_cupo']);
+    Route::get('/datos_titular_autorizacion', [DocumentacionClienteController::class, 'datos_titular_autorizacion']);
 });
 
 Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
