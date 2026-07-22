@@ -266,6 +266,17 @@ class ClienteController extends Controller
                 'emp_id' => DB::selectOne("SELECT emp.emp_id AS id, TRIM(COALESCE(ent.ent_nombres,'') || ' ' || COALESCE(ent.ent_apellidos,'')) AS label
                     FROM empleado emp INNER JOIN entidad ent ON ent.ent_id = emp.ent_id
                     WHERE emp.emp_activo = true ORDER BY emp.emp_id LIMIT 1"),
+                // Agente del VENDEDOR logueado: mapeo usu_alias del usuario CRM -> usuario ERP -> empleado.usu_id
+                // (mismo patrón que solicitudCredito). Solo se resuelve si mapea a un empleado ACTIVO; null si no.
+                // El front lo usa como Agente por defecto SOLO cuando el modal se abre desde el caso; si es null,
+                // add cae a 'ventas directa' (emp_id de arriba) y edit conserva el agente ya guardado del cliente.
+                'emp_id_vendedor' => ($aliasVendedor = optional(auth('api')->user())->usu_alias)
+                    ? DB::selectOne("SELECT emp.emp_id AS id, TRIM(COALESCE(ent.ent_nombres,'') || ' ' || COALESCE(ent.ent_apellidos,'')) AS label
+                        FROM empleado emp
+                        INNER JOIN entidad ent ON ent.ent_id = emp.ent_id
+                        INNER JOIN usuario usu ON usu.usu_id = emp.usu_id
+                        WHERE emp.emp_activo = true AND UPPER(TRIM(usu.usu_alias)) = UPPER(TRIM(?)) LIMIT 1", [$aliasVendedor])
+                    : null,
                 'can_id' => DB::selectOne("SELECT can_id AS id, can_nombre AS label FROM canal
                     WHERE can_activo = true AND can_id = (SELECT to_number(par_texto,'999999')::integer FROM parametro WHERE par_abreviacion='CAN' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1")
                     ?? DB::selectOne("SELECT can_id AS id, can_nombre AS label FROM canal WHERE can_activo = true ORDER BY can_id LIMIT 1"),
