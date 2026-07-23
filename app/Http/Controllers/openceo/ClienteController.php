@@ -238,21 +238,8 @@ class ClienteController extends Controller
         try {
             $data = (object) [
                 'politicas' => DB::select("SELECT pol_id, pol_nombre, pol_diasplazo FROM politica WHERE pol_activo = true AND pol_tipocli = 1 ORDER BY pol_nombre"),
-                'categorias' => DB::select("SELECT cat_id, cat_nombre FROM catcliente WHERE cat_activo = true AND cat_tipocli = 1 ORDER BY cat_nombre"),
-                'canales' => DB::select("SELECT can_id, can_nombre FROM canal WHERE can_activo = true ORDER BY can_nombre"),
-                'agentes' => DB::select("SELECT emp.emp_id, TRIM(COALESCE(ent.ent_nombres, '') || ' ' || COALESCE(ent.ent_apellidos, '')) AS nombre_completo
-                    FROM empleado emp
-                    INNER JOIN entidad ent ON ent.ent_id = emp.ent_id
-                    WHERE emp.emp_activo = true
-                    ORDER BY nombre_completo"),
-                'zonas' => DB::select("SELECT zon_id, zon_nombre FROM zona WHERE zon_activo = true ORDER BY zon_nombre"),
-                'listasPrecio' => DB::select("SELECT lpr_id, lpr_nombre FROM listapre WHERE lpr_activo = true ORDER BY lpr_nombre"),
                 'paises' => DB::select("SELECT pai_id, pai_nombre FROM pais ORDER BY pai_nombre"),
-                'companias' => DB::select("SELECT com_id, com_nombre FROM compania WHERE com_activo = true ORDER BY com_nombre"),
-                'actividadesEconomicas' => DB::select("SELECT aec_id, aec_nombre FROM actividad_economica ORDER BY aec_nombre"),
-                'formasPago' => DB::select("SELECT sfp_id, sfp_nombre FROM sri_formas_pago ORDER BY sfp_nombre"),
                 'tiposTelefono' => DB::select("SELECT tte_id, tte_nombre FROM tipo_telefono ORDER BY tte_nombre"),
-                'ubicaciones' => DB::select("SELECT ubi_id, ubi_nombre FROM ubicacion WHERE ubi_activo = true ORDER BY ubi_nombre"),
                 'titulos' => DB::select("SELECT tit_id, tit_nombre FROM titulo WHERE tit_activo = true ORDER BY tit_nombre"),
                 'cantones' => DB::select("SELECT ctn_id, ctn_nombre, prv_id FROM canton ORDER BY ctn_nombre"),
                 'provincias' => DB::select("SELECT prv_id, prv_nombre FROM provincia ORDER BY prv_nombre"),
