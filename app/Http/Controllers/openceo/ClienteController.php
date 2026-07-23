@@ -284,6 +284,16 @@ class ClienteController extends Controller
                 // Provincia por defecto para la cascada provincia->cantón->parroquia: AZUAY.
                 'prv_id' => DB::selectOne("SELECT prv_id AS id, prv_nombre AS label FROM provincia
                     WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' LIMIT 1"),
+                // Cantón por defecto: el PRIMER cantón (alfabético) de la provincia por defecto (AZUAY).
+                'ctn_id' => DB::selectOne("SELECT ctn_id AS id, ctn_nombre AS label FROM canton
+                    WHERE prv_id = (SELECT prv_id FROM provincia WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' LIMIT 1)
+                    ORDER BY ctn_nombre LIMIT 1"),
+                // Parroquia por defecto: la PRIMERA parroquia (alfabética) del cantón por defecto de arriba.
+                'prq_id' => DB::selectOne("SELECT prq_id AS id, prq_nombre AS label FROM parroquia
+                    WHERE ctn_id = (SELECT ctn_id FROM canton
+                        WHERE prv_id = (SELECT prv_id FROM provincia WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' LIMIT 1)
+                        ORDER BY ctn_nombre LIMIT 1)
+                    ORDER BY prq_nombre LIMIT 1"),
                 // Nacionalidad por defecto: ECUADOR (parámetro PAI/CLI; fallback por nombre).
                 'pai_id' => DB::selectOne("SELECT pai_id AS id, pai_nombre AS label FROM pais
                     WHERE pai_codigo = (SELECT par_texto FROM parametro WHERE par_abreviacion='PAI' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1")
@@ -632,9 +642,12 @@ class ClienteController extends Controller
 
             // Guarda un snapshot de la solicitud cada vez que se imprime (header + referencias). Best-effort:
             // si falla el guardado, no debe impedir que se genere/imprima el reporte. CONTADO (sin datos)
-            // no persiste nada (la función devuelve NULL internamente).
+            // no persiste nada (la función devuelve NULL internamente). El id devuelto es el N° de solicitud
+            // que el front inyecta en el encabezado para mostrarlo en el reporte (igual que el flujo del caso).
+            $solicitudId = null;
             try {
-                DB::selectOne('SELECT crm.fn_solicitud_credito_guardar(?, ?, ?) AS impresion_id', [$cliId, $usuId, auth('api')->id()]);
+                $guardado = DB::selectOne('SELECT crm.fn_solicitud_credito_guardar(?, ?, ?) AS impresion_id', [$cliId, $usuId, auth('api')->id()]);
+                $solicitudId = $guardado->impresion_id ?? null;
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('No se pudo guardar el historial de solicitud de crédito: ' . $e->getMessage());
             }
@@ -642,6 +655,7 @@ class ClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Solicitud de crédito generada con éxito', [
                 'filas' => $data,
                 'telefonos' => $telefonos,
+                'solicitud_id' => $solicitudId,
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo generar la solicitud de crédito', $th->getMessage()));
