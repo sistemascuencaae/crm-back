@@ -345,6 +345,7 @@ class ClienteController extends Controller
             'cantones' => 'crm.fn_canton_listar_paginacion',
             'parroquias' => 'crm.fn_parroquia_listar_paginacion',
             'actividadesEconomicas' => 'crm.fn_actividad_economica_listar_paginacion',
+            'cargos' => 'crm.fn_cargo_listar_paginacion',
             'companias' => 'crm.fn_compania_listar_paginacion',
             'ubicaciones' => 'crm.fn_ubicacion_listar_paginacion',
             'zonas' => 'crm.fn_zona_listar_paginacion',
@@ -413,7 +414,7 @@ class ClienteController extends Controller
     // Campos básicos que acepta el modal de empresa (se mandan a crm.fn_compania_crear/modificar como jsonb).
     private const CAMPOS_COMPANIA = [
         'com_id', 'com_nombre', 'com_ruc', 'com_direccion',
-        'com_telefono1', 'com_telefono2', 'com_actividad', 'com_contacto', 'ctn_id',
+        'com_telefono1', 'com_telefono2', 'com_actividad', 'com_contacto', 'ctn_id', 'com_tipo',
     ];
 
     public function companiaCrear(Request $request)
