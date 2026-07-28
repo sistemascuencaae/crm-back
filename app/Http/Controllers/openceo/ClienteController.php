@@ -281,18 +281,29 @@ class ClienteController extends Controller
                 // Categoría por defecto: catcliente.cat_pordefecto (cat_id=1 = CLIENTES). Mismo default que aplica PG.
                 'cat_id' => DB::selectOne("SELECT cat_id AS id, cat_nombre AS label FROM catcliente
                     WHERE cat_pordefecto = true AND cat_tipocli = 1 LIMIT 1"),
-                // Provincia por defecto para la cascada provincia->cantón->parroquia: AZUAY.
+                // Defaults de la geo que precarga el modal "+ agregar dirección" (solo direcciones NUEVAS;
+                // al editar una existente el modal nunca los aplica). Los tres filtran por su bandera de
+                // ACTIVO (2026-07-28): sin el filtro, el primer cantón alfabético de AZUAY era ASUNCION —
+                // inactivo, de los 225 que se desactivaron por ser parroquias disfrazadas de cantón — y su
+                // única parroquia, "SIN PARROQUIAS". Resultado: el modal precargaba un cantón que el propio
+                // selector ya no ofrece (y así nacieron las direcciones que hoy apuntan a cantones inactivos).
+                // OJO: esto filtra solo lo que se PROPONE al crear. Lo que un cliente ya tiene guardado se
+                // respeta aunque esté inactivo: el diccionario de etiquetas (cantones/provincias de arriba) y
+                // los endpoints cantonesByProvincia/parroquiasByCanton NO filtran, a propósito.
                 'prv_id' => DB::selectOne("SELECT prv_id AS id, prv_nombre AS label FROM provincia
-                    WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' LIMIT 1"),
-                // Cantón por defecto: el PRIMER cantón (alfabético) de la provincia por defecto (AZUAY).
+                    WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' AND prv_activo = true LIMIT 1"),
+                // Cantón por defecto: el PRIMER cantón ACTIVO (alfabético) de la provincia por defecto (AZUAY).
                 'ctn_id' => DB::selectOne("SELECT ctn_id AS id, ctn_nombre AS label FROM canton
-                    WHERE prv_id = (SELECT prv_id FROM provincia WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' LIMIT 1)
+                    WHERE prv_id = (SELECT prv_id FROM provincia WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' AND prv_activo = true LIMIT 1)
+                      AND ctn_activo = true
                     ORDER BY ctn_nombre LIMIT 1"),
-                // Parroquia por defecto: la PRIMERA parroquia (alfabética) del cantón por defecto de arriba.
+                // Parroquia por defecto: la PRIMERA parroquia ACTIVA (alfabética) del cantón por defecto de arriba.
                 'prq_id' => DB::selectOne("SELECT prq_id AS id, prq_nombre AS label FROM parroquia
                     WHERE ctn_id = (SELECT ctn_id FROM canton
-                        WHERE prv_id = (SELECT prv_id FROM provincia WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' LIMIT 1)
+                        WHERE prv_id = (SELECT prv_id FROM provincia WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' AND prv_activo = true LIMIT 1)
+                          AND ctn_activo = true
                         ORDER BY ctn_nombre LIMIT 1)
+                      AND prq_activo = true
                     ORDER BY prq_nombre LIMIT 1"),
                 // Nacionalidad por defecto: ECUADOR (parámetro PAI/CLI; fallback por nombre).
                 'pai_id' => DB::selectOne("SELECT pai_id AS id, pai_nombre AS label FROM pais
