@@ -4,6 +4,7 @@ namespace App\Http\Controllers\openceo;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -697,6 +698,19 @@ class ClienteController extends Controller
 
             $fila = $resultado[0] ?? null;
             $cliente = $fila ? json_decode($fila->datos, true) : null;
+
+            if ($cliente) {
+                // Tipo Persona deducido del número (Natural/Jurídica), para cuando el modal NO puede preguntarle
+                // al SRI: el throttle de consulta de identidad (ent_fecha_ultima_consulta_identidad) deja al edit
+                // sin 'tipoContribuyente'. Se calcula sobre la identificación DEL CLIENTE, no sobre la buscada:
+                // el buscador compara solo los primeros 10 dígitos, así que se puede buscar por cédula y traer
+                // al mismo titular guardado con RUC. Es solo la deducción; quién decide qué hacer con ella
+                // (corregir o respetar lo guardado) es el modal.
+                $cliente['tipo_sujeto_derivado'] = ValidacionCedulaRucService::tipoSujetoPorIdentificacion(
+                    $cliente['ent_identificacion'] ?? null,
+                    isset($cliente['ent_tipo_identificacion']) ? (int) $cliente['ent_tipo_identificacion'] : null
+                );
+            }
 
             return response()->json(RespuestaApi::returnResultado(
                 'success',

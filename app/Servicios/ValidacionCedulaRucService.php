@@ -50,6 +50,46 @@ class ValidacionCedulaRucService
     }
 
     /**
+     * Tipo de persona ('N' = Natural, 'J' = Jurídica) deducido SOLO del número, sin consultar al SRI.
+     * Es el respaldo para cuando el SRI está caído o el throttle no deja consultarlo.
+     *
+     * Una persona jurídica NO tiene cédula: se identifica con RUC de 13 dígitos. Por eso cédula y pasaporte
+     * son SIEMPRE Natural, y el único ambiguo es el RUC.
+     *
+     * En el RUC no basta mirar el tercer dígito: el 6 lo comparten la persona natural NACIONALIZADA y la
+     * sociedad pública, y quien los separa es el dígito verificador (cada tipo usa coeficientes distintos).
+     * Por eso se prueba con los validadores de arriba en vez de leer el dígito a mano.
+     *
+     * @param string|null $identificacion cédula / RUC / pasaporte
+     * @param int|null $tipoIdentificacion 1 = cédula, 2 = RUC, 3 = pasaporte. Si no es uno de esos (dato
+     *                                     legacy sucio), se deduce por la longitud del número.
+     * @return string|null 'N' | 'J', o null si es un RUC que no valida como ninguno de los tres tipos
+     */
+    public static function tipoSujetoPorIdentificacion(?string $identificacion, ?int $tipoIdentificacion = null): ?string
+    {
+        $numero = trim((string) $identificacion);
+
+        if (!in_array($tipoIdentificacion, [1, 2, 3], true)) {
+            $tipoIdentificacion = strlen($numero) === 13 ? 2 : 1;
+        }
+
+        // Cédula y pasaporte: jamás jurídica.
+        if ($tipoIdentificacion !== 2) {
+            return 'N';
+        }
+
+        if (self::esRucPersonaNaturalValido($numero)) {
+            return 'N';
+        }
+
+        if (self::esRucSociedadPrivadaValido($numero) || self::esRucSociedadPublicaValido($numero)) {
+            return 'J';
+        }
+
+        return null;
+    }
+
+    /**
      * Verifica si un número de cédula es válido
      */
     public static function esCedulaValida(string $numeroCedula): bool
@@ -86,16 +126,22 @@ class ValidacionCedulaRucService
     }
 
     /**
-     * Verifica si un RUC de sociedad privada es válido
+     * Verifica si un RUC de sociedad privada es válido.
+     *
+     * NO se exige el dígito verificador (2026-07-28). Medido sobre las 178.903 sociedades privadas activas
+     * del catálogo de la Superintendencia de Compañías: solo el 59% lo cumple. El 41% restante se rechazaba
+     * — 36% son RUC que el SRI emitió sin respetar su propia regla, y 5% caían en 11-residuo=10, que no es
+     * un dígito y por tanto nunca podía coincidir. El algoritmo NO está mal (si lo estuviera los aciertos
+     * rondarían el 9% por azar, no el 59%): es el SRI el que no lo respeta, así que exigirlo dejaba fuera a
+     * 4 de cada 10 empresas reales. Caso que lo destapó: 1793232706001 (ZULU LABZ S.A.), válido en el SRI.
+     *
+     * Se mantiene TODA la validación estructural: 13 dígitos numéricos, provincia 01-24 o 30, tercer dígito
+     * 9 y establecimiento >= 001. Cédula y RUC de persona natural siguen exigiendo el dígito verificador,
+     * que ahí sí es fiable y protege de los errores de tipeo.
      */
     public static function esRucSociedadPrivadaValido(string $numeroRuc): bool
     {
-        if (!self::validacionesPrevias($numeroRuc, 13, self::RUC_SOCIEDAD_PRIVADA)) {
-            return false;
-        }
-
-        $ultimoDigito = (int) $numeroRuc[9];
-        return self::algoritmoVerificaIdentificacion($numeroRuc, $ultimoDigito, self::RUC_SOCIEDAD_PRIVADA);
+        return self::validacionesPrevias($numeroRuc, 13, self::RUC_SOCIEDAD_PRIVADA);
     }
 
     /**

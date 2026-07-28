@@ -4,6 +4,7 @@ namespace App\Http\Controllers\varios;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -31,14 +32,19 @@ class ConsultaIdentidadExternoController extends Controller
             ])->timeout(4) // aborta si el SRI no responde en 4 segundos
                 ->get(self::URL_SRI, ['ruc' => $identificacion]);
 
+            // Aunque el SRI falle, el front necesita saber si el RUC es de Natural o Jurídica para marcar el
+            // Tipo Persona: se devuelve el deducido del propio número (dígito verificador) en el 'data' del
+            // error. El front lo usa SIN darlo por consultado (no sella el throttle ni escribe nombres).
+            $tipoSujetoLocal = ['tipo_sujeto' => ValidacionCedulaRucService::tipoSujetoPorIdentificacion($identificacion, 2)];
+
             if (!$response->successful()) {
-                return response()->json(RespuestaApi::returnResultado('error', 'El SRI no respondio correctamente', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'El SRI no respondio correctamente', $tipoSujetoLocal));
             }
 
             $data = $response->json();
 
             if (empty($data) || !isset($data[0])) {
-                return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron datos en el SRI', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron datos en el SRI', $tipoSujetoLocal));
             }
 
             // Devolvemos tal cual todo lo que entrega el SRI para ese RUC.
@@ -54,6 +60,15 @@ class ConsultaIdentidadExternoController extends Controller
             }
             $resultado['apellidos'] = $partes['apellidos'];
             $resultado['nombres'] = $partes['nombres'];
+
+            // Tipo Persona resuelto AQUI (no en el front): el SRI es la fuente autoritativa. Si por lo que sea
+            // no mandó 'tipoContribuyente', se cae al deducido del número. Con esto el modal de cliente marca
+            // Natural/Jurídica solo, y de paso 'razonSocial' entra completa en "Nombre Empresa" (antes el front
+            // decidía con el tipo aún en Natural y guardaba la razón social partida a la mitad).
+            $tipoContribuyente = trim((string) ($resultado['tipoContribuyente'] ?? ''));
+            $resultado['tipo_sujeto'] = $tipoContribuyente !== ''
+                ? ($tipoContribuyente === 'PERSONA NATURAL' ? 'N' : 'J')
+                : $tipoSujetoLocal['tipo_sujeto'];
 
             // Caché (log append-only: 1 fila por CADA consulta, con quién la hizo). Best-effort.
             $this->cachearConsultaIdentidad('SRI', $identificacion, $resultado, auth('api')->id());
@@ -81,14 +96,18 @@ class ConsultaIdentidadExternoController extends Controller
             ])->timeout(4) // aborta si Ecuador Legal no responde en 4 segundos
                 ->post(self::URL_ECUADOR_LEGAL, ['name' => $identificacion, 'tipo' => 'I']);
 
+            // Este endpoint solo acepta cédulas, y una persona jurídica NO tiene cédula: el Tipo Persona es
+            // Natural pase lo que pase, así que viaja también cuando Ecuador Legal falla.
+            $tipoSujetoLocal = ['tipo_sujeto' => 'N'];
+
             if (!$response->successful()) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Ecuador Legal no respondio correctamente', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'Ecuador Legal no respondio correctamente', $tipoSujetoLocal));
             }
 
             $nombre = $this->extraerNombreHtml($response->body());
 
             if (empty($nombre)) {
-                return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron datos en Ecuador Legal', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron datos en Ecuador Legal', $tipoSujetoLocal));
             }
 
             $partes = $this->separarNombreCompleto($nombre);
@@ -99,6 +118,7 @@ class ConsultaIdentidadExternoController extends Controller
                 'nombre' => mb_strtoupper($nombre, 'UTF-8'),
                 'apellidos' => $partes['apellidos'],
                 'nombres' => $partes['nombres'],
+                'tipo_sujeto' => 'N',
             ];
 
             // Caché (log append-only: 1 fila por CADA consulta, con quién la hizo). Best-effort.
