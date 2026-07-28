@@ -275,9 +275,9 @@ class ClienteController extends Controller
                 'sfp_id' => DB::selectOne("SELECT sfp_id AS id, sfp_nombre AS label FROM sri_formas_pago
                     WHERE UPPER(TRIM(sfp_nombre)) = 'SIN UTILIZACION DEL SISTEMA FINANCIERO' LIMIT 1")
                     ?? DB::selectOne("SELECT sfp_id AS id, sfp_nombre AS label FROM sri_formas_pago ORDER BY sfp_id LIMIT 1"),
-                // Ubicación por defecto del cliente: parámetro UBI/CLI (ubi_id 10150 = CUENCA).
-                'ubi_id' => DB::selectOne("SELECT ubi_id AS id, ubi_nombre AS label FROM ubicacion
-                    WHERE ubi_activo = true AND ubi_id = (SELECT to_number(par_texto,'999999')::integer FROM parametro WHERE par_abreviacion='UBI' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1"),
+                // 'ubi_id' se quitó de los defaults (2026-07-27): el campo "Ubicación para Dinardap" ya no se
+                // captura en el modal, y crm.fn_cliente_validaciones resuelve el valor con el mismo parámetro
+                // UBI/CLI (10150 = CUENCA) cuando llega vacío, respetando el que el cliente ya tenga.
                 // Categoría por defecto: catcliente.cat_pordefecto (cat_id=1 = CLIENTES). Mismo default que aplica PG.
                 'cat_id' => DB::selectOne("SELECT cat_id AS id, cat_nombre AS label FROM catcliente
                     WHERE cat_pordefecto = true AND cat_tipocli = 1 LIMIT 1"),
@@ -302,14 +302,15 @@ class ClienteController extends Controller
                 'tit_id' => DB::selectOne("SELECT tit_id AS id, tit_nombre AS label FROM titulo WHERE tit_activo=true ORDER BY (tit_id = 2) DESC, tit_nombre LIMIT 1"),
                 // Tipo de teléfono por defecto: CELULAR.
                 'tte_id' => DB::selectOne("SELECT tte_id AS id, tte_nombre AS label FROM tipo_telefono WHERE UPPER(TRIM(tte_nombre))='CELULAR' LIMIT 1"),
-                // Defaults demográficos/actividad (parametro_anexo). Sexo/Nivel/Vivienda/Sit.Laboral/Tipo Empresa
-                // = el "principal" del ERP (pane_principal=true). Estado Civil = SOLTERO (decisión del usuario;
+                // Defaults demográficos/actividad (parametro_anexo). Sexo/Nivel/Vivienda/Tipo Empresa = el
+                // "principal" del ERP (pane_principal=true). Estado Civil = SOLTERO (decisión del usuario;
                 // el "principal" del ERP es CASADO, se sobreescribe a propósito).
+                // 'pane_id_sla' (Situación Laboral) se quitó (2026-07-27): el combo salió del formulario y
+                // crm.fn_cliente_validaciones fija 26 (EMPLEADO E INDEPENDIENTE) cuando llega vacío.
                 'pane_id_sex' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=2 AND pane_principal=true LIMIT 1"),
                 'pane_id_eci' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=3 AND UPPER(TRIM(pane_nombre))='SOLTERO' LIMIT 1"),
                 'pane_id_nes' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=4 AND pane_principal=true LIMIT 1"),
                 'pane_id_tvi' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=5 AND pane_principal=true LIMIT 1"),
-                'pane_id_sla' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=6 AND pane_principal=true LIMIT 1"),
                 'pane_id_tem' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=7 AND pane_principal=true LIMIT 1"),
                 // Parentesco/relación por defecto de las referencias: la primera opción del catálogo
                 // (en mayúsculas, igual que crm.fn_parentesco_listar_paginacion).
