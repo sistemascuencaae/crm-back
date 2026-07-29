@@ -47,11 +47,12 @@ class ReqCasoController extends Controller
                     $imagen = $request->file("imagen_file");
                     // $titulo = $imagen->getClientOriginalName();
                     $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
+                    $marcaTiempo = now()->format('YmdHis'); // Fecha con hora y segundos para no sobrescribir archivos previos
 
                     if ($parametro->nas == true) {
-                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo);
                     } else {
-                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo);
                     }
 
                 }
@@ -140,12 +141,12 @@ class ReqCasoController extends Controller
                     $file = $request->file("archivo_file");
                     // $titulo = $file->getClientOriginalName();
                     $titulo = str_replace(' ', '-', $file->getClientOriginalName()); // Reemplazar espacios por -
-
+                    $marcaTiempo = now()->format('YmdHis'); // Fecha con hora y segundos para no sobrescribir archivos previos
 
                     if ($parametro->nas == true) {
-                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo); // guarda en el nas con el nombre original del archivo
                     } else {
-                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo);
                     }
                 }
                 $requerimiento->esimagen = false;
