@@ -13,6 +13,7 @@ use App\Http\Controllers\comercializacion\RenegociacionController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\TableauAuthController;
 use App\Http\Controllers\PowerBiRefreshDatasetController;
+use App\Http\Controllers\GoogleSheetsController;
 use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\configuracion\CodigoQrController;
@@ -125,7 +126,10 @@ use App\Http\Controllers\formulario\FormAuthDatosCliController;
 use App\Http\Controllers\formulario\FormController;
 use App\Http\Controllers\formulario\FormSeccionController;
 use App\Http\Controllers\openceo\DdocumentoController;
+use App\Http\Controllers\openceo\DocumentacionClienteController;
 use App\Http\Controllers\openceo\RenegociacionesController;
+use App\Http\Controllers\corredores\CorredorClienteController;
+use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
@@ -204,6 +208,10 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::post('/addCaso2', [CasoController::class, 'addCaso2']);
     Route::post('/addClienteOpenceo', [ClienteDynamoController::class, 'add']);
     Route::get('/getEstadoActualCaso/{caso_id}', [CasoController::class, 'getEstadoActualCaso']);
+
+    // API GEX (JAIRO) - Esto se conecta con el PRECIADOR para cuando cotizan un producto con GEX (Check "PRODUCTO GEX:")
+    Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
+    Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
 });
 
 Route::group(["prefix" => "formulario"], function ($router) {
@@ -407,6 +415,11 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // !Power BI
     Route::post('/refreshDataset', [PowerBiRefreshDatasetController::class, 'refreshDataset']);
     Route::post('/getRefreshStatus', [PowerBiRefreshDatasetController::class, 'getRefreshStatus']);
+    // !Google Sheets
+    Route::get('/googleSheets/read', [GoogleSheetsController::class, 'read']);
+    Route::post('/googleSheets/read', [GoogleSheetsController::class, 'read']);
+    Route::get('/googleSheets/batchRead', [GoogleSheetsController::class, 'batchRead']);
+    Route::post('/googleSheets/batchRead', [GoogleSheetsController::class, 'batchRead']);
 
     // GESTIONES
     Route::get('/listGestionByIdentificacion/{factura}', [GestionController::class, 'listGestionByIdentificacion']);
@@ -858,6 +871,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/editReqCaso', [ReqCasoController::class, 'edit']);
     Route::post('/solicitudCreditoVendedorGenerar', [ReqCasoController::class, 'solicitudCreditoVendedorGenerar']);
     Route::post('/solicitudCreditoVendedorReimprimir', [ReqCasoController::class, 'solicitudCreditoVendedorReimprimir']);
+    Route::post('/solicitudCreditoVendedorPdf', [ReqCasoController::class, 'solicitudCreditoVendedorPdf']);
+    Route::post('/solicitudCreditoVendedorGuardarPdf', [ReqCasoController::class, 'solicitudCreditoVendedorGuardarPdf']);
     Route::get('/listaReqCasoId/{casoId}', [ReqCasoController::class, 'listaReqCasoId']); //
     Route::get('/listReqCasoId/{casoId}', [ReqCasoController::class, 'listReqCasoId']);
 
@@ -889,10 +904,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
 
 
-
-
-    // ----------------------------------------------------------------------------------------
-    // ----------------------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------
     // ----------------------- START RUTAS JAIRO  ----------------------------------------------
 
     //Partes
@@ -1076,11 +1089,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/byProcComi/{comi}/{cumpli}/{almacen}', [ProcComiController::class, 'byProcComi']);
     Route::get('/eliminaProcComi/{comi}/{cumpli}/{almacen}', [ProcComiController::class, 'eliminaProcComi']);
 
-    //API GEX
-    Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
-    Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
-
-    // ----------------------- END RUTAS JAIRO  ----------------------------------------------
+    // ----------------------- END RUTAS JAIRO  -----------------------------------------------
     // ----------------------------------------------------------------------------------------
     // ----------------------------------------------------------------------------------------
 
@@ -1154,6 +1163,12 @@ Route::group(["prefix" => "crm/audi", 'middleware' => ['jwt.auth', 'usuario.acti
 
 Route::group(["prefix" => "crm/robot", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/reasignarCaso/{estadoFormId}/{casoId}/{tableroActualId}/{banMostrarVistaCreditoAprobado?}', [RobotCasoController::class, 'reasignarCaso']);
+});
+
+// CONSULTA DE IDENTIDAD POR CEDULA (fuentes externas: SRI oficial + Ecuador Legal)
+Route::group(["prefix" => "consultas/identidad", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+    Route::get('/consultarRucSri/{identificacion}', [ConsultaIdentidadExternoController::class, 'consultarRucSri']);
+    Route::get('/consultarCedulaEcuadorLegal/{identificacion}', [ConsultaIdentidadExternoController::class, 'consultarCedulaEcuadorLegal']);
 });
 
 // FORMULARIOS FELIPE
@@ -1400,6 +1415,11 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/buscarClienteIdentificacion', [Cliente2Controller::class, 'buscarPorIdentificacion']);
     Route::get('/clienteAuditoria', [Cliente2Controller::class, 'clienteAuditoria']);
     Route::get('/clienteSolicitudCreditoHistorial', [Cliente2Controller::class, 'solicitudCreditoHistorial']);
+
+    // DOCUMENTACIÓN CLIENTE (listar casos por agencia para reimprimir documentos)
+    Route::get('/listar_casos_clientes_by_agencia', [DocumentacionClienteController::class, 'listar_casos_clientes_by_agencia']);
+    Route::get('/reimprimir_solicitud_cupo', [DocumentacionClienteController::class, 'reimprimir_solicitud_cupo']);
+    Route::get('/datos_titular_autorizacion', [DocumentacionClienteController::class, 'datos_titular_autorizacion']);
 });
 
 Route::group(["prefix" => "parametro", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
@@ -1494,45 +1514,40 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
 
     // ============================================================
     // PIN PAD MEDIANET — endpoints REST
-    //
-    // Todos viven bajo /api/almacenesespana/pinpad/* (heredan el prefix
-    // del Route::group "almacenesespana" de mas arriba).
-    //
-    // El controlador esta en app/Http/Controllers/pinpad/PinpadController.php
     // ============================================================
 
     // ----- Utilidades / Diagnostico -----
     // GET /probe : verifica que el Pin Pad responde TCP (no envia trama real)
-    Route::get('/pinpad/probe',              [PinpadController::class, 'probe']);
+    Route::get('/pinpad/probe', [PinpadController::class, 'probe']);
     // GET /hash  : genera un hash 3DES de prueba (test del cifrado)
-    Route::get('/pinpad/hash',               [PinpadController::class, 'hash']);
+    Route::get('/pinpad/hash', [PinpadController::class, 'hash']);
     // POST /raw  : envia una trama YA armada (debug o desde el JAR oficial)
-    Route::post('/pinpad/raw',                [PinpadController::class, 'raw']);
+    Route::post('/pinpad/raw', [PinpadController::class, 'raw']);
 
     // ----- PP — Proceso de Pago (transacciones de venta) -----
     // 5 modalidades: corriente, diferido, anulacion, reverso, maxidolar
-    Route::post('/pinpad/cobrar',              [PinpadController::class, 'cobrar']);
-    Route::post('/pinpad/diferido',            [PinpadController::class, 'diferido']);
-    Route::post('/pinpad/anular',              [PinpadController::class, 'anular']);
-    Route::post('/pinpad/reverso',             [PinpadController::class, 'reverso']);
+    Route::post('/pinpad/cobrar', [PinpadController::class, 'cobrar']);
+    Route::post('/pinpad/diferido', [PinpadController::class, 'diferido']);
+    Route::post('/pinpad/anular', [PinpadController::class, 'anular']);
+    Route::post('/pinpad/reverso', [PinpadController::class, 'reverso']);
     // GET liviano: chequea si hay un reverso cacheado, sin tocar al Pin Pad
-    Route::get('/pinpad/reverso-disponible',  [PinpadController::class, 'reversoDisponible']);
-    Route::post('/pinpad/maxidolar',           [PinpadController::class, 'maxidolar']);
+    Route::get('/pinpad/reverso-disponible', [PinpadController::class, 'reversoDisponible']);
+    Route::post('/pinpad/maxidolar', [PinpadController::class, 'maxidolar']);
 
     // ----- CT — Cierre / Consulta de Tarjeta -----
-    Route::post('/pinpad/cierre-turno',       [PinpadController::class, 'cierreTurno']);
+    Route::post('/pinpad/cierre-turno', [PinpadController::class, 'cierreTurno']);
 
     // ----- LT — Lectura de Tarjeta (offline o pre-pago) -----
-    Route::post('/pinpad/lectura',            [PinpadController::class, 'lectura']);
+    Route::post('/pinpad/lectura', [PinpadController::class, 'lectura']);
 
     // ----- CP — Configuracion del Pin Pad (admin only) -----
-    Route::post('/pinpad/cambio-parametros',  [PinpadController::class, 'cambioParametros']);
+    Route::post('/pinpad/cambio-parametros', [PinpadController::class, 'cambioParametros']);
 
     // ----- PC — Proceso de Control / Cierre de Lote -----
-    Route::post('/pinpad/cierre-lote',        [PinpadController::class, 'cierreLote']);
+    Route::post('/pinpad/cierre-lote', [PinpadController::class, 'cierreLote']);
 
     // ----- RA — Avance en Efectivo / Cash Advance -----
-    Route::post('/pinpad/reimpresion',        [PinpadController::class, 'reimpresion']);
+    Route::post('/pinpad/reimpresion', [PinpadController::class, 'reimpresion']);
 
     // ============================================================
     // PIN PAD - JAR BRIDGE (Trama Builder JavaFX)
@@ -1543,13 +1558,13 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
     // Controlador: app/Http/Controllers/pinpadjar/PinpadJarController.php
     // ============================================================
     // GET diag    : verifica paths/archivos sin lanzar Java
-    Route::get('/pinpad/jar/diag',                 [PinpadJarController::class, 'diag']);
+    Route::get('/pinpad/jar/diag', [PinpadJarController::class, 'diag']);
     // POST abrir  : lanza el JAR en background, devuelve session_id
-    Route::post('/pinpad/jar/abrir',                [PinpadJarController::class, 'abrir']);
+    Route::post('/pinpad/jar/abrir', [PinpadJarController::class, 'abrir']);
     // GET leer    : polling cada 1.5s. Devuelve pending/ready/cancelled
-    Route::get('/pinpad/jar/leer/{sessionId}',     [PinpadJarController::class, 'leer']);
+    Route::get('/pinpad/jar/leer/{sessionId}', [PinpadJarController::class, 'leer']);
     // DELETE limpiar : borra archivos de sesion tras consumirla
-    Route::delete('/pinpad/jar/limpiar/{sessionId}',  [PinpadJarController::class, 'limpiar']);
+    Route::delete('/pinpad/jar/limpiar/{sessionId}', [PinpadJarController::class, 'limpiar']);
 
 
     // ---------- START SISTEMA NOVASOFT ----------
@@ -1601,79 +1616,87 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
 Route::group(['prefix' => 'crm/file-manager', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
 
     // ----- Configuración pública del módulo (límites, extensiones bloqueadas) -----
-    Route::get('/config',                      [FmArchivoController::class, 'config']);
+    Route::get('/config', [FmArchivoController::class, 'config']);
 
     // ----- Navegación de carpetas -----
-    Route::get('/roots',                       [FmCarpetaController::class, 'roots']);
-    Route::get('/folder/tree',                 [FmCarpetaController::class, 'tree']);
-    Route::get('/folder/{id}/contents',        [FmCarpetaController::class, 'contents']);
-    Route::get('/folder/{id}/breadcrumb',      [FmCarpetaController::class, 'breadcrumb']);
-    Route::get('/folder/{id}/all-ids',         [FmCarpetaController::class, 'allIds']);
+    Route::get('/roots', [FmCarpetaController::class, 'roots']);
+    Route::get('/folder/tree', [FmCarpetaController::class, 'tree']);
+    Route::get('/folder/{id}/contents', [FmCarpetaController::class, 'contents']);
+    Route::get('/folder/{id}/breadcrumb', [FmCarpetaController::class, 'breadcrumb']);
+    Route::get('/folder/{id}/all-ids', [FmCarpetaController::class, 'allIds']);
 
     // ----- CRUD de carpetas -----
-    Route::post('/folder',                     [FmCarpetaController::class, 'create']);
-    Route::put('/folder/{id}/rename',          [FmCarpetaController::class, 'rename']);
-    Route::put('/folder/{id}/move',            [FmCarpetaController::class, 'move']);
-    Route::post('/folder/{id}/restore',        [FmCarpetaController::class, 'restore']);
-    Route::get('/folder/{id}',                 [FmCarpetaController::class, 'show']);
-    Route::delete('/folder/{id}',              [FmCarpetaController::class, 'delete']);
+    Route::post('/folder', [FmCarpetaController::class, 'create']);
+    Route::put('/folder/{id}/rename', [FmCarpetaController::class, 'rename']);
+    Route::put('/folder/{id}/move', [FmCarpetaController::class, 'move']);
+    Route::post('/folder/{id}/restore', [FmCarpetaController::class, 'restore']);
+    Route::get('/folder/{id}', [FmCarpetaController::class, 'show']);
+    Route::delete('/folder/{id}', [FmCarpetaController::class, 'delete']);
 
     // ----- Archivos -----
-    Route::post('/file/upload',                [FmArchivoController::class, 'upload']);
-    Route::post('/file/upload-folder',         [FmArchivoController::class, 'uploadFolder']);
-    Route::get('/file/{id}/download',          [FmArchivoController::class, 'download']);
-    Route::get('/file/{id}/preview',           [FmArchivoController::class, 'preview']);
-    Route::put('/file/{id}/rename',            [FmArchivoController::class, 'rename']);
-    Route::put('/file/{id}/move',              [FmArchivoController::class, 'move']);
-    Route::post('/file/{id}/restore',          [FmArchivoController::class, 'restore']);
-    Route::get('/file/{id}',                   [FmArchivoController::class, 'show']);
-    Route::delete('/file/{id}',                [FmArchivoController::class, 'delete']);
+    Route::post('/file/upload', [FmArchivoController::class, 'upload']);
+    Route::post('/file/upload-folder', [FmArchivoController::class, 'uploadFolder']);
+    Route::get('/file/{id}/download', [FmArchivoController::class, 'download']);
+    Route::get('/file/{id}/preview', [FmArchivoController::class, 'preview']);
+    Route::put('/file/{id}/rename', [FmArchivoController::class, 'rename']);
+    Route::put('/file/{id}/move', [FmArchivoController::class, 'move']);
+    Route::post('/file/{id}/restore', [FmArchivoController::class, 'restore']);
+    Route::get('/file/{id}', [FmArchivoController::class, 'show']);
+    Route::delete('/file/{id}', [FmArchivoController::class, 'delete']);
 
     // ----- Operaciones en lote (bulk) -----
-    Route::post('/bulk-delete',                [FmBulkController::class, 'bulkDelete']);
-    Route::post('/bulk-move',                  [FmBulkController::class, 'bulkMove']);
-    Route::post('/bulk-download',              [FmBulkController::class, 'bulkDownload']);
+    Route::post('/bulk-delete', [FmBulkController::class, 'bulkDelete']);
+    Route::post('/bulk-move', [FmBulkController::class, 'bulkMove']);
+    Route::post('/bulk-download', [FmBulkController::class, 'bulkDownload']);
 
     // ----- Tags -----
-    Route::get('/tags',                        [FmTagController::class, 'index']);
-    Route::post('/tags',                       [FmTagController::class, 'store']);
-    Route::put('/tags/{id}',                   [FmTagController::class, 'update']);
-    Route::delete('/tags/{id}',                [FmTagController::class, 'delete']);
-    Route::post('/file/{archivoId}/tags',      [FmTagController::class, 'asignarTags']);
+    Route::get('/tags', [FmTagController::class, 'index']);
+    Route::post('/tags', [FmTagController::class, 'store']);
+    Route::put('/tags/{id}', [FmTagController::class, 'update']);
+    Route::delete('/tags/{id}', [FmTagController::class, 'delete']);
+    Route::post('/file/{archivoId}/tags', [FmTagController::class, 'asignarTags']);
     Route::delete('/file/{archivoId}/tags/{tagId}', [FmTagController::class, 'quitarTag']);
 
     // ----- Permisos de carpeta -----
-    Route::get('/folder/{id}/permisos',                  [FmPermisosController::class, 'indexCarpeta']);
-    Route::post('/folder/{id}/permisos',                 [FmPermisosController::class, 'storeCarpeta']);
-    Route::put('/folder/{id}/permisos/{userId}',         [FmPermisosController::class, 'updateCarpeta']);
-    Route::delete('/folder/{id}/permisos/{userId}',      [FmPermisosController::class, 'destroyCarpeta']);
+    Route::get('/folder/{id}/permisos', [FmPermisosController::class, 'indexCarpeta']);
+    Route::post('/folder/{id}/permisos', [FmPermisosController::class, 'storeCarpeta']);
+    Route::put('/folder/{id}/permisos/{userId}', [FmPermisosController::class, 'updateCarpeta']);
+    Route::delete('/folder/{id}/permisos/{userId}', [FmPermisosController::class, 'destroyCarpeta']);
 
     // ----- Permisos de archivo -----
-    Route::get('/file/{id}/permisos',                    [FmPermisosController::class, 'indexArchivo']);
-    Route::post('/file/{id}/permisos',                   [FmPermisosController::class, 'storeArchivo']);
-    Route::put('/file/{id}/permisos/{userId}',           [FmPermisosController::class, 'updateArchivo']);
-    Route::delete('/file/{id}/permisos/{userId}',        [FmPermisosController::class, 'destroyArchivo']);
+    Route::get('/file/{id}/permisos', [FmPermisosController::class, 'indexArchivo']);
+    Route::post('/file/{id}/permisos', [FmPermisosController::class, 'storeArchivo']);
+    Route::put('/file/{id}/permisos/{userId}', [FmPermisosController::class, 'updateArchivo']);
+    Route::delete('/file/{id}/permisos/{userId}', [FmPermisosController::class, 'destroyArchivo']);
 
     // ----- Autocomplete de usuarios -----
-    Route::get('/usuarios-asignables',                   [FmPermisosController::class, 'usuariosAsignables']);
+    Route::get('/usuarios-asignables', [FmPermisosController::class, 'usuariosAsignables']);
 
     // ----- Papelera -----
-    Route::get('/papelera',                              [FmCarpetaController::class, 'papelera']);
-    Route::delete('/papelera/vaciar',                    [FmCarpetaController::class, 'vaciarPapelera']);
-    Route::delete('/file/{id}/permanente',               [FmArchivoController::class, 'deletePermanente']);
-    Route::delete('/folder/{id}/permanente',             [FmCarpetaController::class, 'deletePermanente']);
+    Route::get('/papelera', [FmCarpetaController::class, 'papelera']);
+    Route::delete('/papelera/vaciar', [FmCarpetaController::class, 'vaciarPapelera']);
+    Route::delete('/file/{id}/permanente', [FmArchivoController::class, 'deletePermanente']);
+    Route::delete('/folder/{id}/permanente', [FmCarpetaController::class, 'deletePermanente']);
 
     // ----- Búsqueda global -----
-    Route::get('/search',                                                [FmSearchController::class, 'search']);
+    Route::get('/search', [FmSearchController::class, 'search']);
 
     // ----- Auditoría (admin) -----
-    Route::get('/auditoria/recientes',                                   [FmAuditController::class, 'recientes']);
+    Route::get('/auditoria/recientes', [FmAuditController::class, 'recientes']);
 
     // ----- Upload preview / check colisiones -----
-    Route::post('/file/check-colisiones',                                [FmArchivoController::class, 'checkColisiones']);
+    Route::post('/file/check-colisiones', [FmArchivoController::class, 'checkColisiones']);
 
     // ----- Versionado -----
-    Route::get('/file/{id}/versiones',                                   [FmArchivoController::class, 'versiones']);
-    Route::get('/file/{id}/versiones/{versionId}/download',              [FmArchivoController::class, 'descargarVersion']);
-    Route::post('/file/{id}/versiones/{versionId}/restaurar',            [FmArchivoController::class, 'restaurarVersion']);
+    Route::get('/file/{id}/versiones', [FmArchivoController::class, 'versiones']);
+    Route::get('/file/{id}/versiones/{versionId}/download', [FmArchivoController::class, 'descargarVersion']);
+    Route::post('/file/{id}/versiones/{versionId}/restaurar', [FmArchivoController::class, 'restaurarVersion']);
+});
+
+// CORREDORES INTERNOS (Corredor ALM): formulario de clientes multinivel dentro
+// del CRM. Sin link cifrado: el corredor es el usuario JWT y tipo_corredor = 1
+// va quemado en el controller.
+Route::group(["prefix" => "corredores", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+    Route::post('/verificarClienteCorredor', [CorredorClienteController::class, 'verificarClienteCorredor']);
+    Route::post('/guardarClienteCorredor', [CorredorClienteController::class, 'guardarClienteCorredor']);
 });

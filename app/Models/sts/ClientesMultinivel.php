@@ -15,6 +15,7 @@ class ClientesMultinivel extends Model
     protected $fillable = [
 	"cli_id",
 	"corredor",
+	"tipo_corredor",
 	"dias_parametro",
 	"activo",
 	"fecha_desvinculacion",

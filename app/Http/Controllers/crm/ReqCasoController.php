@@ -47,11 +47,12 @@ class ReqCasoController extends Controller
                     $imagen = $request->file("imagen_file");
                     // $titulo = $imagen->getClientOriginalName();
                     $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
+                    $marcaTiempo = now()->format('YmdHis'); // Fecha con hora y segundos para no sobrescribir archivos previos
 
                     if ($parametro->nas == true) {
-                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo);
                     } else {
-                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo);
                     }
 
                 }
@@ -140,12 +141,12 @@ class ReqCasoController extends Controller
                     $file = $request->file("archivo_file");
                     // $titulo = $file->getClientOriginalName();
                     $titulo = str_replace(' ', '-', $file->getClientOriginalName()); // Reemplazar espacios por -
-
+                    $marcaTiempo = now()->format('YmdHis'); // Fecha con hora y segundos para no sobrescribir archivos previos
 
                     if ($parametro->nas == true) {
-                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo); // guarda en el nas con el nombre original del archivo
                     } else {
-                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo);
                     }
                 }
                 $requerimiento->esimagen = false;
@@ -544,30 +545,10 @@ class ReqCasoController extends Controller
         try {
             $solicitudId = (int) $request->input('solicitud_id');
 
-            $cab = DB::selectOne('SELECT cli_id FROM crm.solicitudes_credito WHERE id = ?', [$solicitudId]);
-            if (!$cab) {
+            $snap = $this->obtenerSnapshotSolicitudVendedor($solicitudId);
+            if (!$snap) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontró la solicitud guardada.', ''));
             }
-
-            $regs = DB::select(
-                'SELECT * FROM crm.fn_cliente_solicitud_credito_listar_paginacion(?, ?, ?, ?)',
-                [$cab->cli_id, 1, 100000, null]
-            );
-
-            $snap = null;
-            foreach ($regs as $r) {
-                if ((int) $r->id === $solicitudId) {
-                    $snap = $r;
-                    break;
-                }
-            }
-            if (!$snap) {
-                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró el snapshot de la solicitud.', ''));
-            }
-
-            $snap->referencias  = json_decode($snap->referencias);
-            $snap->telefonos    = json_decode($snap->telefonos);
-            $snap->direcciones  = json_decode($snap->direcciones);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Solicitud obtenida', $snap));
         } catch (Exception $e) {
@@ -575,5 +556,103 @@ class ReqCasoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
         }
+    }
+
+    // Snapshot guardado de una solicitud (header + referencias/telefonos/direcciones ya decodificados).
+    // Compartido por solicitudCreditoVendedorReimprimir y solicitudCreditoVendedorPdf.
+    private function obtenerSnapshotSolicitudVendedor(int $solicitudId)
+    {
+        $cab = DB::selectOne('SELECT cli_id FROM crm.solicitudes_credito WHERE id = ?', [$solicitudId]);
+        if (!$cab) {
+            return null;
+        }
+
+        $regs = DB::select(
+            'SELECT * FROM crm.fn_cliente_solicitud_credito_listar_paginacion(?, ?, ?, ?)',
+            [$cab->cli_id, 1, 100000, null]
+        );
+
+        foreach ($regs as $r) {
+            if ((int) $r->id === $solicitudId) {
+                $r->referencias = json_decode($r->referencias);
+                $r->telefonos   = json_decode($r->telefonos);
+                $r->direcciones = json_decode($r->direcciones);
+
+                return $r;
+            }
+        }
+
+        return null;
+    }
+
+    // Estado del PDF guardado de una solicitud (ojito): devuelve { existe, ruta }. El PDF NO se genera
+    // aquí: lo captura y sube el FRONT desde el componente real <app-print-solicitud-credito> (fuente
+    // ÚNICA del diseño — si cambia el diseño, solo se toca el frontend). Si 'existe' es false, el front
+    // lo regenera con el snapshot (solicitudCreditoVendedorReimprimir) y lo sube (GuardarPdf).
+    public function solicitudCreditoVendedorPdf(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $solicitudId = (int) $request->input('solicitud_id');
+
+            $cab = DB::selectOne('SELECT caso_id FROM crm.solicitudes_credito WHERE id = ?', [$solicitudId]);
+            if (!$cab) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró la solicitud guardada.', ''));
+            }
+
+            $ruta = $this->rutaPdfSolicitudVendedor($solicitudId, $cab->caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Estado del PDF', [
+                'existe' => Storage::disk($this->discoArchivosCaso())->exists($ruta),
+                'ruta'   => $ruta,
+            ]));
+        } catch (\Throwable $e) {
+            $log->logError(ReqCasoController::class, 'Error al consultar el PDF de la solicitud crédito vendedor', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
+        }
+    }
+
+    // Recibe el PDF capturado por el front (html2pdf sobre el componente real) y lo guarda como
+    // archivo del caso en casos/<caso_id>/archivos/ (mismo disco NAS/local que los adjuntos).
+    // Sobrescribe si ya existía (mismo snapshot => mismo contenido). Devuelve la ruta relativa.
+    public function solicitudCreditoVendedorGuardarPdf(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $solicitudId = (int) $request->input('solicitud_id');
+            if (!$request->hasFile('pdf')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No llegó el archivo PDF.', ''));
+            }
+
+            $cab = DB::selectOne('SELECT caso_id FROM crm.solicitudes_credito WHERE id = ?', [$solicitudId]);
+            if (!$cab) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró la solicitud guardada.', ''));
+            }
+
+            $ruta = $this->rutaPdfSolicitudVendedor($solicitudId, $cab->caso_id);
+            Storage::disk($this->discoArchivosCaso())->put($ruta, file_get_contents($request->file('pdf')->getRealPath()));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'PDF guardado', $ruta));
+        } catch (\Throwable $e) {
+            $log->logError(ReqCasoController::class, 'Error al guardar el PDF de la solicitud crédito vendedor', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
+        }
+    }
+
+    // Ruta relativa del PDF de una solicitud dentro del storage de adjuntos del caso.
+    private function rutaPdfSolicitudVendedor(int $solicitudId, $casoId): string
+    {
+        return ($casoId ? 'casos/' . $casoId . '/archivos/' : 'solicitudes-credito/')
+            . 'solicitud-credito-' . $solicitudId . '.pdf';
+    }
+
+    // Mismo criterio NAS/local que los adjuntos del caso (editReqTipoFile): crm.parametro 'NAS'.
+    private function discoArchivosCaso(): string
+    {
+        $parametro = DB::table('crm.parametro')->where('abreviacion', 'NAS')->first();
+
+        return ($parametro && $parametro->nas == true) ? 'nas' : 'local';
     }
 }

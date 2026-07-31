@@ -14,12 +14,30 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 
 class DynamoClienteController extends Controller
 {
+    // Mensaje amigable para cada excepción que puede lanzar crm.fn_clientes_registrar
+    // (mismo mapa del ClienteController de openceo; aquí solo aplican las de contado)
+    private const MENSAJES_ERROR = [
+        'REQUIERE_TIPOS_PAGO' => 'Debe registrar al menos un tipo de pago.',
+        'REQUIERE_AGENTE' => 'Debe seleccionar un agente.',
+        'REQUIRE_IDENTIFICACION' => 'Debe ingresar la identificación.',
+        'REQUIERE_UBICACION' => 'Debe seleccionar una ubicación.',
+        'REQUIERE_CATEGORIA' => 'Debe seleccionar una categoría.',
+        'REQUIERE_ZONA' => 'Debe seleccionar una zona.',
+        'REQUIERE_CANAL' => 'Debe seleccionar un canal.',
+        'REQUIERE_LISTAPRE' => 'Debe seleccionar una lista de precios.',
+        'IDENTIFICACION_INVALIDA' => 'La identificación ingresada no es válida.',
+        'IDENTIFICACION_DUPLICADA' => 'Ya existe un cliente con esa identificación.',
+        'CODIGO_DUPLICADO' => 'Ya existe un cliente con ese código.',
+        'POLITICA_INVALIDA' => 'La política seleccionada no es válida.',
+    ];
+
     // Version 1.0
     public function verificarClienteDynamo(Request $request)
     {
@@ -116,6 +134,7 @@ class DynamoClienteController extends Controller
                 return $tokenData;
             }
             $corredor = trim($tokenData['corredor']);
+            $tipoCorredor = (int) $tokenData['tipo_corredor'];
 
             // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR)
             $diasCorredor = $this->obtenerDiasParametroCorredor();
@@ -189,10 +208,11 @@ class DynamoClienteController extends Controller
                 DB::update("UPDATE public.telefono SET tel_numero = ? WHERE tel_id = ?", [trim($telefono), $resultado->tel_id]);
             }
 
-            // Actualizar el registro de dirección usando el FK dir_id
+            // Actualizar el registro de dirección usando el FK dir_id. El tipo solo
+            // se rellena con el default CASA si estaba vacío (no pisa un TRABAJO asignado)
             if ($resultado->dir_id) {
                 DB::update(
-                    "UPDATE public.direccion SET dir_calle_principal = ?, dir_calle_secundaria = ? WHERE dir_id = ?",
+                    "UPDATE public.direccion SET dir_calle_principal = ?, dir_calle_secundaria = ?, dir_tipo = COALESCE(dir_tipo, 'CASA') WHERE dir_id = ?",
                     [trim($direccion), trim($direccionSecundaria) ?: '.', $resultado->dir_id]
                 );
             }
@@ -203,6 +223,7 @@ class DynamoClienteController extends Controller
                 ClientesMultinivel::create([
                     'cli_id' => $resultado->cli_id,
                     'corredor' => $corredor,
+                    'tipo_corredor' => $tipoCorredor,
                     'dias_parametro' => $diasCorredor,
                     'activo' => true,
                 ]);
@@ -238,6 +259,7 @@ class DynamoClienteController extends Controller
             }
 
             $corredor = trim($credenciales['corredor']);
+            $tipoCorredor = (int) $credenciales['tipo_corredor'];
 
             // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR);
             // se guardan en dias_parametro al vincular
@@ -300,8 +322,15 @@ class DynamoClienteController extends Controller
             $entidad = DB::selectOne("SELECT * FROM public.entidad e
                                         WHERE SUBSTRING(TRIM(e.ent_identificacion), 1, 10) = ?", [$identificacionBusqueda]);
 
-            // 6. Crear cliente básico
-            DB::transaction(function () use ($request, $entidad, $corredor, $diasCorredor) {
+            // 6a. ENTIDAD NO EXISTE -> crear el cliente CONTADO vía crm.fn_clientes_registrar
+            // (defaults y auditoría forense del módulo cliente, SIN modificar la función).
+            // La función rechaza entidades ya existentes, por eso ese caso sigue en 6b.
+            if (!$entidad) {
+                return $this->crearClienteContadoViaFuncion($request, $corredor, $tipoCorredor, $diasCorredor);
+            }
+
+            // 6b. ENTIDAD EXISTE (sin cliente): camino PHP que reusa la entidad
+            DB::transaction(function () use ($request, $entidad, $corredor, $tipoCorredor, $diasCorredor) {
                 $direccion = mb_strtoupper(trim($request->input('direccion')));
                 $direccionSecundaria = mb_strtoupper(trim($request->input('dir_calle_secundaria')));
                 $telefono = trim($request->input('telefono'));
@@ -319,6 +348,8 @@ class DynamoClienteController extends Controller
                 $newDireccion = new Direccion();
                 $newDireccion->dir_calle_principal = $direccion;
                 $newDireccion->dir_calle_secundaria = $direccionSecundaria;
+                // Tipo por defecto del formulario (catálogo crm.fn_tipo_direccion_listar: CASA / TRABAJO)
+                $newDireccion->dir_tipo = 'CASA';
                 $newDireccion->save();
 
                 // 6.2. Crear nuevo teléfono (siempre se crea)
@@ -327,44 +358,20 @@ class DynamoClienteController extends Controller
                 $newTelefono->tel_numero = $telefono;
                 $newTelefono->save();
 
-                $entId = null;
+                // 6.3. Actualizamos la entidad existente con la nueva dirección/teléfono
+                DB::update(
+                    "UPDATE public.entidad SET
+                                    ent_nombres = ?,
+                                    ent_apellidos = ?,
+                                    ent_tipo_identificacion = ?,
+                                    ent_email = ?,
+                                    ent_direccion_principal = ?,
+                                    ent_telefono_principal = ?
+                                WHERE ent_id = ?",
+                    [$nombres, $apellidos, $tipoIdentificacion, $email, $newDireccion->dir_id, $newTelefono->tel_id, $entidad->ent_id]
+                );
 
-                if ($entidad) {
-                    // 6.3.1. ENTIDAD EXISTE -> actualizamos con la nueva dirección/teléfono
-                    DB::update(
-                        "UPDATE public.entidad SET
-                                        ent_nombres = ?,
-                                        ent_apellidos = ?,
-                                        ent_tipo_identificacion = ?,
-                                        ent_email = ?,
-                                        ent_direccion_principal = ?,
-                                        ent_telefono_principal = ?
-                                    WHERE ent_id = ?",
-                        [$nombres, $apellidos, $tipoIdentificacion, $email, $newDireccion->dir_id, $newTelefono->tel_id, $entidad->ent_id]
-                    );
-
-                    $entId = $entidad->ent_id;
-                } else {
-                    // 6.3.2. ENTIDAD NO EXISTE -> creamos la nueva entidad
-                    $valor1 = DB::selectOne("SELECT to_number(par_texto,'999999') AS tit_id
-                                                FROM parametro
-                                                WHERE par_abreviacion='TIT'
-                                                    AND mod_abreviatura='CLI'
-                                                LIMIT 1");
-
-                    $newEntidad = new Entidad();
-                    $newEntidad->ent_identificacion = $identificacion;
-                    $newEntidad->ent_nombres = $nombres;
-                    $newEntidad->ent_apellidos = $apellidos;
-                    $newEntidad->tit_id = $valor1->tit_id;
-                    $newEntidad->ent_direccion_principal = $newDireccion->dir_id;
-                    $newEntidad->ent_tipo_identificacion = $tipoIdentificacion;
-                    $newEntidad->ent_email = $email;
-                    $newEntidad->ent_telefono_principal = $newTelefono->tel_id;
-                    $newEntidad->save();
-
-                    $entId = $newEntidad->ent_id;
-                }
+                $entId = $entidad->ent_id;
 
                 // 6.4. Obtener datos por defecto para el nuevo cliente
                 // Ubicación
@@ -446,10 +453,11 @@ class DynamoClienteController extends Controller
                 }
 
                 // 6.8: Registrar el cliente al corredor Netos en Dynamo
-                // ($corredor proviene del token cifrado, no del formulario)
+                // ($corredor y $tipoCorredor provienen del token cifrado, no del formulario)
                 $clienteMultinivel = new ClientesMultinivel();
                 $clienteMultinivel->cli_id = $newCliente->cli_id;
                 $clienteMultinivel->corredor = $corredor;
+                $clienteMultinivel->tipo_corredor = $tipoCorredor;
                 $clienteMultinivel->dias_parametro = $diasCorredor;
                 $clienteMultinivel->activo = true;
                 $clienteMultinivel->save();
@@ -462,6 +470,114 @@ class DynamoClienteController extends Controller
             }
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+
+
+    // Version 1.0
+    // Crea el cliente CONTADO vía crm.fn_clientes_registrar (SIN modificarla) y lo
+    // vincula al corredor del token en la misma transacción (si la vinculación falla,
+    // el cliente también se revierte). cat_id y lpr_id van explícitos, resueltos igual
+    // que el camino PHP anterior ('clien' y parámetro LPR), para no cambiar los valores.
+    private function crearClienteContadoViaFuncion(Request $request, string $corredor, int $tipoCorredor, int $diasCorredor)
+    {
+        $politica = DB::selectOne("SELECT pol_id FROM politica WHERE pol_nombre = 'CONTADO' AND pol_tipocli = 1");
+        if (!$politica) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No está configurada la política CONTADO, comuniquese con el administrador.', null));
+        }
+
+        // Título por defecto (parámetro TIT/CLI); la función NO lo defaultea
+        $titulo = DB::selectOne("SELECT to_number(par_texto,'999999') AS tit_id
+                                    FROM parametro
+                                    WHERE par_abreviacion='TIT'
+                                        AND mod_abreviatura='CLI'
+                                    LIMIT 1");
+
+        $categoria = DB::selectOne("SELECT cat_id
+                                    FROM catcliente
+                                    WHERE cat_abreviacion = 'clien'");
+
+        $listaPre = DB::selectOne("SELECT lpr_id
+                                    FROM listapre
+                                    WHERE lpr_nombre
+                                        IN (SELECT par_texto
+                                                FROM parametro
+                                                WHERE par_abreviacion='LPR'
+                                                    AND mod_abreviatura='CLI'
+                                                LIMIT 1)
+                                    LIMIT 1");
+
+        $identificacion = trim($request->input('identificacion'));
+        $nombres = mb_strtoupper(trim($request->input('nombres')));
+        $apellidos = mb_strtoupper(trim($request->input('apellidos')));
+
+        $payload = [
+            'ent_identificacion' => $identificacion,
+            'ent_tipo_identificacion' => (int) trim($request->input('tipoidentificacion')),
+            'ent_nombres' => $nombres,
+            'ent_apellidos' => $apellidos,
+            'ent_email' => mb_strtolower(trim($request->input('email'))),
+            'ent_nombre_comercial' => $apellidos . ' ' . $nombres,
+            'tit_id' => $titulo->tit_id ?? null,
+            'pol_id' => $politica->pol_id,
+            'cat_id' => $categoria->cat_id ?? null,
+            'lpr_id' => $listaPre->lpr_id ?? null,
+            'emp_id' => 1,
+            'cli_credito' => false,
+            'tipos_pago' => [['sfp_id' => 1, 'ctip_default' => true]],
+            'direccion' => [
+                'dir_calle_principal' => mb_strtoupper(trim($request->input('direccion'))),
+                'dir_calle_secundaria' => mb_strtoupper(trim($request->input('dir_calle_secundaria') ?? '')),
+                'dir_principal' => true,
+                'dir_tipo' => 'CASA',
+            ],
+            'telefono' => [
+                'tte_id' => 2, // 2 es celular
+                'tel_numero' => trim($request->input('telefono')),
+                'tel_principal' => true,
+            ],
+            // Trazabilidad: en este flujo público no hay usuario CRM; created_by y
+            // la auditoría forense quedan atribuidos al corredor del token
+            'usuario_auditoria' => mb_substr('CORREDOR - ' . $corredor, 0, 100),
+            'auditoria' => [
+                'usuario_id' => null,
+                'usuario_login' => mb_substr($corredor, 0, 100),
+                'usuario_nombre' => 'FORMULARIO PROVEEDOR STS',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'request_id' => (string) Str::uuid(),
+            ],
+        ];
+
+        try {
+            DB::transaction(function () use ($payload, $corredor, $tipoCorredor, $diasCorredor) {
+                $resultado = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload)]);
+
+                // ($corredor y $tipoCorredor provienen del token cifrado, no del formulario)
+                $clienteMultinivel = new ClientesMultinivel();
+                $clienteMultinivel->cli_id = $resultado->cli_id;
+                $clienteMultinivel->corredor = $corredor;
+                $clienteMultinivel->tipo_corredor = $tipoCorredor;
+                $clienteMultinivel->dias_parametro = $diasCorredor;
+                $clienteMultinivel->activo = true;
+                $clienteMultinivel->save();
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Cliente creado con éxito', null));
+        } catch (QueryException $e) {
+            if ($this->esCarreraVinculacion($e)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
+            }
+
+            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
+                if (strpos($e->getMessage(), $codigo) !== false) {
+                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+                }
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear el cliente', $e->getMessage()));
         }
     }
 
@@ -512,9 +628,13 @@ class DynamoClienteController extends Controller
 
             $expires = now()->addMinutes($minutos)->timestamp;
 
-            // Credenciales cifrado y autenticado: nadie puede leerlo ni manipularlo
+            // Credenciales cifrado y autenticado: nadie puede leerlo ni manipularlo.
+            // tipo_corredor va QUEMADO aquí (1. Corredor ALM; 2. Corredor STS;): todo link
+            // de este endpoint es tipo 2 (STS); ni el front ni el proveedor lo envían nunca.
+            // El tipo 1 queda reservado para el flujo interno del CRM (sin link).
             $t = Crypt::encryptString(json_encode([
                 'corredor' => $corredor,
+                'tipo_corredor' => 2,
                 'expires' => $expires,
             ]));
 
@@ -612,7 +732,7 @@ class DynamoClienteController extends Controller
 
 
     // Descifra y valida el token ?t= del enlace (caducidad + integridad).
-    // Devuelve el array de las credenciales (['corredor' => ..., 'expires' => ...])
+    // Devuelve el array de las credenciales (['corredor' => ..., 'tipo_corredor' => ..., 'expires' => ...])
     // Metodo privado que se usa para validar si la url es correcta en el metodo addDynamoCliente
     private function validarTokenEnlace(Request $request)
     {
@@ -628,7 +748,7 @@ class DynamoClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Enlace no válido.', null));
         }
 
-        if (!is_array($credenciales) || empty($credenciales['corredor']) || empty($credenciales['expires'])) {
+        if (!is_array($credenciales) || empty($credenciales['corredor']) || empty($credenciales['tipo_corredor']) || empty($credenciales['expires'])) {
             return response()->json(RespuestaApi::returnResultado('error', 'Enlace no válido.', null));
         }
 

@@ -58,7 +58,7 @@ class RouteServiceProvider extends ServiceProvider
                 ->namespace($this->namespace)
                 ->group(base_path('routes/openceo.php'));
 
-                Route::prefix('demo')
+            Route::prefix('demo')
                 ->middleware('api')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/demo.php'));
@@ -68,6 +68,10 @@ class RouteServiceProvider extends ServiceProvider
                 ->namespace($this->namespace)
                 ->group(base_path('routes/sts.php'));
 
+            Route::prefix('garancheck')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/garancheck.php'));
         });
     }
 

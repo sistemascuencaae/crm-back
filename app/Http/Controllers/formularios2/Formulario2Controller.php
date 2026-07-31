@@ -458,10 +458,25 @@ class Formulario2Controller extends Controller
                     'form_id' => $input_form_id
                 ]);
 
+                // IDs de los campos tipo ARCHIVOS de este formulario. El front manda
+                // en 'dform' un item por cada campo (incluido ARCHIVOS con value vacío),
+                // pero el archivo real se guarda más abajo como su propia fila con la ruta.
+                // Por eso NO guardamos aquí el placeholder del campo ARCHIVOS: evita la
+                // "fila en blanco" que quedaba en crm.dform.
+                $archivosFieldIds = Field::where('form_id', $cForm->form_id)
+                    ->where('type', 'ARCHIVOS')
+                    ->pluck('id')
+                    ->all();
+
                 // Guardar los datos del formulario en la tabla DFormularios
                 if (count($input_dform) > 0) {
                     // Iteramos sobre los campos del formulario
                     foreach ($input_dform as $item) {
+                        // Saltar el placeholder del campo ARCHIVOS (se guarda abajo con su ruta).
+                        if (in_array($item['field_id'] ?? null, $archivosFieldIds)) {
+                            continue;
+                        }
+
                         // Asignamos el id del formulario recién creado
                         $item['cform_id'] = $cForm->id;
 
@@ -476,6 +491,17 @@ class Formulario2Controller extends Controller
                 if ($archivos) {
                     // Verificamos el parámetro NAS para decidir dónde guardar los archivos
                     $parametro = DB::table('crm.parametro')->where('abreviacion', 'NAS')->first();
+
+                    // Buscamos el campo de tipo ARCHIVOS de este formulario para asociar
+                    // correctamente los adjuntos (antes se colgaban del último campo guardado).
+                    $campoArchivos = Field::where('form_id', $cForm->form_id)
+                        ->where('type', 'ARCHIVOS')
+                        ->first();
+
+                    // Si existe el campo ARCHIVOS usamos su id/seccion; si no, caemos al último
+                    // campo guardado por compatibilidad (evita romper si faltara el campo).
+                    $archivoFieldId   = $campoArchivos->id         ?? ($dForm_guardado->field_id  ?? null);
+                    $archivoSeccionId = $campoArchivos->seccion_id ?? ($dForm_guardado->seccion_id ?? null);
 
                     // Iteramos sobre los archivos recibidos
                     foreach ($archivos as $archivoData) {
@@ -492,9 +518,9 @@ class Formulario2Controller extends Controller
                         // Guardar la ruta del archivo en la base de datos (en DFormularios)
                         DForm::create([
                             "cform_id" => $cForm->id,
-                            "field_id" => $dForm_guardado->field_id,
+                            "field_id" => $archivoFieldId,
                             "value" => $path,  // Ruta del archivo
-                            "seccion_id" => $dForm_guardado->seccion_id,
+                            "seccion_id" => $archivoSeccionId,
                         ]);
                     }
                 }

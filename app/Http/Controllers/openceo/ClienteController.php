@@ -4,13 +4,12 @@ namespace App\Http\Controllers\openceo;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Models\crm\Audits;
-use App\Models\openceo\Cliente;
-use App\Models\User;
+use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ClienteController extends Controller
 {
@@ -79,6 +78,9 @@ class ClienteController extends Controller
         'cli_ilimitado',
         'cli_activo',
         'emp_id',
+        // Flag del front: true si en esta alta/edición se consultó una fuente externa (SRI/Ecuador Legal).
+        // fn_entidad_crear/modificar lo usan para sellar entidad.ent_fecha_ultima_consulta_identidad = now().
+        'consulto_identidad',
         'can_id',
         'ent_nombre_comercial',
         'ent_representante_legal',
@@ -129,9 +131,9 @@ class ClienteController extends Controller
         $payload['usuario_auditoria'] = $this->etiquetaUsuarioAuditoria();
 
         try {
-            $resultado = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload)]);
-
-            $this->registrarAuditoria($request, 'created', 'crearCliente', $resultado->cli_id, null, $payload);
+            // El bloque 'auditoria' (usuario/IP/user agent/request_id) va dentro del jsonb;
+            // la función PG lo usa para la auditoría forense y NO lo persiste como dato del cliente.
+            $resultado = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Cliente creado con éxito', ['cli_id' => $resultado->cli_id]));
         } catch (QueryException $e) {
@@ -175,17 +177,11 @@ class ClienteController extends Controller
         // Etiqueta "usu_alias - APELLIDOS NOMBRES" del usuario JWT, para cliente.updated_by.
         $payload['usuario_auditoria'] = $this->etiquetaUsuarioAuditoria();
 
-        // Snapshot del estado ANTES de modificar (old_values de la auditoría). Reusa el buscador que ya
-        // devuelve el cliente completo en JSON. Best-effort: si falla, la modificación igual procede.
-        $oldValues = $this->snapshotCliente(
-            $request->input('ent_identificacion'),
-            $request->input('ent_tipo_identificacion')
-        );
-
         try {
-            $resultado = DB::selectOne('SELECT crm.fn_clientes_modificar(?::jsonb) AS cli_id', [json_encode($payload)]);
-
-            $this->registrarAuditoria($request, 'updated', 'modificarCliente', $resultado->cli_id, $oldValues, $payload);
+            // El bloque 'auditoria' (usuario/IP/user agent/request_id) va dentro del jsonb;
+            // la función PG lo usa para la auditoría forense (auditoria.logs_cambios, donde
+            // ella misma captura el ANTES) y NO lo persiste como dato del cliente.
+            $resultado = DB::selectOne('SELECT crm.fn_clientes_modificar(?::jsonb) AS cli_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Cliente modificado con éxito', ['cli_id' => $resultado->cli_id]));
         } catch (QueryException $e) {
@@ -213,45 +209,28 @@ class ClienteController extends Controller
         return mb_substr($etiqueta, 0, 100);
     }
 
-    // Trae el estado actual del cliente (JSON) para usarlo como old_values en la auditoría de modificar().
-    // Best-effort: devuelve null si la identificación es inválida o no se encuentra (no debe frenar el flujo).
-    private function snapshotCliente($identificacion, $tipoIdentificacion): ?array
-    {
-        try {
-            $fila = DB::selectOne(
-                'SELECT datos FROM crm.fn_cliente_buscar_por_identificacion(?, ?)',
-                [$identificacion, $tipoIdentificacion]
-            );
+    // NOTA: la auditoría de cliente ya NO escribe en crm.audits (quedó de lado).
+    // La única auditoría es la FORENSE en auditoria.logs_cambios: la escriben las
+    // funciones PG (crear/modificar) o el trigger trg_cliente_audit (cambios directos
+    // en BD), y el modal la lee vía crm.fn_cliente_auditoria_listar_paginacion.
 
-            return $fila && $fila->datos ? json_decode($fila->datos, true) : null;
-        } catch (\Throwable $e) {
-            return null;
-        }
-    }
-
-    // Registra un evento de auditoría en crm.audits (mismo patrón manual que ComentariosController).
-    // Es best-effort: un fallo aquí NO debe revertir ni romper la creación/modificación del cliente
-    // (que ya se ejecutó en su propia transacción dentro de la función PG).
-    private function registrarAuditoria(Request $request, string $event, string $accion, $cliId, $oldValues, $newValues): void
+    // Bloque de contexto que viaja DENTRO del jsonb hacia las funciones PG
+    // (fn_clientes_registrar / fn_clientes_modificar) para la auditoría FORENSE
+    // (auditoria.fn_registrar_evento — UNA sola fila por operación). Si la función se
+    // ejecuta directo en la BD sin este bloque, la auditoría registra al usuario de
+    // base de datos con la marca DIRECT_DB_OPERATION.
+    private function contextoAuditoriaForense(Request $request): array
     {
-        try {
-            $audit = new Audits();
-            $audit->user_id = auth('api')->id();
-            $audit->event = $event;
-            $audit->auditable_type = Cliente::class;
-            $audit->auditable_id = $cliId;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip();
-            $audit->url = $request->fullUrl();
-            $audit->old_values = json_encode($oldValues ?? []);
-            $audit->new_values = json_encode($newValues ?? []);
-            $audit->user_agent = $request->header('User-Agent');
-            $audit->accion = $accion;
-            $audit->save();
-        } catch (\Throwable $e) {
-            // No interrumpir el flujo principal por un fallo de auditoría; solo se deja constancia en el log.
-            \Illuminate\Support\Facades\Log::warning('No se pudo registrar auditoría de cliente: ' . $e->getMessage());
-        }
+        $u = auth('api')->user();
+
+        return [
+            'usuario_id' => $u->id ?? null,
+            'usuario_login' => $u->usu_alias ?? null,
+            'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'request_id' => (string) Str::uuid(),
+        ];
     }
 
     // Catálogos para poblar los combos del formulario (réplica de mntClienteAux.jsf)
@@ -260,21 +239,8 @@ class ClienteController extends Controller
         try {
             $data = (object) [
                 'politicas' => DB::select("SELECT pol_id, pol_nombre, pol_diasplazo FROM politica WHERE pol_activo = true AND pol_tipocli = 1 ORDER BY pol_nombre"),
-                'categorias' => DB::select("SELECT cat_id, cat_nombre FROM catcliente WHERE cat_activo = true AND cat_tipocli = 1 ORDER BY cat_nombre"),
-                'canales' => DB::select("SELECT can_id, can_nombre FROM canal WHERE can_activo = true ORDER BY can_nombre"),
-                'agentes' => DB::select("SELECT emp.emp_id, TRIM(COALESCE(ent.ent_nombres, '') || ' ' || COALESCE(ent.ent_apellidos, '')) AS nombre_completo
-                    FROM empleado emp
-                    INNER JOIN entidad ent ON ent.ent_id = emp.ent_id
-                    WHERE emp.emp_activo = true
-                    ORDER BY nombre_completo"),
-                'zonas' => DB::select("SELECT zon_id, zon_nombre FROM zona WHERE zon_activo = true ORDER BY zon_nombre"),
-                'listasPrecio' => DB::select("SELECT lpr_id, lpr_nombre FROM listapre WHERE lpr_activo = true ORDER BY lpr_nombre"),
                 'paises' => DB::select("SELECT pai_id, pai_nombre FROM pais ORDER BY pai_nombre"),
-                'companias' => DB::select("SELECT com_id, com_nombre FROM compania WHERE com_activo = true ORDER BY com_nombre"),
-                'actividadesEconomicas' => DB::select("SELECT aec_id, aec_nombre FROM actividad_economica ORDER BY aec_nombre"),
-                'formasPago' => DB::select("SELECT sfp_id, sfp_nombre FROM sri_formas_pago ORDER BY sfp_nombre"),
                 'tiposTelefono' => DB::select("SELECT tte_id, tte_nombre FROM tipo_telefono ORDER BY tte_nombre"),
-                'ubicaciones' => DB::select("SELECT ubi_id, ubi_nombre FROM ubicacion WHERE ubi_activo = true ORDER BY ubi_nombre"),
                 'titulos' => DB::select("SELECT tit_id, tit_nombre FROM titulo WHERE tit_activo = true ORDER BY tit_nombre"),
                 'cantones' => DB::select("SELECT ctn_id, ctn_nombre, prv_id FROM canton ORDER BY ctn_nombre"),
                 'provincias' => DB::select("SELECT prv_id, prv_nombre FROM provincia ORDER BY prv_nombre"),
@@ -291,6 +257,17 @@ class ClienteController extends Controller
                 'emp_id' => DB::selectOne("SELECT emp.emp_id AS id, TRIM(COALESCE(ent.ent_nombres,'') || ' ' || COALESCE(ent.ent_apellidos,'')) AS label
                     FROM empleado emp INNER JOIN entidad ent ON ent.ent_id = emp.ent_id
                     WHERE emp.emp_activo = true ORDER BY emp.emp_id LIMIT 1"),
+                // Agente del VENDEDOR logueado: mapeo usu_alias del usuario CRM -> usuario ERP -> empleado.usu_id
+                // (mismo patrón que solicitudCredito). Solo se resuelve si mapea a un empleado ACTIVO; null si no.
+                // El front lo usa como Agente por defecto SOLO cuando el modal se abre desde el caso; si es null,
+                // add cae a 'ventas directa' (emp_id de arriba) y edit conserva el agente ya guardado del cliente.
+                'emp_id_vendedor' => ($aliasVendedor = optional(auth('api')->user())->usu_alias)
+                    ? DB::selectOne("SELECT emp.emp_id AS id, TRIM(COALESCE(ent.ent_nombres,'') || ' ' || COALESCE(ent.ent_apellidos,'')) AS label
+                        FROM empleado emp
+                        INNER JOIN entidad ent ON ent.ent_id = emp.ent_id
+                        INNER JOIN usuario usu ON usu.usu_id = emp.usu_id
+                        WHERE emp.emp_activo = true AND UPPER(TRIM(usu.usu_alias)) = UPPER(TRIM(?)) LIMIT 1", [$aliasVendedor])
+                    : null,
                 'can_id' => DB::selectOne("SELECT can_id AS id, can_nombre AS label FROM canal
                     WHERE can_activo = true AND can_id = (SELECT to_number(par_texto,'999999')::integer FROM parametro WHERE par_abreviacion='CAN' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1")
                     ?? DB::selectOne("SELECT can_id AS id, can_nombre AS label FROM canal WHERE can_activo = true ORDER BY can_id LIMIT 1"),
@@ -299,15 +276,36 @@ class ClienteController extends Controller
                 'sfp_id' => DB::selectOne("SELECT sfp_id AS id, sfp_nombre AS label FROM sri_formas_pago
                     WHERE UPPER(TRIM(sfp_nombre)) = 'SIN UTILIZACION DEL SISTEMA FINANCIERO' LIMIT 1")
                     ?? DB::selectOne("SELECT sfp_id AS id, sfp_nombre AS label FROM sri_formas_pago ORDER BY sfp_id LIMIT 1"),
-                // Ubicación por defecto del cliente: parámetro UBI/CLI (ubi_id 10150 = CUENCA).
-                'ubi_id' => DB::selectOne("SELECT ubi_id AS id, ubi_nombre AS label FROM ubicacion
-                    WHERE ubi_activo = true AND ubi_id = (SELECT to_number(par_texto,'999999')::integer FROM parametro WHERE par_abreviacion='UBI' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1"),
+                // 'ubi_id' se quitó de los defaults (2026-07-27): el campo "Ubicación para Dinardap" ya no se
+                // captura en el modal, y crm.fn_cliente_validaciones resuelve el valor con el mismo parámetro
+                // UBI/CLI (10150 = CUENCA) cuando llega vacío, respetando el que el cliente ya tenga.
                 // Categoría por defecto: catcliente.cat_pordefecto (cat_id=1 = CLIENTES). Mismo default que aplica PG.
                 'cat_id' => DB::selectOne("SELECT cat_id AS id, cat_nombre AS label FROM catcliente
                     WHERE cat_pordefecto = true AND cat_tipocli = 1 LIMIT 1"),
-                // Provincia por defecto para la cascada provincia->cantón->parroquia: AZUAY.
+                // Defaults de la geo que precarga el modal "+ agregar dirección" (solo direcciones NUEVAS;
+                // al editar una existente el modal nunca los aplica). Los tres filtran por su bandera de
+                // ACTIVO (2026-07-28): sin el filtro, el primer cantón alfabético de AZUAY era ASUNCION —
+                // inactivo, de los 225 que se desactivaron por ser parroquias disfrazadas de cantón — y su
+                // única parroquia, "SIN PARROQUIAS". Resultado: el modal precargaba un cantón que el propio
+                // selector ya no ofrece (y así nacieron las direcciones que hoy apuntan a cantones inactivos).
+                // OJO: esto filtra solo lo que se PROPONE al crear. Lo que un cliente ya tiene guardado se
+                // respeta aunque esté inactivo: el diccionario de etiquetas (cantones/provincias de arriba) y
+                // los endpoints cantonesByProvincia/parroquiasByCanton NO filtran, a propósito.
                 'prv_id' => DB::selectOne("SELECT prv_id AS id, prv_nombre AS label FROM provincia
-                    WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' LIMIT 1"),
+                    WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' AND prv_activo = true LIMIT 1"),
+                // Cantón por defecto: el PRIMER cantón ACTIVO (alfabético) de la provincia por defecto (AZUAY).
+                'ctn_id' => DB::selectOne("SELECT ctn_id AS id, ctn_nombre AS label FROM canton
+                    WHERE prv_id = (SELECT prv_id FROM provincia WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' AND prv_activo = true LIMIT 1)
+                      AND ctn_activo = true
+                    ORDER BY ctn_nombre LIMIT 1"),
+                // Parroquia por defecto: la PRIMERA parroquia ACTIVA (alfabética) del cantón por defecto de arriba.
+                'prq_id' => DB::selectOne("SELECT prq_id AS id, prq_nombre AS label FROM parroquia
+                    WHERE ctn_id = (SELECT ctn_id FROM canton
+                        WHERE prv_id = (SELECT prv_id FROM provincia WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' AND prv_activo = true LIMIT 1)
+                          AND ctn_activo = true
+                        ORDER BY ctn_nombre LIMIT 1)
+                      AND prq_activo = true
+                    ORDER BY prq_nombre LIMIT 1"),
                 // Nacionalidad por defecto: ECUADOR (parámetro PAI/CLI; fallback por nombre).
                 'pai_id' => DB::selectOne("SELECT pai_id AS id, pai_nombre AS label FROM pais
                     WHERE pai_codigo = (SELECT par_texto FROM parametro WHERE par_abreviacion='PAI' AND mod_abreviatura='CLI' LIMIT 1) LIMIT 1")
@@ -316,14 +314,15 @@ class ClienteController extends Controller
                 'tit_id' => DB::selectOne("SELECT tit_id AS id, tit_nombre AS label FROM titulo WHERE tit_activo=true ORDER BY (tit_id = 2) DESC, tit_nombre LIMIT 1"),
                 // Tipo de teléfono por defecto: CELULAR.
                 'tte_id' => DB::selectOne("SELECT tte_id AS id, tte_nombre AS label FROM tipo_telefono WHERE UPPER(TRIM(tte_nombre))='CELULAR' LIMIT 1"),
-                // Defaults demográficos/actividad (parametro_anexo). Sexo/Nivel/Vivienda/Sit.Laboral/Tipo Empresa
-                // = el "principal" del ERP (pane_principal=true). Estado Civil = SOLTERO (decisión del usuario;
+                // Defaults demográficos/actividad (parametro_anexo). Sexo/Nivel/Vivienda/Tipo Empresa = el
+                // "principal" del ERP (pane_principal=true). Estado Civil = SOLTERO (decisión del usuario;
                 // el "principal" del ERP es CASADO, se sobreescribe a propósito).
+                // 'pane_id_sla' (Situación Laboral) se quitó (2026-07-27): el combo salió del formulario y
+                // crm.fn_cliente_validaciones fija 26 (EMPLEADO E INDEPENDIENTE) cuando llega vacío.
                 'pane_id_sex' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=2 AND pane_principal=true LIMIT 1"),
                 'pane_id_eci' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=3 AND UPPER(TRIM(pane_nombre))='SOLTERO' LIMIT 1"),
                 'pane_id_nes' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=4 AND pane_principal=true LIMIT 1"),
                 'pane_id_tvi' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=5 AND pane_principal=true LIMIT 1"),
-                'pane_id_sla' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=6 AND pane_principal=true LIMIT 1"),
                 'pane_id_tem' => DB::selectOne("SELECT pane_id AS id, pane_nombre AS label FROM parametro_anexo WHERE pane_grupo_codigo=7 AND pane_principal=true LIMIT 1"),
                 // Parentesco/relación por defecto de las referencias: la primera opción del catálogo
                 // (en mayúsculas, igual que crm.fn_parentesco_listar_paginacion).
@@ -359,6 +358,7 @@ class ClienteController extends Controller
             'cantones' => 'crm.fn_canton_listar_paginacion',
             'parroquias' => 'crm.fn_parroquia_listar_paginacion',
             'actividadesEconomicas' => 'crm.fn_actividad_economica_listar_paginacion',
+            'cargos' => 'crm.fn_cargo_listar_paginacion',
             'companias' => 'crm.fn_compania_listar_paginacion',
             'ubicaciones' => 'crm.fn_ubicacion_listar_paginacion',
             'zonas' => 'crm.fn_zona_listar_paginacion',
@@ -427,7 +427,7 @@ class ClienteController extends Controller
     // Campos básicos que acepta el modal de empresa (se mandan a crm.fn_compania_crear/modificar como jsonb).
     private const CAMPOS_COMPANIA = [
         'com_id', 'com_nombre', 'com_ruc', 'com_direccion',
-        'com_telefono1', 'com_telefono2', 'com_actividad', 'com_contacto', 'ctn_id',
+        'com_telefono1', 'com_telefono2', 'com_actividad', 'com_contacto', 'ctn_id', 'com_tipo',
     ];
 
     public function companiaCrear(Request $request)
@@ -656,9 +656,12 @@ class ClienteController extends Controller
 
             // Guarda un snapshot de la solicitud cada vez que se imprime (header + referencias). Best-effort:
             // si falla el guardado, no debe impedir que se genere/imprima el reporte. CONTADO (sin datos)
-            // no persiste nada (la función devuelve NULL internamente).
+            // no persiste nada (la función devuelve NULL internamente). El id devuelto es el N° de solicitud
+            // que el front inyecta en el encabezado para mostrarlo en el reporte (igual que el flujo del caso).
+            $solicitudId = null;
             try {
-                DB::selectOne('SELECT crm.fn_solicitud_credito_guardar(?, ?, ?) AS impresion_id', [$cliId, $usuId, auth('api')->id()]);
+                $guardado = DB::selectOne('SELECT crm.fn_solicitud_credito_guardar(?, ?, ?) AS impresion_id', [$cliId, $usuId, auth('api')->id()]);
+                $solicitudId = $guardado->impresion_id ?? null;
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('No se pudo guardar el historial de solicitud de crédito: ' . $e->getMessage());
             }
@@ -666,6 +669,7 @@ class ClienteController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Solicitud de crédito generada con éxito', [
                 'filas' => $data,
                 'telefonos' => $telefonos,
+                'solicitud_id' => $solicitudId,
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo generar la solicitud de crédito', $th->getMessage()));
@@ -694,6 +698,19 @@ class ClienteController extends Controller
 
             $fila = $resultado[0] ?? null;
             $cliente = $fila ? json_decode($fila->datos, true) : null;
+
+            if ($cliente) {
+                // Tipo Persona deducido del número (Natural/Jurídica), para cuando el modal NO puede preguntarle
+                // al SRI: el throttle de consulta de identidad (ent_fecha_ultima_consulta_identidad) deja al edit
+                // sin 'tipoContribuyente'. Se calcula sobre la identificación DEL CLIENTE, no sobre la buscada:
+                // el buscador compara solo los primeros 10 dígitos, así que se puede buscar por cédula y traer
+                // al mismo titular guardado con RUC. Es solo la deducción; quién decide qué hacer con ella
+                // (corregir o respetar lo guardado) es el modal.
+                $cliente['tipo_sujeto_derivado'] = ValidacionCedulaRucService::tipoSujetoPorIdentificacion(
+                    $cliente['ent_identificacion'] ?? null,
+                    isset($cliente['ent_tipo_identificacion']) ? (int) $cliente['ent_tipo_identificacion'] : null
+                );
+            }
 
             return response()->json(RespuestaApi::returnResultado(
                 'success',

@@ -30,4 +30,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'google_sheets' => [
+        // Opción A (recomendada): JSON completo de la cuenta de servicio,
+        // codificado en Base64, en una sola línea del .env.
+        'credentials_json' => env('GOOGLE_SHEETS_CREDENTIALS_JSON'),
+        // Opción B: ruta a un archivo .json en disco.
+        // Por defecto: storage/app/google/service-account.json
+        'credentials' => env('GOOGLE_SHEETS_CREDENTIALS', storage_path('app/google/service-account.json')),
+        // ID de la hoja usada por defecto (opcional). Es el tramo del URL entre /d/ y /edit.
+        'spreadsheet_id' => env('GOOGLE_SHEETS_SPREADSHEET_ID'),
+    ],
+
 ];

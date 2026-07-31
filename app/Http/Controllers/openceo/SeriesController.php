@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\RichText\RichText;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -677,14 +679,14 @@ class SeriesController extends Controller
             }
 
             // Cargar el archivo con PhpSpreadsheet y convertir la hoja activa a array PHP.
-            // Parametros de toArray:
-            //   - null: valor para celdas vacias.
-            //   - true: incluir celdas vacias (necesario para que cuadre el indice).
-            //   - false: NO formatear (importante para que las fechas no se reordenen segun locale).
-            //   - false: NO usar referencias de celda (devuelve indices 0..N).
+            // NO se usa toArray(): con formatData=false las celdas con formato de
+            // FECHA devuelven el serial numerico de Excel (ej. "17/07/2026" -> 46220)
+            // y asi se estaba guardando; con formatData=true devuelven el texto segun
+            // el formato/locale de la celda (ej. "7/17/26"), que es ambiguo.
+            // hojaToArray() detecta las celdas fecha y las convierte a dd/mm/yyyy.
             $spreadsheet = IOFactory::load($archivo->getRealPath());
             $hoja = $spreadsheet->getActiveSheet();
-            $filas = $hoja->toArray(null, true, false, false);
+            $filas = $this->hojaToArray($hoja);
 
             // Debe haber al menos encabezado (fila 1) + 1 fila de datos.
             if (count($filas) < 2) {
@@ -1050,6 +1052,56 @@ class SeriesController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', $e->getMessage(), []));
         }
+    }
+
+    // Convierte la hoja activa a array PHP (indices 0..N), equivalente a
+    // toArray(null, true, false, false) pero con manejo correcto de FECHAS:
+    // Excel guarda las fechas como numero serial (ej. 17/07/2026 = 46220) y
+    // toArray() sin formato devolvia ese numero crudo, que terminaba guardado
+    // en la BD. Aqui se detecta el formato fecha/hora de la celda y se
+    // convierte a texto dd/mm/yyyy (con hora si la tiene), sin depender del
+    // locale del archivo.
+    private function hojaToArray($hoja): array
+    {
+        $maxFila = $hoja->getHighestDataRow();
+        $maxCol = Coordinate::columnIndexFromString($hoja->getHighestDataColumn());
+
+        $filas = [];
+        for ($f = 1; $f <= $maxFila; $f++) {
+            $fila = [];
+            for ($c = 1; $c <= $maxCol; $c++) {
+                // No crear celdas que no existen (ahorra memoria en hojas dispersas).
+                if (!$hoja->cellExists([$c, $f])) {
+                    $fila[] = null;
+                    continue;
+                }
+
+                $cell = $hoja->getCell([$c, $f]);
+
+                // Valor calculado (resuelve formulas, igual que toArray con calculateFormulas=true).
+                try {
+                    $valor = $cell->getCalculatedValue();
+                } catch (Exception $e) {
+                    $valor = $cell->getValue();
+                }
+
+                if ($valor instanceof RichText) {
+                    $valor = $valor->getPlainText();
+                }
+
+                // Celda con formato de fecha/hora: convertir el serial a texto legible.
+                if (is_numeric($valor) && ExcelDate::isDateTime($cell)) {
+                    $dt = ExcelDate::excelToDateTimeObject((float) $valor);
+                    $tieneHora = fmod((float) $valor, 1) > 0;
+                    $valor = $dt->format($tieneHora ? 'd/m/Y H:i' : 'd/m/Y');
+                }
+
+                $fila[] = $valor;
+            }
+            $filas[] = $fila;
+        }
+
+        return $filas;
     }
 
     // Determina si una fila esta completamente vacia (todos sus valores null o solo espacios).
