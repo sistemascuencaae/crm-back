@@ -803,6 +803,10 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/addEditReporteLinkUsuarios', [ReporteLinkUsuariosController::class, 'addEditReporteLinkUsuarios']); // guardar
 
     Route::get('/listReporteLinkByUserId/{id}', [ReporteLinkController::class, 'listReporteLinkByUserId']); // listar
+    Route::get('/listUsuActivosReportes', [ReporteLinkController::class, 'listUsuActivosReportes']); // listar
+    Route::get('/listReportesByUsuId/{id}', [ReporteLinkController::class, 'listReportesByUsuId']); // listar
+    Route::get('/listAllReportes', [ReporteLinkController::class, 'listAllReportes']); // listar
+    Route::post('/editReporteUsuario', [ReporteLinkController::class, 'editReporteUsuario']);
 
     // ULTIMO ID
 
