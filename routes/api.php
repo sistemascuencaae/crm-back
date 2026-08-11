@@ -16,6 +16,8 @@ use App\Http\Controllers\PowerBiRefreshDatasetController;
 use App\Http\Controllers\GoogleSheetsController;
 use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
+use App\Http\Controllers\anuncios\AnunciosController;
+use App\Http\Controllers\anuncios\AnunciosUsuarioController;
 use App\Http\Controllers\configuracion\CodigoQrController;
 use App\Http\Controllers\configuracion\HorarioController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
@@ -888,6 +890,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
 
     Route::get('/listUsuariosActivos', [UserController::class, 'listUsuariosActivos']);
+    Route::get('/listUsuariosActivos2', [UserController::class, 'listUsuariosActivos2']);
 
     Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']); //list
 
@@ -1703,4 +1706,27 @@ Route::group(['prefix' => 'crm/file-manager', 'middleware' => ['jwt.auth', 'usua
 Route::group(["prefix" => "corredores", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::post('/verificarClienteCorredor', [CorredorClienteController::class, 'verificarClienteCorredor']);
     Route::post('/guardarClienteCorredor', [CorredorClienteController::class, 'guardarClienteCorredor']);
+});
+
+// ANUNCIOS: publicidad interna mostrada al iniciar sesion y en la campanita.
+// AnunciosController es el CRUD de administracion; AnunciosUsuarioController
+// es el consumo del usuario final (que le toca ver y marcar visto).
+Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+
+    // ----- Administracion -----
+    Route::get('/listAllAnuncios', [AnunciosController::class, 'listAllAnuncios']);
+    Route::get('/getAnuncio/{id}', [AnunciosController::class, 'getAnuncio']);
+    Route::post('/addAnuncio', [AnunciosController::class, 'addAnuncio']);
+    Route::post('/editAnuncio/{id}', [AnunciosController::class, 'editAnuncio']);
+    Route::delete('/deleteAnuncio/{id}', [AnunciosController::class, 'deleteAnuncio']);
+
+    // ----- Imagenes -----
+    Route::post('/addImagenes/{anuncio_id}', [AnunciosController::class, 'addImagenes']);
+    Route::post('/reordenarImagenes/{anuncio_id}', [AnunciosController::class, 'reordenarImagenes']);
+    Route::delete('/deleteImagen/{id}', [AnunciosController::class, 'deleteImagen']);
+
+    // ----- Consumo del usuario final -----
+    Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
+    Route::post('/marcarVisto/{anuncio_id}', [AnunciosUsuarioController::class, 'marcarVisto']);
+    Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
 });
