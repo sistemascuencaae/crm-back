@@ -10,16 +10,9 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Consumo de anuncios por parte del usuario final: lo que alimenta el modal
- * al iniciar sesion y la campanita.
- */
 class AnunciosUsuarioController extends Controller
 {
-    /**
-     * Anuncios vigentes dirigidos al usuario autenticado.
-     * Los NO vistos salen primero; si ya los vio todos queda el orden normal.
-     */
+
     public function listAnunciosUsuario()
     {
         try {
@@ -40,35 +33,32 @@ class AnunciosUsuarioController extends Controller
             date_default_timezone_set("America/Guayaquil");
             $ahora = Carbon::now()->format('Y-m-d H:i:s');
 
-            $ids = DB::select("
-                SELECT a.id, (v.id IS NOT NULL) AS visto
-                FROM crm.anuncios a
-                JOIN crm.users u ON u.id = ?
-                LEFT JOIN crm.anuncios_vistos v
-                       ON v.anuncio_id = a.id AND v.user_id = u.id
-                WHERE a.activo = true
-                  AND ? BETWEEN a.fecha_inicio AND a.fecha_fin
-                  AND (
-                        a.ver_todos = true
-                        OR EXISTS (
-                             SELECT 1
-                             FROM crm.anuncios_destinos d
-                             WHERE d.anuncio_id = a.id
-                               AND (
-                                     (d.tipo = ? AND d.destino_id = u.dep_id)
-                                  OR (d.tipo = ? AND d.destino_id = u.profile_id)
-                                  OR (d.tipo = ? AND d.destino_id = u.id)
-                                   )
-                           )
-                      )
-                ORDER BY (v.id IS NOT NULL), a.orden, a.id
-            ", [
-                $userId,
-                $ahora,
-                AnuncioDestino::TIPO_DEPARTAMENTO,
-                AnuncioDestino::TIPO_PERFIL,
-                AnuncioDestino::TIPO_USUARIO,
-            ]);
+            $ids = DB::select("SELECT a.id, (v.id IS NOT NULL) AS visto
+                                FROM crm.anuncios a
+                                JOIN crm.users u ON u.id = ?
+                                LEFT JOIN crm.anuncios_vistos v
+                                    ON v.anuncio_id = a.id AND v.user_id = u.id
+                                WHERE a.activo = true
+                                    AND ? BETWEEN a.fecha_inicio AND a.fecha_fin
+                                    AND (
+                                        a.ver_todos = true
+                                        OR EXISTS (
+                                            SELECT 1
+                                            FROM crm.anuncios_destinos d
+                                            WHERE d.anuncio_id = a.id
+                                                AND (
+                                                    (d.tipo = ? AND d.destino_id = u.dep_id)
+                                                    OR (d.tipo = ? AND d.destino_id = u.profile_id)
+                                                    OR (d.tipo = ? AND d.destino_id = u.id)
+                                                    )
+                                            )
+                                        )
+                                ORDER BY (v.id IS NOT NULL), a.orden, a.id
+                            ", [$userId, $ahora,
+                                AnuncioDestino::TIPO_DEPARTAMENTO,
+                                AnuncioDestino::TIPO_PERFIL,
+                                AnuncioDestino::TIPO_USUARIO,
+                                ]);
 
             // se resuelve en dos pasos: la consulta cruda define QUE y en que
             // orden, y Eloquent trae las imagenes sin repetir filas
@@ -76,14 +66,14 @@ class AnunciosUsuarioController extends Controller
             $vistos = array_column($ids, 'visto', 'id');
 
             $anuncios = Anuncio::with("imagenes")
-                ->whereIn("id", $orden)
-                ->get()
-                ->sortBy(fn($a) => array_search($a->id, $orden))
-                ->values()
-                ->map(function ($anuncio) use ($vistos) {
-                    $anuncio->visto = (bool) ($vistos[$anuncio->id] ?? false);
-                    return $anuncio;
-                });
+                                    ->whereIn("id", $orden)
+                                    ->get()
+                                    ->sortBy(fn($a) => array_search($a->id, $orden))
+                                    ->values()
+                                    ->map(function ($anuncio) use ($vistos) {
+                                        $anuncio->visto = (bool) ($vistos[$anuncio->id] ?? false);
+                                        return $anuncio;
+                                    });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $anuncios));
         } catch (Exception $e) {
@@ -107,11 +97,10 @@ class AnunciosUsuarioController extends Controller
 
             // ON CONFLICT contra el UNIQUE (anuncio_id, user_id): permite
             // insertar a ciegas sin consultar antes si ya estaba marcado
-            DB::insert("
-                INSERT INTO crm.anuncios_vistos (anuncio_id, user_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT (anuncio_id, user_id) DO NOTHING
-            ", [$anuncio_id, auth()->id(), $ahora, $ahora]);
+            DB::insert("INSERT INTO crm.anuncios_vistos (anuncio_id, user_id, created_at, updated_at)
+                        VALUES (?, ?, ?, ?)
+                        ON CONFLICT (anuncio_id, user_id) DO NOTHING
+                        ", [$anuncio_id, auth()->id(), $ahora, $ahora]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se marco como visto', true));
         } catch (Exception $e) {
@@ -138,11 +127,11 @@ class AnunciosUsuarioController extends Controller
 
             DB::transaction(function () use ($ids, $userId, $ahora) {
                 foreach ($ids as $anuncioId) {
-                    DB::insert("
-                        INSERT INTO crm.anuncios_vistos (anuncio_id, user_id, created_at, updated_at)
-                        VALUES (?, ?, ?, ?)
-                        ON CONFLICT (anuncio_id, user_id) DO NOTHING
-                    ", [(int) $anuncioId, $userId, $ahora, $ahora]);
+
+                    DB::insert("INSERT INTO crm.anuncios_vistos (anuncio_id, user_id, created_at, updated_at)
+                                VALUES (?, ?, ?, ?)
+                                ON CONFLICT (anuncio_id, user_id) DO NOTHING
+                                ", [(int) $anuncioId, $userId, $ahora, $ahora]);
                 }
             });
 
