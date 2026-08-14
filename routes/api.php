@@ -158,6 +158,7 @@ use App\Http\Controllers\gestionClientes\TipoAdjuntoController;
 use App\Http\Controllers\gestionClientes\CSemaforoController;
 use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
+use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ServidorController;
 use Illuminate\Support\Facades\Route;
 
@@ -240,15 +241,15 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
-
+    // ? START POLITICAS
+    Route::get('/listAllPoliticas', [PoliticaController::class, 'listAllPoliticas']);
+    Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
+    Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);
+    // ? END POLITICAS
 
     // ? START COBRANZAS
-
     Route::get('/diferenciasFechasDynamoNovasoft', [CobranzasController::class, 'diferenciasFechasDynamoNovasoft']);
-
     // ? END COBRANZAS
-
-
 
     // ? START API TESTER
     // Colecciones
