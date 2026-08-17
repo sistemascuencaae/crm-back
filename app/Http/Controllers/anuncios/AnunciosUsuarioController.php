@@ -12,6 +12,43 @@ use Illuminate\Support\Facades\DB;
 
 class AnunciosUsuarioController extends Controller
 {
+    /**
+     * Configuracion del modulo para el frontend.
+     *
+     * Existe porque el frontend NO conoce crm.parametro: esa bandera solo la
+     * leia el backend, y por eso el modulo tenia el interruptor repartido entre
+     * la base de datos y codigo comentado en Angular, que habia que mantener en
+     * sincronia a mano. Con esto **la base de datos es la unica que manda**:
+     * apagar el modulo es un UPDATE, sin recompilar ni tocar nada.
+     *
+     * Va en un endpoint aparte y no dentro de listAnunciosUsuario porque
+     * RespuestaApi tiene un solo campo 'data': meter la config ahi obligaria a
+     * envolver la respuesta en {anuncios, config} y romper el contrato que el
+     * frontend ya consume.
+     *
+     * OJO: este metodo NO puede cortar por modulo apagado como los de abajo.
+     * Es justamente el que informa si esta apagado.
+     */
+    public function config()
+    {
+        // Ante cualquier fallo se responde todo en false y con exito: el
+        // default seguro es no mostrar nada, y el frontend no se rompe.
+        $configuracion = [
+            'modulo_activo' => false,
+            'marca_agua'    => false,
+        ];
+
+        try {
+            // UNA sola consulta a crm.parametro, resuelta entera en el modelo
+            $configuracion = Anuncio::configuracion();
+        } catch (Exception $e) {
+            // se deja la configuracion en false
+        }
+
+        return response()->json(
+            RespuestaApi::returnResultado('success', 'Se obtuvo la configuración', $configuracion)
+        );
+    }
 
     public function listAnunciosUsuario()
     {

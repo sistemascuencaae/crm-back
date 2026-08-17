@@ -202,6 +202,10 @@ class PoliticaController extends Controller
             'pol_valorhasta'          => 'required|numeric',
             'pol_lineacredito'        => 'required|integer',
             'pol_por_desc'            => 'required|numeric',
+            // Modalidad: false = CONTADO, true = CREDITO. Es la que manda; el
+            // % de contado pasa a ser consecuencia (en contado la funcion lo
+            // fuerza a 100 y el formulario ni siquiera lo muestra).
+            'pol_tipo_politica'       => 'required|boolean',
             'pol_por_pagconta'        => 'required|numeric',
             'pol_por_financia'        => 'nullable|numeric',
             'pol_por_propago'         => 'nullable|numeric',
@@ -227,6 +231,7 @@ class PoliticaController extends Controller
             'pol_valorhasta'          => $request->input('pol_valorhasta'),
             'pol_lineacredito'        => $request->input('pol_lineacredito'),
             'pol_por_desc'            => $request->input('pol_por_desc'),
+            'pol_tipo_politica'       => $request->boolean('pol_tipo_politica'),
             'pol_por_pagconta'        => $request->input('pol_por_pagconta'),
             'pol_por_financia'        => $request->input('pol_por_financia'),
             'pol_por_propago'         => $request->input('pol_por_propago'),

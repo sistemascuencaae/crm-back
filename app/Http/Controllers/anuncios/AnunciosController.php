@@ -24,7 +24,7 @@ class AnunciosController extends Controller
     private const CARPETA = "anuncios";
 
     /** tamano maximo por imagen en KB */
-    private const MAX_KB_IMAGEN = 5120;
+    private const MAX_KB_IMAGEN = 10240;
 
     /**
      * Interruptor del modulo para TODO el CRUD, en un solo lugar.
