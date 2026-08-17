@@ -242,9 +242,12 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     // ? START POLITICAS
-    Route::get('/listAllPoliticas', [PoliticaController::class, 'listAllPoliticas']);
+    Route::get('/listPoliticasPaginado', [PoliticaController::class, 'listPoliticasPaginado']);
+    Route::get('/getPolitica/{id}', [PoliticaController::class, 'getPolitica']);
     Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
     Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);
+    Route::post('/cambiarEstadoPolitica/{id}', [PoliticaController::class, 'cambiarEstadoPolitica']);
+    Route::get('/politicaAuditoria', [PoliticaController::class, 'politicaAuditoria']);
     // ? END POLITICAS
 
     // ? START COBRANZAS
@@ -1727,6 +1730,9 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::delete('/deleteImagen/{id}', [AnunciosController::class, 'deleteImagen']);
 
     // ----- Consumo del usuario final -----
+    // config va PRIMERO y sin verificacion de modulo: es el que informa si el
+    // modulo esta encendido y que extras se muestran (marca de agua)
+    Route::get('/config', [AnunciosUsuarioController::class, 'config']);
     Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
     Route::post('/marcarVisto/{anuncio_id}', [AnunciosUsuarioController::class, 'marcarVisto']);
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
