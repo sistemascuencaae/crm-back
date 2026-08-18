@@ -1713,27 +1713,12 @@ Route::group(["prefix" => "corredores", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::post('/guardarClienteCorredor', [CorredorClienteController::class, 'guardarClienteCorredor']);
 });
 
-// ANUNCIOS: publicidad interna mostrada al iniciar sesion y en la campanita.
-// AnunciosController es el CRUD de administracion; AnunciosUsuarioController
-// es el consumo del usuario final (que le toca ver y marcar visto).
 Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
-
-    // ----- Administracion -----
-    // Las imagenes ya NO tienen endpoints propios: addAnuncio y editAnuncio
-    // resuelven altas, bajas y reorden en una sola peticion (una transaccion y
-    // una sola fila de auditoria por operacion del usuario).
-    // Los parametros de paginacion (pagina, tamanio, busqueda) van por query string.
     Route::get('/listAllAnuncios', [AnunciosController::class, 'listAllAnuncios']);
     Route::post('/addAnuncio', [AnunciosController::class, 'addAnuncio']);
     Route::post('/editAnuncio/{id}', [AnunciosController::class, 'editAnuncio']);
     Route::delete('/deleteAnuncio/{id}', [AnunciosController::class, 'deleteAnuncio']);
-
-    // ----- Auditoria forense (modal del CRUD, gateado con crm.access.audit) -----
     Route::get('/anuncioAuditoria/{id}', [AnunciosController::class, 'anuncioAuditoria']);
-
-    // ----- Consumo del usuario final -----
-    // config va PRIMERO y sin verificacion de modulo: es el que informa si el
-    // modulo esta encendido y que extras se muestran (marca de agua)
     Route::get('/config', [AnunciosUsuarioController::class, 'config']);
     Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);

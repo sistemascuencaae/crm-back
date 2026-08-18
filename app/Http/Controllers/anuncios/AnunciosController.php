@@ -21,9 +21,9 @@ class AnunciosController extends Controller
     private const MAX_KB_IMAGEN = 10240;
 
     private const MENSAJES_ERROR = [
-        'TITULO_REQUERIDO'      => 'El título es obligatorio.',
-        'FECHAS_REQUERIDAS'     => 'Las fechas de inicio y fin son obligatorias.',
-        'FECHA_FIN_MENOR'       => 'La fecha fin no puede ser anterior a la fecha inicio.',
+        'TITULO_REQUERIDO' => 'El título es obligatorio.',
+        'FECHAS_REQUERIDAS' => 'Las fechas de inicio y fin son obligatorias.',
+        'FECHA_FIN_MENOR' => 'La fecha fin no puede ser anterior a la fecha inicio.',
         'TIPO_DESTINO_INVALIDO' => 'Tipo de destino no válido.',
         'ANUNCIO_NO_ENCONTRADO' => 'No se encontró el anuncio.',
     ];
@@ -43,8 +43,8 @@ class AnunciosController extends Controller
     public function listAllAnuncios(Request $request)
     {
         try {
-            $pagina   = max((int) $request->query('pagina', 1), 1);
-            $tamanio  = max((int) $request->query('tamanio', 10), 1);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             $registros = DB::select(
@@ -64,17 +64,17 @@ class AnunciosController extends Controller
                 // Los tipos los daba Eloquent con $casts; con DB::select hay que
                 // ponerlos a mano o los checkbox del modal de edicion reciben
                 // texto y quedan siempre marcados.
-                $registro->activo         = (bool) $registro->activo;
-                $registro->ver_todos      = (bool) $registro->ver_todos;
-                $registro->orden          = (int) $registro->orden;
+                $registro->activo = (bool) $registro->activo;
+                $registro->ver_todos = (bool) $registro->ver_todos;
+                $registro->orden = (int) $registro->orden;
                 $registro->total_imagenes = (int) $registro->total_imagenes;
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 'registros' => $registros,
-                'total'     => (int) $total,
-                'pagina'    => $pagina,
-                'tamanio'   => $tamanio,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
             ]));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
@@ -100,11 +100,11 @@ class AnunciosController extends Controller
             $rutasSubidas = array_column($imagenes, 'ruta');
 
             $payload = $this->payloadCabecera($request) + [
-                'id'         => $anuncioId,
+                'id' => $anuncioId,
                 'created_by' => auth()->id(),
-                'destinos'   => $this->comoArreglo($request->input("destinos")),
-                'imagenes'   => $imagenes,
-                'auditoria'  => $this->contextoAuditoriaForense($request),
+                'destinos' => $this->comoArreglo($request->input("destinos")),
+                'imagenes' => $imagenes,
+                'auditoria' => $this->contextoAuditoriaForense($request),
             ];
 
             DB::selectOne('SELECT crm.fn_anuncio_crear(?::jsonb) AS id', [json_encode($payload)]);
@@ -143,11 +143,11 @@ class AnunciosController extends Controller
             $rutasSubidas = array_column($imagenes, 'ruta');
 
             $payload = $this->payloadCabecera($request) + [
-                'id'                => $anuncioId,
-                'imagenes'          => $imagenes,
+                'id' => $anuncioId,
+                'imagenes' => $imagenes,
                 'imagenes_eliminar' => $this->comoArreglo($request->input("imagenes_eliminar")),
-                'imagenes_orden'    => $this->comoArreglo($request->input("imagenes_orden")),
-                'auditoria'         => $this->contextoAuditoriaForense($request),
+                'imagenes_orden' => $this->comoArreglo($request->input("imagenes_orden")),
+                'auditoria' => $this->contextoAuditoriaForense($request),
             ];
 
             // los destinos solo se reemplazan si vinieron en la peticion
@@ -208,8 +208,8 @@ class AnunciosController extends Controller
     public function anuncioAuditoria(Request $request, $id)
     {
         try {
-            $pagina   = max((int) $request->query('pagina', 1), 1);
-            $tamanio  = max((int) $request->query('tamanio', 10), 1);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             $resumen = DB::selectOne('SELECT * FROM crm.fn_anuncio_auditoria_resumen(?)', [(int) $id]);
@@ -223,8 +223,8 @@ class AnunciosController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
                 'resumen' => $resumen,
                 'eventos' => $eventos,
-                'total'   => (int) $total,
-                'pagina'  => $pagina,
+                'total' => (int) $total,
+                'pagina' => $pagina,
                 'tamanio' => $tamanio,
             ]));
         } catch (Exception $e) {
@@ -269,8 +269,8 @@ class AnunciosController extends Controller
             $nombre = Carbon::now()->format('Y-m-d') . '-' . uniqid() . '-' . $nombreLimpio;
 
             $imagenes[] = [
-                'ruta'  => $disco->putFileAs($carpeta, $archivo, $nombre),
-                'alt'   => $alts[$indice] ?? null,
+                'ruta' => $disco->putFileAs($carpeta, $archivo, $nombre),
+                'alt' => $alts[$indice] ?? null,
                 'orden' => null, // lo numera la funcion, continuando las existentes
             ];
         }
@@ -303,18 +303,17 @@ class AnunciosController extends Controller
         return ($fila && $fila->datos) ? (json_decode($fila->datos, true) ?: []) : [];
     }
 
-    /** Campos de cabecera comunes a crear y modificar. */
     private function payloadCabecera(Request $request): array
     {
         return [
-            'titulo'       => $request->input("titulo"),
-            'descripcion'  => $request->input("descripcion"),
+            'titulo' => $request->input("titulo"),
+            'descripcion' => $request->input("descripcion"),
             'fecha_inicio' => $request->input("fecha_inicio"),
-            'fecha_fin'    => $request->input("fecha_fin"),
-            'activo'       => $request->boolean("activo", true),
-            'ver_todos'    => $request->boolean("ver_todos", false),
-            'orden'        => (int) $request->input("orden", 0),
-            'ahora'        => $this->ahora(),
+            'fecha_fin' => $request->input("fecha_fin"),
+            'activo' => $request->boolean("activo", true),
+            'ver_todos' => $request->boolean("ver_todos", false),
+            'orden' => (int) $request->input("orden", 0),
+            'ahora' => $this->ahora(),
         ];
     }
 
@@ -330,12 +329,12 @@ class AnunciosController extends Controller
         $u = auth('api')->user();
 
         return [
-            'usuario_id'     => $u->id ?? null,
-            'usuario_login'  => $u->usu_alias ?? null,
+            'usuario_id' => $u->id ?? null,
+            'usuario_login' => $u->usu_alias ?? null,
             'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
-            'ip_address'     => $request->ip(),
-            'user_agent'     => substr((string) $request->userAgent(), 0, 500),
-            'request_id'     => (string) \Illuminate\Support\Str::uuid(),
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 500),
+            'request_id' => (string) \Illuminate\Support\Str::uuid(),
         ];
     }
 
