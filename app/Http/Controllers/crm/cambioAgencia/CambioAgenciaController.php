@@ -114,6 +114,28 @@ class CambioAgenciaController extends Controller
         }
     }
 
+    public function vendedorAgenciaAuditoria(Request $request)
+    {
+        try {
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            $eventos = DB::select('SELECT * FROM crm.fn_vendedor_agencia_auditoria_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+
+            $total = $eventos[0]->total_registros ?? 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'eventos' => $eventos,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría', $e->getMessage()));
+        }
+    }
+
     private function contextoAuditoriaForense(Request $request): array
     {
         $u = auth('api')->user();

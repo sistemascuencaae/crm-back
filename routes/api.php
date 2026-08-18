@@ -295,6 +295,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listAlmacenesDynamo', [CambioAgenciaController::class, 'listAlmacenesDynamo']);
     Route::post('/getVendedorByIdentificacion', [CambioAgenciaController::class, 'getVendedorByIdentificacion']);
     Route::post('/editAgenciaVendedor', [CambioAgenciaController::class, 'editAgenciaVendedor']);
+    Route::get('/vendedorAgenciaAuditoria', [CambioAgenciaController::class, 'vendedorAgenciaAuditoria']);
     // ? END CAMBIO VENDEDORES AGENCIA
 
 
