@@ -1718,22 +1718,22 @@ Route::group(["prefix" => "corredores", 'middleware' => ['jwt.auth', 'usuario.ac
 Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
 
     // ----- Administracion -----
+    // Las imagenes ya NO tienen endpoints propios: addAnuncio y editAnuncio
+    // resuelven altas, bajas y reorden en una sola peticion (una transaccion y
+    // una sola fila de auditoria por operacion del usuario).
+    // Los parametros de paginacion (pagina, tamanio, busqueda) van por query string.
     Route::get('/listAllAnuncios', [AnunciosController::class, 'listAllAnuncios']);
-    Route::get('/getAnuncio/{id}', [AnunciosController::class, 'getAnuncio']);
     Route::post('/addAnuncio', [AnunciosController::class, 'addAnuncio']);
     Route::post('/editAnuncio/{id}', [AnunciosController::class, 'editAnuncio']);
     Route::delete('/deleteAnuncio/{id}', [AnunciosController::class, 'deleteAnuncio']);
 
-    // ----- Imagenes -----
-    Route::post('/addImagenes/{anuncio_id}', [AnunciosController::class, 'addImagenes']);
-    Route::post('/reordenarImagenes/{anuncio_id}', [AnunciosController::class, 'reordenarImagenes']);
-    Route::delete('/deleteImagen/{id}', [AnunciosController::class, 'deleteImagen']);
+    // ----- Auditoria forense (modal del CRUD, gateado con crm.access.audit) -----
+    Route::get('/anuncioAuditoria/{id}', [AnunciosController::class, 'anuncioAuditoria']);
 
     // ----- Consumo del usuario final -----
     // config va PRIMERO y sin verificacion de modulo: es el que informa si el
     // modulo esta encendido y que extras se muestran (marca de agua)
     Route::get('/config', [AnunciosUsuarioController::class, 'config']);
     Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
-    Route::post('/marcarVisto/{anuncio_id}', [AnunciosUsuarioController::class, 'marcarVisto']);
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
 });
