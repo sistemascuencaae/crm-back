@@ -78,6 +78,17 @@ class UserController extends Controller
         }
     }
 
+    public function listUsuariosActivos2()
+    {
+        try {
+            $usuarios = User::where('estado', true)->orderBy("name", "asc")->get(["id", "usu_alias", "name", "surname"]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuarios));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
     public function allUsers()
     {
         try {

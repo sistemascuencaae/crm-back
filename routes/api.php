@@ -16,6 +16,8 @@ use App\Http\Controllers\PowerBiRefreshDatasetController;
 use App\Http\Controllers\GoogleSheetsController;
 use App\Http\Controllers\configuracion\AgenciaController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
+use App\Http\Controllers\anuncios\AnunciosController;
+use App\Http\Controllers\anuncios\AnunciosUsuarioController;
 use App\Http\Controllers\configuracion\CodigoQrController;
 use App\Http\Controllers\configuracion\HorarioController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
@@ -156,6 +158,7 @@ use App\Http\Controllers\gestionClientes\TipoAdjuntoController;
 use App\Http\Controllers\gestionClientes\CSemaforoController;
 use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
+use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ServidorController;
 use Illuminate\Support\Facades\Route;
 
@@ -238,15 +241,18 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
-
+    // ? START POLITICAS
+    Route::get('/listPoliticasPaginado', [PoliticaController::class, 'listPoliticasPaginado']);
+    Route::get('/getPolitica/{id}', [PoliticaController::class, 'getPolitica']);
+    Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
+    Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);
+    Route::post('/cambiarEstadoPolitica/{id}', [PoliticaController::class, 'cambiarEstadoPolitica']);
+    Route::get('/politicaAuditoria', [PoliticaController::class, 'politicaAuditoria']);
+    // ? END POLITICAS
 
     // ? START COBRANZAS
-
     Route::get('/diferenciasFechasDynamoNovasoft', [CobranzasController::class, 'diferenciasFechasDynamoNovasoft']);
-
     // ? END COBRANZAS
-
-
 
     // ? START API TESTER
     // Colecciones
@@ -803,6 +809,10 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/addEditReporteLinkUsuarios', [ReporteLinkUsuariosController::class, 'addEditReporteLinkUsuarios']); // guardar
 
     Route::get('/listReporteLinkByUserId/{id}', [ReporteLinkController::class, 'listReporteLinkByUserId']); // listar
+    Route::get('/listUsuActivosReportes', [ReporteLinkController::class, 'listUsuActivosReportes']); // listar
+    Route::get('/listReportesByUsuId/{id}', [ReporteLinkController::class, 'listReportesByUsuId']); // listar
+    Route::get('/listAllReportes', [ReporteLinkController::class, 'listAllReportes']); // listar
+    Route::post('/editReporteUsuario', [ReporteLinkController::class, 'editReporteUsuario']);
 
     // ULTIMO ID
 
@@ -884,6 +894,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/guardarComentario', [ComentariosController::class, 'guardarComentario']);
 
     Route::get('/listUsuariosActivos', [UserController::class, 'listUsuariosActivos']);
+    Route::get('/listUsuariosActivos2', [UserController::class, 'listUsuariosActivos2']);
 
     Route::get('/listCasosUsuarios/{tabId}', [TableroProcesosController::class, 'list']); //list
 
@@ -1699,4 +1710,30 @@ Route::group(['prefix' => 'crm/file-manager', 'middleware' => ['jwt.auth', 'usua
 Route::group(["prefix" => "corredores", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::post('/verificarClienteCorredor', [CorredorClienteController::class, 'verificarClienteCorredor']);
     Route::post('/guardarClienteCorredor', [CorredorClienteController::class, 'guardarClienteCorredor']);
+});
+
+// ANUNCIOS: publicidad interna mostrada al iniciar sesion y en la campanita.
+// AnunciosController es el CRUD de administracion; AnunciosUsuarioController
+// es el consumo del usuario final (que le toca ver y marcar visto).
+Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+
+    // ----- Administracion -----
+    // Las imagenes ya NO tienen endpoints propios: addAnuncio y editAnuncio
+    // resuelven altas, bajas y reorden en una sola peticion (una transaccion y
+    // una sola fila de auditoria por operacion del usuario).
+    // Los parametros de paginacion (pagina, tamanio, busqueda) van por query string.
+    Route::get('/listAllAnuncios', [AnunciosController::class, 'listAllAnuncios']);
+    Route::post('/addAnuncio', [AnunciosController::class, 'addAnuncio']);
+    Route::post('/editAnuncio/{id}', [AnunciosController::class, 'editAnuncio']);
+    Route::delete('/deleteAnuncio/{id}', [AnunciosController::class, 'deleteAnuncio']);
+
+    // ----- Auditoria forense (modal del CRUD, gateado con crm.access.audit) -----
+    Route::get('/anuncioAuditoria/{id}', [AnunciosController::class, 'anuncioAuditoria']);
+
+    // ----- Consumo del usuario final -----
+    // config va PRIMERO y sin verificacion de modulo: es el que informa si el
+    // modulo esta encendido y que extras se muestran (marca de agua)
+    Route::get('/config', [AnunciosUsuarioController::class, 'config']);
+    Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
+    Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
 });

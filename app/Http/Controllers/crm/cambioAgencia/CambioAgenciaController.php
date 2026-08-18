@@ -9,6 +9,7 @@ use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class CambioAgenciaController extends Controller
 {
@@ -73,7 +74,7 @@ class CambioAgenciaController extends Controller
                             ", [$request->identificacion, $request->identificacion]);
 
             if (!$data) {
-                return response()->json(RespuestaApi::returnResultado('error', 'No existe un vendedor con la identificación que ingresó', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'El vendedor no existe o esta inactivo.', null));
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $data));
@@ -96,37 +97,82 @@ class CambioAgenciaController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos', $validator->errors()));
             }
 
-            DB::beginTransaction();
+            $payload = $request->only(['pve_id', 'alm_id', 'usu_id_dynamo', 'usu_id_crm']);
+            $payload['auditoria'] = $this->contextoAuditoriaForense($request);
 
-            if ($request->usu_id_dynamo) {
-                DB::update("UPDATE public.usuario SET pve_id = ? WHERE usu_id = ?", [
-                    $request->pve_id,
-                    $request->usu_id_dynamo
-                ]);
+            $resultado = DB::selectOne('SELECT crm.fn_vendedor_actualizar_agencia(?::jsonb) AS resultado', [json_encode($payload)]);
+
+            $respuesta = json_decode($resultado->resultado, true);
+
+            if ($respuesta['success']) {
+                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], null));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
             }
-
-            if ($request->usu_id_crm) {
-                DB::update("UPDATE crm.users SET alm_id = ? WHERE id = ?", [
-                    $request->alm_id,
-                    $request->usu_id_crm
-                ]);
-
-                // 7. Elimina todos los permisos de las agencias del vendedor.
-                UsuarioAlmacen::where('user_id', $request->usu_id_crm)->delete();
-
-                // 8. Crea el permiso de la agencia.
-                UsuarioAlmacen::create([
-                    'alm_id' => $request->alm_id,
-                    'user_id' => $request->usu_id_crm,
-                ]);
-            }
-
-            DB::commit();
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Agencia actualizada correctamente', null));
         } catch (Exception $e) {
-            DB::rollBack();
             return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar la agencia', $e->getMessage()));
         }
     }
+
+    private function contextoAuditoriaForense(Request $request): array
+    {
+        $u = auth('api')->user();
+
+        return [
+            'usuario_id' => $u->id ?? null,
+            'usuario_login' => $u->usu_alias ?? null,
+            'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'request_id' => (string) Str::uuid(),
+        ];
+    }
 }
+
+    // public function editAgenciaVendedor(Request $request)
+    // {
+    //     try {
+    //         $validator = Validator::make($request->all(), [
+    //             'usu_id_dynamo' => 'nullable|integer',
+    //             'usu_id_crm' => 'nullable|integer',
+    //             'pve_id' => 'required|integer',
+    //             'alm_id' => 'required|integer'
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos', $validator->errors()));
+    //         }
+
+    //         DB::beginTransaction();
+
+    //         if ($request->usu_id_dynamo) {
+    //             DB::update("UPDATE public.usuario SET pve_id = ? WHERE usu_id = ?", [
+    //                 $request->pve_id,
+    //                 $request->usu_id_dynamo
+    //             ]);
+    //         }
+
+    //         if ($request->usu_id_crm) {
+    //             DB::update("UPDATE crm.users SET alm_id = ? WHERE id = ?", [
+    //                 $request->alm_id,
+    //                 $request->usu_id_crm
+    //             ]);
+
+    //             // 7. Elimina todos los permisos de las agencias del vendedor.
+    //             UsuarioAlmacen::where('user_id', $request->usu_id_crm)->delete();
+
+    //             // 8. Crea el permiso de la agencia.
+    //             UsuarioAlmacen::create([
+    //                 'alm_id' => $request->alm_id,
+    //                 'user_id' => $request->usu_id_crm,
+    //             ]);
+    //         }
+
+    //         DB::commit();
+
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Agencia actualizada correctamente', null));
+    //     } catch (Exception $e) {
+    //         DB::rollBack();
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar la agencia', $e->getMessage()));
+    //     }
+    // }
