@@ -60,6 +60,8 @@ class ClienteController extends Controller
         'REQUIERE_DIA' => 'Debe seleccionar el día de visita.',
         'DIA_INVALIDO' => 'El día debe estar entre 1 y 30, o ser 99.',
         'RUTA_DUPLICADA' => 'El cliente tiene más de un rutaje registrado. Debe depurarse antes de continuar.',
+        // Canal del cliente (crm.fn_cliente_registrar_canal)
+        'CANAL_INVALIDO' => 'El canal no es válido o no está activo.',
     ];
 
     // Campos que se envían tal cual a crm.fn_clientes_registrar/crm.fn_clientes_modificar como jsonb
@@ -797,6 +799,69 @@ class ClienteController extends Controller
             }
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar el rutaje', $e->getMessage()));
+        }
+    }
+
+    // Canal actual del cliente (cliente.can_id) para precargar el modal.
+    public function obtenerCanalCliente($cliId)
+    {
+        try {
+            $fila = DB::selectOne('SELECT crm.fn_cliente_obtener_canal(?) AS datos', [(int) $cliId]);
+            $canal = $fila && $fila->datos ? json_decode($fila->datos, true) : null;
+
+            if (!$canal) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El cliente no existe', null));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Canal encontrado', $canal));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo obtener el canal', $th->getMessage()));
+        }
+    }
+
+    // Canales elegibles: los activos + el actual del cliente aunque esté inactivo (el front
+    // lo muestra deshabilitado para que se vea el valor real sin poder volver a elegirlo).
+    public function canalesCliente($cliId)
+    {
+        try {
+            $canales = DB::select('SELECT * FROM crm.fn_canal_cliente_listar(?)', [(int) $cliId]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Canales', $canales));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron obtener los canales', $th->getMessage()));
+        }
+    }
+
+    // Cambia el canal del cliente. La función PG valida el canal, actualiza SOLO can_id y
+    // registra la auditoría forense (módulo CANAL_CLIENTE). Si el canal no cambia, no escribe.
+    public function registrarCanalCliente(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'cli_id' => 'required|integer',
+            'can_id' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Validación de datos', $validator->errors()));
+        }
+
+        $payload = $request->only(['cli_id', 'can_id']);
+        $payload['usuario_auditoria'] = $this->etiquetaUsuarioAuditoria();
+
+        try {
+            $resultado = DB::selectOne('SELECT crm.fn_cliente_registrar_canal(?::jsonb) AS cli_id', [
+                json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)]),
+            ]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Canal guardado con éxito', ['cli_id' => $resultado->cli_id]));
+        } catch (QueryException $e) {
+            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
+                if (strpos($e->getMessage(), $codigo) !== false) {
+                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+                }
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar el canal', $e->getMessage()));
         }
     }
 }

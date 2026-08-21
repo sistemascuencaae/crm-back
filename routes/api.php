@@ -1432,6 +1432,11 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/obtenerRutajeCliente/{cliId}', [Cliente2Controller::class, 'obtenerRutajeCliente']);
     Route::post('/registrarRutajeCliente', [Cliente2Controller::class, 'registrarRutajeCliente']);
 
+    // CANAL DEL CLIENTE (cliente.can_id)
+    Route::get('/obtenerCanalCliente/{cliId}', [Cliente2Controller::class, 'obtenerCanalCliente']);
+    Route::get('/canalesCliente/{cliId}', [Cliente2Controller::class, 'canalesCliente']);
+    Route::post('/registrarCanalCliente', [Cliente2Controller::class, 'registrarCanalCliente']);
+
     // DOCUMENTACIÓN CLIENTE (listar casos por agencia para reimprimir documentos)
     Route::get('/listar_casos_clientes_by_agencia', [DocumentacionClienteController::class, 'listar_casos_clientes_by_agencia']);
     Route::get('/reimprimir_solicitud_cupo', [DocumentacionClienteController::class, 'reimprimir_solicitud_cupo']);
