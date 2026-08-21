@@ -1428,6 +1428,10 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/clienteAuditoria', [Cliente2Controller::class, 'clienteAuditoria']);
     Route::get('/clienteSolicitudCreditoHistorial', [Cliente2Controller::class, 'solicitudCreditoHistorial']);
 
+    // RUTAJE DEL CLIENTE (cliruta_gestion): visitador, secretaria, zona y día de visita
+    Route::get('/obtenerRutajeCliente/{cliId}', [Cliente2Controller::class, 'obtenerRutajeCliente']);
+    Route::post('/registrarRutajeCliente', [Cliente2Controller::class, 'registrarRutajeCliente']);
+
     // DOCUMENTACIÓN CLIENTE (listar casos por agencia para reimprimir documentos)
     Route::get('/listar_casos_clientes_by_agencia', [DocumentacionClienteController::class, 'listar_casos_clientes_by_agencia']);
     Route::get('/reimprimir_solicitud_cupo', [DocumentacionClienteController::class, 'reimprimir_solicitud_cupo']);

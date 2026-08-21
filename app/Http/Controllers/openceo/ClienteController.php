@@ -50,6 +50,16 @@ class ClienteController extends Controller
         'EMPRESA' => 'Debe seleccionar la compañía para clientes a crédito.',
         'PARROQUIA' => 'Debe seleccionar la parroquia para clientes a crédito.',
         'REFERENCIAS' => 'Debe registrar al menos 3 referencias para clientes a crédito.',
+        // Rutaje (crm.fn_cliente_registrar_rutaje)
+        'CLIENTE_NO_EXISTE' => 'El cliente no existe.',
+        'REQUIERE_VISITADOR' => 'Debe seleccionar un visitador.',
+        'VISITADOR_INVALIDO' => 'El visitador no es válido o no está activo.',
+        'REQUIERE_SECRETARIA' => 'Debe seleccionar una secretaria.',
+        'SECRETARIA_INVALIDA' => 'La secretaria no es válida o no está activa.',
+        'ZONA_INVALIDA' => 'La zona no es válida o no está activa.',
+        'REQUIERE_DIA' => 'Debe seleccionar el día de visita.',
+        'DIA_INVALIDO' => 'El día debe estar entre 1 y 30, o ser 99.',
+        'RUTA_DUPLICADA' => 'El cliente tiene más de un rutaje registrado. Debe depurarse antes de continuar.',
     ];
 
     // Campos que se envían tal cual a crm.fn_clientes_registrar/crm.fn_clientes_modificar como jsonb
@@ -366,6 +376,10 @@ class ClienteController extends Controller
             'categorias' => 'crm.fn_categoria_cliente_listar_paginacion',
             'tiposTelefono' => 'crm.fn_tipo_telefono_listar_paginacion',
             'parentescos' => 'crm.fn_parentesco_listar_paginacion',
+            // Rutaje: visitador (age_tipo 2/3), secretaria (usu_tipo 1), zonas hoja
+            'visitadores' => 'crm.fn_visitador_listar_paginacion',
+            'secretarias' => 'crm.fn_secretaria_listar_paginacion',
+            'zonasRuta' => 'crm.fn_zona_ruta_listar_paginacion',
             default => null,
         };
 
@@ -728,6 +742,61 @@ class ClienteController extends Controller
             }
 
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo buscar el cliente', $e->getMessage()), 500);
+        }
+    }
+
+    // Rutaje actual del cliente (cliruta_gestion) para precargar el modal. Los campos que
+    // falten llegan completados con los valores por defecto (CLI/AGE, CLI/USU, CLI/ZON, día 1);
+    // 'existe' dice si había fila y 'defectos' qué campos se rellenaron.
+    public function obtenerRutajeCliente($cliId)
+    {
+        try {
+            $fila = DB::selectOne('SELECT crm.fn_cliente_obtener_rutaje(?) AS datos', [(int) $cliId]);
+            $rutaje = $fila && $fila->datos ? json_decode($fila->datos, true) : null;
+
+            return response()->json(RespuestaApi::returnResultado(
+                'success',
+                ($rutaje['existe'] ?? false) ? 'Rutaje encontrado' : 'El cliente no tiene rutaje registrado',
+                $rutaje
+            ));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo obtener el rutaje', $th->getMessage()));
+        }
+    }
+
+    // Guarda el rutaje del cliente (upsert en cliruta_gestion). La función PG valida
+    // visitador/secretaria/zona/día y registra la auditoría forense (módulo RUTAJE_CLIENTE).
+    public function registrarRutajeCliente(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'cli_id' => 'required|integer',
+            'emp_id' => 'required|integer',  // visitador
+            'usu_id' => 'required|integer',  // secretaria
+            'zon_id' => 'required|integer',
+            'crg_dia' => 'required|integer|min:1|max:99',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Validación de datos', $validator->errors()));
+        }
+
+        $payload = $request->only(['cli_id', 'emp_id', 'usu_id', 'zon_id', 'crg_dia']);
+        $payload['usuario_auditoria'] = $this->etiquetaUsuarioAuditoria();
+
+        try {
+            $resultado = DB::selectOne('SELECT crm.fn_cliente_registrar_rutaje(?::jsonb) AS crg_id', [
+                json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)]),
+            ]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Rutaje guardado con éxito', ['crg_id' => $resultado->crg_id]));
+        } catch (QueryException $e) {
+            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
+                if (strpos($e->getMessage(), $codigo) !== false) {
+                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+                }
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar el rutaje', $e->getMessage()));
         }
     }
 }
