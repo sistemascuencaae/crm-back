@@ -26,6 +26,8 @@ class Access extends Model
         'solicitud_credito',
         'ejecutar',
         'revertir',
+        'rutaje',
+        'canal_cliente',
     ];
 
     // protected $hidden = [

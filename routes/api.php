@@ -295,6 +295,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listAlmacenesDynamo', [CambioAgenciaController::class, 'listAlmacenesDynamo']);
     Route::post('/getVendedorByIdentificacion', [CambioAgenciaController::class, 'getVendedorByIdentificacion']);
     Route::post('/editAgenciaVendedor', [CambioAgenciaController::class, 'editAgenciaVendedor']);
+    Route::get('/vendedorAgenciaAuditoria', [CambioAgenciaController::class, 'vendedorAgenciaAuditoria']);
     // ? END CAMBIO VENDEDORES AGENCIA
 
 
@@ -1427,6 +1428,15 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/clienteAuditoria', [Cliente2Controller::class, 'clienteAuditoria']);
     Route::get('/clienteSolicitudCreditoHistorial', [Cliente2Controller::class, 'solicitudCreditoHistorial']);
 
+    // RUTAJE DEL CLIENTE (cliruta_gestion): visitador, secretaria, zona y día de visita
+    Route::get('/obtenerRutajeCliente/{cliId}', [Cliente2Controller::class, 'obtenerRutajeCliente']);
+    Route::post('/registrarRutajeCliente', [Cliente2Controller::class, 'registrarRutajeCliente']);
+
+    // CANAL DEL CLIENTE (cliente.can_id)
+    Route::get('/obtenerCanalCliente/{cliId}', [Cliente2Controller::class, 'obtenerCanalCliente']);
+    Route::get('/canalesCliente/{cliId}', [Cliente2Controller::class, 'canalesCliente']);
+    Route::post('/registrarCanalCliente', [Cliente2Controller::class, 'registrarCanalCliente']);
+
     // DOCUMENTACIÓN CLIENTE (listar casos por agencia para reimprimir documentos)
     Route::get('/listar_casos_clientes_by_agencia', [DocumentacionClienteController::class, 'listar_casos_clientes_by_agencia']);
     Route::get('/reimprimir_solicitud_cupo', [DocumentacionClienteController::class, 'reimprimir_solicitud_cupo']);
@@ -1712,27 +1722,12 @@ Route::group(["prefix" => "corredores", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::post('/guardarClienteCorredor', [CorredorClienteController::class, 'guardarClienteCorredor']);
 });
 
-// ANUNCIOS: publicidad interna mostrada al iniciar sesion y en la campanita.
-// AnunciosController es el CRUD de administracion; AnunciosUsuarioController
-// es el consumo del usuario final (que le toca ver y marcar visto).
 Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
-
-    // ----- Administracion -----
-    // Las imagenes ya NO tienen endpoints propios: addAnuncio y editAnuncio
-    // resuelven altas, bajas y reorden en una sola peticion (una transaccion y
-    // una sola fila de auditoria por operacion del usuario).
-    // Los parametros de paginacion (pagina, tamanio, busqueda) van por query string.
     Route::get('/listAllAnuncios', [AnunciosController::class, 'listAllAnuncios']);
     Route::post('/addAnuncio', [AnunciosController::class, 'addAnuncio']);
     Route::post('/editAnuncio/{id}', [AnunciosController::class, 'editAnuncio']);
     Route::delete('/deleteAnuncio/{id}', [AnunciosController::class, 'deleteAnuncio']);
-
-    // ----- Auditoria forense (modal del CRUD, gateado con crm.access.audit) -----
     Route::get('/anuncioAuditoria/{id}', [AnunciosController::class, 'anuncioAuditoria']);
-
-    // ----- Consumo del usuario final -----
-    // config va PRIMERO y sin verificacion de modulo: es el que informa si el
-    // modulo esta encendido y que extras se muestran (marca de agua)
     Route::get('/config', [AnunciosUsuarioController::class, 'config']);
     Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
