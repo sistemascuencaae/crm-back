@@ -339,6 +339,12 @@ class ClienteController extends Controller
                 // Parentesco/relación por defecto de las referencias: la primera opción del catálogo
                 // (en mayúsculas, igual que crm.fn_parentesco_listar_paginacion).
                 'parentesco' => DB::selectOne("SELECT UPPER(TRIM(nombre)) AS label FROM crm.parentesco ORDER BY nombre LIMIT 1"),
+                // Fecha de nacimiento sugerida: 18 años atrás (mayoría de edad). Se calcula con CURRENT_DATE de
+                // POSTGRES a propósito — no con el reloj del navegador ni con el de PHP: la fecha del servidor de
+                // BD es la única autoridad, y el equipo del usuario puede tener la hora corrida.
+                // El front la usa SOLO para precargar el campo vacío (alta nueva, o cliente viejo con
+                // ent_fechanacimiento en NULL); si el usuario la cambia, manda la suya.
+                'fecha_nacimiento' => DB::selectOne("SELECT (CURRENT_DATE - INTERVAL '18 years')::date AS valor"),
             ];
 
             return response()->json(RespuestaApi::returnResultado('success', 'Catálogos cargados con éxito', $data));
