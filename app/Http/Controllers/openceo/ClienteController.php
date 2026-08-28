@@ -756,6 +756,65 @@ class ClienteController extends Controller
     // Rutaje actual del cliente (cliruta_gestion) para precargar el modal. Los campos que
     // falten llegan completados con los valores por defecto (CLI/AGE, CLI/USU, CLI/ZON, día 1);
     // 'existe' dice si había fila y 'defectos' qué campos se rellenaron.
+    // Línea de tiempo de las DIRECCIONES del cliente (botón "Datos Históricos" del tab Direcciones).
+    // La función reconstruye cada versión de cada dirección desde auditoria.logs_cambios, le suma el
+    // estado vigente de la tabla direccion (así siempre devuelve al menos una fila) y le atribuye el
+    // caso/solicitud cuando esa dirección fue la que se imprimió en una Solicitud de Cupo.
+    // Devuelve las filas YA ordenadas: histórico cronológico arriba y el estado vigente al final.
+    public function direccionesHistorico(Request $request)
+    {
+        return $this->historicoColeccion($request, 'crm.fn_cliente_direcciones_historico_paginado', 'direcciones');
+    }
+
+    // Línea de tiempo de los TELÉFONOS del cliente (botón "Datos Históricos" del tab Teléfonos).
+    // Misma mecánica que direccionesHistorico, sobre las claves `telefono`/`telefonos_adicionales`
+    // de la foto auditada + las tablas telefono/telefono_entidad.
+    public function telefonosHistorico(Request $request)
+    {
+        return $this->historicoColeccion($request, 'crm.fn_cliente_telefonos_historico_paginado', 'teléfonos');
+    }
+
+    // Línea de tiempo de las REFERENCIAS del cliente (botón "Datos Históricos" del tab Referencias).
+    // Sobre la colección `referencias` de la foto auditada + la tabla referencias_anexo.
+    public function referenciasHistorico(Request $request)
+    {
+        return $this->historicoColeccion($request, 'crm.fn_cliente_referencias_historico_paginado', 'referencias');
+    }
+
+    // Contrato común de los tres históricos (direcciones/teléfonos/referencias): mismos parámetros de
+    // entrada (cli_id, pagina, tamanio, busqueda) y misma forma de salida (filas/total/pagina/tamanio)
+    // que clienteAuditoria, así el modal del front es el mismo componente con otras columnas.
+    // $funcion se arma en el código, NUNCA con datos del request: no entra nada del usuario al SQL.
+    private function historicoColeccion(Request $request, string $funcion, string $etiqueta)
+    {
+        try {
+            $cliId = (int) $request->query('cli_id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($cliId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no válido', null));
+            }
+
+            $filas = DB::select(
+                'SELECT * FROM ' . $funcion . '(?, ?, ?, ?)',
+                [$cliId, $pagina, $tamanio, $busqueda]
+            );
+            // total_registros viaja repetido en cada fila (COUNT(*) OVER()), igual que en clienteAuditoria.
+            $total = $filas[0]->total_registros ?? 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Histórico de ' . $etiqueta . ' cargado con éxito', [
+                'filas' => $filas,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo obtener el histórico de ' . $etiqueta, $th->getMessage()));
+        }
+    }
+
     public function obtenerRutajeCliente($cliId)
     {
         try {
