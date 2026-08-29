@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\sts;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
 use App\Http\Resources\RespuestaApi;
-use App\Models\openceo\Cliente;
 use App\Models\openceo\Direccion;
-use App\Models\openceo\Entidad;
 use App\Models\openceo\Telefono;
 use App\Models\sts\ClientesMultinivel;
 use App\Servicios\ValidacionCedulaRucService;
@@ -21,8 +20,17 @@ use Illuminate\Support\Facades\Validator;
 
 class DynamoClienteController extends Controller
 {
-    // Mensaje amigable para cada excepción que puede lanzar crm.fn_clientes_registrar
-    // (mismo mapa del ClienteController de openceo; aquí solo aplican las de contado)
+    // Un cliente a CRÉDITO conserva su política al editarse desde aquí (nunca se degrada a
+    // contado), pero eso activa las validaciones de crédito de crm.fn_cliente_validaciones.
+    // Si le faltan datos que este formulario no captura, no hay nada que el corredor pueda
+    // hacer: se le dice dónde se resuelve.
+    private const MSG_CLIENTE_INCOMPLETO_CREDITO = 'Este cliente tiene datos pendientes y se administra desde el CRM. Comuníquese con Almacenes España.';
+
+    // Mensaje amigable para cada excepción que pueden lanzar crm.fn_clientes_registrar y
+    // crm.fn_clientes_modificar (ambas validan por crm.fn_cliente_validaciones, así que
+    // comparten el catálogo de códigos). Mismo mapa del ClienteController de openceo, salvo
+    // los códigos de CRÉDITO: aquí el corredor no tiene cómo completar esos datos desde el
+    // formulario, así que se le indica que el cliente se administra en el CRM.
     private const MENSAJES_ERROR = [
         'REQUIERE_TIPOS_PAGO' => 'Debe registrar al menos un tipo de pago.',
         'REQUIERE_AGENTE' => 'Debe seleccionar un agente.',
@@ -32,13 +40,51 @@ class DynamoClienteController extends Controller
         'REQUIERE_ZONA' => 'Debe seleccionar una zona.',
         'REQUIERE_CANAL' => 'Debe seleccionar un canal.',
         'REQUIERE_LISTAPRE' => 'Debe seleccionar una lista de precios.',
+        'REQUIERE_PAIS' => 'Debe seleccionar el país / nacionalidad.',
+        'REQUIERE_SEXO' => 'Debe seleccionar el sexo.',
+        'REQUIERE_ESTADOCIVIL' => 'Debe seleccionar el estado civil.',
+        'REQUIERE_NIVELESTUDIOS' => 'Debe seleccionar el nivel de estudios.',
+        'REQUIERE_VIVIENDA' => 'Debe seleccionar el tipo de vivienda.',
+        'REQUIERE_SITLABORAL' => 'Debe seleccionar la situación laboral.',
+        'REQUIERE_TIPOEMPRESA' => 'Debe seleccionar el tipo de empresa.',
+        'REQUIERE_INGRESOSPERSONALES' => 'Debe seleccionar la fuente de ingresos personales.',
+        'REQUIERE_CARGASFAMILIARES' => 'Debe ingresar el número de cargas familiares.',
+        'REQUIERE_INGRESOSACTIVIDAD' => 'Debe ingresar los ingresos mensuales.',
+        'REQUIERE_EGRESOSACTIVIDAD' => 'Debe ingresar los egresos mensuales.',
         'IDENTIFICACION_INVALIDA' => 'La identificación ingresada no es válida.',
         'IDENTIFICACION_DUPLICADA' => 'Ya existe un cliente con esa identificación.',
         'CODIGO_DUPLICADO' => 'Ya existe un cliente con ese código.',
+        'CLIENTE_NO_ENCONTRADO' => 'No se encontró el cliente a actualizar.',
         'POLITICA_INVALIDA' => 'La política seleccionada no es válida.',
+        // CRÉDITO: el cliente existe pero le faltan datos que solo se cargan en el CRM.
+        'EMAILINCO' => self::MSG_CLIENTE_INCOMPLETO_CREDITO,
+        'CANTON' => self::MSG_CLIENTE_INCOMPLETO_CREDITO,
+        'AECONOMICA' => self::MSG_CLIENTE_INCOMPLETO_CREDITO,
+        'EMPRESA' => self::MSG_CLIENTE_INCOMPLETO_CREDITO,
+        'PARROQUIA' => self::MSG_CLIENTE_INCOMPLETO_CREDITO,
+        'REFERENCIAS' => self::MSG_CLIENTE_INCOMPLETO_CREDITO,
     ];
 
-    // Version 1.0
+    // Constantes del canal STS. Solo se aplican al ALTA: en una edición estos valores salen
+    // de la ficha del propio cliente, nunca de aquí (si no, se le cambiaría el agente y la
+    // política a un cliente que ya existe).
+    private const TTE_ID_CELULAR = 2;
+    private const DIR_TIPO_DEFAULT = 'CASA';
+    private const SFP_ID_DEFAULT = 1;
+    private const EMP_ID_DEFAULT = 1;
+    private const CLI_SEXO_DEFAULT = 'M';
+    private const CLI_ESTADOCIVIL_DEFAULT = 'S';
+
+    // Usuario del proveedor que generó el enlace, leído del token cifrado. Las rutas del
+    // formulario no llevan JWT, así que esta es la única identidad disponible en ese canal:
+    // alimenta el log de consultas de identidad (crm.consulta_identidad.usu_id) y el usuario_id
+    // de la auditoría forense. Queda en null con enlaces emitidos antes de incluirlo en el token.
+    private ?int $usuIdEnlace = null;
+
+    // Version 2.0
+    // Busca sobre ENTIDAD (no solo sobre cliente) y distingue tres estados: no existe / la
+    // persona existe pero aún no es cliente / ya es cliente. Devuelve únicamente los campos
+    // que muestra el formulario.
     public function verificarClienteDynamo(Request $request)
     {
         try {
@@ -75,413 +121,428 @@ class DynamoClienteController extends Controller
                 }
             }
 
-            $identificacionBusqueda = substr($identificacion, 0, 10);
+            // La foto sale de la MISMA función que usa el CRUD del CRM
+            // (crm.fn_cliente_buscar_por_identificacion). Busca sobre public.entidad con
+            // LEFT JOIN cliente ... AND cli_tipocli = 1, así que a diferencia del SELECT
+            // anterior —que miraba cliente.cli_codigo— también encuentra a una persona que
+            // YA existe en el sistema pero todavía no es cliente (p.ej. un proveedor).
+            $foto = $this->fotoCliente($identificacion, (int) $tipoidentificacion);
 
-            // LEFT JOIN: corredor_vinculado = null si el cliente existe pero no tiene
-            // vinculación VIGENTE (activo = true y fecha_desvinculacion NULL)
-            $resultado = DB::selectOne("SELECT c.cli_id, c.cli_codigo,
-                                            e.ent_id, e.ent_nombres, e.ent_apellidos, e.ent_email, e.ent_tipo_identificacion,
-                                            t.tel_numero,
-                                            d.dir_calle_principal, d.dir_calle_secundaria,
-                                            cm.corredor AS corredor_vinculado
-                                        FROM public.cliente c
-                                        JOIN public.entidad e ON e.ent_id = c.ent_id
-                                        LEFT JOIN public.clientes_multinivel cm ON cm.cli_id = c.cli_id
-                                            AND cm.activo = true
-                                            AND cm.fecha_desvinculacion IS NULL
-                                        LEFT JOIN public.direccion d ON d.dir_id = e.ent_direccion_principal
-                                        LEFT JOIN public.telefono t ON t.tel_id = e.ent_telefono_principal
-                                        WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
-                                            AND c.cli_tipocli = 1
-                                        ORDER BY c.cli_id ASC
-                                        LIMIT 1", [$identificacionBusqueda]);
-
-            // Escenario 4: cliente no existe
-            if (!$resultado) {
+            // ESTADO A: no existe ni la entidad
+            if (!$foto) {
                 return response()->json(RespuestaApi::returnResultado('success', 'El cliente no existe', null));
             }
 
-            // Validación previa a los 4 escenarios: si la vinculación vigente ya
-            // cumplió los días del parámetro CLICOR se desvincula (activo = false)
-            // y el cliente se evalúa como libre
-            if ($resultado->corredor_vinculado !== null && $this->desvincularCorredorSiExpiro($resultado->cli_id, $diasCorredor)) {
-                $resultado->corredor_vinculado = null;
+            // ESTADO B: la persona existe pero aún no es cliente. No puede tener vinculación
+            // (esa tabla cuelga de cli_id), así que está libre por definición.
+            if (empty($foto['cli_id'])) {
+                return response()->json(RespuestaApi::returnResultado('success', 'La persona ya está registrada. Verifique los datos para registrarla como cliente.', $this->datosFormulario($foto)));
             }
 
-            // Escenario 3: cliente existe pero pertenece a otro corredor
-            if ($resultado->corredor_vinculado !== null && $resultado->corredor_vinculado !== $corredor) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece al corredor: ' . $resultado->corredor_vinculado, null));
+            // ESTADO C: ya es cliente. Si la vinculación vigente cumplió los días del
+            // parámetro CLICOR se desvincula y el cliente se evalúa como libre.
+            $vinculado = $this->corredorVinculado((int) $foto['cli_id'], $diasCorredor);
+
+            // Pertenece a otro corredor
+            if ($vinculado !== null && $vinculado !== $corredor) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece al corredor: ' . $vinculado, null));
             }
 
-            // Escenarios 1 y 2: cliente libre o ya vinculado al mismo corredor
-            $mensaje = $resultado->corredor_vinculado === $corredor
+            // Libre, o ya vinculado a este mismo corredor
+            $mensaje = $vinculado === $corredor
                 ? 'El cliente ya existe'
                 : 'El cliente existe y está disponible';
 
-            return response()->json(RespuestaApi::returnResultado('success', $mensaje, $resultado));
+            return response()->json(RespuestaApi::returnResultado('success', $mensaje, $this->datosFormulario($foto)));
+        } catch (QueryException $e) {
+            return $this->respuestaErrorFuncion($e, 'Error al consultar el cliente');
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }
 
 
-    // Version 1.0
+    // Version 2.0
+    // Actualiza el cliente a través de crm.fn_clientes_modificar (las mismas funciones del
+    // CRUD del CRM), para que herede sus validaciones, sus defaults y su auditoría forense.
+    // Delega en el resolvedor común: el servidor decide crear o modificar según el estado
+    // REAL en la base, no según el endpoint que haya llamado el formulario.
     public function updateDynamoCliente(Request $request)
     {
-        try {
-            $tokenData = $this->validarTokenEnlace($request);
-            if ($tokenData instanceof JsonResponse) {
-                return $tokenData;
-            }
-            $corredor = trim($tokenData['corredor']);
-            $tipoCorredor = (int) $tokenData['tipo_corredor'];
-
-            // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR)
-            $diasCorredor = $this->obtenerDiasParametroCorredor();
-            if ($diasCorredor instanceof JsonResponse) {
-                return $diasCorredor;
-            }
-
-            $identificacion = mb_strtoupper(trim($request->input('identificacion')));
-            $nombres = mb_strtoupper(trim($request->input('nombres')));
-            $apellidos = mb_strtoupper(trim($request->input('apellidos')));
-            $email = mb_strtolower(trim($request->input('email')));
-            $telefono = trim($request->input('telefono'));
-            $direccion = mb_strtoupper(trim($request->input('direccion')));
-            $direccionSecundaria = mb_strtoupper(trim($request->input('dir_calle_secundaria') ?? ''));
-
-            if (
-                empty($identificacion) || empty($nombres) || empty($apellidos)
-                || empty($email) || empty($telefono) || empty($direccion) || empty($direccionSecundaria)
-            ) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Todos los campos son requeridos.', null));
-            }
-
-            $identificacionBusqueda = substr($identificacion, 0, 10);
-
-            // ent_telefono_principal y ent_direccion_principal son FKs a tel_id y dir_id.
-            // Solo se considera la vinculación VIGENTE (activo = true y fecha_desvinculacion NULL)
-            $resultado = DB::selectOne("SELECT c.cli_id, e.ent_id,
-                                            e.ent_telefono_principal  AS tel_id,
-                                            e.ent_direccion_principal AS dir_id,
-                                            cm.corredor AS corredor_vinculado
-                                        FROM public.cliente c
-                                            JOIN public.entidad e ON e.ent_id = c.ent_id
-                                            LEFT JOIN public.clientes_multinivel cm ON cm.cli_id = c.cli_id
-                                                AND cm.activo = true
-                                                AND cm.fecha_desvinculacion IS NULL
-                                        WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
-                                            AND c.cli_tipocli = 1
-                                        ORDER BY c.cli_id ASC
-                                        LIMIT 1", [$identificacionBusqueda]);
-
-            if (!$resultado) {
-                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró el cliente para actualizar.', null));
-            }
-
-            // Si la vinculación vigente ya cumplió los días del parámetro CLICOR
-            // se desvincula (activo = false) y el cliente se trata como libre
-            if ($resultado->corredor_vinculado !== null && $this->desvincularCorredorSiExpiro($resultado->cli_id, $diasCorredor)) {
-                $resultado->corredor_vinculado = null;
-            }
-
-            if ($resultado->corredor_vinculado !== null && $resultado->corredor_vinculado !== $corredor) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
-            }
-
-            DB::beginTransaction();
-
-            // Actualizar datos de la entidad (solo campos propios, no los FKs)
-            Entidad::where('ent_id', $resultado->ent_id)->update([
-                'ent_nombres' => trim($nombres),
-                'ent_apellidos' => trim($apellidos),
-                'ent_email' => trim($email),
-            ]);
-
-            // Actualizar nombre comercial en la tabla cliente
-            Cliente::where('cli_id', $resultado->cli_id)->update([
-                'ent_nombre_comercial' => trim($apellidos) . ' ' . trim($nombres),
-            ]);
-
-            // Actualizar el registro de teléfono usando el FK tel_id
-            if ($resultado->tel_id) {
-                DB::update("UPDATE public.telefono SET tel_numero = ? WHERE tel_id = ?", [trim($telefono), $resultado->tel_id]);
-            }
-
-            // Actualizar el registro de dirección usando el FK dir_id. El tipo solo
-            // se rellena con el default CASA si estaba vacío (no pisa un TRABAJO asignado)
-            if ($resultado->dir_id) {
-                DB::update(
-                    "UPDATE public.direccion SET dir_calle_principal = ?, dir_calle_secundaria = ?, dir_tipo = COALESCE(dir_tipo, 'CASA') WHERE dir_id = ?",
-                    [trim($direccion), trim($direccionSecundaria) ?: '.', $resultado->dir_id]
-                );
-            }
-
-            // Escenario 1: cliente libre → vincularlo al corredor,
-            // guardando los días vigentes del parámetro CLICOR
-            if ($resultado->corredor_vinculado === null) {
-                ClientesMultinivel::create([
-                    'cli_id' => $resultado->cli_id,
-                    'corredor' => $corredor,
-                    'tipo_corredor' => $tipoCorredor,
-                    'dias_parametro' => $diasCorredor,
-                    'activo' => true,
-                ]);
-            }
-
-            DB::commit();
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Cliente actualizado con éxito', null));
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            if ($this->esCarreraVinculacion($e)) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
-            }
-
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar el cliente', $e->getMessage()));
-        }
+        return $this->guardarClienteDynamo($request);
     }
 
 
 
 
 
-    // Version 1.0
+    // Version 2.0
+    // Registra el cliente a través de crm.fn_clientes_registrar (las mismas funciones del
+    // CRUD del CRM). Delega en el resolvedor común, igual que updateDynamoCliente: el camino
+    // lo decide el estado real en la base, no el endpoint que llamó el formulario.
     public function addDynamoCliente(Request $request)
     {
-        try {
-            // 0. Descifrar y validar el token de la URL (caducidad + integridad).
-            // El corredor sale de aquí, NO del formulario.
-            $credenciales = $this->validarTokenEnlace($request);
-            if ($credenciales instanceof JsonResponse) {
-                return $credenciales;
-            }
-
-            $corredor = trim($credenciales['corredor']);
-            $tipoCorredor = (int) $credenciales['tipo_corredor'];
-
-            // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR);
-            // se guardan en dias_parametro al vincular
-            $diasCorredor = $this->obtenerDiasParametroCorredor();
-            if ($diasCorredor instanceof JsonResponse) {
-                return $diasCorredor;
-            }
-
-            $identificacion = trim($request->input('identificacion'));
-            $tipoidentificacion = trim($request->input('tipoidentificacion'));
-
-            // 1. Validamos que exista el tipo y la identificación
-            if (empty($tipoidentificacion)) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar el tipo de identificación.', null));
-            }
-
-            if (empty($identificacion)) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar una identificación.', null));
-            }
-
-            if ($tipoidentificacion == 1) {
-                if (!ValidacionCedulaRucService::esCedulaValida($identificacion)) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'La cédula ingresada no es válida', null));
-                }
-            } elseif ($tipoidentificacion == 2) {
-                if (!ValidacionCedulaRucService::esRucValido($identificacion)) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'El RUC ingresado no es válido', null));
-                }
-            }
-
-            // 2. Validamos todos los campos del formulario
-            $validator = Validator::make($request->all(), [
-                'tipoidentificacion' => 'required|string',
-                'identificacion' => 'required|string',
-                'nombres' => 'required|string',
-                'apellidos' => 'required|string',
-                'email' => 'required|string',
-                'telefono' => 'required|string',
-                'direccion' => 'required|string',
-                'dir_calle_secundaria' => 'required|string',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Validación datos', $validator->errors()));
-            }
-
-            // 3. Cortamos a 10 caracteres
-            $identificacionBusqueda = substr($identificacion, 0, 10);
-
-            // 4. Verificamos si ya existe como cliente
-            $clienteOpenceo = DB::selectOne("SELECT * FROM public.cliente c
-                                                WHERE SUBSTRING(TRIM(c.cli_codigo), 1, 10) = ?
-                                                AND c.cli_tipocli = 1", [$identificacionBusqueda]);
-
-            if ($clienteOpenceo) {
-                return response()->json(RespuestaApi::returnResultado('error', 'El cliente ya existe', null));
-            }
-
-            // 5. Buscar si existe la entidad
-            $entidad = DB::selectOne("SELECT * FROM public.entidad e
-                                        WHERE SUBSTRING(TRIM(e.ent_identificacion), 1, 10) = ?", [$identificacionBusqueda]);
-
-            // 6a. ENTIDAD NO EXISTE -> crear el cliente CONTADO vía crm.fn_clientes_registrar
-            // (defaults y auditoría forense del módulo cliente, SIN modificar la función).
-            // La función rechaza entidades ya existentes, por eso ese caso sigue en 6b.
-            if (!$entidad) {
-                return $this->crearClienteContadoViaFuncion($request, $corredor, $tipoCorredor, $diasCorredor);
-            }
-
-            // 6b. ENTIDAD EXISTE (sin cliente): camino PHP que reusa la entidad
-            DB::transaction(function () use ($request, $entidad, $corredor, $tipoCorredor, $diasCorredor) {
-                $direccion = mb_strtoupper(trim($request->input('direccion')));
-                $direccionSecundaria = mb_strtoupper(trim($request->input('dir_calle_secundaria')));
-                $telefono = trim($request->input('telefono'));
-                $identificacion = trim($request->input('identificacion'));
-                $tipoIdentificacion = trim($request->input('tipoidentificacion'));
-                $nombres = mb_strtoupper(trim($request->input('nombres')));
-                $apellidos = mb_strtoupper(trim($request->input('apellidos')));
-                $email = mb_strtolower(trim($request->input('email')));
-                $empId = 1;
-                $identificacionConyugue = mb_strtoupper(trim($request->input('identificacionConyugue') ?? ''));
-                $nombreConyugue = mb_strtoupper(trim($request->input('nombreConyugue') ?? ''));
-                $apellidoConyugue = mb_strtoupper(trim($request->input('apellidoConyugue') ?? ''));
-
-                // 6.1. Crear nueva dirección (siempre se crea)
-                $newDireccion = new Direccion();
-                $newDireccion->dir_calle_principal = $direccion;
-                $newDireccion->dir_calle_secundaria = $direccionSecundaria;
-                // Tipo por defecto del formulario (catálogo crm.fn_tipo_direccion_listar: CASA / TRABAJO)
-                $newDireccion->dir_tipo = 'CASA';
-                $newDireccion->save();
-
-                // 6.2. Crear nuevo teléfono (siempre se crea)
-                $newTelefono = new Telefono();
-                $newTelefono->tte_id = 2; // 2 es celular
-                $newTelefono->tel_numero = $telefono;
-                $newTelefono->save();
-
-                // 6.3. Actualizamos la entidad existente con la nueva dirección/teléfono
-                DB::update(
-                    "UPDATE public.entidad SET
-                                    ent_nombres = ?,
-                                    ent_apellidos = ?,
-                                    ent_tipo_identificacion = ?,
-                                    ent_email = ?,
-                                    ent_direccion_principal = ?,
-                                    ent_telefono_principal = ?
-                                WHERE ent_id = ?",
-                    [$nombres, $apellidos, $tipoIdentificacion, $email, $newDireccion->dir_id, $newTelefono->tel_id, $entidad->ent_id]
-                );
-
-                $entId = $entidad->ent_id;
-
-                // 6.4. Obtener datos por defecto para el nuevo cliente
-                // Ubicación
-                $valor2 = DB::selectOne("SELECT to_number(par_texto,'999999') AS tit_id
-                                            FROM parametro
-                                            WHERE par_abreviacion='UBI'
-                                                AND mod_abreviatura='CLI'
-                                            LIMIT 1");
-
-                // Zona
-                $valor3 = DB::selectOne("SELECT zon_id
-                                            FROM zona
-                                            WHERE zon_codigo
-                                                IN (SELECT par_texto
-                                                        FROM parametro
-                                                        WHERE par_abreviacion='ZON'
-                                                            AND mod_abreviatura='CLI'
-                                                        LIMIT 1)
-                                            LIMIT 1");
-
-                // Categoría
-                $valor4 = DB::selectOne("SELECT cat_id
-                                            FROM catcliente
-                                            WHERE cat_abreviacion = 'clien'");
-
-                // Política
-                $valor5 = DB::selectOne("SELECT pol_id
-                                            FROM politica
-                                            WHERE pol_nombre = 'CONTADO'
-                                                AND pol_tipocli = 1");
-
-                // Lista de precios
-                $valor6 = DB::selectOne("SELECT lpr_id
-                                            FROM listapre
-                                            WHERE lpr_nombre
-                                                IN (SELECT par_texto
-                                                        FROM parametro
-                                                        WHERE par_abreviacion='LPR'
-                                                            AND mod_abreviatura='CLI'
-                                                        LIMIT 1)
-                                            LIMIT 1");
-
-                // Canal
-                $valor7 = DB::selectOne("SELECT to_number(par_texto,'999999') AS can_id
-                                            FROM parametro
-                                            WHERE par_abreviacion='CAN'
-                                                AND mod_abreviatura='CLI'
-                                            LIMIT 1");
-
-                // 6.5. Crear nuevo cliente
-                $newCliente = new Cliente();
-
-                $newCliente->cli_codigo = $identificacion;
-                $newCliente->ent_id = $entId;
-                $newCliente->ubi_id = $valor2->tit_id;
-                $newCliente->zon_id = $valor3->zon_id;
-                $newCliente->cat_id = $valor4->cat_id;
-                $newCliente->pol_id = $valor5->pol_id;
-                $newCliente->lpr_id = $valor6->lpr_id;
-                $newCliente->cli_tipocli = 1;
-                $newCliente->emp_id = $empId;
-                $newCliente->can_id = $valor7->can_id;
-                $newCliente->ent_nombre_comercial = $apellidos . ' ' . $nombres;
-                $newCliente->cli_tiposujeto = 'N';
-                $newCliente->cli_sexo = 'M';
-                $newCliente->cli_estadocivil = 'S';
-                $newCliente->cli_ingresos = 'I';
-                $newCliente->cli_activo = true;
-                $newCliente->save();
-
-                // 6.6. Asignar tipo de pago por defecto sfp_id=1
-                DB::insert("INSERT INTO cliente_tipo_pago(cli_id, sfp_id)
-                            VALUES (?, 1)", [$newCliente->cli_id]);
-
-                // 6.7. Registrar datos del cónyuge (opcional)
-                if ($identificacionConyugue && $nombreConyugue && $apellidoConyugue) {
-                    DB::insert("INSERT INTO cliente_anexo(cliane_identificacion_conyuge, cliane_nombre_conyuge,cli_id)
-                                VALUES (?,?,?)", [$identificacionConyugue, $nombreConyugue, $newCliente->cli_id]);
-                }
-
-                // 6.8: Registrar el cliente al corredor Netos en Dynamo
-                // ($corredor y $tipoCorredor provienen del token cifrado, no del formulario)
-                $clienteMultinivel = new ClientesMultinivel();
-                $clienteMultinivel->cli_id = $newCliente->cli_id;
-                $clienteMultinivel->corredor = $corredor;
-                $clienteMultinivel->tipo_corredor = $tipoCorredor;
-                $clienteMultinivel->dias_parametro = $diasCorredor;
-                $clienteMultinivel->activo = true;
-                $clienteMultinivel->save();
-            });
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Cliente creado con éxito', null));
-        } catch (Exception $e) {
-            if ($this->esCarreraVinculacion($e)) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
-            }
-
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
-        }
+        return $this->guardarClienteDynamo($request);
     }
 
 
 
 
     // Version 1.0
-    // Crea el cliente CONTADO vía crm.fn_clientes_registrar (SIN modificarla) y lo
-    // vincula al corredor del token en la misma transacción (si la vinculación falla,
-    // el cliente también se revierte). cat_id y lpr_id van explícitos, resueltos igual
-    // que el camino PHP anterior ('clien' y parámetro LPR), para no cambiar los valores.
-    private function crearClienteContadoViaFuncion(Request $request, string $corredor, int $tipoCorredor, int $diasCorredor)
+    // Consulta de identidad en fuentes oficiales para el formulario público, con la MISMA
+    // regla del CRUD del CRM: cédula -> Ecuador Legal, RUC -> SRI, pasaporte no se consulta.
+    // Reusa ConsultaIdentidadExternoController tal cual; aquí solo cambia la puerta de entrada
+    // (token cifrado del enlace en vez de JWT). La respuesta trae nombres/apellidos ya
+    // separados, razonSocial y tipo_sujeto ('N'/'J'), que es lo que el formulario necesita
+    // para decidir si muestra "Nombre Empresa".
+    public function consultarIdentidadDynamo(Request $request)
+    {
+        $credenciales = $this->validarTokenEnlace($request);
+        if ($credenciales instanceof JsonResponse) {
+            return $credenciales;
+        }
+
+        $identificacion = trim($request->input('identificacion'));
+        $tipoIdentificacion = (int) trim($request->input('tipoidentificacion'));
+
+        if ($identificacion === '') {
+            return response()->json(RespuestaApi::returnResultado('error', 'Debe ingresar una identificación.', null));
+        }
+
+        // El usuario del proveedor viaja en el token: con él, cada consulta del corredor queda
+        // registrada en crm.consulta_identidad igual que las que hace un usuario del CRM.
+        $usuId = isset($credenciales['usu_id']) ? (int) $credenciales['usu_id'] : null;
+
+        $consultas = app(ConsultaIdentidadExternoController::class);
+
+        if ($tipoIdentificacion === 1) {
+            if (!ValidacionCedulaRucService::esCedulaValida($identificacion)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'La cédula ingresada no es válida', null));
+            }
+
+            return $consultas->consultarCedulaEcuadorLegal($identificacion, $usuId);
+        }
+
+        if ($tipoIdentificacion === 2) {
+            if (!ValidacionCedulaRucService::esRucValido($identificacion)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El RUC ingresado no es válido', null));
+            }
+
+            return $consultas->consultarRucSri($identificacion, $usuId);
+        }
+
+        // Pasaporte: no hay fuente que consultar. Se responde el tipo de persona deducido
+        // (siempre Natural) para que el formulario no quede a la espera.
+        return response()->json(RespuestaApi::returnResultado('error', 'El tipo de identificación no admite consulta externa.', ['tipo_sujeto' => 'N']));
+    }
+
+
+
+
+    // ========================================================================
+    // GUARDADO VÍA LAS FUNCIONES DEL CRM
+    // (crm.fn_clientes_registrar / crm.fn_clientes_modificar, sin modificarlas)
+    // ========================================================================
+
+    // Resolvedor único, compartido por addDynamoCliente y updateDynamoCliente. El camino lo
+    // decide el estado REAL en la base, no el endpoint que llamó el formulario:
+    //   A) no existe la entidad            -> fn_clientes_registrar
+    //   B) existe la entidad, sin cliente  -> fn_clientes_registrar (la función la REUSA)
+    //   C) ya es cliente tipo 1            -> fn_clientes_modificar (con la ficha hidratada)
+    private function guardarClienteDynamo(Request $request)
+    {
+        // El corredor sale del token cifrado de la URL, NUNCA del formulario.
+        $credenciales = $this->validarTokenEnlace($request);
+        if ($credenciales instanceof JsonResponse) {
+            return $credenciales;
+        }
+
+        $corredor = trim($credenciales['corredor']);
+        $tipoCorredor = (int) $credenciales['tipo_corredor'];
+        $this->usuIdEnlace = isset($credenciales['usu_id']) ? (int) $credenciales['usu_id'] : null;
+
+        // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR)
+        $diasCorredor = $this->obtenerDiasParametroCorredor();
+        if ($diasCorredor instanceof JsonResponse) {
+            return $diasCorredor;
+        }
+
+        $errorValidacion = $this->validarCamposFormulario($request);
+        if ($errorValidacion instanceof JsonResponse) {
+            return $errorValidacion;
+        }
+
+        try {
+            $campos = $this->camposFormulario($request);
+            $foto = $this->fotoCliente($campos['identificacion'], $campos['tipoidentificacion']);
+
+            if ($foto && !empty($foto['cli_id'])) {
+                return $this->modificarClienteDesdeFoto($request, $campos, $foto, $corredor, $tipoCorredor, $diasCorredor);
+            }
+
+            return $this->registrarClienteContado($request, $campos, $foto, $corredor, $tipoCorredor, $diasCorredor);
+        } catch (QueryException $e) {
+            if ($this->esCarreraVinculacion($e)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
+            }
+
+            return $this->respuestaErrorFuncion($e, 'Error al guardar el cliente');
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar el cliente', $e->getMessage()));
+        }
+    }
+
+    // ESTADOS A y B. crm.fn_clientes_registrar mide el duplicado contra un CLIENTE tipo 1, no
+    // contra la entidad: si la persona ya existe (proveedor, garante) la REUSA y baja su
+    // dirección y teléfono anteriores a adicionales. Por eso un solo camino cubre los dos casos.
+    private function registrarClienteContado(Request $request, array $campos, ?array $foto, string $corredor, int $tipoCorredor, int $diasCorredor)
+    {
+        $defaults = $this->defaultsCanal();
+        if ($defaults instanceof JsonResponse) {
+            return $defaults;
+        }
+
+        return $this->ejecutarGuardado($request, $corredor, $tipoCorredor, $diasCorredor, 'Cliente creado con éxito', function () use ($campos, $foto, $defaults) {
+            $payload = [
+                'ent_identificacion' => $campos['identificacion'],
+                'ent_tipo_identificacion' => $campos['tipoidentificacion'],
+                'ent_nombres' => $campos['nombres'],
+                'ent_apellidos' => $campos['apellidos'],
+                'ent_email' => $campos['email'],
+                'ent_nombre_comercial' => trim($campos['apellidos'] . ' ' . $campos['nombres']),
+                // Constantes del canal: solo en el alta. En una edición salen de la ficha.
+                'pol_id' => $defaults['pol_id'],
+                'cat_id' => $defaults['cat_id'],
+                'lpr_id' => $defaults['lpr_id'],
+                'emp_id' => self::EMP_ID_DEFAULT,
+                'cli_credito' => false,
+                'tipos_pago' => [['sfp_id' => self::SFP_ID_DEFAULT, 'ctip_default' => true]],
+                'direccion' => [
+                    'dir_calle_principal' => $campos['direccion'],
+                    'dir_calle_secundaria' => $campos['dir_calle_secundaria'],
+                    'dir_principal' => true,
+                    'dir_activo' => true,
+                    'dir_tipo' => self::DIR_TIPO_DEFAULT,
+                    // Geo por defecto, igual que el modal del CRM al agregar una dirección nueva.
+                    // De aquí la copia fn_cliente_anexo_crear al domicilio, que es su espejo.
+                    'dir_prv_id' => $defaults['prv_id'],
+                    'dir_ctn_id' => $defaults['ctn_id'],
+                    'dir_prq_id' => $defaults['prq_id'],
+                ],
+                'telefono' => [
+                    'tte_id' => self::TTE_ID_CELULAR,
+                    'tel_numero' => $campos['telefono'],
+                    'tel_principal' => true,
+                    'tel_activo' => true,
+                ],
+                // Si la entidad YA existía (estado B) se arrastran su título y su fecha de
+                // nacimiento: fn_entidad_modificar los reescribe SIN COALESCE y este formulario
+                // no los captura, así que sin esto se le borrarían a una persona ya registrada.
+                'tit_id' => $foto['tit_id'] ?? $defaults['tit_id'],
+                'ent_fechanacimiento' => $foto['ent_fechanacimiento'] ?? null,
+            ];
+
+            // TIPO DE PERSONA. Lo resuelve el SERVIDOR a partir de la identificación, nunca el
+            // formulario: en un endpoint público no se puede confiar en un 'J' que llegue en el
+            // request (marcaría como empresa a una cédula). Es la misma regla que usa el CRM
+            // cuando el SRI no responde — tercer dígito 9/6 = sociedad, cédula y pasaporte = 'N'.
+            //
+            // Sin esta clave el payload no llevaba 'dinardap' y fn_cliente_validaciones defaulteaba
+            // a 'N', así que TODA empresa nacía marcada como persona natural: al reconsultarla el
+            // formulario ya no la reconocía y volvía a mostrar Nombres/Apellidos con el punto.
+            $payload['dinardap'] = [
+                'cli_tiposujeto' => ValidacionCedulaRucService::tipoSujetoPorIdentificacion(
+                    $campos['identificacion'],
+                    $campos['tipoidentificacion']
+                ) ?: 'N',
+            ];
+
+            // Sexo M y estado civil S, los valores con los que nacían los clientes de este
+            // canal. Viajan como pane_id porque la función deriva cli_sexo/cli_estadocivil del
+            // código DINARDAP de parametro_anexo; omitirlos tomaría el pane_principal del ERP,
+            // que es otro valor y dejaría a estos clientes sin comparación con los anteriores.
+            $demografico = [];
+            if ($defaults['pane_id_sex'] !== null) {
+                $demografico['pane_id_sex'] = $defaults['pane_id_sex'];
+            }
+            if ($defaults['pane_id_eci'] !== null) {
+                $demografico['pane_id_eci'] = $defaults['pane_id_eci'];
+            }
+            if ($demografico) {
+                $payload['demografico'] = $demografico;
+            }
+
+            return ['crm.fn_clientes_registrar', $payload];
+        });
+    }
+
+    // ESTADO C — HIDRATACIÓN. Se parte de la ficha COMPLETA que devuelve el buscador y solo se
+    // pisan los campos del formulario. Es obligatorio: crm.fn_clientes_modificar reescribe el
+    // cliente entero y solo 14 columnas llevan COALESCE, así que mandar únicamente los 8 campos
+    // borraría geo, cónyuge, actividad, datos bancarios y cupo. Además las PKs que trae la foto
+    // (dir_id / tel_id / ctip_id / refane_id) son las que evitan que cada guardado DUPLIQUE las
+    // filas hijas y cree una dirección principal nueva.
+    private function modificarClienteDesdeFoto(Request $request, array $campos, array $foto, string $corredor, int $tipoCorredor, int $diasCorredor)
+    {
+        $vinculado = $this->corredorVinculado((int) $foto['cli_id'], $diasCorredor);
+        if ($vinculado !== null && $vinculado !== $corredor) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
+        }
+
+        return $this->ejecutarGuardado($request, $corredor, $tipoCorredor, $diasCorredor, 'Cliente actualizado con éxito', function () use ($campos, $foto) {
+            // Clientes legacy sin dirección o teléfono principal: la función aborta con
+            // CLIENTE_NO_ENCONTRADO. Se crean al vuelo (mismo criterio que el formulario de
+            // corredores ALM) para no dejarlos fuera. Va dentro de la transacción.
+            $payload = $this->asegurarPrincipales($foto, $campos);
+
+            // Los campos del formulario, y nada más. Todo lo demás viaja con el valor que ya
+            // tenía en la base, así que se reescribe idéntico.
+            $payload['ent_nombres'] = $campos['nombres'];
+            $payload['ent_apellidos'] = $campos['apellidos'];
+            $payload['ent_email'] = $campos['email'];
+            $payload['ent_nombre_comercial'] = trim($campos['apellidos'] . ' ' . $campos['nombres']);
+            $payload['direccion']['dir_calle_principal'] = $campos['direccion'];
+            $payload['direccion']['dir_calle_secundaria'] = $campos['dir_calle_secundaria'];
+            $payload['telefono']['tel_numero'] = $campos['telefono'];
+
+            // ent_identificacion y ent_tipo_identificacion se dejan TAL COMO VIENEN DE LA FOTO,
+            // a propósito: fn_entidad_modificar los reescribe sin COALESCE, y como la búsqueda
+            // casa por los 10 primeros dígitos, un cliente guardado con RUC quedaría con la
+            // cédula si el corredor la teclea. Aquí la identificación solo sirve para buscar.
+
+            return ['crm.fn_clientes_modificar', $payload];
+        });
+    }
+
+    // Ejecuta la función PG y vincula al corredor en la MISMA transacción: si la vinculación
+    // falla, el cliente también se revierte. El nombre de la función se arma en el código,
+    // nunca desde el request.
+    private function ejecutarGuardado(Request $request, string $corredor, int $tipoCorredor, int $diasCorredor, string $mensajeExito, callable $armarPayload)
+    {
+        DB::transaction(function () use ($request, $corredor, $tipoCorredor, $diasCorredor, $armarPayload) {
+            [$funcion, $payload] = $armarPayload();
+
+            $payload = array_merge($payload, $this->contextoAuditoria($request, $corredor));
+
+            $resultado = DB::selectOne("SELECT {$funcion}(?::jsonb) AS cli_id", [json_encode($payload)]);
+
+            $this->vincularCorredor((int) $resultado->cli_id, $corredor, $tipoCorredor, $diasCorredor);
+        });
+
+        return response()->json(RespuestaApi::returnResultado('success', $mensajeExito, null));
+    }
+
+    // Trazabilidad del canal público: aquí no hay usuario del CRM, así que el autor es el
+    // corredor del token. 'usuario_auditoria' alimenta cliente.created_by/updated_by (lo que
+    // muestra el resumen del modal) y el bloque 'auditoria' va a la auditoría forense.
+    // Los DOS caminos lo mandan: si el update lo omitiera, updated_by quedaría en NULL.
+    private function contextoAuditoria(Request $request, string $corredor): array
+    {
+        return [
+            'usuario_auditoria' => mb_substr('CORREDOR - ' . $corredor, 0, 100),
+            'auditoria' => [
+                // Usuario del proveedor que generó el enlace (del token). Con enlaces viejos
+                // que no lo traen queda null, como antes.
+                'usuario_id' => $this->usuIdEnlace,
+                'usuario_login' => mb_substr($corredor, 0, 100),
+                'usuario_nombre' => 'MULTINIVEL',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'request_id' => (string) Str::uuid(),
+            ],
+        ];
+    }
+
+    // La ficha completa del cliente, desde la MISMA función que usa el CRUD del CRM.
+    // Su FROM es entidad LEFT JOIN cliente ... AND cli_tipocli = 1, así que también devuelve a
+    // una persona que existe pero todavía no es cliente (con cli_id en NULL).
+    private function fotoCliente(string $identificacion, int $tipoIdentificacion): ?array
+    {
+        $fila = DB::selectOne('SELECT datos FROM crm.fn_cliente_buscar_por_identificacion(?, ?)', [$identificacion, $tipoIdentificacion]);
+
+        if (!$fila || empty($fila->datos)) {
+            return null;
+        }
+
+        return json_decode($fila->datos, true);
+    }
+
+    // Lo ÚNICO que sale al navegador del corredor. La foto trae la ficha completa (geo,
+    // cónyuge, actividad, cupo, referencias, datos bancarios); de aquí solo salen los campos
+    // que el formulario muestra. El resto nunca cruza la red.
+    private function datosFormulario(array $foto): array
+    {
+        return [
+            'ent_nombres' => $foto['ent_nombres'] ?? '',
+            'ent_apellidos' => $foto['ent_apellidos'] ?? '',
+            'ent_email' => $foto['ent_email'] ?? '',
+            'ent_tipo_identificacion' => $foto['ent_tipo_identificacion'] ?? null,
+            'tel_numero' => $foto['telefono']['tel_numero'] ?? '',
+            'dir_calle_principal' => $foto['direccion']['dir_calle_principal'] ?? '',
+            'dir_calle_secundaria' => $foto['direccion']['dir_calle_secundaria'] ?? '',
+            // Para que el formulario muestre "Nombre Empresa" en vez de Nombres/Apellidos.
+            'cli_tiposujeto' => $foto['dinardap']['cli_tiposujeto'] ?? 'N',
+            // Throttle de la consulta a fuentes externas, resuelto por la misma función.
+            'debe_consultar_identidad' => $foto['debe_consultar_identidad'] ?? true,
+        ];
+    }
+
+    // Normalización única de los campos del formulario (mayúsculas / minúsculas / trim).
+    private function camposFormulario(Request $request): array
+    {
+        return [
+            'identificacion' => trim($request->input('identificacion')),
+            'tipoidentificacion' => (int) trim($request->input('tipoidentificacion')),
+            'nombres' => mb_strtoupper(trim($request->input('nombres'))),
+            'apellidos' => mb_strtoupper(trim($request->input('apellidos'))),
+            'email' => mb_strtolower(trim($request->input('email'))),
+            'telefono' => trim($request->input('telefono')),
+            'direccion' => mb_strtoupper(trim($request->input('direccion'))),
+            'dir_calle_secundaria' => mb_strtoupper(trim($request->input('dir_calle_secundaria') ?? '')),
+        ];
+    }
+
+    // Devuelve JsonResponse si algo falla, null si todo está bien.
+    private function validarCamposFormulario(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'tipoidentificacion' => 'required',
+            'identificacion' => 'required|string',
+            'nombres' => 'required|string',
+            'apellidos' => 'required|string',
+            'email' => 'required|email',
+            'telefono' => 'required|digits:10',
+            'direccion' => 'required|string',
+            'dir_calle_secundaria' => 'required|string',
+        ], [
+            'email.email' => 'Ingrese un email válido.',
+            'telefono.digits' => 'El teléfono debe tener 10 dígitos.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+        }
+
+        // El dígito verificador lo revalida la función PG, pero validarlo aquí da un mensaje
+        // específico en vez del genérico IDENTIFICACION_INVALIDA. El pasaporte (tipo 3) no
+        // tiene algoritmo: la función lo acepta tal cual.
+        $identificacion = trim($request->input('identificacion'));
+        $tipo = trim($request->input('tipoidentificacion'));
+
+        if ($tipo == 1 && !ValidacionCedulaRucService::esCedulaValida($identificacion)) {
+            return response()->json(RespuestaApi::returnResultado('error', 'La cédula ingresada no es válida', null));
+        }
+
+        if ($tipo == 2 && !ValidacionCedulaRucService::esRucValido($identificacion)) {
+            return response()->json(RespuestaApi::returnResultado('error', 'El RUC ingresado no es válido', null));
+        }
+
+        return null;
+    }
+
+    // Valores propios del canal STS, SOLO para el alta. Se resuelven igual que el camino PHP
+    // anterior ('clien' y parámetros TIT/LPR) para no cambiar el dato de los clientes nuevos.
+    private function defaultsCanal()
     {
         $politica = DB::selectOne("SELECT pol_id FROM politica WHERE pol_nombre = 'CONTADO' AND pol_tipocli = 1");
         if (!$politica) {
@@ -509,76 +570,142 @@ class DynamoClienteController extends Controller
                                                 LIMIT 1)
                                     LIMIT 1");
 
-        $identificacion = trim($request->input('identificacion'));
-        $nombres = mb_strtoupper(trim($request->input('nombres')));
-        $apellidos = mb_strtoupper(trim($request->input('apellidos')));
+        // Grupos DINARDAP: 2 = SEXO, 3 = ESTADO CIVIL.
+        $sexo = DB::selectOne("SELECT pane_id FROM parametro_anexo
+                                WHERE pane_grupo_codigo = 2 AND pane_cod_dinardap = ? LIMIT 1", [self::CLI_SEXO_DEFAULT]);
 
-        $payload = [
-            'ent_identificacion' => $identificacion,
-            'ent_tipo_identificacion' => (int) trim($request->input('tipoidentificacion')),
-            'ent_nombres' => $nombres,
-            'ent_apellidos' => $apellidos,
-            'ent_email' => mb_strtolower(trim($request->input('email'))),
-            'ent_nombre_comercial' => $apellidos . ' ' . $nombres,
-            'tit_id' => $titulo->tit_id ?? null,
+        $estadoCivil = DB::selectOne("SELECT pane_id FROM parametro_anexo
+                                        WHERE pane_grupo_codigo = 3 AND pane_cod_dinardap = ? LIMIT 1", [self::CLI_ESTADOCIVIL_DEFAULT]);
+
+        // Geo por defecto de la dirección: MISMA regla que el modal del CRM
+        // (ClienteController::catalogos, bloque defaults) — provincia AZUAY + primer cantón ACTIVO
+        // alfabético + primera parroquia ACTIVA de ese cantón. El formulario del corredor no captura
+        // la geo, así que sin esto el cliente nacía sin provincia/cantón/parroquia.
+        //
+        // El filtro por *_activo NO es opcional: sin él el primer cantón alfabético de AZUAY es
+        // ASUNCION, que está inactivo (de los 225 que se desactivaron por ser parroquias disfrazadas
+        // de cantón), y su única parroquia es el marcador "SIN PARROQUIAS".
+        $provinciaDefecto = "(SELECT prv_id FROM provincia WHERE UPPER(TRIM(prv_nombre)) = 'AZUAY' AND prv_activo = true LIMIT 1)";
+        $cantonDefecto = "(SELECT ctn_id FROM canton WHERE prv_id = {$provinciaDefecto} AND ctn_activo = true ORDER BY ctn_nombre LIMIT 1)";
+
+        $provincia = DB::selectOne("SELECT {$provinciaDefecto} AS prv_id");
+        $canton = DB::selectOne("SELECT {$cantonDefecto} AS ctn_id");
+        $parroquia = DB::selectOne("SELECT prq_id FROM parroquia
+                                     WHERE ctn_id = {$cantonDefecto} AND prq_activo = true
+                                     ORDER BY prq_nombre LIMIT 1");
+
+        return [
             'pol_id' => $politica->pol_id,
+            'tit_id' => $titulo->tit_id ?? null,
             'cat_id' => $categoria->cat_id ?? null,
             'lpr_id' => $listaPre->lpr_id ?? null,
-            'emp_id' => 1,
-            'cli_credito' => false,
-            'tipos_pago' => [['sfp_id' => 1, 'ctip_default' => true]],
-            'direccion' => [
-                'dir_calle_principal' => mb_strtoupper(trim($request->input('direccion'))),
-                'dir_calle_secundaria' => mb_strtoupper(trim($request->input('dir_calle_secundaria') ?? '')),
-                'dir_principal' => true,
-                'dir_tipo' => 'CASA',
-            ],
-            'telefono' => [
-                'tte_id' => 2, // 2 es celular
-                'tel_numero' => trim($request->input('telefono')),
-                'tel_principal' => true,
-            ],
-            // Trazabilidad: en este flujo público no hay usuario CRM; created_by y
-            // la auditoría forense quedan atribuidos al corredor del token
-            'usuario_auditoria' => mb_substr('CORREDOR - ' . $corredor, 0, 100),
-            'auditoria' => [
-                'usuario_id' => null,
-                'usuario_login' => mb_substr($corredor, 0, 100),
-                'usuario_nombre' => 'FORMULARIO PROVEEDOR STS',
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'request_id' => (string) Str::uuid(),
-            ],
+            'pane_id_sex' => $sexo->pane_id ?? null,
+            'pane_id_eci' => $estadoCivil->pane_id ?? null,
+            'prv_id' => $provincia->prv_id ?? null,
+            'ctn_id' => $canton->ctn_id ?? null,
+            'prq_id' => $parroquia->prq_id ?? null,
         ];
+    }
 
-        try {
-            DB::transaction(function () use ($payload, $corredor, $tipoCorredor, $diasCorredor) {
-                $resultado = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload)]);
+    // Un cliente sin dirección o teléfono principal hace abortar a fn_clientes_modificar.
+    // Se crean con los datos del formulario y se apuntan en la entidad; la función los
+    // actualizará enseguida con esos mismos valores.
+    private function asegurarPrincipales(array $foto, array $campos): array
+    {
+        $entId = (int) $foto['ent_id'];
 
-                // ($corredor y $tipoCorredor provienen del token cifrado, no del formulario)
-                $clienteMultinivel = new ClientesMultinivel();
-                $clienteMultinivel->cli_id = $resultado->cli_id;
-                $clienteMultinivel->corredor = $corredor;
-                $clienteMultinivel->tipo_corredor = $tipoCorredor;
-                $clienteMultinivel->dias_parametro = $diasCorredor;
-                $clienteMultinivel->activo = true;
-                $clienteMultinivel->save();
-            });
+        if (empty($foto['direccion']['dir_id'])) {
+            $nuevaDireccion = new Direccion();
+            $nuevaDireccion->dir_calle_principal = $campos['direccion'];
+            $nuevaDireccion->dir_calle_secundaria = $campos['dir_calle_secundaria'];
+            $nuevaDireccion->dir_tipo = self::DIR_TIPO_DEFAULT;
+            $nuevaDireccion->dir_principal = true;
+            $nuevaDireccion->dir_activo = true;
+            $nuevaDireccion->save();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Cliente creado con éxito', null));
-        } catch (QueryException $e) {
-            if ($this->esCarreraVinculacion($e)) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
-            }
+            DB::update("UPDATE public.entidad SET ent_direccion_principal = ? WHERE ent_id = ?", [$nuevaDireccion->dir_id, $entId]);
 
-            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-                if (strpos($e->getMessage(), $codigo) !== false) {
-                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
-                }
-            }
-
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear el cliente', $e->getMessage()));
+            $foto['direccion'] = array_merge(
+                is_array($foto['direccion'] ?? null) ? $foto['direccion'] : [],
+                ['dir_id' => $nuevaDireccion->dir_id, 'dir_principal' => true, 'dir_activo' => true, 'dir_tipo' => self::DIR_TIPO_DEFAULT]
+            );
         }
+
+        if (empty($foto['telefono']['tel_id'])) {
+            $nuevoTelefono = new Telefono();
+            $nuevoTelefono->tte_id = self::TTE_ID_CELULAR;
+            $nuevoTelefono->tel_numero = $campos['telefono'];
+            $nuevoTelefono->tel_principal = true;
+            $nuevoTelefono->tel_activo = true;
+            $nuevoTelefono->save();
+
+            DB::update("UPDATE public.entidad SET ent_telefono_principal = ? WHERE ent_id = ?", [$nuevoTelefono->tel_id, $entId]);
+
+            $foto['telefono'] = array_merge(
+                is_array($foto['telefono'] ?? null) ? $foto['telefono'] : [],
+                ['tel_id' => $nuevoTelefono->tel_id, 'tte_id' => self::TTE_ID_CELULAR, 'tel_principal' => true, 'tel_activo' => true]
+            );
+        }
+
+        return $foto;
+    }
+
+    // Corredor con vinculación VIGENTE, o null si está libre. Si la vinculación ya cumplió los
+    // días del parámetro CLICOR se desvincula y el cliente pasa a considerarse libre.
+    private function corredorVinculado(int $cliId, int $diasCorredor): ?string
+    {
+        $fila = DB::selectOne("SELECT corredor FROM public.clientes_multinivel
+                                WHERE cli_id = ?
+                                    AND activo = true
+                                    AND fecha_desvinculacion IS NULL
+                                LIMIT 1", [$cliId]);
+
+        if (!$fila) {
+            return null;
+        }
+
+        if ($this->desvincularCorredorSiExpiro($cliId, $diasCorredor)) {
+            return null;
+        }
+
+        return $fila->corredor;
+    }
+
+    // Vincula el cliente al corredor del token si está libre. Si ya tiene vinculación vigente
+    // no hace nada: el caso "pertenece a otro corredor" se rechaza antes de llegar aquí.
+    private function vincularCorredor(int $cliId, string $corredor, int $tipoCorredor, int $diasCorredor): void
+    {
+        $vigente = DB::selectOne("SELECT cli_id FROM public.clientes_multinivel
+                                    WHERE cli_id = ?
+                                        AND activo = true
+                                        AND fecha_desvinculacion IS NULL
+                                    LIMIT 1", [$cliId]);
+
+        if ($vigente) {
+            return;
+        }
+
+        $clienteMultinivel = new ClientesMultinivel();
+        $clienteMultinivel->cli_id = $cliId;
+        $clienteMultinivel->corredor = $corredor;
+        $clienteMultinivel->tipo_corredor = $tipoCorredor;
+        $clienteMultinivel->dias_parametro = $diasCorredor;
+        $clienteMultinivel->activo = true;
+        $clienteMultinivel->save();
+    }
+
+    // Traduce el código de excepción de las funciones PG al mensaje del corredor. El orden de
+    // MENSAJES_ERROR importa: los códigos largos van antes que los que son su subcadena
+    // (REQUIERE_TIPOEMPRESA antes que EMPRESA).
+    private function respuestaErrorFuncion(QueryException $e, string $mensajeGenerico)
+    {
+        foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
+            if (strpos($e->getMessage(), $codigo) !== false) {
+                return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+            }
+        }
+
+        return response()->json(RespuestaApi::returnResultado('error', $mensajeGenerico, $e->getMessage()));
     }
 
 
@@ -632,9 +759,16 @@ class DynamoClienteController extends Controller
             // tipo_corredor va QUEMADO aquí (1. Corredor ALM; 2. Corredor STS;): todo link
             // de este endpoint es tipo 2 (STS); ni el front ni el proveedor lo envían nunca.
             // El tipo 1 queda reservado para el flujo interno del CRM (sin link).
+            //
+            // usu_id: el usuario del proveedor que pidió el link. Esta ruta SÍ tiene JWT, y las
+            // del formulario NO, así que es el único punto donde se puede saber quién habilitó
+            // ese acceso. Viaja dentro del token para que las consultas de identidad y la
+            // auditoría del cliente queden atribuidas a él. Los enlaces emitidos antes de este
+            // cambio no lo traen: se lee como opcional.
             $t = Crypt::encryptString(json_encode([
                 'corredor' => $corredor,
                 'tipo_corredor' => 2,
+                'usu_id' => auth('api')->id(),
                 'expires' => $expires,
             ]));
 
@@ -683,10 +817,14 @@ class DynamoClienteController extends Controller
 
         $valor = $parametro ? trim((string) $parametro->valor) : '';
 
-        // Error si el parámetro no existe, su valor es NULL/vacío o es negativo.
-        // Se acepta 0 o más días (0 = la vinculación expira de inmediato)
-        if ($valor === '' || (int) $valor < 0) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No está configurado el parámetro, comuniquese con el administrador.', null));
+        // Error si el parámetro no existe, su valor es NULL/vacío o no es un entero.
+        // Se acepta 0 o más días (0 = la vinculación expira de inmediato).
+        //
+        // ctype_digit en vez de (int) >= 0: la comparación anterior daba por bueno cualquier texto,
+        // porque (int) 'abc' es 0 — y 0 días significa "expira ya", así que un valor mal escrito
+        // desvinculaba del corredor a TODOS los clientes en cada consulta, sin avisar.
+        if ($valor === '' || !ctype_digit($valor)) {
+            return response()->json(RespuestaApi::returnResultado('error', 'El parámetro CLICOR no tiene un número de días válido, comuníquese con el administrador.', null));
         }
 
         return (int) $valor;

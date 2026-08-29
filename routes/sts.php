@@ -28,4 +28,7 @@ Route::group(["prefix" => "sts", 'middleware' => ['throttle:10,1']], function ($
     Route::post('/addDynamoCliente', [DynamoClienteController::class, 'addDynamoCliente']);
     Route::post('/verificarClienteDynamo', [DynamoClienteController::class, 'verificarClienteDynamo']);
     Route::post('/updateDynamoCliente', [DynamoClienteController::class, 'updateDynamoCliente']);
+    // Consulta de identidad en fuentes oficiales (SRI / Ecuador Legal). Misma lógica que el
+    // CRUD del CRM, pero autenticada con el token cifrado del enlace en vez de JWT.
+    Route::post('/consultarIdentidadDynamo', [DynamoClienteController::class, 'consultarIdentidadDynamo']);
 });
