@@ -940,7 +940,8 @@ class DynamoClienteController extends Controller
                                         e.ent_email AS email,
                                         t.tel_numero AS telefono,
                                         d.dir_calle_principal AS calle_principal,
-                                        d.dir_calle_secundaria AS calle_secundaria
+                                        d.dir_calle_secundaria AS calle_secundaria,
+                                        NULL AS calificacion_cliente
                                     FROM public.clientes_multinivel cm
                                         JOIN public.cliente c ON c.cli_id = cm.cli_id
                                         JOIN public.entidad e ON e.ent_id = c.ent_id
