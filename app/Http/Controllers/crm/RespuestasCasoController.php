@@ -22,8 +22,8 @@ class RespuestasCasoController extends Controller
     public function listRespuestasCasoByTablero($id)
     {
         try {
-            // $respuestas = RespuestasCaso::where('tab_id', $id)->with('tipo_estado')->get();
-            $respuestas = RespuestasCaso::where('tab_id', $id)->with('fase')->get();
+            // $respuestas = RespuestasCaso::where('tab_id', $id)->with('fase')->get();
+            $respuestas = RespuestasCaso::where('tab_id', $id)->with('fase', 'tipo_caso_formula.tipoCaso')->get();
 
             $this->log->logInfo(RespuestasCasoController::class, 'Se listo con exito las respuestas del caso del tablero con el ID: ' . $id);
 
@@ -68,29 +68,29 @@ class RespuestasCasoController extends Controller
     public function addRespuestasCaso(Request $request)
     {
         try {
-            // Validar si ya existe un registro con el mismo est_id_actual y resp_id
-            $existingRecord = RespuestasCaso::where('fase_id', $request->fase_id)
-                ->where('nombre', $request->nombre)
-                ->with('fase')
-                ->first();
+            // // Validar si ya existe un registro con el mismo est_id_actual y resp_id
+            // $existingRecord = RespuestasCaso::where('fase_id', $request->fase_id)
+            //     ->where('nombre', $request->nombre)
+            //     ->with('fase')
+            //     ->first();
 
-            if ($existingRecord) {
-                $this->log->logError(RespuestasCasoController::class, 'Ya EXISTE una respuesta con el nombre: ' . $existingRecord->nombre . ', en la fase: ' . $existingRecord->fase->nombre);
+            // if ($existingRecord) {
+            //     $this->log->logError(RespuestasCasoController::class, 'Ya EXISTE una respuesta con el nombre: ' . $existingRecord->nombre . ', en la fase: ' . $existingRecord->fase->nombre);
 
-                // Si ya existe un registro con los mismos valores, devuelve un error
-                return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE una respuesta con el nombre: ' . $existingRecord->nombre . ', en la fase: ' . $existingRecord->fase->nombre, ''));
+            //     // Si ya existe un registro con los mismos valores, devuelve un error
+            //     return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE una respuesta con el nombre: ' . $existingRecord->nombre . ', en la fase: ' . $existingRecord->fase->nombre, ''));
 
-            } else {
+            // } else {
 
                 $respuestas = RespuestasCaso::create($request->all());
 
-                $resultado = RespuestasCaso::where('tab_id', $respuestas->tab_id)->with('fase')
+                $resultado = RespuestasCaso::where('tab_id', $respuestas->tab_id)->with('fase', 'tipo_caso_formula.tipoCaso')
                     ->orderBy('estado', 'DESC')->orderBy('id', 'DESC')->get();
 
                 $this->log->logInfo(RespuestasCasoController::class, 'Se guardo con exito la respuesta del caso');
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado));
-            }
+            // }
 
         } catch (Exception $e) {
             $this->log->logError(RespuestasCasoController::class, 'Error al guardar la respuesta del caso', $e);
@@ -104,28 +104,28 @@ class RespuestasCasoController extends Controller
         try {
             $respuestas = RespuestasCaso::findOrFail($id);
 
-            // Validar si la actualización resultaría en valores duplicados
-            $existingRecord = RespuestasCaso::where('fase_id', $request->fase_id)
-                ->where('nombre', $request->nombre)
-                ->where('id', '!=', $id) // Excluir el registro actual de la consulta
-                ->first();
+            // // Validar si la actualización resultaría en valores duplicados
+            // $existingRecord = RespuestasCaso::where('fase_id', $request->fase_id)
+            //     ->where('nombre', $request->nombre)
+            //     ->where('id', '!=', $id) // Excluir el registro actual de la consulta
+            //     ->first();
 
-            if ($existingRecord) {
-                $this->log->logError(RespuestasCasoController::class, 'Ya EXISTE una respuesta con el nombre: ' . $existingRecord->nombre . ', en la fase: ' . $existingRecord->fase->nombre);
+            // if ($existingRecord) {
+            //     $this->log->logError(RespuestasCasoController::class, 'Ya EXISTE una respuesta con el nombre: ' . $existingRecord->nombre . ', en la fase: ' . $existingRecord->fase->nombre);
 
-                // Si la actualización resultaría en valores duplicados, devuelve un error
-                return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE una respuesta con el nombre: ' . $existingRecord->nombre . ', en la fase: ' . $existingRecord->fase->nombre, ''));
+            //     // Si la actualización resultaría en valores duplicados, devuelve un error
+            //     return response()->json(RespuestaApi::returnResultado('error', 'Ya EXISTE una respuesta con el nombre: ' . $existingRecord->nombre . ', en la fase: ' . $existingRecord->fase->nombre, ''));
 
-            } else {
+            // } else {
 
                 $respuestas->update($request->all());
 
-                $resultado = RespuestasCaso::where('id', $respuestas->id)->with('fase')->first();
+                $resultado = RespuestasCaso::where('id', $respuestas->id)->with('fase', 'tipo_caso_formula.tipoCaso')->first();
 
                 $this->log->logInfo(RespuestasCasoController::class, 'Se actualizo con exito la respuesta con el ID: ' . $id);
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $resultado));
-            }
+            // }
 
         } catch (Exception $e) {
             $this->log->logError(RespuestasCasoController::class, 'Error al actualizar la respuesta con el ID: ' . $id, $e);

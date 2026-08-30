@@ -6,9 +6,11 @@ use App\Events\NotificacionesCrmEvent;
 use App\Events\ReasignarCasoEvent;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\EmailDinamicoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
+use App\Models\configuracion\Agencia;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\ClienteCrm;
@@ -16,16 +18,18 @@ use App\Models\crm\ControlTiemposCaso;
 use App\Models\crm\credito\ClienteEnrolamiento;
 use App\Models\crm\Estados;
 use App\Models\crm\EstadosFormulas;
+use App\Models\crm\formularios2\CasoComprobante;
 use App\Models\crm\Miembros;
 use App\Models\crm\Notificaciones;
 use App\Models\crm\ReferenciasCliente;
 use App\Models\crm\RequerimientoCaso;
 use App\Models\crm\Tablero;
-use App\Models\crm\Tareas;
+use App\Models\crm\TableroUsuario;
 use App\Models\crm\TelefonosCliente;
 use App\Models\crm\TelefonosReferencias;
 use App\Models\crm\TipoCaso;
 use App\Models\crm\Fase;
+use App\Models\crm\VistaTodosLosCasos;
 use App\Models\Formulario\FormCampoValor;
 use App\Models\Formulario\FormValor;
 use App\Models\openceo\CPedidoProforma;
@@ -43,12 +47,12 @@ class CasoController extends Controller
     {
         $this->middleware('auth:api', [
             'except' =>
-                [
-                    'add',
-                    //'addCasoOPMICreativa'
-                    'getCasoFormulario'
-
-                ]
+            [
+                'add',
+                'addCaso2',
+                //'addCasoOPMICreativa'
+                'getCasoFormulario',
+            ]
         ]);
     }
 
@@ -59,7 +63,8 @@ class CasoController extends Controller
         $casoInput = $request->all();
         // $miembros = $request->input('miembros');
         $miembros2 = $request->input('miembros');
-
+        //datos formulario estatico creacion de usuario
+        $dataFormStatic = $request->input('form_estatico');
         // Verificar si $miembros2 es un string
         if (is_string($miembros2)) {
             // Convertir la cadena en un array usando la coma como delimitador
@@ -67,91 +72,122 @@ class CasoController extends Controller
         } else {
             $miembros = $miembros2;
         }
-        try {
-            $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
-                $caso = new Caso($casoInput);
-                $caso->save();
-                //buscar las tareas predefinidas
-                //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
-                $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
-                inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
-                inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
-                where tc.id = ?', [$caso->tc_id]);
-                //insertar en la tabla tareas
-                foreach ($arrayDtipoTareas as $dtt) {
-                    $tarea = new Tareas();
-                    $tarea->nombre = $dtt->nombre;
-                    $tarea->requerido = $dtt->requerido;
-                    $tarea->estado = $dtt->estado;
-                    $tarea->ctt_id = $caso->ctt_id;
-                    $tarea->tab_id = $dtt->tab_id;
-                    $tarea->marcado = false;
-                    $caso->tareas()->save($tarea);
+        //try {
+        $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request, $dataFormStatic) {
+
+
+            $caso = new Caso($casoInput);
+            $caso->save();
+            if ($dataFormStatic) {
+                $this->crearFormularioStatico($dataFormStatic, $caso->id);
+            }
+            // //buscar las tareas predefinidas
+            // //$arrayDtipoTareas = DTipoTarea::where('ctt_id', $caso->ctt_id)->get();
+            // $arrayDtipoTareas = DB::select('SELECT dt.* from crm.tipo_caso tc
+            //     inner join crm.ctipo_tarea ct on ct.id = tc.ctt_id
+            //     inner join crm.dtipo_tarea dt on dt.ctt_id = ct.id
+            //     where tc.id = ?', [$caso->tc_id]);
+            // //insertar en la tabla tareas
+            // foreach ($arrayDtipoTareas as $dtt) {
+            //     $tarea = new Tareas();
+            //     $tarea->nombre = $dtt->nombre;
+            //     $tarea->requerido = $dtt->requerido;
+            //     $tarea->estado = $dtt->estado;
+            //     $tarea->ctt_id = $caso->ctt_id;
+            //     $tarea->tab_id = $dtt->tab_id;
+            //     $tarea->marcado = false;
+            //     $caso->tareas()->save($tarea);
+            // }
+            // // $newGrupo = new ChatGroups();
+            // // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
+            // // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
+            // //$newGrupo->save();
+            $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
+            //--------------------
+            $caso->estado_2 = $estadoInicial->id;
+            $caso->nombre = 'CASO # ' . $caso->id;
+            $caso->user_creador_id = $request->user_creador_id;
+
+            $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
+
+            if ($caso->desc_json) {
+            }
+
+            // Buscar id_zona_agencia por codigo_agencia
+            if ($caso->codigo_agencia) {
+                $agencia = Agencia::where('codigo', $caso->codigo_agencia)->first();
+                if ($agencia) {
+                    $caso->id_zona_agencia = $agencia->id_zona_agencia;
                 }
-                // $newGrupo = new ChatGroups();
-                // $newGrupo->nombre = 'GRUPO CASO ' . $caso->id;
-                // $newGrupo->uniqd = 'caso.grupo.' . $caso->id;
-                //$newGrupo->save();
-                $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
-                //--------------------
-                $caso->estado_2 = $estadoInicial->id;
-                $caso->nombre = 'CASO # ' . $caso->id;
-                //$caso->user_creador_id = $userLoginId;
-                $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
-                $caso->save();
+            }
 
-
-
-                for ($i = 0; $i < sizeof($miembros); $i++) {
+            $caso->save();
+            for ($i = 0; $i < sizeof($miembros); $i++) {
+                $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
+                if (!$mieExixte) {
                     $miembro = new Miembros();
                     $miembro->user_id = $miembros[$i];
-                    //$miembro->chat_group_id = $newGrupo->id;
                     $caso->miembros()->save($miembro);
                 }
-
-
-
-                $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
-
-                $soporteController = new SoporteController();
-                $soporteController->addGaleriaArchivos($request, $caso->id);
-
-                return $this->getCaso($caso->id);
-            });
-            $dataFormSopo = $request->input('valoresFormulario');
-            if ($dataFormSopo) {
-                $this->formularioSoporte($request, $casoCreado['id']);
             }
-            // START Bloque de código que genera un registro de auditoría manualmente
-            $audit = new Audits();
-            $audit->user_id = Auth::id();
-            $audit->event = 'created';
-            $audit->auditable_type = Caso::class;
-            $audit->auditable_id = $casoCreado->id;
-            $audit->user_type = User::class;
-            $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
-            $audit->url = $request->fullUrl();
-            // Establecer old_values y new_values
-            $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
-            $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
-            $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
-            $audit->estado_caso = $casoCreado->estadodos->nombre;
-            $audit->estado_caso_id = $casoCreado->estado_2;
-            $audit->accion = 'addCaso';
-            $audit->caso_id = $casoCreado->id;
-            $audit->save();
-            // END Auditoria
-            // le mando uno porque es la primera vez q se crea el caso
-            $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
-            broadcast(new TableroEvent($casoCreado));
-            $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
-            $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
-        } catch (\Throwable $e) {
-            $log->logError(CasoController::class, 'Error al guardar el caso', $e);
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
 
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
+            $soporteController = new SoporteController();
+            $soporteController->addGaleriaArchivos($request, $caso->id);
+
+
+            $ccm_id_input = $request->input('ccm_id');
+            if ($ccm_id_input) {
+                CasoComprobante::create([
+                    'caso_id' => $caso->id,
+                    'ccm_id' => $ccm_id_input,
+                ]);
+            }
+
+            return $this->getCaso($caso->id);
+        });
+        $dataFormSopo = $request->input('valoresFormulario');
+        if ($dataFormSopo) {
+            $this->formularioSoporte($request, $casoCreado['id']);
         }
+        // START Bloque de código que genera un registro de auditoría manualmente
+        $audit = new Audits();
+        $audit->user_id = Auth::id();
+        $audit->event = 'created';
+        $audit->auditable_type = Caso::class;
+        $audit->auditable_id = $casoCreado->id;
+        $audit->user_type = User::class;
+        $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+        $audit->url = $request->fullUrl();
+        // Establecer old_values y new_values
+        $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
+        $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
+        $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+        $audit->estado_caso = $casoCreado->estadodos->nombre;
+        $audit->estado_caso_id = $casoCreado->estado_2;
+        $audit->accion = 'addCaso';
+        $audit->caso_id = $casoCreado->id;
+        $audit->save();
+        // END Auditoria
+        // le mando uno porque es la primera vez q se crea el caso
+        $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+        $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
+        $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
+        broadcast(new TableroEvent($casoCreado));
+        return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
+        // } catch (\Throwable $e) {
+        //     $log->logError(CasoController::class, 'Error al guardar el caso', $e);
+
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error al crear caso.', $e->getMessage()));
+        // }
+    }
+
+    public function crearFormularioStatico($data, $casoId)
+    {
+        $dataObject = json_decode($data); // assuming $data is a JSON string
+        $dataObject->caso_id = $casoId;
+        $dataObject->user_id = Auth::id();
+        $result = DB::table('crm.formulario_estatico')->insert((array) $dataObject);
     }
 
     public function formularioSoporte($request, $casoId)
@@ -268,7 +304,7 @@ class CasoController extends Controller
             );
             // end diferencia de tiempos en horas minutos y segundos
 
-            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id);
+            $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
             $data = $this->getCaso($caso->id);
             broadcast(new TableroEvent($data));
 
@@ -287,8 +323,8 @@ class CasoController extends Controller
             $audit->caso_id = $caso->id;
             $audit->save();
             // END Auditoria
-            $emailController = new EmailController();
-            $emailController->send_emailCambioFase($caso->id, $caso->fas_id);
+            $emailController = new EmailDinamicoController();
+            $emailController->sendEmailDinamico($caso->id, $caso->fas_id);
             //$this->enviarCorreoCliente($caso->id);
 
             $log->logInfo(CasoController::class, 'Se actualizo la fase del caso con exito');
@@ -325,29 +361,114 @@ class CasoController extends Controller
     {
         $log = new Funciones();
 
-        $data = [];
         $casoId = $request->input("casoId");
         $bloqueado = $request->input("bloqueado");
         $bloqueado_user = $request->input("bloqueado_user");
+        $user = auth('api')->user();
 
+        // Usar transacción para evitar condiciones de carrera (race conditions)
+        DB::beginTransaction();
         try {
-            $caso = Caso::find($casoId);
-            if ($caso) {
-                $caso->bloqueado = $bloqueado;
-                $caso->bloqueado_user = $bloqueado_user;
-                $caso->save();
-                $data = $this->getCasoJoinTablero($casoId);
+            // Obtener el caso con bloqueo de fila (FOR UPDATE) para evitar lecturas concurrentes
+            $caso = Caso::where('id', $casoId)->lockForUpdate()->first();
+
+            if (!$caso) {
+                DB::rollBack();
+                return response()->json(
+                    RespuestaApi::returnResultado('error', 'Caso no encontrado', null),
+                    404
+                );
             }
+
+            // Obtener información del usuario que hace la petición
+            $usuarioActual = User::find($user->id);
+            $esAdmin = $usuarioActual && ($usuarioActual->usu_tipo == 2 || $usuarioActual->usu_tipo == 3);
+
+            // Variable para detectar desbloqueo forzado por admin
+            $desbloqueoForzado = false;
+            $usuarioAnterior = null;
+
+            // Si se quiere BLOQUEAR el caso
+            if ($bloqueado === true || $bloqueado === "true" || $bloqueado === 1) {
+                // Verificar si ya está bloqueado por OTRO usuario
+                if ($caso->bloqueado && $caso->bloqueado_user !== $bloqueado_user) {
+
+                    // ⭐ Si es ADMIN o SUPERUSUARIO, puede forzar el bloqueo y tomar control
+                    if ($esAdmin) {
+                        $desbloqueoForzado = true;
+                        $usuarioAnterior = $caso->bloqueado_user;
+                        $log->logInfo(CasoController::class, 'BLOQUEO FORZADO - Admin/Superusuario: ' . $bloqueado_user . ' tomó control del caso #' . $casoId . ' que estaba bloqueado por: ' . $usuarioAnterior);
+                    } else {
+                        // Si NO es admin, rechazar el bloqueo
+                        DB::rollBack();
+
+                        $log->logInfo(CasoController::class, 'Intento de bloqueo fallido - Caso #' . $casoId . ' ya está bloqueado por: ' . $caso->bloqueado_user . '. Usuario que intentó: ' . $bloqueado_user);
+
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Este caso está siendo atendido por ' . $caso->bloqueado_user,
+                            'data' => [
+                                'bloqueado' => true,
+                                'bloqueado_user' => $caso->bloqueado_user,
+                                'caso_id' => $casoId
+                            ]
+                        ], 423); // HTTP 423 Locked
+                    }
+                }
+
+                // Bloquear el caso (o re-bloquearlo si es admin forzando)
+                $caso->bloqueado = true;
+                $caso->bloqueado_user = $bloqueado_user;
+
+                if (!$desbloqueoForzado) {
+                    $log->logInfo(CasoController::class, 'Caso #' . $casoId . ' bloqueado exitosamente por: ' . $bloqueado_user);
+                }
+            } else {
+                // DESBLOQUEAR el caso
+                // Detectar si es un desbloqueo forzado por admin/superusuario
+                // Solo es desbloqueo forzado si:
+                // 1. El caso está bloqueado
+                // 2. Tiene un usuario que lo bloqueó
+                // 3. El usuario que desbloquea NO es el mismo (y no es vacío)
+                // 4. El usuario que desbloquea ES admin/superusuario
+                if ($caso->bloqueado && $caso->bloqueado_user && $bloqueado_user && $caso->bloqueado_user !== $bloqueado_user && $esAdmin) {
+                    $desbloqueoForzado = true;
+                    $usuarioAnterior = $caso->bloqueado_user;
+                    $log->logInfo(CasoController::class, 'Desbloqueo FORZADO - Admin/Superusuario: ' . $bloqueado_user . ' desbloqueó el caso #' . $casoId . ' que estaba bloqueado por: ' . $usuarioAnterior);
+                } else {
+                    $log->logInfo(CasoController::class, 'Caso #' . $casoId . ' desbloqueado por: ' . ($bloqueado_user ?: 'usuario'));
+                }
+
+                $caso->bloqueado = false;
+                $caso->bloqueado_user = null;
+            }
+
+            $caso->save();
+            DB::commit();
+
+            // Obtener datos actualizados del caso
             $data = $this->getCaso($casoId);
+
+            // Agregar información sobre desbloqueo forzado al evento
+            if ($desbloqueoForzado) {
+                $data->desbloqueo_forzado = true;
+                $data->admin_que_desbloqueo = $bloqueado_user;
+                $data->usuario_anterior = $usuarioAnterior;
+                $data->tipo_admin = $usuarioActual->usu_tipo == 2 ? 'Administrador' : 'Superusuario';
+            }
+
+            // Emitir evento WebSocket
             broadcast(new TableroEvent($data));
 
-            $log->logInfo(CasoController::class, 'Caso #' . $casoId . ' bloqueado por: ' . $bloqueado_user);
-
-            return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizo con exito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizó con éxito', $data));
         } catch (\Throwable $e) {
+            DB::rollBack();
             $log->logError(CasoController::class, 'Error al actualizar el bloqueo del caso #' . $casoId, $e);
 
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al actualizar', $e->getMessage()));
+            return response()->json(
+                RespuestaApi::returnResultado('error', 'Error al actualizar: ' . $e->getMessage(), null),
+                500
+            );
         }
     }
 
@@ -358,7 +479,6 @@ class CasoController extends Controller
         INNER JOIN crm.fase fa on fa.id = ca.fas_id
         INNER JOIN crm.tablero ta on ta.id = fa.tab_id
         where ca.id = ' . $casoId);
-        //echo('<-------------------------------->                 '.json_encode($data).'            <-------------------------------->');
         return $data[0];
     }
 
@@ -607,9 +727,9 @@ class CasoController extends Controller
                 $casoEnProceso->fase_anterior_id = $fase_anterior_id;
                 $casoEnProceso->user_anterior_id = $user_anterior_id;
                 $casoEnProceso->save();
-                $this->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
-                $emailController = new EmailController();
-                $emailController->send_emailCambioFase($caso_id, $casoEnProceso->fas_id);
+                $this->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id, $casoEnProceso->tc_id);
+                $emailController = new EmailDinamicoController();
+                $emailController->sendEmailDinamico($caso_id, $casoEnProceso->fas_id);
                 //$this->enviarCorreoCliente($caso_id);
 
                 // Obtener el old_values (valor antiguo)
@@ -780,39 +900,80 @@ class CasoController extends Controller
         $log = new Funciones();
 
         try {
-            $tabId = DB::select('SELECT t.id FROM crm.caso co
-            inner join crm.fase fa on fa.id = co.fas_id
+
+            $tabId = DB::selectOne('SELECT t.id, t.nombre FROM crm.caso ca
+            inner join crm.fase fa on fa.id = ca.fas_id
             inner join crm.tablero t on t.id = fa.tab_id
-                where co.id = ' . $casoId)[0];
+                where ca.id = ?', [$casoId]);
 
+            //"nombre"	"cpp_id"	"cpp_estado"	"ecr_nombre"
+            //"CASO # 2664"	542	9	"APROBADO"
+
+            //VALIDAR CASO TERMINADO CUANDO TIENE UN CPEDIDO_PROFORMA DEL DYNAMO
+            $this->validarEstadoOPMdynamo($casoId);
             $log->logInfo(CasoController::class, 'Se listo con exito el caso #' . $casoId);
+            //$userLogin = Auth::id();
+            //$user = DB::selectOne("SELECT usu_tipo FROM crm.users where id = ?", [$userLogin]);
 
-            return Caso::with([
-                'user',
-                'userCreador',
-                'clienteCrm',
-                'resumen',
-                'tareas' => function ($query) use ($tabId) {
-                    $query->where('tab_id', $tabId->id);
-                },
-                'actividad',
-                'Etiqueta',
-                'miembros.usuario.departamento',
-                'Galeria',
-                'Archivo',
-                'req_caso' => function ($query) {
-                    $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
-                },
-                'tablero',
-                'fase.tablero',
-                'estadodos',
-                'tipocaso'
-
-            ])->where('id', $casoId)->first();
+            return Caso::selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                ->with([
+                    'user',
+                    'userCreador',
+                    'clienteCrm',
+                    // 'resumen',
+                    // 'tareas' => function ($query) use ($tabId) {
+                    //     $query->where('tab_id', $tabId->id);
+                    // },
+                    'tareas2',
+                    'actividad',
+                    'Etiqueta',
+                    // 'miembros.usuario.departamento',
+                    'Galeria',
+                    'Archivo',
+                    'req_caso' => function ($query) {
+                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    },
+                    'tablero',
+                    'fase.tablero',
+                    'estadodos',
+                    // 'estadodos' => function ($query) {
+                    //     $query->where('nombre', '!=', 'TERMINADO');
+                    // },
+                    'tipocaso' => function ($query) {
+                        $query->select('*', DB::raw("
+                            CASE 
+                                WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                ELSE 'TABLERO'
+                            END as categoria_caso_nombre"));
+                    },
+                    'tiempo_caso',
+                    'agencia'
+                ])->where('id', $casoId)->first();
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al listar el caso #' . $casoId, $e);
-
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function validarEstadoOPMdynamo($casoId)
+    {
+        $cpedidoProforma = DB::selectOne("SELECT ca.nombre, cpp.cpp_id, cpp.cpp_estado, ec.ecr_nombre from crm.caso ca
+                inner join public.cpedido_proforma cpp on cpp.cpp_id = ca.cpp_id
+                inner join public.estado_credito ec on ec.ecr_id = cpp.cpp_estado
+                where ca.id = ?
+                order by ca.id", [$casoId]);
+        if ($cpedidoProforma) {
+            $tableroCaso = DB::selectOne("SELECT ta.nombre from crm.caso ca
+                inner join crm.fase fa on fa.id = ca.fas_id
+                inner join crm.tablero ta on ta.id = fa.tab_id
+                where ca.id = ?", [$casoId]);
+            if ($tableroCaso) {
+                $parametro = DB::selectOne("SELECT p.valor from crm.parametro p where p.abreviacion = 'TABFACOPM'");
+                if (stripos($parametro->valor, $tableroCaso->nombre) !== false) {
+                    DB::update("UPDATE public.cpedido_proforma SET cpp_estado = 9 WHERE cpp_id = ?", [$cpedidoProforma->cpp_id]);
+                }
+            }
         }
     }
 
@@ -837,7 +998,7 @@ class CasoController extends Controller
                 "tab_id" => sizeof($tabDepa) > 0 ? $tabDepa[0]->tab_id : null,
             ]);
 
-            $data = Notificaciones::with('caso', 'caso.user', 'caso.userCreador', 'caso.clienteCrm', 'caso.resumen', 'caso.tareas', 'caso.actividad', 'caso.Etiqueta', 'caso.miembros.usuario.departamento', 'caso.Galeria', 'caso.Archivo', 'tablero', 'user_destino')
+            $data = Notificaciones::with('caso.user', 'caso.miembros', 'tablero', 'user_destino')
                 ->where('id', $noti->id)
                 ->orderBy('id', 'DESC')->first();
 
@@ -878,7 +1039,7 @@ class CasoController extends Controller
             $reqCaso->requerido = $reqFase[$i]->requerido;
 
             if ($reqCaso->tipo_campo == 'lista') {
-                $array = explode(',', $reqCaso->valor_lista);
+                $array = explode(';', $reqCaso->valor_lista);
                 $nuevoArray = array();
 
                 foreach ($array as $item) {
@@ -891,6 +1052,27 @@ class CasoController extends Controller
 
                 $reqCaso->valor_multiple = $nuevoArray;
             }
+
+            if ($reqCaso->tipo_campo == 'lista agrupada') {
+                $grupos = json_decode($reqCaso->valor_lista, true);
+                $nuevoArray = array();
+
+                if (is_array($grupos)) {
+                    foreach ($grupos as $grupo) {
+                        if (isset($grupo['items']) && is_array($grupo['items'])) {
+                            foreach ($grupo['items'] as $item) {
+                                $nuevoArray[] = array(
+                                    'id' => $item,
+                                    'valor' => $item,
+                                    'grupo' => $grupo['grupo'] ?? '',
+                                );
+                            }
+                        }
+                    }
+                }
+
+                $reqCaso->valor_multiple = $nuevoArray;
+            }
             array_push($arrayTest, $reqCaso);
             //echo ('$reqCaso: '.json_encode($reqCaso));
             //$reqCaso->save();
@@ -899,7 +1081,7 @@ class CasoController extends Controller
         return response()->json($arrayTest);
     }
 
-    public function addRequerimientosFase($casoId, $faseId, $userCreadorId)
+    public function addRequerimientosFase($casoId, $faseId, $userCreadorId, $tipo_caso_id)
     {
 
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
@@ -927,11 +1109,23 @@ class CasoController extends Controller
         $log = new Funciones();
 
         try {
+            // funcion orginal de felipao | JGSJ
+            // $reqFase = DB::select(
+            //     'SELECT rp.* from crm.requerimientos_predefinidos rp
+            //     left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
+            //     WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden asc',
+            //     [$casoId, $faseId]
+            // );
             $reqFase = DB::select(
-                'SELECT rp.* from crm.requerimientos_predefinidos rp
-                left join crm.requerimientos_caso rc on rc.caso_id = ? and rc.titulo = rp.nombre
-                WHERE rc.titulo IS null and rp.fase_id = ? order by rp.orden asc',
-                [$casoId, $faseId]
+                'SELECT req_pre.* 
+                                    from crm.requerimientos_predefinidos req_pre
+                                left join crm.requerimientos_caso req_caso on req_caso.caso_id = ? 
+                                    and req_caso.titulo = req_pre.nombre
+                                WHERE req_caso.titulo IS null 
+                                    and req_pre.fase_id = ? 
+                                    and req_pre.tipo_caso_id = ? 
+                                order by req_pre.orden asc',
+                [$casoId, $faseId, $tipo_caso_id]
             );
 
             for ($i = 0; $i < sizeof($reqFase); $i++) {
@@ -948,11 +1142,13 @@ class CasoController extends Controller
                 $reqCaso->orden = $reqFase[$i]->orden;
                 $reqCaso->acc_publico = $reqFase[$i]->acc_publico;
                 $reqCaso->desc_requerida = $reqFase[$i]->desc_requerida;
+                $reqCaso->minimo = $reqFase[$i]->minimo;
+                $reqCaso->maximo = $reqFase[$i]->maximo;
+                $reqCaso->editable = $reqFase[$i]->editable;
 
                 if ($reqCaso->tipo_campo == 'lista') {
-                    $array = explode(',', $reqCaso->valor_lista);
+                    $array = explode(';', $reqCaso->valor_lista);
                     $nuevoArray = array();
-
                     foreach ($array as $item) {
                         $objeto = array(
                             'id' => $item,
@@ -960,7 +1156,25 @@ class CasoController extends Controller
                         );
                         $nuevoArray[] = $objeto;
                     }
+                    $reqCaso->valor_multiple = json_encode($nuevoArray);
+                }
 
+                if ($reqCaso->tipo_campo == 'lista agrupada') {
+                    $grupos = json_decode($reqCaso->valor_lista, true);
+                    $nuevoArray = array();
+                    if (is_array($grupos)) {
+                        foreach ($grupos as $grupo) {
+                            if (isset($grupo['items']) && is_array($grupo['items'])) {
+                                foreach ($grupo['items'] as $item) {
+                                    $nuevoArray[] = array(
+                                        'id' => $item,
+                                        'valor' => $item,
+                                        'grupo' => $grupo['grupo'] ?? '',
+                                    );
+                                }
+                            }
+                        }
+                    }
                     $reqCaso->valor_multiple = json_encode($nuevoArray);
                 }
 
@@ -1125,7 +1339,6 @@ class CasoController extends Controller
                             $telefonoCliente->save();
                         }
                     }
-
                 }
 
                 $clienteReferencias = DB::select("SELECT
@@ -1361,8 +1574,8 @@ class CasoController extends Controller
             }
             //--- Configuracion del destino del caso
             $configuracion = DB::selectOne("SELECT tcf.* from crm.tipo_caso tc
-        inner join crm.tipo_caso_formulas tcf on tcf.tc_id = tc.id
-        where tc.nombre = 'SOLICITUD DE CREDITO APP MOVIL' and tc.estado = true limit 1;");
+            inner join crm.tipo_caso_formulas tcf on tcf.tc_id = tc.id
+            where tc.nombre = 'SOLICITUD DE CREDITO APP MOVIL' and tc.estado = true limit 1;");
 
             if ($configuracion && $opm) {
 
@@ -1486,6 +1699,30 @@ class CasoController extends Controller
         }
     }
 
+    public function listHistorialCasoAgrupadoTablero($caso_id)
+    {
+        $log = new Funciones();
+
+        try {
+            $data = ControlTiemposCaso::where('caso_id', $caso_id)
+                ->select(
+                    'tablero',
+                    DB::raw('SUM(tiempo_cambio) as tiempo_cambio')
+                )
+                ->groupBy('tablero')
+                ->orderBy('tablero', 'ASC')
+                ->get();
+
+            $log->logInfo(CasoController::class, 'Se listo con exito el historial del caso #' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar el historial del caso #' . $caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
     public function actualizarCaso(Request $request, $casoId, $tabId)
     {
         $log = new Funciones();
@@ -1517,6 +1754,27 @@ class CasoController extends Controller
                 $robot->addMiembro($data->user_id, $casoId, $tabId);
                 broadcast(new TableroEvent($data));
                 $log->logInfo(CasoController::class, 'Se actualizo con exito el caso #' . $casoId);
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                // Obtener el old_values (valor antiguo)
+                $valorAntiguo = $casoData;
+                $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
+
+                $audit->user_id = Auth::id();
+                $audit->event = 'updated';
+                $audit->auditable_type = Caso::class;
+                $audit->auditable_id = $casoId;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->accion = 'reasignarCaso';
+                $audit->caso_id = $casoId;
+                // Establecer old_values y new_values
+                $audit->new_values = json_encode($data); // json_encode para convertir en string ese array
+                $audit->save();
+                // END Auditoria
 
                 return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
             }
@@ -1555,4 +1813,839 @@ class CasoController extends Controller
         $casos = Caso::with('formValores.campoValores.campo.formSeccion.formulario')->get();
         return response($casos);
     }
+
+    public function deleteCasoById($caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $dataCaso = $this->getCaso($caso_id);
+
+            $data = DB::transaction(function () use ($caso_id) {
+                // eliminar respuestas del formulario del caso
+                $formId2 = DB::table('crm.caso')
+                    ->where('id', $caso_id)
+                    ->value('form_id2');
+
+                $delete_solicitud_credito = DB::delete("DELETE FROM crm.solicitud_credito where caso_id = ?", [$caso_id]);
+                $delete_cliente_enrolamiento = DB::delete("DELETE FROM crm.cliente_enrolamiento where caso_id = ?", [$caso_id]);
+                $delete_requerimientos_caso = DB::delete("DELETE FROM crm.requerimientos_caso where caso_id = ?", [$caso_id]);
+                $delete_galerias = DB::delete("DELETE FROM crm.galerias g WHERE g.tipo_gal_id NOT IN (10, 11) and caso_id = ?", [$caso_id]);
+                $delete_archivos = DB::delete("DELETE FROM crm.archivos where caso_id = ?", [$caso_id]);
+                $delete_notificaciones = DB::delete("DELETE FROM crm.notificaciones where caso_id = ?", [$caso_id]);
+                $delete_tareas = DB::delete("DELETE FROM crm.tareas where caso_id = ?", [$caso_id]);
+                $delete_tareas = DB::delete("DELETE FROM crm.tareas2 where caso_id = ?", [$caso_id]);
+                $delete_miembros = DB::delete("DELETE FROM crm.miembros where caso_id = ?", [$caso_id]);
+                $delete_comentarios = DB::delete("DELETE FROM crm.comentarios where caso_id = ?", [$caso_id]);
+                $delete_etiquetas = DB::delete("DELETE FROM crm.etiquetas where caso_id = ?", [$caso_id]);
+                $delete_nota = DB::delete("DELETE FROM crm.nota where caso_id = ?", [$caso_id]);
+                $delete_caso = DB::delete("DELETE FROM crm.caso where id = ?", [$caso_id]);
+                $delete_audits = DB::delete("DELETE FROM crm.audits where caso_id = ?", [$caso_id]);
+                $delete_control_tiempos_caso = DB::delete("DELETE FROM crm.control_tiempos_caso where caso_id = ?", [$caso_id]);
+
+                // Validar que form_id2 no sea nulo y no sea un ID protegido (ej. 1)
+                if ($formId2 && $formId2 != 1) {
+                    // Eliminar primero las respuestas (dform)
+                    DB::table('crm.dform')->where('cform_id', $formId2)->delete();
+
+                    // Luego eliminar el formulario (cform)
+                    DB::table('crm.cform')->where('id', $formId2)->delete();
+                }
+
+                return 'ok';
+            });
+
+            $dataCaso->descripcion = "DELETED_BY_SUPER_USER";
+
+            broadcast(new TableroEvent($dataCaso));
+
+            $log->logInfo(CasoController::class, 'Se elimino con exito el caso con el ID: ' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $dataCaso));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al eliminar el caso con el ID: ' . $caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function listCasosRechazadosTerminados($fechaInicio, $fechaFin, $tableroId)
+    {
+        try {
+            // con el metodo now()->subDays(5) me filtra los ultimos 5 dias (5 dias atras desde la fecha actual)
+            // $fechaLimite = now()->subDays(5);
+            // ->where('created_at', '>=', $fechaLimite)
+
+            // $data = ControlTiemposCaso::where(function ($query) {
+            //     $query->where('estado_caso', 'ilike', '%RECHAZADO%')
+            //         ->orWhere('estado_caso', 'ilike', '%TERMINADO%');
+            // })
+            //     ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            //     ->whereIn('caso_id', function ($query) use ($tableroId) {
+            //         $query->select('caso_id')
+            //             ->from('crm.control_tiempos_caso')
+            //             ->where('tab_id', $tableroId);
+            //     })
+            //     ->orderBy('id', 'desc')
+            //     ->with('caso.clienteCrm')
+            //     ->get(); // Obtén el primer registro después de ordenar
+
+            // // Especificar las propiedades que representan fechas en tu objeto
+            // $dateFields = ['created_at', 'updated_at'];
+            // // Utilizar la función map para transformar y obtener una nueva colección
+            // $data->map(function ($item) use ($dateFields) {
+            //     $funciones = new Funciones();
+            //     $funciones->formatoFechaItem($item, $dateFields);
+            //     return $item;
+            // });
+
+            // return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+    public function crearFormularioSoporte(Request $request)
+    {
+        DB::transaction(function () use ($request) {
+            $data = $request->all();
+            foreach ($data as $key => $item) {
+
+                $campoValor = DB::selectOne("SELECT * FROM crm.form_campo WHERE nombre = ?;", [$item["control"]]);
+                $dataValor = (object) [
+                    // "valor_texto"=> $item["value"],
+                    // "valor_entero"=>,
+                    // "valor_decimal"=>,
+                    // "valor_boolean"=>,
+                    // "valor_json"=>,
+                    // "valor_array"=>,
+                    // "valor_date"=>,
+                    // "created_at"=>,
+                    // "updated_at"=>,
+                    // "deleted_at"=>,
+                    // "user_id"=>,
+                    // "orden"=>,
+                    // "pac_id"=>,
+                    // "caso_id"=>,
+                    // "key"=>,
+                ];
+                //echo ('$a->id: '.json_encode($a->id));
+                return;
+                // $dataCV = (object)[
+                //     "campo_id"=> $campoValor->id,
+                //     "valor_id"=> $campoValor->,
+                //     "fcl_id"=> ,
+                //     "created_at"=> ,
+                //     "updated_at"=> ,
+                //     "deleted_at"=> ,
+                // ];
+
+
+
+
+
+
+                // $data = FormCampoValor::create([]);
+            }
+        });
+    }
+
+
+
+
+    // *************************************************
+    // JGSJ START CALENDARIO CLIENTES - ACTIVIDADES CLIENTES
+    // *************************************************
+
+    // end point para listar todos los casos del cliente (1 Caso, 2 Actividad, 3 Recordatorio)
+    public function listCasosPendientesByCliente($identificacion)
+    {
+        try {
+            // $data = Caso::where('identificacion', $identificacion)
+            //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
+            //     ->get();
+
+            // $tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('identificacion', $identificacion)
+                // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                ->with([
+                    // 'user',
+                    // 'userCreador',
+                    // 'clienteCrm',
+                    // 'resumen',
+                    // 'tareas' => function ($query) use ($tabId) {
+                    //     $query->where('tab_id', $tabId->id);
+                    // },
+                    // 'actividad',
+                    // 'Etiqueta',
+                    // 'miembros.usuario.departamento',
+                    // 'Galeria',
+                    // 'Archivo',
+                    // 'req_caso' => function ($query) {
+                    //     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    // },
+                    // 'tablero',
+                    'fase.tablero',
+                    'estadodos',
+                    'tipocaso',
+                    // 'tiempo_caso',
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', '!=', 'TERMINADO');
+                })
+                ->orderBy('id', 'desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listCasosTerminadosByCliente($identificacion)
+    {
+        try {
+            // $data = Caso::where('identificacion', $identificacion)
+            //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
+            //     ->get();
+
+            // $tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('identificacion', $identificacion)
+                // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                ->with([
+                    // 'user',
+                    // 'userCreador',
+                    // 'clienteCrm',
+                    // 'resumen',
+                    // 'tareas' => function ($query) use ($tabId) {
+                    //     $query->where('tab_id', $tabId->id);
+                    // },
+                    // 'actividad',
+                    // 'Etiqueta',
+                    // 'miembros.usuario.departamento',
+                    // 'Galeria',
+                    // 'Archivo',
+                    // 'req_caso' => function ($query) {
+                    //     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    // },
+                    // 'tablero',
+                    'fase.tablero',
+                    'estadodos',
+                    'tipocaso',
+                    // 'tiempo_caso',
+                ])
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'TERMINADO');
+                })
+                ->orderBy('id', 'desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listUsuarioComunCasosPendienteByCliente($identificacion)
+    {
+        try {
+            // $data = Caso::where('identificacion', $identificacion)
+            //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
+            //     ->get();
+
+            // $tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('identificacion', $identificacion)
+                ->where('acc_publico', false)
+                // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                ->with([
+                    // 'user',
+                    // 'userCreador',
+                    // 'clienteCrm',
+                    // 'resumen',
+                    // 'tareas' => function ($query) use ($tabId) {
+                    //     $query->where('tab_id', $tabId->id);
+                    // },
+                    // 'actividad',
+                    // 'Etiqueta',
+                    // 'miembros.usuario.departamento',
+                    // 'Galeria',
+                    // 'Archivo',
+                    // 'req_caso' => function ($query) {
+                    //     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    // },
+                    // 'tablero',
+                    'fase.tablero',
+                    'estadodos',
+                    'tipocaso',
+                    // 'tiempo_caso',
+                ])->orderBy('id', 'desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function listUsuarioComunCasosTerminadosByCliente($identificacion)
+    {
+        try {
+            // $data = Caso::where('identificacion', $identificacion)
+            //     ->with('estadodos', 'tipocaso', 'user', 'tiempo_caso')
+            //     ->get();
+
+            // $tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('identificacion', $identificacion)
+                ->where('acc_publico', false)
+                // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+                ->with([
+                    // 'user',
+                    // 'userCreador',
+                    // 'clienteCrm',
+                    // 'resumen',
+                    // 'tareas' => function ($query) use ($tabId) {
+                    //     $query->where('tab_id', $tabId->id);
+                    // },
+                    // 'actividad',
+                    // 'Etiqueta',
+                    // 'miembros.usuario.departamento',
+                    // 'Galeria',
+                    // 'Archivo',
+                    // 'req_caso' => function ($query) {
+                    //     $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    // },
+                    // 'tablero',
+                    'fase.tablero',
+                    'estadodos',
+                    'tipocaso',
+                    // 'tiempo_caso',
+                ])->orderBy('id', 'desc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    // LISTA PARA EL CALENDARIO CASOS CATEGORIA 2 y 3 (1 CASOS, 2 ACTIVIDAD, 3 RECORDATORIO)
+    public function listActividadesCategoria2ByUserId($user_id)
+    {
+        try {
+            //    $tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('user_id', $user_id)
+                ->whereHas('tipocaso', function ($q) {
+                    $q->where('categoria_caso', 2)
+                        ->orWhere('categoria_caso', 3);
+                })
+
+                ->whereHas('estadodos', function ($query) {
+                    $query->where('nombre', 'PENDIENTE');
+                })
+                ->with([
+                    'user',
+                    'userCreador',
+                    'clienteCrm',
+                    // 'resumen',
+                    'actividad',
+                    'Etiqueta',
+                    // 'miembros.usuario.departamento',
+                    'Galeria',
+                    'Archivo',
+                    'req_caso' => function ($query) {
+                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    },
+                    'tablero',
+                    'fase.tablero',
+                    'estadodos' => function ($query) {
+                        $query->where('nombre', 'PENDIENTE');
+                    },
+                    'tipocaso' => function ($query) {
+                        $query->select('*', DB::raw("
+                            CASE 
+                                WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                ELSE 'TABLERO'
+                            END as categoria_caso_nombre"));
+                    },
+                    'tiempo_caso',
+                ])
+                ->orderBy('id', 'desc')
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // end point para actualizar la fecha de inicio y fecha de vencimiento del caso categoria 2 desde el calendario actividades clientes
+    public function editDuracionCaso(Request $request)
+    {
+        try {
+            $caso = Caso::findOrFail($request->caso_id);
+
+            DB::transaction(function () use ($caso, $request) {
+                $caso->update([
+                    "fecha_inicio" => Carbon::parse($request->fecha_inicio)->setTimezone('America/Guayaquil'),
+                    "fecha_vencimiento" => Carbon::parse($request->fecha_vencimiento)->setTimezone('America/Guayaquil')
+                ]);
+            });
+
+            $data = $this->getCaso($request->caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    // listado de actividades y recordatorios
+    public function listAllActividadesByUserId($user_id)
+    {
+        try {
+            //    $tabId = 230; // esta variable tengo que revisar que hace
+
+            $data = Caso::where('user_id', $user_id)
+                ->whereHas('tipocaso', function ($q) {
+                    $q->where('categoria_caso', 2)
+                        ->orWhere('categoria_caso', 3);
+                })
+                ->with([
+                    'user',
+                    'userCreador',
+                    'clienteCrm',
+                    // 'resumen',
+                    'actividad',
+                    'Etiqueta',
+                    // 'miembros.usuario.departamento',
+                    'Galeria',
+                    'Archivo',
+                    'req_caso' => function ($query) {
+                        $query->orderBy('id', 'asc')->orderBy('orden', 'asc');
+                    },
+                    'tablero',
+                    'fase.tablero',
+                    'estadodos',
+                    'tipocaso' => function ($query) {
+                        $query->select('*', DB::raw("
+                            CASE 
+                                WHEN categoria_caso = 2 THEN 'ACTIVIDAD'
+                                WHEN categoria_caso = 3 THEN 'RECORDATORIO'
+                                ELSE 'TABLERO'
+                            END as categoria_caso_nombre"));
+                    },
+                    'tiempo_caso',
+                ])
+                ->orderBy('id', 'desc')
+                ->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // *************************************************
+    // JGSJ END CALENDARIO CLIENTES - ACTIVIDADES CLIENTES
+    // *************************************************
+
+
+    public function reasignarCasosMasivo(Request $request)
+    {
+        $log = new Funciones();
+        $error = null;
+        $exitoso = null;
+
+        try {
+            DB::transaction(function () use ($request, $log, &$error, &$exitoso) {
+                $items = $request->all(); // obtenemos el array del cuerpo
+
+                foreach ($items as $item) {
+                    $casoAudit = $this->getCaso($item['caso_id']);
+                    $caso = Caso::find($item['caso_id']);
+
+                    // Auditoría
+                    $audit = new Audits();
+                    $audit->old_values = json_encode($casoAudit);
+
+                    if ($caso) {
+                        // Agrega usuarios que no estén en el tablero
+                        $tabl = TableroUsuario::where('tab_id', $item['tab_id'])
+                            ->where('user_id', $item['user_id'])
+                            ->first();
+
+                        if (!$tabl) {
+                            DB::insert(
+                                'INSERT INTO crm.tablero_user (user_id, tab_id, permisos) VALUES (?, ?, ?)',
+                                [$item['user_id'], $item['tab_id'], false]
+                            );
+                        }
+
+                        // Actualiza el caso
+                        $caso->update([
+                            'user_anterior_id' => $caso->user_id,
+                            'user_id' => $item['user_id'],
+                        ]);
+
+                        $tipo = 1;
+
+                        $this->calcularTiemposCaso(
+                            $caso,
+                            $caso->id,
+                            $caso->estado_2,
+                            $caso->fas_id,
+                            $tipo,
+                            $caso->user_id
+                        );
+
+                        $data = $this->getCaso($item['caso_id']);
+                        $robot = new RobotCasoController();
+                        $robot->addMiembro($data->user_id, $item['caso_id'], $item['tab_id']);
+                        broadcast(new TableroEvent($data));
+
+                        $log->logInfo(CasoController::class, 'Se actualizó con éxito el caso #' . $item['caso_id']);
+
+                        $audit->user_id = Auth::id();
+                        $audit->event = 'updated';
+                        $audit->auditable_type = Caso::class;
+                        $audit->auditable_id = $item['caso_id'];
+                        $audit->user_type = User::class;
+                        $audit->ip_address = $request->ip();
+                        $audit->url = $request->fullUrl();
+                        $audit->user_agent = $request->header('User-Agent');
+                        $audit->accion = 'reasignarCaso';
+                        $audit->caso_id = $item['caso_id'];
+                        $audit->new_values = json_encode($data);
+                        $audit->save();
+
+                        // Guardamos el último caso procesado exitosamente
+                        $exitoso = $data;
+                    } else {
+                        $log->logError(CasoController::class, 'El caso #' . $item['caso_id'] . ' no existe');
+                        $error = 'El caso #' . $item['caso_id'] . ' no existe';
+                    }
+                }
+            });
+
+            if ($error) {
+                return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $exitoso));
+            }
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar los casos masivamente', $e);
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function editAccesoPublico(Request $request, $caso_id)
+    {
+        try {
+            $caso = Caso::findOrFail($caso_id);
+
+            DB::transaction(function () use ($caso, $request) {
+                $caso->update([
+                    "acc_publico" => $request->acc_publico
+                ]);
+            });
+
+            $data = VistaTodosLosCasos::where('caso_id', $caso_id)
+                ->with([
+                    'estadodos'
+                ])->get();
+
+            // Especificar las propiedades que representan fechas en tu objeto
+            $dateFields = ['created_at'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $data->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function editAccesoPublicoActividadCliente(Request $request, $caso_id)
+    {
+        try {
+            $caso = Caso::findOrFail($caso_id);
+
+            DB::transaction(function () use ($caso, $request) {
+                $caso->update([
+                    "acc_publico" => $request->acc_publico
+                ]);
+            });
+
+            $data = $this->getCaso($caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function addCaso2(Request $request)
+    {
+        $log = new Funciones();
+
+        $casoInput = $request->all();
+
+        // ESTO SE EJECUTA CUANDO DEL FRONT VIENE EN NULL, ES PORQUE NO TIENE PERMISOS DE ACCESS.CREATE EN EL TABLERO KANBAN
+        if ($casoInput['fecha_inicio'] === null && $casoInput['fecha_vencimiento'] === null) {
+
+            $fechaActual = now();
+            $casoInput['fecha_inicio'] = $fechaActual;
+
+            $tipo_caso = TipoCaso::find($casoInput['tc_id']);
+
+            if ($tipo_caso && $tipo_caso->tiempo_vencimiento) {
+                // Separar la hora, minutos y segundos
+                list($horas, $minutos, $segundos) = explode(':', $tipo_caso->tiempo_vencimiento);
+
+                // Clonar la fecha actual y sumarle el tiempo
+                $fechaVencimiento = $fechaActual
+                    ->copy()
+                    ->addHours((int)$horas)
+                    ->addMinutes((int)$minutos)
+                    ->addSeconds((int)$segundos);
+
+                $casoInput['fecha_vencimiento'] = $fechaVencimiento;
+            }
+        }
+
+        $miembros2 = $request->input('miembros');
+        // Verificar si $miembros2 es un string
+        if (is_string($miembros2)) {
+            // Convertir la cadena en un array usando la coma como delimitador
+            $miembros = array_map('intval', explode(',', $miembros2));
+        } else {
+            $miembros = $miembros2;
+        }
+        // id del formulario dinámico (cform) creado en el request previo addCDFormulario
+        $formId2 = $request->input('form_id2');
+
+        try {
+            $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
+
+                $caso = new Caso($casoInput);
+                $caso->save();
+
+                $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();
+
+                //--------------------
+                $caso->estado_2 = $estadoInicial->id;
+                $caso->nombre = 'CASO # ' . $caso->id;
+                $caso->user_creador_id = $request->user_creador_id;
+
+                // cliente/entidad por defecto (este flujo no maneja solicitud de crédito)
+                $caso->cliente_id = 29; // ID del cliente default del crm
+                $caso->ent_id = 999; // ID del cliente default de dynamo
+
+                // Buscar id_zona_agencia por codigo_agencia
+                if ($caso->codigo_agencia) {
+                    $agencia = Agencia::where('codigo', $caso->codigo_agencia)->first();
+                    if ($agencia) {
+                        $caso->id_zona_agencia = $agencia->id_zona_agencia;
+                    }
+                }
+
+                $caso->save();
+
+                // El caso es nuevo: no tiene miembros previos, así que no hace falta consultar
+                // duplicados (esa consulta escaneaba toda la tabla miembros). Basta deduplicar el array.
+                foreach (array_unique($miembros) as $userId) {
+                    $miembro = new Miembros();
+                    $miembro->user_id = $userId;
+                    $caso->miembros()->save($miembro);
+                }
+
+                // addRequerimientosFase se traga su error y devuelve un JsonResponse; si pasa eso,
+                // lanzamos excepción para que la transacción revierta todo.
+                $resReq = $this->addRequerimientosFase($caso->id, $caso->fas_id, $caso->user_creador_id, $caso->tc_id);
+                if ($resReq instanceof \Illuminate\Http\JsonResponse) {
+                    throw new \Exception('Fallo al agregar los requerimientos de la fase');
+                }
+
+                $ccm_id_input = $request->input('ccm_id');
+                if ($ccm_id_input) {
+                    CasoComprobante::create([
+                        'caso_id' => $caso->id,
+                        'ccm_id' => $ccm_id_input,
+                    ]);
+                }
+
+                // getCaso también se traga su error y devuelve un JsonResponse; lo relanzamos.
+                $casoCreado = $this->getCaso($caso->id);
+                if ($casoCreado instanceof \Illuminate\Http\JsonResponse) {
+                    throw new \Exception('Fallo al obtener el caso creado');
+                }
+
+                // START Bloque de código que genera un registro de auditoría manualmente
+                $audit = new Audits();
+                $audit->user_id = Auth::id();
+                $audit->event = 'created';
+                $audit->auditable_type = Caso::class;
+                $audit->auditable_id = $casoCreado->id;
+                $audit->user_type = User::class;
+                $audit->ip_address = $request->ip(); // Obtener la dirección IP del cliente
+                $audit->url = $request->fullUrl();
+                // Establecer old_values y new_values
+                $audit->old_values = json_encode($casoCreado); // json_encode para convertir en string ese array
+                $audit->new_values = json_encode([]); // json_encode para convertir en string ese array
+                $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
+                $audit->estado_caso = $casoCreado->estadodos->nombre;
+                $audit->estado_caso_id = $casoCreado->estado_2;
+                $audit->accion = 'addCaso';
+                $audit->caso_id = $casoCreado->id;
+                $audit->save();
+                // END Auditoria
+
+                // le mando uno porque es la primera vez q se crea el caso
+                $tipo = 1; // 1 reasignacion manual // 2 automatica por formulas // 3 cambio de fase
+                // calcularTiemposCaso se traga su error y devuelve un JsonResponse; si pasa eso,
+                // lanzamos excepción para que la transacción revierta todo.
+                $resTiempo = $this->calcularTiemposCaso($casoCreado, $casoCreado->id, $casoCreado->estado_2, $casoCreado->fas_id, $tipo, $casoCreado->user_id);
+                if ($resTiempo instanceof \Illuminate\Http\JsonResponse) {
+                    throw new \Exception('Fallo al calcular los tiempos del caso');
+                }
+
+                // Broadcast como ÚLTIMO paso DENTRO de la transacción: si el WebSocket falla,
+                // la excepción revierte TODO el caso (y el catch revierte el formulario dinámico).
+                broadcast(new TableroEvent($casoCreado));
+
+                return $casoCreado;
+            });
+        } catch (\Throwable $e) {
+            // La creación falló: la transacción ya revirtió las filas del caso.
+            // El formulario dinámico (cform/dform) se guardó en un request previo (addCDFormulario)
+            // y quedó huérfano -> lo borramos aquí (rollback compensatorio).
+            // El guard evita romper la FK si otro caso comparte el mismo cform.
+            if ($formId2 && $formId2 != 1) {
+                $compartido = DB::table('crm.caso')->where('form_id2', $formId2)->exists();
+                if (!$compartido) {
+                    DB::table('crm.dform')->where('cform_id', $formId2)->delete();
+                    DB::table('crm.cform')->where('id', $formId2)->delete();
+                }
+            }
+
+            $log->logError(CasoController::class, 'Error al crear el caso; se revirtió el formulario dinámico (cform ' . $formId2 . ')', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo crear el caso: ' . $e->getMessage(), null));
+        }
+
+        $log->logInfo(CasoController::class, 'Se guardo con exito el caso');
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $casoCreado));
+    }
+
+    public function getEstadoActualCaso($caso_id)
+    {
+        try {
+            $data = Caso::where('id', $caso_id)->with('estadodos.tablero')->first();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+
+    // *************************************************
+    // JGSJ START MOVER CASOS MASIVAMENTE
+    // *************************************************
+
+    public function respuestaCasoMasivo(Request $request)
+    {
+        $log = new Funciones();
+
+        $estadoFormId = $request->input('estadoFormId');
+        $casosIds = $request->input('casosIds'); // Array de IDs de casos
+
+        try {
+            $formula = EstadosFormulas::find($estadoFormId);
+            if (!$formula) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La fórmula no existe.'));
+            }
+
+            if (!is_array($casosIds) || empty($casosIds)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error', 'Debe existir al menos un caso.'));
+            }
+
+            $result = DB::transaction(function () use ($estadoFormId, $casosIds, $log) {
+                $robot = new RobotCasoController();
+                $casosActualizados = [];
+                $casosConError = [];
+
+                foreach ($casosIds as $casoId) {
+                    try {
+                        $caso = Caso::find($casoId);
+                        if (!$caso) {
+                            $casosConError[] = [
+                                'caso_id' => $casoId,
+                                'error' => 'El caso no existe'
+                            ];
+                            continue;
+                        }
+
+                        // Obtener el tablero actual del caso
+                        $tableroActualId = DB::selectOne('SELECT t.id FROM crm.caso c
+                                                            INNER JOIN crm.fase f ON f.id = c.fas_id
+                                                            INNER JOIN crm.tablero t ON t.id = f.tab_id
+                                                            WHERE c.id = ?', [$casoId])->id;
+
+                        $casoModificado = $robot->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
+
+                        // Desbloquear el caso
+                        $casoModificado->bloqueado = false;
+                        $casoModificado->bloqueado_user = '';
+                        $casoModificado->save();
+
+                        $data = $this->getCaso($casoModificado->id);
+                        broadcast(new ReasignarCasoEvent($data));
+
+                        $casosActualizados[] = $casoId;
+
+                        $log->logInfo(CasoController::class, 'Se movio con exito el caso #' . $casoId);
+                    } catch (Exception $e) {
+                        $casosConError[] = [
+                            'caso_id' => $casoId,
+                            'error' => $e->getMessage()
+                        ];
+                        $log->logError(CasoController::class, 'Error al mover el caso #' . $casoId, $e);
+                    }
+                }
+
+                return [
+                    'casos_actualizados' => $casosActualizados,
+                    'casos_con_error' => $casosConError,
+                    'total_actualizados' => count($casosActualizados),
+                    'total_errores' => count($casosConError)
+                ];
+            });
+
+            $mensaje = $result['total_actualizados'] . ' casos actualizados correctamente';
+            if ($result['total_errores'] > 0) {
+                $mensaje .= ', ' . $result['total_errores'] . ' casos con errores';
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', $mensaje, $result));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al mover casos masivamente', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    // *************************************************
+    // JGSJ END MOVER CASOS MASIVAMENTE
+    // *************************************************
+
 }

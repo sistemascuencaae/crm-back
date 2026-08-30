@@ -25,4 +25,10 @@ class Almacen extends Model
         "alm_nombre_tmp",
         "alm_nombre_tmp2",
     ];
+
+    public function puntoventa()
+    {
+        return $this->hasMany(PuntoVenta::class, "alm_id", "alm_id");
+    }
+
 }

@@ -23,7 +23,7 @@ class RequerimientoController extends Controller
     public function listRequerimientosByFaseId($fase_id)
     {
         try {
-            $requerimientos = Requerimientos::where('fase_id', $fase_id)->orderBy('orden', 'ASC')->get();
+            $requerimientos = Requerimientos::where('fase_id', $fase_id)->with('tipo_caso')->orderBy('orden', 'ASC')->get();
 
             $this->log->logInfo(RequerimientoController::class, 'Se listo con exito los requerimientos de la fase con el ID: ' . $fase_id);
 
@@ -72,7 +72,7 @@ class RequerimientoController extends Controller
                 // Si no existe un requerimiento con tipo "perfil de cliente" o el nuevo tipo no es "perfil de cliente"
                 $requerimiento = Requerimientos::create($request->all());
 
-                $resultado = Requerimientos::where('fase_id', $requerimiento->fase_id)->orderBy('orden', 'ASC')->get();
+                $resultado = Requerimientos::where('fase_id', $requerimiento->fase_id)->with('tipo_caso')->orderBy('orden', 'ASC')->get();
 
                 $this->log->logInfo(RequerimientoController::class, 'Se guardo con exito los requerimientos en la fase con el ID: ' . $request->input('fase_id'));
 
@@ -137,10 +137,11 @@ class RequerimientoController extends Controller
             } else {
 
                 $requerimiento->update($request->all());
+                $resultado = Requerimientos::where('id', $requerimiento->id)->with('tipo_caso')->first();
 
                 $this->log->logInfo(RequerimientoController::class, 'Se actualizo con exito el requerimiento con el ID: ' . $id);
 
-                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $requerimiento));
+                return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $resultado));
             }
         } catch (Exception $e) {
             $this->log->logError(RequerimientoController::class, 'Error al actualizar el requerimiento con el ID: ' . $id, $e);

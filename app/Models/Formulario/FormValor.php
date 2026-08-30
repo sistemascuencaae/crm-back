@@ -24,6 +24,7 @@ class FormValor extends Model
         'valor_boolean',
         'valor_decimal',
         'valor_entero',
+        'key'
     ];
     protected $hidden = ['created_at', 'updated_at', 'deleted_at'];
     public function caso()

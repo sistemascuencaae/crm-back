@@ -10,7 +10,6 @@ class Menu extends Model
 {
     use HasFactory;
 
-    // protected $table = 'hclinico.menu';
     protected $table = 'crm.menu';
 
     protected $fillable = [

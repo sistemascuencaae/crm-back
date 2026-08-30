@@ -36,4 +36,9 @@ class ControlTiemposCaso extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
+    public function caso()
+    {
+        return $this->belongsTo(Caso::class, "caso_id");
+    } 
+
 }
