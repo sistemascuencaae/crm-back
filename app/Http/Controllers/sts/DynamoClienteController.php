@@ -81,7 +81,7 @@ class DynamoClienteController extends Controller
     // de la auditoría forense. Queda en null con enlaces emitidos antes de incluirlo en el token.
     private ?int $usuIdEnlace = null;
 
-    // Version 2.0
+    // Version 1.0
     // Busca sobre ENTIDAD (no solo sobre cliente) y distingue tres estados: no existe / la
     // persona existe pero aún no es cliente / ya es cliente. Devuelve únicamente los campos
     // que muestra el formulario.
@@ -162,7 +162,7 @@ class DynamoClienteController extends Controller
     }
 
 
-    // Version 2.0
+    // Version 1.0
     // Actualiza el cliente a través de crm.fn_clientes_modificar (las mismas funciones del
     // CRUD del CRM), para que herede sus validaciones, sus defaults y su auditoría forense.
     // Delega en el resolvedor común: el servidor decide crear o modificar según el estado
@@ -176,7 +176,7 @@ class DynamoClienteController extends Controller
 
 
 
-    // Version 2.0
+    // Version 1.0
     // Registra el cliente a través de crm.fn_clientes_registrar (las mismas funciones del
     // CRUD del CRM). Delega en el resolvedor común, igual que updateDynamoCliente: el camino
     // lo decide el estado real en la base, no el endpoint que llamó el formulario.
@@ -951,6 +951,43 @@ class DynamoClienteController extends Controller
                                         AND cm.fecha_desvinculacion IS NULL
                                         AND cm.created_at::date BETWEEN ? AND ?
                                     ORDER BY cm.created_at ASC", [$fechaInicio, $fechaFin]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    // Version 1.0
+    // Obtener clientes de un corredor
+    public function listCorredorClientePaginado(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'corredor' => 'required|string',
+                'identificacion_cliente' => 'nullable|string',
+                'num_pagina' => 'required|integer|min:1',
+            ], [
+                'corredor.required' => 'Debe ingresar un corredor',
+                'corredor.string' => 'Corredor inválido',
+                'identificacion_cliente.string' => 'Identificación de cliente inválida',
+                'num_pagina.required' => 'Debe ingresar el número de página',
+                'num_pagina.integer' => 'Número de página inválido',
+                'num_pagina.min' => 'El número de página debe ser mayor o igual a 1',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+            }
+
+            $corredor = trim($request->input('corredor', ''));
+            $identificacion_cliente = trim($request->input('identificacion_cliente', ''));
+            $num_pagina = (int) $request->input('num_pagina');
+
+            $resultado = DB::select(
+                "SELECT * FROM crm.fn_cliente_corredor_listar_paginacion(?, ?, ?)",
+                [$corredor, $identificacion_cliente, $num_pagina]
+            );
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
         } catch (Exception $e) {

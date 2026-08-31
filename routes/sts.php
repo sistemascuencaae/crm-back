@@ -13,6 +13,8 @@ Route::group(["prefix" => "sts", 'middleware' => ['jwt.auth', 'usuario.activo']]
     Route::post('/listClientesCorredor', [DynamoClienteController::class, 'listClientesCorredor']);
     // CLIENTE DYNAMO: envia un correo con la cuenta secundaria multinivel (smtp2)
     Route::post('/send_emailMultinivel', [EmailController::class, 'send_emailMultinivel']);
+    // Listado de clientes de un corredor especifico
+    Route::post('/listCorredorClientePaginado', [DynamoClienteController::class, 'listCorredorClientePaginado']);
 
     // ARCHIVOS
     Route::post('/addArchivos', [ArchivoCorredorController::class, 'addArchivos']);
