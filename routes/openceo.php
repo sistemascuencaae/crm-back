@@ -61,7 +61,9 @@ Route::group([
     Route::get('/getClienteReiterativoByIdentificacion/{identificacion}', [CliReiterativoController::class, 'getClienteReiterativoByIdentificacion']);
     Route::get('/getInfoCuotasByComprobante/{comprobante}', [CliReiterativoController::class, 'getInfoCuotasByComprobante']);
     Route::get('/getInfoCobrosByComprobante/{comprobante}/{cuota}', [CliReiterativoController::class, 'getInfoCobrosByComprobante']);
-
+    
+    // MOVIMIENTO DE CLIENTE
+    Route::post('/listMovimientoCliente', [CliReiterativoController::class, 'listMovimientoCliente']);
 
 
     // USUARIOS OPENCEO

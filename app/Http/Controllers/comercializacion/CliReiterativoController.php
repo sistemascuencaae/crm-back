@@ -5,8 +5,10 @@ namespace App\Http\Controllers\comercializacion;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use PhpParser\Node\Stmt\TryCatch;
 
 class CliReiterativoController extends Controller
 {
@@ -168,21 +170,21 @@ class CliReiterativoController extends Controller
     {
         //try {
 
-            $identificacion = $request->input("identificacion"); // Asegúrate de que $comprobantes es un array de valores
+        $identificacion = $request->input("identificacion"); // Asegúrate de que $comprobantes es un array de valores
 
-            // Convertimos el array a una cadena separada por comas
-            // $comprobantesString = implode(',', array_map(function ($comprobante) {
-            //     return "'" . $comprobante . "'"; // Agregar comillas a cada valor
-            // }, $comprobantes));
+        // Convertimos el array a una cadena separada por comas
+        // $comprobantesString = implode(',', array_map(function ($comprobante) {
+        //     return "'" . $comprobante . "'"; // Agregar comillas a cada valor
+        // }, $comprobantes));
 
-            // $comprobantes = DB::select("SELECT cod_comprobante_fp  from (SELECT cod_comprobante_fp, MAX(ddo_fecha_emision) AS max_fecha
-            //                 FROM crm.data_temp_cli_reiterativo
-            //                 WHERE ent_identificacion = ?
-            //                 GROUP BY cod_comprobante_fp
-            //                 order by 2 desc) ttemp limit 3;", [$identificacion]);
+        // $comprobantes = DB::select("SELECT cod_comprobante_fp  from (SELECT cod_comprobante_fp, MAX(ddo_fecha_emision) AS max_fecha
+        //                 FROM crm.data_temp_cli_reiterativo
+        //                 WHERE ent_identificacion = ?
+        //                 GROUP BY cod_comprobante_fp
+        //                 order by 2 desc) ttemp limit 3;", [$identificacion]);
 
 
-            $data = DB::select("SELECT ttemp.name,
+        $data = DB::select("SELECT ttemp.name,
                    false as activo,
                    MAX(ttempfae.pro_nombre) as productos,
                    MAX(v1.tipo_nota) as tipo_nota,
@@ -214,11 +216,11 @@ class CliReiterativoController extends Controller
                 GROUP BY cfa.cfa_periodo, cti.cti_sigla, alm.alm_codigo, pve.pve_numero, cfa.cfa_numero
             ) ttempfae ON ttempfae.comprobante = ttemp.name
             GROUP BY ttemp.name;
-        ",[$identificacion]);
-            if (sizeof($data) > 0) {
-                $data[0]->activo = true;
-            }
-            return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
+        ", [$identificacion]);
+        if (sizeof($data) > 0) {
+            $data[0]->activo = true;
+        }
+        return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito', $data));
         // } catch (\Throwable $th) {
         //     return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th));
         // }
@@ -331,9 +333,9 @@ class CliReiterativoController extends Controller
                 ORDER BY
                     cod_comprobante_fp,
                     secuencia ASC;
-                ",[$identificacion, $identificacion, $identificacion]);
+                ", [$identificacion, $identificacion, $identificacion]);
 
-                return $data;
+        return $data;
     }
 
 
@@ -355,7 +357,6 @@ class CliReiterativoController extends Controller
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'Cliente no cuenta con historial crediticio.', $cliente));
             }
-
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
         }
@@ -364,16 +365,17 @@ class CliReiterativoController extends Controller
     public function getInfoCuotasByComprobante($comprobante)
     {
         try {
-            $data = DB::select("SELECT * FROM aav_migracion_cartera_historica_xcuotas
+            $data = DB::select(
+                "SELECT * FROM aav_migracion_cartera_historica_xcuotas
                                             WHERE cod_comprobante_fp = ?",
-                                        [$comprobante]);
+                [$comprobante]
+            );
 
             if (!empty($data)) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'No existe datos con este comprobante: ' . $comprobante, $data));
             }
-
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
         }
@@ -382,21 +384,59 @@ class CliReiterativoController extends Controller
     public function getInfoCobrosByComprobante($comprobante, $cuota)
     {
         try {
-            $data = DB::select("SELECT *
+            $data = DB::select(
+                "SELECT *
                                         FROM aav_migracion_cartera_historica_xcuotas_xcobros_masconcepto
                                         WHERE cod_comprobante_fp = ?
                                         AND secuencia_fp = ?",
-                                        [$comprobante, $cuota]);
+                [$comprobante, $cuota]
+            );
 
             if (!empty($data)) {
                 return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $data));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', 'No existe datos con este comprobante: ' . $comprobante, $data));
             }
-
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
         }
     }
-    
+
+
+
+    // PARA EL TAB DEL CASO "MOVIMIENTO CLIENTE"
+    public function listMovimientoCliente(Request $request)
+    {
+        try {
+            $identificacionBusqueda = substr(trim($request->input("identificacion")), 0, 10);
+
+            $cliId = DB::selectOne("SELECT cli_id
+                                        FROM cliente
+                                        WHERE SUBSTRING(TRIM(cli_codigo), 1, 10) = ?
+                                        AND cli_tipocli = 1
+                                        LIMIT 1", [$identificacionBusqueda]);
+
+            if ($cliId) {
+                $dataResumen = DB::select("SELECT * FROM crm.fn_movimientos_cliente_resumen_creditos(?, p_fecha_ini => DATE '2016-01-01')", [$cliId->cli_id]);
+
+                $dataMovCliente = DB::select("SELECT * FROM crm.fn_movimientos_cliente_listar_paginado(
+                                                p_cli_id => ?,
+                                                p_fecha_ini => DATE '2016-01-01',
+                                                p_fecha_fin => CURRENT_DATE + 1,
+                                                p_pendientes => FALSE,
+                                                p_tamanio => NULL)", [$cliId->cli_id]);
+
+                $object = [
+                    'resumen_movimiento_cliente' => $dataResumen,
+                    'movimiento_cliente' => $dataMovCliente,
+                ];
+
+                return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $object));
+            } else {
+                return response()->json(RespuestaApi::returnResultado('error', 'Error al encontrar el cliente', null));
+            }
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
+        }
+    }
 }
