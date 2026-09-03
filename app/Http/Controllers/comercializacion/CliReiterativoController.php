@@ -439,4 +439,46 @@ class CliReiterativoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
         }
     }
+
+    // BUSCADOR DEL ng-select DEL TAB "MOVIMIENTO CLIENTE"
+    // Un solo término: la función de PG decide sola si es identificación o nombre.
+    public function buscarClienteMovimiento(Request $request)
+    {
+        try {
+            $termino = trim((string) $request->query('termino', ''));
+            $pagina  = max((int) $request->query('pagina', 1), 1);
+            // Tope de 50 para que nadie pida 10.000 filas cambiando el query string.
+            $tamanio = min(max((int) $request->query('tamanio', 20), 1), 50);
+
+            // Mínimo 6, igual que la función y el front. Un prefijo corto ("0912",
+            // "tor") calza con miles de entidades y obliga a otras tantas búsquedas
+            // para devolver 20. La función también corta por su cuenta, pero ni vale
+            // la pena ir a la base.
+            if (mb_strlen($termino) < 6) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Término muy corto', [
+                    'registros' => [],
+                    'hay_mas'   => false,
+                ]));
+            }
+
+            // La función devuelve hasta tamanio + 1 filas. Si vino la de más, hay
+            // siguiente página: se descarta y se avisa al front con hay_mas.
+            $filas = DB::select(
+                'SELECT * FROM crm.fn_cliente_buscar_movimiento(?, ?, ?)',
+                [$termino, $pagina, $tamanio]
+            );
+
+            $hayMas = count($filas) > $tamanio;
+            if ($hayMas) {
+                array_pop($filas);
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Clientes encontrados', [
+                'registros' => $filas,
+                'hay_mas'   => $hayMas,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
+        }
+    }
 }

@@ -64,6 +64,10 @@ Route::group([
     
     // MOVIMIENTO DE CLIENTE
     Route::post('/listMovimientoCliente', [CliReiterativoController::class, 'listMovimientoCliente']);
+    // throttle no es para proteger a la BD (la consulta va por índice), sino para que
+    // un bug del front en un solo cliente no se convierta en una tormenta de peticiones.
+    Route::get('/buscarClienteMovimiento', [CliReiterativoController::class, 'buscarClienteMovimiento'])
+        ->middleware('throttle:60,1');
 
 
     // USUARIOS OPENCEO
