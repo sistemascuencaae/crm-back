@@ -481,4 +481,17 @@ class CliReiterativoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
         }
     }
+
+    public function getComprobanteCabecera(Request $request)
+    {
+        try {
+            $ccm_id = $request->input('ccm_id');
+
+            $data = DB::selectOne('SELECT * FROM crm.fn_comprobante_cabecera(?)', [$ccm_id]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', $th->getMessage(), $th));
+        }
+    }
 }
