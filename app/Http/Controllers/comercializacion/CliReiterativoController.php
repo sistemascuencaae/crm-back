@@ -414,10 +414,33 @@ class CliReiterativoController extends Controller
                                         FROM cliente
                                         WHERE SUBSTRING(TRIM(cli_codigo), 1, 10) = ?
                                         AND cli_tipocli = 1
+                                        ORDER BY cli_id ASC
                                         LIMIT 1", [$identificacionBusqueda]);
 
             if ($cliId) {
-                $dataResumen = DB::select("SELECT * FROM crm.fn_movimientos_cliente_resumen_creditos(?, p_fecha_ini => DATE '2016-01-01')", [$cliId->cli_id]);
+                // $dataResumen = DB::select("SELECT * FROM crm.fn_movimientos_cliente_resumen_creditos(?, p_fecha_ini => DATE '2016-01-01')", [$cliId->cli_id]);
+
+                $dataResumen = DB::select("SELECT
+                                            pag.fecha,
+                                            pag.comprobante,
+                                            pag.politica,
+                                            pag.numero_cuotas,
+                                            round((pag.valor_cuotas / NULLIF(pag.numero_cuotas, 0))::numeric, 2) ::numeric AS valor_cuota,
+                                            res.dias_venc,
+                                            res.cuotas_pagadas,
+                                            res.num_creditos,
+                                            pag.numero_cuotas_pendientes,
+                                            pag.total_cancelado_xsigla AS total_cancelado,
+                                            (pag.total_deuda - pag.total_cancelado_xsigla) AS saldo,
+                                            pag.total_deuda,
+                                            pag.numero_entradas,
+                                            res.fecha_ult_credito_pagado,
+                                            res.fecha_ult_cuota_pagada,
+                                            res.saldo_total_cliente,
+                                            res.acr_texto,
+                                            pag.rec,pag.nce,pag.ncc,pag.cru,pag.dep,pag.dia,pag.che,pag.pag,pag.ree,pag.cpc,pag.crp,pag.dif,pag.lsc,pag.ncb,pag.ndb,pag.trb
+                                            FROM crm.fn_movimientos_cliente_resumen_creditos(?, p_fecha_ini => DATE '2016-01-01') res
+                                            LEFT JOIN public.af_cfactura_pagare_tipopago(?) pag ON pag.cfa_id = res.cfa_id  ", [$cliId->cli_id, $cliId->cli_id]);
 
                 $dataMovCliente = DB::select("SELECT * FROM crm.fn_movimientos_cliente_listar_paginado(
                                                 p_cli_id => ?,
