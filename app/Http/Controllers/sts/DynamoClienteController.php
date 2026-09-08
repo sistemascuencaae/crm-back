@@ -308,7 +308,10 @@ class DynamoClienteController extends Controller
                 'ent_tipo_identificacion' => $campos['tipoidentificacion'],
                 'ent_nombres' => $campos['nombres'],
                 'ent_apellidos' => $campos['apellidos'],
-                'ent_email' => $campos['email'],
+                // Email OPCIONAL: si el formulario no lo trae se conserva el de la entidad. En
+                // estado B fn_entidad_modificar lo reescribe SIN COALESCE, así que mandar ''
+                // le borraría el correo a una persona que ya existía (proveedor, garante).
+                'ent_email' => $campos['email'] !== '' ? $campos['email'] : ($foto['ent_email'] ?? ''),
                 'ent_nombre_comercial' => trim($campos['apellidos'] . ' ' . $campos['nombres']),
                 // Constantes del canal: solo en el alta. En una edición salen de la ficha.
                 'pol_id' => $defaults['pol_id'],
@@ -399,7 +402,12 @@ class DynamoClienteController extends Controller
             // tenía en la base, así que se reescribe idéntico.
             $payload['ent_nombres'] = $campos['nombres'];
             $payload['ent_apellidos'] = $campos['apellidos'];
-            $payload['ent_email'] = $campos['email'];
+            // Email OPCIONAL: solo se pisa si el formulario trae uno. El payload ya arrastra el
+            // de la foto, y fn_entidad_modificar lo reescribe sin COALESCE: mandar '' se lo
+            // borraría en silencio a un cliente que sí lo tenía.
+            if ($campos['email'] !== '') {
+                $payload['ent_email'] = $campos['email'];
+            }
             $payload['ent_nombre_comercial'] = trim($campos['apellidos'] . ' ' . $campos['nombres']);
             $payload['direccion']['dir_calle_principal'] = $campos['direccion'];
             $payload['direccion']['dir_calle_secundaria'] = $campos['dir_calle_secundaria'];
@@ -495,9 +503,11 @@ class DynamoClienteController extends Controller
             'tipoidentificacion' => (int) trim($request->input('tipoidentificacion')),
             'nombres' => mb_strtoupper(trim($request->input('nombres'))),
             'apellidos' => mb_strtoupper(trim($request->input('apellidos'))),
-            'email' => mb_strtolower(trim($request->input('email'))),
+            // ?? '' porque el middleware global ConvertEmptyStringsToNull convierte el '' del
+            // formulario en null, y trim(null) es deprecation desde PHP 8.1.
+            'email' => mb_strtolower(trim($request->input('email') ?? '')),
             'telefono' => trim($request->input('telefono')),
-            'direccion' => mb_strtoupper(trim($request->input('direccion'))),
+            'direccion' => mb_strtoupper(trim($request->input('direccion') ?? '')),
             'dir_calle_secundaria' => mb_strtoupper(trim($request->input('dir_calle_secundaria') ?? '')),
         ];
     }
@@ -510,7 +520,8 @@ class DynamoClienteController extends Controller
             'identificacion' => 'required|string',
             'nombres' => 'required|string',
             'apellidos' => 'required|string',
-            'email' => 'required|email',
+            // OPCIONAL: nullable deja pasar vacío o ausente, pero si trae algo exige formato.
+            'email' => 'nullable|email',
             'telefono' => 'required|digits:10',
             'direccion' => 'required|string',
             'dir_calle_secundaria' => 'required|string',
