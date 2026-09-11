@@ -114,11 +114,9 @@ class ReporteLinkController extends Controller
     {
         try {
             // profile_id 3, es el perfil FABRICA DE CREDITO (Analista) en el crm.profiles
-            // profile_id 6, es el perfil BODEGA en el crm.profiles
             // profile_id 38, es el perfil VENDEDOR en el crm.profiles
             // profile_id 39, es el perfil CAJERA FACTURADORA en el crm.profiles
-            // $data = User::where('estado', true)->whereNotIn('profile_id', [3, 6, 38, 39])->orderBy('name', 'asc')->get(['id', 'usu_alias', 'name', 'surname']);
-            $data = User::whereNotIn('profile_id', [3, 6, 38, 39])->orderBy('name', 'asc')->get(['id', 'usu_alias', 'name', 'surname']);
+            $data = User::whereNotIn('profile_id', [3, 38, 39])->orderBy('name', 'asc')->get(['id', 'usu_alias', 'name', 'surname']);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $data));
         } catch (Exception $e) {
