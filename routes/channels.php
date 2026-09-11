@@ -84,6 +84,21 @@ Broadcast::channel('chat.refresh.conver.{id}', function ($user, $id) {
 
 
 
+// JGSJ - NO LO ESTOY OCUPANDO EN NINGUN LADO (QUITAR ESTE COMENTARIO CUANDO SE LO OCUPE EN ALGUN LADO) 
+Broadcast::channel('usuario.{id}', function ($user) {
+    $usuario = User::where("id", $user->id)->first();
+
+    // echo('ingresamos al chanel'.json_encode($tablero));
+    if ($usuario) {
+        return true;
+    } else {
+        return false;
+    }
+});
+
+
+
+
 // Broadcast::channel('chat.room.{uniqd}', function ($user, $uniqd) {
 //     echo('ingresamos al channel chat.romm');
 //     $chatroom = ChatRoom::where("uniqd",$uniqd)->first();

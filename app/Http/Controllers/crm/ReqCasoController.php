@@ -28,10 +28,6 @@ class ReqCasoController extends Controller
         $reqCaso = $request->input('reqCaso');
         $inputReq = json_decode($reqCaso);
 
-
-
-
-
         $tipoArchivo = $request->input('tipoArchivo');
         $requerimiento = RequerimientoCaso::where('id', $inputReq->id)->first();
         if (!$requerimiento) {
@@ -49,12 +45,14 @@ class ReqCasoController extends Controller
                     // $path = Storage::putFile("galerias", $request->file("imagen_file"));
 
                     $imagen = $request->file("imagen_file");
-                    $titulo = $imagen->getClientOriginalName();
+                    // $titulo = $imagen->getClientOriginalName();
+                    $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
+                    $marcaTiempo = now()->format('YmdHis'); // Fecha con hora y segundos para no sobrescribir archivos previos
 
                     if ($parametro->nas == true) {
-                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo);
                     } else {
-                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/galerias", $imagen, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo);
                     }
 
                 }
@@ -79,6 +77,8 @@ class ReqCasoController extends Controller
                         "caso_id" => $inputReq->caso_id,
                         "tipo_gal_id" => 8, // Tipo Requerimiento es el id 8
                         "sc_id" => 0,
+                        "tab_id" => $requerimiento->tab_id,
+                        "acc_publico" => $requerimiento->acc_publico,
                     ]);
 
 
@@ -108,6 +108,9 @@ class ReqCasoController extends Controller
                     $newGaleria->caso_id = $inputReq->caso_id;
                     $newGaleria->tipo_gal_id = 8;
                     $newGaleria->sc_id = 0;
+                    $newGaleria->tab_id = $requerimiento->tab_id;
+                    $newGaleria->acc_publico = $requerimiento->acc_publico;
+
                     $newGaleria->save();
                     $requerimiento->galerias_id = $newGaleria->id;
 
@@ -136,13 +139,14 @@ class ReqCasoController extends Controller
                 if ($request->hasFile("archivo_file")) {
 
                     $file = $request->file("archivo_file");
-                    $titulo = $file->getClientOriginalName();
-
+                    // $titulo = $file->getClientOriginalName();
+                    $titulo = str_replace(' ', '-', $file->getClientOriginalName()); // Reemplazar espacios por -
+                    $marcaTiempo = now()->format('YmdHis'); // Fecha con hora y segundos para no sobrescribir archivos previos
 
                     if ($parametro->nas == true) {
-                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo); // guarda en el nas con el nombre original del archivo
+                        $path = Storage::disk('nas')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo); // guarda en el nas con el nombre original del archivo
                     } else {
-                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $titulo);
+                        $path = Storage::disk('local')->putFileAs("casos/" . $inputReq->caso_id . "/archivos", $file, $inputReq->caso_id . '-' . $marcaTiempo . '-' . $titulo);
                     }
                 }
                 $requerimiento->esimagen = false;
@@ -162,6 +166,8 @@ class ReqCasoController extends Controller
                         "archivo" => $path,
                         "caso_id" => $inputReq->caso_id,
                         "tipo" => 'Requerimiento',
+                        "tab_id" => $requerimiento->tab_id,
+                        "acc_publico" => $requerimiento->acc_publico,
                     ]);
 
                     // START Bloque de código que genera un registro de auditoría manualmente
@@ -187,6 +193,8 @@ class ReqCasoController extends Controller
                     $newArchivo->archivo = $path;
                     $newArchivo->caso_id = $inputReq->caso_id;
                     $newArchivo->tipo = 'Requerimiento';
+                    $newArchivo->tab_id = $requerimiento->tab_id;
+                    $newArchivo->acc_publico = $requerimiento->acc_publico;
                     $newArchivo->save();
                     $requerimiento->archivos_id = $newArchivo->id;
 
@@ -275,13 +283,9 @@ class ReqCasoController extends Controller
                     $audit->caso_id = $requerimiento->caso_id;
                     $audit->save();
                     // END Auditoria
-
-
-
                 });
 
                 $reqCaso = RequerimientoCaso::where('caso_id', $request->input('caso_id'))
-                    ->orderBy('id', 'asc')
                     ->orderBy('id', 'asc')
                     ->get();
 
@@ -327,7 +331,7 @@ class ReqCasoController extends Controller
     public function listReqCasoId($casoId)
     {
         try {
-            $data = RequerimientoCaso::where('caso_id', $casoId)->orderBy('orden', 'asc')->get();
+            $data = RequerimientoCaso::where('caso_id', $casoId)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
@@ -429,5 +433,226 @@ class ReqCasoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
         }
+    }
+
+    // Resuelve el usu_id del ERP del usuario logueado (por usu_alias); si no hay coincidencia, cae al
+    // usu_id del agente (empleado) asignado al cliente. Mismo patrón que ClienteController::solicitudCredito.
+    private function resolverUsuIdSolicitud($cliId)
+    {
+        $usuAlias = optional(auth('api')->user())->usu_alias;
+        $usuId = null;
+        if ($usuAlias) {
+            $u = DB::selectOne('SELECT usu_id FROM usuario WHERE UPPER(usu_alias) = UPPER(?) LIMIT 1', [$usuAlias]);
+            $usuId = $u->usu_id ?? null;
+        }
+        if (!$usuId) {
+            $a = DB::selectOne(
+                'SELECT emp.usu_id FROM cliente cli INNER JOIN empleado emp ON emp.emp_id = cli.emp_id WHERE cli.cli_id = ?',
+                [$cliId]
+            );
+            $usuId = $a->usu_id ?? null;
+        }
+        return $usuId;
+    }
+
+    // Requerimiento "solicitud credito vendedor": tras guardar el cliente (a crédito) en el modal de edición,
+    // genera la solicitud (crm.fn_cliente_solicitud_credito = datos para imprimir), guarda el snapshot en la
+    // auditoría de impresiones del cliente (crm.fn_solicitud_credito_guardar -> id) y marca el requerimiento
+    // (marcado=true, valor_int = id de la solicitud). Crea un registro 'editRequerimiento' en crm.audits para
+    // que aparezca en la bitácora. Devuelve { reqCaso (lista del caso), solicitud (filas a imprimir), impresion_id }.
+    public function solicitudCreditoVendedorGenerar(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $casoId = $request->input('caso_id');
+            $cliId  = $request->input('cli_id');
+            $reqId  = $request->input('id');
+
+            $usuId = $this->resolverUsuIdSolicitud($cliId);
+
+            $solicitud = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito(?, ?)', [$cliId, $usuId]);
+            if (empty($solicitud)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Verifique que el cliente sea a CRÉDITO y tenga toda su información completa.', ''));
+            }
+
+            // Teléfonos ACTIVOS del cliente (principal + adicionales) para la tabla "4) TELÉFONOS".
+            $telefonos = DB::select('SELECT * FROM crm.fn_cliente_solicitud_credito_telefonos(?)', [$cliId]);
+
+            $impresionId = optional(DB::selectOne(
+                'SELECT crm.fn_solicitud_credito_guardar(?, ?, ?, ?) AS impresion_id',
+                [$cliId, $usuId, auth('api')->id(), $casoId]
+            ))->impresion_id;
+
+            // El reporte en vivo no trae caso ni id de impresión; se inyectan para que la impresión muestre
+            // "N°: <caso_id> - <id solicitud>" en la esquina sup. derecha.
+            foreach ($solicitud as $s) {
+                $s->caso_id = $casoId;
+                $s->solicitud_id = $impresionId;
+            }
+
+            $reqCaso = RequerimientoCaso::find($reqId);
+            if (!$reqCaso) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento no existe.', $reqId));
+            }
+
+            $audit = new Audits();
+            $audit->old_values = json_encode($reqCaso);
+
+            $reqCaso->marcado = true;
+            $reqCaso->valor_int = $impresionId;
+            $reqCaso->save();
+
+            // Auditoría (bitácora). accion 'editRequerimiento' + tipo_campo 'solicitud credito vendedor':
+            // la bitácora detecta el tipo y muestra solo el mensaje resumido (sin old/new values).
+            $audit->user_id = Auth::id();
+            $audit->event = 'updated';
+            $audit->auditable_type = RequerimientoCaso::class;
+            $audit->auditable_id = $reqCaso->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip();
+            $audit->url = $request->fullUrl();
+            $audit->new_values = json_encode($reqCaso);
+            $audit->user_agent = $request->header('User-Agent');
+            $audit->accion = 'editRequerimiento';
+            $audit->caso_id = $casoId;
+            $audit->save();
+
+            $requerimientosCaso = RequerimientoCaso::where('caso_id', $casoId)->orderBy('id', 'asc')->get();
+
+            $data = (object) [
+                'reqCaso'      => $requerimientosCaso,
+                'solicitud'    => $solicitud,
+                'telefonos'    => $telefonos,
+                'impresion_id' => $impresionId,
+            ];
+
+            $log->logInfo(ReqCasoController::class, 'Solicitud crédito vendedor generada en el caso #' . $casoId . ', impresion_id ' . $impresionId);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Solicitud generada con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(ReqCasoController::class, 'Error al generar la solicitud crédito vendedor', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
+        }
+    }
+
+    // Reimpresión: trae el snapshot guardado (crm.solicitudes_credito) por su id, en el mismo shape que el
+    // historial de solicitudes (reusa crm.fn_cliente_solicitud_credito_listar_paginacion), para reimprimir SOLO
+    // esa solicitud. Los jsonb (referencias/telefonos/direcciones) se decodifican para el front.
+    public function solicitudCreditoVendedorReimprimir(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $solicitudId = (int) $request->input('solicitud_id');
+
+            $snap = $this->obtenerSnapshotSolicitudVendedor($solicitudId);
+            if (!$snap) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró la solicitud guardada.', ''));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Solicitud obtenida', $snap));
+        } catch (Exception $e) {
+            $log->logError(ReqCasoController::class, 'Error al reimprimir la solicitud crédito vendedor', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
+        }
+    }
+
+    // Snapshot guardado de una solicitud (header + referencias/telefonos/direcciones ya decodificados).
+    // Compartido por solicitudCreditoVendedorReimprimir y solicitudCreditoVendedorPdf.
+    private function obtenerSnapshotSolicitudVendedor(int $solicitudId)
+    {
+        $cab = DB::selectOne('SELECT cli_id FROM crm.solicitudes_credito WHERE id = ?', [$solicitudId]);
+        if (!$cab) {
+            return null;
+        }
+
+        $regs = DB::select(
+            'SELECT * FROM crm.fn_cliente_solicitud_credito_listar_paginacion(?, ?, ?, ?)',
+            [$cab->cli_id, 1, 100000, null]
+        );
+
+        foreach ($regs as $r) {
+            if ((int) $r->id === $solicitudId) {
+                $r->referencias = json_decode($r->referencias);
+                $r->telefonos   = json_decode($r->telefonos);
+                $r->direcciones = json_decode($r->direcciones);
+
+                return $r;
+            }
+        }
+
+        return null;
+    }
+
+    // Estado del PDF guardado de una solicitud (ojito): devuelve { existe, ruta }. El PDF NO se genera
+    // aquí: lo captura y sube el FRONT desde el componente real <app-print-solicitud-credito> (fuente
+    // ÚNICA del diseño — si cambia el diseño, solo se toca el frontend). Si 'existe' es false, el front
+    // lo regenera con el snapshot (solicitudCreditoVendedorReimprimir) y lo sube (GuardarPdf).
+    public function solicitudCreditoVendedorPdf(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $solicitudId = (int) $request->input('solicitud_id');
+
+            $cab = DB::selectOne('SELECT caso_id FROM crm.solicitudes_credito WHERE id = ?', [$solicitudId]);
+            if (!$cab) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró la solicitud guardada.', ''));
+            }
+
+            $ruta = $this->rutaPdfSolicitudVendedor($solicitudId, $cab->caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Estado del PDF', [
+                'existe' => Storage::disk($this->discoArchivosCaso())->exists($ruta),
+                'ruta'   => $ruta,
+            ]));
+        } catch (\Throwable $e) {
+            $log->logError(ReqCasoController::class, 'Error al consultar el PDF de la solicitud crédito vendedor', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
+        }
+    }
+
+    // Recibe el PDF capturado por el front (html2pdf sobre el componente real) y lo guarda como
+    // archivo del caso en casos/<caso_id>/archivos/ (mismo disco NAS/local que los adjuntos).
+    // Sobrescribe si ya existía (mismo snapshot => mismo contenido). Devuelve la ruta relativa.
+    public function solicitudCreditoVendedorGuardarPdf(Request $request)
+    {
+        $log = new Funciones();
+        try {
+            $solicitudId = (int) $request->input('solicitud_id');
+            if (!$request->hasFile('pdf')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No llegó el archivo PDF.', ''));
+            }
+
+            $cab = DB::selectOne('SELECT caso_id FROM crm.solicitudes_credito WHERE id = ?', [$solicitudId]);
+            if (!$cab) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró la solicitud guardada.', ''));
+            }
+
+            $ruta = $this->rutaPdfSolicitudVendedor($solicitudId, $cab->caso_id);
+            Storage::disk($this->discoArchivosCaso())->put($ruta, file_get_contents($request->file('pdf')->getRealPath()));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'PDF guardado', $ruta));
+        } catch (\Throwable $e) {
+            $log->logError(ReqCasoController::class, 'Error al guardar el PDF de la solicitud crédito vendedor', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
+        }
+    }
+
+    // Ruta relativa del PDF de una solicitud dentro del storage de adjuntos del caso.
+    private function rutaPdfSolicitudVendedor(int $solicitudId, $casoId): string
+    {
+        return ($casoId ? 'casos/' . $casoId . '/archivos/' : 'solicitudes-credito/')
+            . 'solicitud-credito-' . $solicitudId . '.pdf';
+    }
+
+    // Mismo criterio NAS/local que los adjuntos del caso (editReqTipoFile): crm.parametro 'NAS'.
+    private function discoArchivosCaso(): string
+    {
+        $parametro = DB::table('crm.parametro')->where('abreviacion', 'NAS')->first();
+
+        return ($parametro && $parametro->nas == true) ? 'nas' : 'local';
     }
 }

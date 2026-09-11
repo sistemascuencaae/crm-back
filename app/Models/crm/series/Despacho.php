@@ -21,6 +21,7 @@ class Despacho extends Model implements Auditable
     public $timestamps = false;
 
     protected $fillable = [
+        "id",
         "numero",
         "fecha",
         "estado",
@@ -33,7 +34,7 @@ class Despacho extends Model implements Auditable
         "fecha_modifica",
         "bod_id_origen",
     ];
-    
+
     public function detalle()
     {
         return $this->hasMany(DesepachoDet::class, "numero");

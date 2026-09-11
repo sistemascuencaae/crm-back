@@ -7,8 +7,11 @@ use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\Audits;
+use App\Models\crm\Caso;
 use App\Models\crm\Galeria;
 use App\Models\crm\RequerimientoCaso;
+use App\Models\crm\Tablero;
+use App\Models\crm\TableroUsuario;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
@@ -31,7 +34,8 @@ class GaleriaController extends Controller
         try {
             if ($request->hasFile("imagen_file")) {
                 $imagen = $request->file("imagen_file");
-                $titulo = $imagen->getClientOriginalName();
+                // $titulo = $imagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
 
                 // Fecha actual
                 $fechaActual = Carbon::now();
@@ -85,61 +89,19 @@ class GaleriaController extends Controller
         }
     }
 
-    // public function listGaleriaByCasoId($caso_id)
-    // {
-    //     try {
-    //         $galerias = Galeria::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
-
-    //         // return response()->json([
-    //         //     "imagenes" => $imagenes,]);
-
-    //         // return response()->json([
-    //         //     "imagenes" => $galerias->map(function ($galeria) {
-    //         //         return [
-    //         //             "id" => $galeria->id,
-    //         //             "titulo" => $galeria->titulo,
-    //         //             "descripcion" => $galeria->descripcion,
-    //         //             // "imagen" => env("APP_URL") . "storage/app/public/" . $imagen->imagen,
-    //         //             "imagen" => $galeria->imagen,
-    //         //             "caso_id" => $galeria->caso_id,
-    //         //             "tipo_gal_id" => $galeria->tipo_gal_id
-    //         //         ];
-    //         //     }),
-    //         // ]);
-
-
-    //         return response()->json(
-    //             RespuestaApi::returnResultado(
-    //                 'success',
-    //                 'Se listo con éxito',
-    //                 $galerias
-    //                 // $galerias->map(function ($galeria) {
-    //                 //     return [
-    //                 //         "id" => $galeria->id,
-    //                 //         "titulo" => $galeria->titulo,
-    //                 //         "descripcion" => $galeria->descripcion,
-    //                 //         "imagen" => $galeria->imagen,
-    //                 //         "caso_id" => $galeria->caso_id,
-    //                 //         "tipo_gal_id" => $galeria->tipo_gal_id,
-    //                 //         "sc_id" => $galeria->sc_id,
-    //                 //     ];
-    //                 // })
-    //             )
-    //         );
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-
-    // }
-
     public function listGaleriaByCasoId($caso_id, $tabId)
     {
         $log = new Funciones();
         try {
             // Recupera las galerías relacionadas con el caso_id desde la base de datos
             //$galerias = Galeria::where('caso_id', $caso_id)->get();
-
-            $galerias = DB::select("SELECT * from (
+            $userLoginId = Auth::id();
+            $user = DB::selectOne("SELECT * FROM crm.users where id = ?", [$userLoginId]);
+            $data = [];
+            if ($user->usu_tipo_analista !== 1) {
+                $data = Galeria::where('caso_id', $caso_id)->get();
+            } else {
+                $data = DB::select("SELECT * from (
             select ga.* from crm.galerias ga
             where ga.tipo_gal_id <> 8
             union
@@ -147,11 +109,13 @@ class GaleriaController extends Controller
             inner join crm.requerimientos_caso rc2 on rc2.galerias_id = ga2.id
             where rc2.acc_publico = true or (rc2.acc_publico = false and rc2.tab_id = $tabId)
             ) temp where temp.caso_id = $caso_id ORDER BY temp.id DESC");
+            }
+
 
 
             $log->logInfo(GaleriaController::class, 'Se listo con exito las imagenes del caso #' . $caso_id);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $galerias));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
             $log->logError(GaleriaController::class, 'Error al listar la imagenes del caso #' . $caso_id, $e);
 
@@ -187,7 +151,9 @@ class GaleriaController extends Controller
 
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
-                $titulo = $nuevaImagen->getClientOriginalName();
+                // $titulo = $nuevaImagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $nuevaImagen->getClientOriginalName()); // Reemplazar espacios por -
+
 
                 // Fecha actual
                 $fechaActual = Carbon::now();
@@ -319,8 +285,8 @@ class GaleriaController extends Controller
     {
         $log = new Funciones();
         try {
-
-            $galerias = Galeria::where('tab_id', $tab_id)->first();
+            $tablero = Tablero::find($tab_id);
+            $galerias = ($tablero && $tablero->gal_id) ? Galeria::find($tablero->gal_id) : null;
 
             $log->logInfo(GaleriaController::class, 'Se listo con exito el fondo del tablero con el ID ' . $tab_id);
 
@@ -339,7 +305,8 @@ class GaleriaController extends Controller
         try {
             if ($request->hasFile("imagen_file")) {
                 $imagen = $request->file("imagen_file");
-                $titulo = $imagen->getClientOriginalName();
+                // $titulo = $imagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
 
                 // Fecha actual
                 $fechaActual = Carbon::now();
@@ -360,9 +327,14 @@ class GaleriaController extends Controller
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
             }
 
-            $galeria = Galeria::create($request->all());
+            $galeria = DB::transaction(function () use ($request, $tab_id) {
+                $galeria = Galeria::create($request->all());
+                // Apuntamos el tablero a su fondo recién creado
+                Tablero::where('id', $tab_id)->update(['gal_id' => $galeria->id]);
+                return $galeria;
+            });
 
-            $log->logInfo(GaleriaController::class, 'Se guardo con exito el fondo del tablero con el ID ' . $tab_id);
+            $log->logInfo(GaleriaController::class, 'Se guardo con exito el fondo del tablero');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
         } catch (Exception $e) {
@@ -395,7 +367,7 @@ class GaleriaController extends Controller
 
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
-                $titulo = $nuevaImagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $nuevaImagen->getClientOriginalName());
 
                 // Fecha actual
                 $fechaActual = Carbon::now();
@@ -419,15 +391,7 @@ class GaleriaController extends Controller
 
             $galeria->update($request->all());
 
-            // si la imagen es de un requerimiento actualizar el requerimiento
-            $reqCaso = RequerimientoCaso::where('galerias_id', $galeria->id)->first();
-            if ($reqCaso) {
-                $reqCaso->descripcion = $galeria->descripcion;
-                $reqCaso->valor_varchar = $galeria->imagen;
-                $reqCaso->save();
-            }
-
-            $log->logInfo(GaleriaController::class, 'Se actualizo con exito el fondo del tablero, con el ID de la imagen ' . $id);
+            $log->logInfo(GaleriaController::class, 'Se actualizo con exito el fondo del tablero');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
         } catch (Exception $e) {
@@ -447,13 +411,20 @@ class GaleriaController extends Controller
                 ->where('abreviacion', 'NAS')
                 ->first();
 
-            if ($parametro->nas == true) {
-                Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta nas
-            } else {
-                Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
-            }
+            $galeria = DB::transaction(function () use ($id, $galeria, $parametro) {
+                // Primero soltamos la FK del tablero apuntando a esta galería
+                // (si existe), para no chocar con re_caso_galeria_fk u otras.
+                Tablero::where('gal_id', $id)->update(['gal_id' => null]);
 
-            $galeria->delete();
+                if ($parametro->nas == true) {
+                    Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta nas
+                } else {
+                    Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+                }
+
+                $galeria->delete();
+                return $galeria;
+            });
 
             $log->logInfo(GaleriaController::class, 'Se elimino con exito el fondo del tablero, con el ID de la imagen ' . $id);
 
@@ -465,4 +436,62 @@ class GaleriaController extends Controller
         }
     }
 
+    //! Lista Todos los archivos e imagenes del caso
+    public function listAllAdjuntosByCasoId($caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $userLoginId = Auth::id();
+
+            // Obtener galerías: públicas O privadas si tiene acceso al tab_id de la galería
+            $galerias = DB::select("SELECT ga.* FROM crm.galerias ga
+                WHERE ga.caso_id = ?
+                AND (
+                    ga.acc_publico = true
+                    OR ga.tab_id IS NULL
+                    OR (
+                        ga.acc_publico = false
+                        AND ga.tab_id IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1 FROM crm.tablero_user tu
+                            WHERE tu.tab_id = ga.tab_id
+                            AND tu.user_id = ?
+                        )
+                    )
+                )
+                ORDER BY ga.id DESC", [$caso_id, $userLoginId]);
+
+            // Obtener archivos: públicos O privados si tiene acceso al tab_id del archivo
+            $archivos = DB::select("SELECT arch.* FROM crm.archivos arch
+                WHERE arch.caso_id = ?
+                AND (
+                    arch.acc_publico = true
+                    OR arch.tab_id IS NULL
+                    OR (
+                        arch.acc_publico = false
+                        AND arch.tab_id IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1 FROM crm.tablero_user tu
+                            WHERE tu.tab_id = arch.tab_id
+                            AND tu.user_id = ?
+                        )
+                    )
+                )
+                ORDER BY arch.id DESC", [$caso_id, $userLoginId]);
+
+            // Combinar galerías y archivos
+            $data = collect($galerias)->merge(collect($archivos));
+
+            // Ordenar por created_at ascendente
+            $data = $data->sortBy('created_at')->values();
+
+            $log->logInfo(GaleriaController::class, 'Se listo con exito todos los adjuntos del caso: #' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al listar todos los adjuntos del caso: #' . $caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }

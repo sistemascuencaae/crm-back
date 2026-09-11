@@ -25,4 +25,9 @@ class Estados extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["updated_at"] = Carbon::now();
     }
+
+    public function tablero()
+    {
+        return $this->belongsTo(Tablero::class, "tab_id", "id");
+    }
 }

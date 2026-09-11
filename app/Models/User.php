@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\configuracion\Agencia;
+use App\Models\configuracion\UsuarioCHorario;
 use App\Models\crm\Almacen;
 use App\Models\crm\PerfilAnalistas;
 use App\Models\crm\Tablero;
@@ -60,6 +62,11 @@ class User extends Authenticatable implements JWTSubject
         "alm_id",
         "cedula",
         "emp_id",
+        "bod_id",
+        "bod_id_dos",
+        "bod_id_tres",
+        "ult_inicio_sesion",
+        "id_usu_crea_actualiza",
     ];
 
     protected $hidden = [
@@ -70,6 +77,17 @@ class User extends Authenticatable implements JWTSubject
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    // **START**
+    // Este bloque se llama accessor y sirve para que no tenga que estar llamando en cada select al usuario_completo
+    // El $appends se agrega para no estar llamando usuario_completo cada vez que lo necesite, sino ya viene en el objeto usuario
+    public function getUsuarioCompletoAttribute()
+    {
+        return $this->usu_alias . ' - ' . $this->name . ' ' . $this->surname;
+    }
+
+    protected $appends = ['usuario_completo'];
+    // **END**
 
     public function setPasswordAttribute($password)
     {
@@ -139,4 +157,18 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Almacen::class, "alm_id", "alm_id");
     }
 
+    public function agencia()
+    {
+        return $this->belongsTo(Agencia::class, "alm_id", "codigo");
+    }
+
+    public function horario()
+    {
+        return $this->belongsTo(UsuarioCHorario::class, "id", "user_id");
+    }
+
+    public function usuario_crea_actualiza()
+    {
+        return $this->belongsTo(User::class, "id_usu_crea_actualiza", "id");
+    }
 }

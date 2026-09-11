@@ -6,6 +6,7 @@ use App\Events\ReasignarCasoEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
 use App\Http\Controllers\crm\EmailController;
+use App\Http\Controllers\crm\EmailDinamicoController;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
@@ -63,8 +64,13 @@ class RobotCasoController extends Controller
                 }
 
                 $casoModificado = $this->validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId);
-                $data = $casoController->getCaso($casoModificado->id);
 
+                // Desbloquear el caso (ya se realiza en validacionReasignacionUsuario lineas 146-147)
+                // $casoModificado->bloqueado = false;
+                // $casoModificado->bloqueado_user = '';
+                // $casoModificado->save();
+
+                $data = $casoController->getCaso($casoModificado->id);
                 broadcast(new ReasignarCasoEvent($data));
 
                 // si existe la variable banMostrarVistaCreditoAprobado, se muestra la vista de caso creditoAprobado
@@ -84,7 +90,7 @@ class RobotCasoController extends Controller
 
     public function validacionReasignacionUsuario($estadoFormId, $casoId, $tableroActualId)
     {
-        $emailController = new EmailController();
+        $emailController = new EmailDinamicoController();
         $casoEnProceso = Caso::find($casoId);
         $formula = EstadosFormulas::where('id', $estadoFormId)
             ->with('estado_actual', 'fase_actual', 'respuesta_caso', 'estado_proximo', 'tablero_proximo', 'fase_proxima')
@@ -93,10 +99,12 @@ class RobotCasoController extends Controller
 
 
         if (!$casoEnProceso) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
+            // return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
+            throw new Exception('El caso no existe.');
         }
         if (!$formula) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La formula no existe.'));
+            // return response()->json(RespuestaApi::returnResultado('error', 'Error', 'La formula no existe.'));
+            throw new Exception('La formula no existe.');
         }
         //--- APROBAR CREDITO
         if ($casoEnProceso->cpp_id) {
@@ -176,7 +184,7 @@ class RobotCasoController extends Controller
         // END Auditoria
         /*---------******** ADD REQUERIMIENTOS AL CASO ********------------- */
         $casoController = new CasoController();
-        $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id);
+        $casoController->addRequerimientosFase($casoEnProceso->id, $casoEnProceso->fas_id, $casoEnProceso->user_creador_id, $casoEnProceso->tc_id);
         //0.-  si el caso esta en la bandeja de entrada con el usuario general
         if ($formula->tablero_id == $tableroActualId) {
             $casoBandejaEntrada = DB::selectOne("SELECT fa.nombre, fa.orden, u.name from crm.caso ca
@@ -189,7 +197,7 @@ class RobotCasoController extends Controller
                     $casoEnProceso->user_id = $user_id;
                     $casoEnProceso->save();
                     $this->addMiembro($user_id, $casoEnProceso->id, $formula->tablero_id);
-                    $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+                    $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
                     $this->calcularTiemposCaso($casoEnProceso);
                     return $casoEnProceso;
                 }
@@ -198,7 +206,7 @@ class RobotCasoController extends Controller
         // si se mueve en el mismo tablero y se encuentra asignado un usuario
         if ($formula->tablero_id == $tableroActualId) {
             $casoEnProceso->save();
-            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
             $this->calcularTiemposCaso($casoEnProceso);
             return $casoEnProceso;
         }
@@ -206,7 +214,7 @@ class RobotCasoController extends Controller
         if ($formula->tablero_id == $casoEnProceso->tablero_creacion_id) {
             $casoEnProceso->user_id = $casoEnProceso->user_creador_id;
             $casoEnProceso->save();
-            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
             $this->calcularTiemposCaso($casoEnProceso);
             return $casoEnProceso;
         }
@@ -224,7 +232,7 @@ class RobotCasoController extends Controller
             $casoEnProceso->user_id = $controlTiemposCaso->user_id;
             $casoEnProceso->save();
             $this->addMiembro($casoEnProceso->user_id, $casoEnProceso->id, $formula->tablero_id);
-            $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+            $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
             $this->calcularTiemposCaso($casoEnProceso);
             return $casoEnProceso;
         }
@@ -235,7 +243,7 @@ class RobotCasoController extends Controller
         $casoEnProceso->user_id = $userGeneralNuevoTablero->id;
         $casoEnProceso->save();
         $this->addMiembro($casoEnProceso->user_id, $casoEnProceso->id, $formula->tablero_id);
-        $emailController->send_emailCambioFase($casoEnProceso->id, $casoEnProceso->fas_id);
+        $emailController->sendEmailDinamico($casoEnProceso->id, $casoEnProceso->fas_id);
         $this->calcularTiemposCaso($casoEnProceso);
         return $casoEnProceso;
     }
@@ -290,7 +298,7 @@ class RobotCasoController extends Controller
                 inner join crm.users u on u.id = tu.user_id
                 where tu.tab_id = ? and u.usu_tipo in (2,3);', [$nuevoTabId]);
         $idsMiembros = DB::selectOne("SELECT array_to_string(array_agg(m.user_id), ','::text) AS ids from crm.miembros m
-        where caso_id = ? ",[$casoId]);
+        where caso_id = ? ", [$casoId]);
         $idsArray = explode(",", $idsMiembros->ids); // Convertir la cadena a un array
         foreach ($miembrosAdminTablero as $miembro) {
             if (!in_array($miembro->id, $idsArray)) { // Verificar si el ID está en el array
