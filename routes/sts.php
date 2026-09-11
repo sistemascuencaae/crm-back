@@ -13,6 +13,8 @@ Route::group(["prefix" => "sts", 'middleware' => ['jwt.auth', 'usuario.activo']]
     Route::post('/listClientesCorredor', [DynamoClienteController::class, 'listClientesCorredor']);
     // CLIENTE DYNAMO: envia un correo con la cuenta secundaria multinivel (smtp2)
     Route::post('/send_emailMultinivel', [EmailController::class, 'send_emailMultinivel']);
+    // Listado de clientes de un corredor especifico
+    Route::post('/listCorredorClientePaginado', [DynamoClienteController::class, 'listCorredorClientePaginado']);
 
     // ARCHIVOS
     Route::post('/addArchivos', [ArchivoCorredorController::class, 'addArchivos']);
@@ -28,4 +30,7 @@ Route::group(["prefix" => "sts", 'middleware' => ['throttle:10,1']], function ($
     Route::post('/addDynamoCliente', [DynamoClienteController::class, 'addDynamoCliente']);
     Route::post('/verificarClienteDynamo', [DynamoClienteController::class, 'verificarClienteDynamo']);
     Route::post('/updateDynamoCliente', [DynamoClienteController::class, 'updateDynamoCliente']);
+    // Consulta de identidad en fuentes oficiales (SRI / Ecuador Legal). Misma lógica que el
+    // CRUD del CRM, pero autenticada con el token cifrado del enlace en vez de JWT.
+    Route::post('/consultarIdentidadDynamo', [DynamoClienteController::class, 'consultarIdentidadDynamo']);
 });

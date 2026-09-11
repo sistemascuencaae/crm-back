@@ -727,6 +727,10 @@ class Formulario2Controller extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Este caso ya ha sido rechazado.', null));
             }
 
+            if ($data->resultado_caso == 'CANCELADO') {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este caso fue cancelado.', null));
+            }
+
             if ($data->resultado_caso !== 'APROBADO') {
                 return response()->json(RespuestaApi::returnResultado('error', 'Este caso todavía sigue en proceso.', null));
             }

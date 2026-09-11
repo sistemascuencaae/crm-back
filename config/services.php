@@ -41,4 +41,19 @@ return [
         'spreadsheet_id' => env('GOOGLE_SHEETS_SPREADSHEET_ID'),
     ],
 
+    // Geocoding / reverse geocoding / POIs. Cuenta gratuita en geoapify.com.
+    'geoapify' => [
+        'key' => env('GEOAPIFY_API_KEY'),
+        // Restringe los resultados a un país (código ISO en minúsculas).
+        'pais' => env('GEOAPIFY_PAIS', 'ec'),
+        // Estilo del mapa vectorial: osm-bright, positron, dark-matter, toner...
+        'map_style' => env('GEOAPIFY_MAP_STYLE', 'osm-bright'),
+    ],
+
+    // Solo se usa para la vista de calle (Street View). Si se deja vacío, el
+    // módulo cae al deep link de Google Maps, que no necesita credenciales.
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_KEY'),
+    ],
+
 ];

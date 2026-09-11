@@ -21,7 +21,10 @@ class ConsultaIdentidadExternoController extends Controller
     const PARTICULAS_APELLIDO = ['de', 'del', 'la', 'las', 'los', 'san', 'santa', 'da', 'di', 'do', 'y', 'e'];
 
     // Acepta solo RUC's esta página del SRI.
-    public function consultarRucSri($ruc)
+    // $usuId permite que un canal SIN sesión JWT (el formulario público de corredores, que se
+    // autentica con el token cifrado del enlace) diga de parte de quién consulta. Si no se
+    // pasa, se usa el usuario autenticado, que es el caso del CRM.
+    public function consultarRucSri($ruc, ?int $usuId = null)
     {
         try {
             $identificacion = trim($ruc);
@@ -71,7 +74,7 @@ class ConsultaIdentidadExternoController extends Controller
                 : $tipoSujetoLocal['tipo_sujeto'];
 
             // Caché (log append-only: 1 fila por CADA consulta, con quién la hizo). Best-effort.
-            $this->cachearConsultaIdentidad('SRI', $identificacion, $resultado, auth('api')->id());
+            $this->cachearConsultaIdentidad('SRI', $identificacion, $resultado, $usuId ?? auth('api')->id());
             // Sella la fecha de última consulta en la entidad (si existe) YA, no al guardar: así el throttle
             // es exacto aunque el usuario consulte y cancele, y el caché no se llena de re-consultas.
             $this->marcarUltimaConsultaEntidad($identificacion);
@@ -83,7 +86,8 @@ class ConsultaIdentidadExternoController extends Controller
     }
 
     // Esta página de Ecuador Legal solo acepta cédulas
-    public function consultarCedulaEcuadorLegal($cedula)
+    // $usuId: mismo criterio que consultarRucSri (canal sin sesión JWT).
+    public function consultarCedulaEcuadorLegal($cedula, ?int $usuId = null)
     {
         try {
             $identificacion = trim($cedula);
@@ -122,7 +126,7 @@ class ConsultaIdentidadExternoController extends Controller
             ];
 
             // Caché (log append-only: 1 fila por CADA consulta, con quién la hizo). Best-effort.
-            $this->cachearConsultaIdentidad('ECUADOR_LEGAL', $identificacion, $resultado, auth('api')->id());
+            $this->cachearConsultaIdentidad('ECUADOR_LEGAL', $identificacion, $resultado, $usuId ?? auth('api')->id());
             // Sella la fecha de última consulta en la entidad (si existe) YA, no al guardar: así el throttle
             // es exacto aunque el usuario consulte y cancele, y el caché no se llena de re-consultas.
             $this->marcarUltimaConsultaEntidad($identificacion);

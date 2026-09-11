@@ -1427,6 +1427,9 @@ Route::group(["prefix" => "openceo", 'middleware' => ['jwt.auth', 'usuario.activ
     Route::get('/buscarClienteIdentificacion', [Cliente2Controller::class, 'buscarPorIdentificacion']);
     Route::get('/clienteAuditoria', [Cliente2Controller::class, 'clienteAuditoria']);
     Route::get('/clienteSolicitudCreditoHistorial', [Cliente2Controller::class, 'solicitudCreditoHistorial']);
+    Route::get('/direccionesHistoricoCliente', [Cliente2Controller::class, 'direccionesHistorico']);
+    Route::get('/telefonosHistoricoCliente', [Cliente2Controller::class, 'telefonosHistorico']);
+    Route::get('/referenciasHistoricoCliente', [Cliente2Controller::class, 'referenciasHistorico']);
 
     // RUTAJE DEL CLIENTE (cliruta_gestion): visitador, secretaria, zona y día de visita
     Route::get('/obtenerRutajeCliente/{cliId}', [Cliente2Controller::class, 'obtenerRutajeCliente']);
