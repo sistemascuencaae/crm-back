@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\consultas\ConsultasController;
 use App\Http\Controllers\crm\EmailController;
 use App\Http\Controllers\sts\ArchivoCorredorController;
 use App\Http\Controllers\sts\DynamoClienteController;
@@ -20,6 +21,10 @@ Route::group(["prefix" => "sts", 'middleware' => ['jwt.auth', 'usuario.activo']]
     Route::post('/addArchivos', [ArchivoCorredorController::class, 'addArchivos']);
     Route::post('/listArchivos', [ArchivoCorredorController::class, 'listArchivos']);
     Route::post('/deleteArchivo', [ArchivoCorredorController::class, 'deleteArchivo']);
+
+    // CONSULTA DE CLIENTES A PROVEEDORES EXTERNOS (GaranCheck) hecha por un corredor:
+    // guarda la consulta y vincula al cliente con el corredor (tipo_corredor = 2).
+    Route::post('/consultas/cliente', [ConsultasController::class, 'consultarClienteCorredor']);
 });
 
 // Rutas PÚBLICAS del formulario Dynamo (sin login).
