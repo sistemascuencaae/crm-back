@@ -56,4 +56,12 @@ return [
         'key' => env('GOOGLE_MAPS_KEY'),
     ],
 
+    // Consulta de clientes GaranCheck / Plataforma 360° (Basic Auth). Sin user/pass el
+    // endpoint responde "Proveedor no configurado" sin salir a la red.
+    'garancheck' => [
+        'url' => env('GARANCHECK_URL'),
+        'user' => env('GARANCHECK_USER'),
+        'pass' => env('GARANCHECK_PASS'),
+    ],
+
 ];

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\varios;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\Consultas\ConsultasService;
 use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -16,9 +17,6 @@ class ConsultaIdentidadExternoController extends Controller
 
     // Esto es obligatorio para estos dos endpoints, sino no responden los endpoints
     const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-
-    // Particulas que forman parte de un apellido compuesto (ej. "De La Rosa", "Del Pozo").
-    const PARTICULAS_APELLIDO = ['de', 'del', 'la', 'las', 'los', 'san', 'santa', 'da', 'di', 'do', 'y', 'e'];
 
     // Acepta solo RUC's esta página del SRI.
     // $usuId permite que un canal SIN sesión JWT (el formulario público de corredores, que se
@@ -56,10 +54,10 @@ class ConsultaIdentidadExternoController extends Controller
             // El SRI nos dice si es persona o empresa en 'tipoContribuyente'.
             if (($resultado['tipoContribuyente'] ?? null) === 'PERSONA NATURAL') {
                 // Persona: convencion ecuatoriana (2 apellidos + nombres).
-                $partes = $this->separarNombreCompleto($resultado['razonSocial'] ?? '');
+                $partes = ConsultasService::separarNombreCompleto($resultado['razonSocial'] ?? '');
             } else {
                 // Sociedad: no tiene apellidos, partimos la razon social en 2 mitades por palabras.
-                $partes = $this->partirRazonSocialEmpresa($resultado['razonSocial'] ?? '');
+                $partes = ConsultasService::partirRazonSocialEmpresa($resultado['razonSocial'] ?? '');
             }
             $resultado['apellidos'] = $partes['apellidos'];
             $resultado['nombres'] = $partes['nombres'];
@@ -114,7 +112,7 @@ class ConsultaIdentidadExternoController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron datos en Ecuador Legal', $tipoSujetoLocal));
             }
 
-            $partes = $this->separarNombreCompleto($nombre);
+            $partes = ConsultasService::separarNombreCompleto($nombre);
 
             $resultado = [
                 'fuente' => 'ECUADOR LEGAL',
@@ -165,84 +163,6 @@ class ConsultaIdentidadExternoController extends Controller
         }
 
         return null;
-    }
-
-    // Separar nombre completo en apellidos y nombres
-    private function separarNombreCompleto($nombreCompleto)
-    {
-        // Normalizamos espacios multiples y bordes.
-        $nombreCompleto = trim(preg_replace('/\s+/', ' ', (string) $nombreCompleto));
-
-        if ($nombreCompleto === '') {
-            return ['apellidos' => null, 'nombres' => null];
-        }
-
-        $partes = explode(' ', $nombreCompleto);
-
-        // Con 2 palabras o menos es ambiguo: la primera es apellido, el resto nombre.
-        if (count($partes) <= 2) {
-            $apellidos = array_shift($partes);
-            $nombres = implode(' ', $partes);
-
-            return [
-                'apellidos' => $apellidos !== '' ? mb_strtoupper($apellidos, 'UTF-8') : null,
-                'nombres' => $nombres !== '' ? mb_strtoupper($nombres, 'UTF-8') : null,
-            ];
-        }
-
-        // Recorremos armando 2 "unidades de apellido"; cada unidad absorbe las
-        // particulas que la anteceden y una palabra nucleo.
-        $i = 0;
-        $total = count($partes);
-        $apellidosCompletados = 0;
-
-        while ($i < $total && $apellidosCompletados < 2) {
-            // Absorbemos particulas consecutivas.
-            while ($i < $total && in_array(mb_strtolower($partes[$i]), self::PARTICULAS_APELLIDO, true)) {
-                $i++;
-            }
-            // Absorbemos la palabra nucleo del apellido.
-            if ($i < $total) {
-                $i++;
-            }
-            $apellidosCompletados++;
-        }
-
-        $apellidos = implode(' ', array_slice($partes, 0, $i));
-        $nombres = implode(' ', array_slice($partes, $i));
-
-        return [
-            'apellidos' => $apellidos !== '' ? mb_strtoupper($apellidos, 'UTF-8') : null,
-            'nombres' => $nombres !== '' ? mb_strtoupper($nombres, 'UTF-8') : null,
-        ];
-    }
-
-    // Separar razon social en apellidos y nombres
-    private function partirRazonSocialEmpresa($nombreCompleto)
-    {
-        // Normalizamos espacios multiples y bordes.
-        $nombreCompleto = trim(preg_replace('/\s+/', ' ', (string) $nombreCompleto));
-
-        if ($nombreCompleto === '') {
-            return ['apellidos' => null, 'nombres' => null];
-        }
-
-        $partes = explode(' ', $nombreCompleto);
-
-        // Una sola palabra: va toda en apellidos.
-        if (count($partes) === 1) {
-            return ['apellidos' => mb_strtoupper($partes[0], 'UTF-8'), 'nombres' => null];
-        }
-
-        // Punto de corte: primera mitad (redondeada hacia arriba) -> apellidos, resto -> nombres.
-        $corte = (int) ceil(count($partes) / 2);
-        $apellidos = implode(' ', array_slice($partes, 0, $corte));
-        $nombres = implode(' ', array_slice($partes, $corte));
-
-        return [
-            'apellidos' => $apellidos !== '' ? mb_strtoupper($apellidos, 'UTF-8') : null,
-            'nombres' => $nombres !== '' ? mb_strtoupper($nombres, 'UTF-8') : null,
-        ];
     }
 
     // Caché de identidad: LOG APPEND-ONLY (un INSERT por CADA consulta a la fuente externa, no 1 fila por
