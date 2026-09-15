@@ -132,6 +132,7 @@ use App\Http\Controllers\openceo\DocumentacionClienteController;
 use App\Http\Controllers\openceo\RenegociacionesController;
 use App\Http\Controllers\corredores\CorredorClienteController;
 use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
+use App\Http\Controllers\consultas\ConsultasController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
@@ -1181,6 +1182,11 @@ Route::group(["prefix" => "crm/robot", 'middleware' => ['jwt.auth', 'usuario.act
 Route::group(["prefix" => "consultas/identidad", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
     Route::get('/consultarRucSri/{identificacion}', [ConsultaIdentidadExternoController::class, 'consultarRucSri']);
     Route::get('/consultarCedulaEcuadorLegal/{identificacion}', [ConsultaIdentidadExternoController::class, 'consultarCedulaEcuadorLegal']);
+});
+
+// CONSULTA DE CLIENTES A PROVEEDORES EXTERNOS (GaranCheck): usuario del CRM
+Route::group(["prefix" => "consultas", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+    Route::post('/cliente', [ConsultasController::class, 'consultarCliente']);
 });
 
 // FORMULARIOS FELIPE
