@@ -242,6 +242,12 @@ class FmCarpetaController extends Controller
                 $data = FmCarpeta::whereIn('id', $visibles->all())
                     ->orderBy('nivel')->orderBy('nombre')->get();
             }
+            // Permisos efectivos sobre cada carpeta: el sidebar los usa para el
+            // context-menu (click derecho sobre un nodo del árbol).
+            $permisosLote = FmPermisosHelper::calcularPermisosEnLote($data, collect());
+            foreach ($data as $c) {
+                $c->mis_permisos = $permisosLote['carpetas'][$c->id] ?? [];
+            }
             return response()->json(RespuestaApi::returnResultado('success', 'OK', $data));
         } catch (Exception $e) {
             $log->logError(self::class, 'Error al listar árbol', $e);
