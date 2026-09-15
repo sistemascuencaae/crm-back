@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Resources\fileManager\FmEnlaceHelper;
 
 class FmArchivoController extends Controller
 {
@@ -267,6 +268,161 @@ class FmArchivoController extends Controller
     }
 
     // ------------------------------------------------------------------------
+    // Enlaces externos
+    // ------------------------------------------------------------------------
+
+    /**
+     * POST /file/enlace
+     * Crea un registro de enlace externo (Drive, PowerBI, Tableau, Otro) dentro
+     * de una carpeta. No hay archivo físico: ver FmEnlaceHelper.
+     */
+    public function crearEnlace(Request $request)
+    {
+        $log = new Funciones();
+
+        $validator = Validator::make($request->all(), [
+            'carpeta_id' => 'required|integer',
+            'nombre'     => 'required|string|max:255',
+            'url'        => 'required|url|max:2000',
+            'proveedor'  => 'required|string|in:' . implode(',', FmEnlaceHelper::slugsValidos()),
+        ], [
+            'url.url'          => 'El enlace no tiene formato de URL válido',
+            'proveedor.in'     => 'Proveedor no soportado',
+            'nombre.required'  => 'Debe indicar un nombre para el enlace',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos', $validator->messages()));
+        }
+
+        try {
+            $carpetaId = (int) $request->input('carpeta_id');
+
+            // Misma regla que upload: la raíz id=1 es de uso común.
+            if ($carpetaId !== 1 &&
+                !FmPermisosHelper::puedeRealizarAccion('subir_archivos', 'carpeta', $carpetaId)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para crear enlaces en esta carpeta', null));
+            }
+
+            $archivo = DB::transaction(function () use ($request, $carpetaId) {
+                $carpeta = FmCarpeta::find($carpetaId);
+                if (!$carpeta) {
+                    throw new Exception('Carpeta destino no encontrada');
+                }
+
+                $nombre = trim($request->input('nombre'));
+
+                // El índice único (carpeta_id, nombre) exige nombre libre.
+                $existe = FmArchivo::where('carpeta_id', $carpetaId)
+                    ->where('nombre', $nombre)
+                    ->where('es_version_actual', true)
+                    ->whereNull('deleted_at')
+                    ->exists();
+                if ($existe) {
+                    throw new Exception("Ya existe un elemento con el nombre '{$nombre}' en esta carpeta");
+                }
+
+                $archivo = FmArchivo::create([
+                    'carpeta_id'        => $carpetaId,
+                    'nombre'            => $nombre,
+                    'extension'         => null,
+                    'mime_type'         => FmEnlaceHelper::mimeDe($request->input('proveedor')),
+                    'tamano_bytes'      => 0,
+                    'ruta_fisica'       => trim($request->input('url')),
+                    'disk'              => FmEnlaceHelper::DISK,
+                    'version'           => 1,
+                    'archivo_padre_id'  => null,
+                    'es_version_actual' => true,
+                    'creado_por'        => Auth::id(),
+                    'descripcion'       => $request->input('descripcion'),
+                ]);
+
+                // Mismos permisos al creador que en upload.
+                FmArchivoUsuario::create([
+                    'archivo_id'               => $archivo->id,
+                    'user_id'                  => Auth::id(),
+                    'puede_ver'                => true,
+                    'puede_descargar'          => true,
+                    'puede_renombrar'          => true,
+                    'puede_editar_contenido'   => true,
+                    'puede_eliminar'           => true,
+                    'puede_mover'              => true,
+                    'puede_gestionar_permisos' => false,
+                    'otorgado_por'             => Auth::id(),
+                ]);
+
+                FmAuditHelper::registrar(
+                    FmAuditHelper::ACCION_UPLOAD,
+                    FmAuditHelper::ENTIDAD_ARCHIVO,
+                    $archivo->id,
+                    null,
+                    $archivo->fresh()->toArray()
+                );
+
+                return $archivo->fresh();
+            });
+
+            $log->logInfo(self::class, 'Enlace creado #' . $archivo->id);
+            return response()->json(RespuestaApi::returnResultado('success', 'Enlace creado', $archivo));
+        } catch (Exception $e) {
+            $log->logError(self::class, 'Error al crear enlace', $e);
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
+        }
+    }
+
+    /**
+     * PUT /file/{id}/enlace
+     * Actualiza la URL y/o el proveedor de un enlace. No genera versión nueva.
+     */
+    public function actualizarEnlace($id, Request $request)
+    {
+        $log = new Funciones();
+
+        $validator = Validator::make($request->all(), [
+            'url'       => 'required|url|max:2000',
+            'proveedor' => 'required|string|in:' . implode(',', FmEnlaceHelper::slugsValidos()),
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos', $validator->messages()));
+        }
+
+        try {
+            if (!FmPermisosHelper::puedeRealizarAccion('editar_contenido', 'archivo', (int) $id)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para editar este enlace', null));
+            }
+
+            $archivo = FmArchivo::find($id);
+            if (!$archivo) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Enlace no encontrado', null));
+            }
+            if (!FmEnlaceHelper::esEnlace($archivo)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este elemento no es un enlace', null));
+            }
+
+            $antes = $archivo->toArray();
+            $archivo->update([
+                'ruta_fisica' => trim($request->input('url')),
+                'mime_type'   => FmEnlaceHelper::mimeDe($request->input('proveedor')),
+            ]);
+
+            FmAuditHelper::registrar(
+                FmAuditHelper::ACCION_RENOMBRAR,
+                FmAuditHelper::ENTIDAD_ARCHIVO,
+                $archivo->id,
+                $antes,
+                $archivo->fresh()->toArray()
+            );
+
+            $log->logInfo(self::class, 'Enlace actualizado #' . $id);
+            return response()->json(RespuestaApi::returnResultado('success', 'Enlace actualizado', $archivo->fresh()));
+        } catch (Exception $e) {
+            $log->logError(self::class, 'Error al actualizar enlace ' . $id, $e);
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
+        }
+    }
+
+    // ------------------------------------------------------------------------
     // Download / Preview
     // ------------------------------------------------------------------------
 
@@ -284,6 +440,10 @@ class FmArchivoController extends Controller
 
             if (!FmPermisosHelper::puedeRealizarAccion('descargar', 'archivo', (int) $id)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para descargar este archivo', null));
+            }
+
+            if (FmEnlaceHelper::esEnlace($archivo)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este elemento es un enlace externo, no se puede descargar', null));
             }
 
             if (!FmStorageHelper::exists($archivo->disk, $archivo->ruta_fisica)) {
@@ -320,6 +480,10 @@ class FmArchivoController extends Controller
 
             if (!FmPermisosHelper::puedeRealizarAccion('descargar', 'archivo', (int) $id)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para previsualizar este archivo', null));
+            }
+
+            if (FmEnlaceHelper::esEnlace($archivo)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este elemento es un enlace externo, no se puede descargar', null));
             }
 
             if (!FmStorageHelper::exists($archivo->disk, $archivo->ruta_fisica)) {
@@ -999,6 +1163,11 @@ class FmArchivoController extends Controller
             if (!$version) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Versión no encontrada', null));
             }
+
+            if (FmEnlaceHelper::esEnlace($archivo)) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Este elemento es un enlace externo, no se puede descargar', null));
+            }
+            
             if (!FmStorageHelper::exists($version->disk, $version->ruta_fisica)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Archivo físico no disponible', null));
             }
