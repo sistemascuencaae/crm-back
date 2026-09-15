@@ -1660,10 +1660,12 @@ Route::group(['prefix' => 'crm/file-manager', 'middleware' => ['jwt.auth', 'usua
     // ----- Archivos -----
     Route::post('/file/upload', [FmArchivoController::class, 'upload']);
     Route::post('/file/upload-folder', [FmArchivoController::class, 'uploadFolder']);
+    Route::post('/file/enlace', [FmArchivoController::class, 'crearEnlace']);
     Route::get('/file/{id}/download', [FmArchivoController::class, 'download']);
     Route::get('/file/{id}/preview', [FmArchivoController::class, 'preview']);
     Route::put('/file/{id}/rename', [FmArchivoController::class, 'rename']);
     Route::put('/file/{id}/move', [FmArchivoController::class, 'move']);
+    Route::put('/file/{id}/enlace', [FmArchivoController::class, 'actualizarEnlace']);
     Route::post('/file/{id}/restore', [FmArchivoController::class, 'restore']);
     Route::get('/file/{id}', [FmArchivoController::class, 'show']);
     Route::delete('/file/{id}', [FmArchivoController::class, 'delete']);
