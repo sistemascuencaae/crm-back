@@ -142,6 +142,12 @@ class FmArchivoController extends Controller
                         ->whereNull('deleted_at')
                         ->first();
 
+                    // Un enlace externo nunca entra al flujo de versionado ni admite
+                    // política de colisión: el nombre debe quedar libre.
+                    if ($existente && FmEnlaceHelper::esEnlace($existente)) {
+                        throw new Exception('Ya existe un enlace con ese nombre en esta carpeta');
+                    }
+
                     $esNuevaVersion = false;
                     $versionNum = 1;
                     $archivoPadreId = null;
@@ -283,10 +289,11 @@ class FmArchivoController extends Controller
         $validator = Validator::make($request->all(), [
             'carpeta_id' => 'required|integer',
             'nombre'     => 'required|string|max:255',
-            'url'        => 'required|url|max:2000',
+            'url'        => ['required', 'url', 'max:2000', 'regex:/^https?:\/\//i'],
             'proveedor'  => 'required|string|in:' . implode(',', FmEnlaceHelper::slugsValidos()),
         ], [
             'url.url'          => 'El enlace no tiene formato de URL válido',
+            'url.regex'        => 'Solo se permiten enlaces http:// o https://',
             'proveedor.in'     => 'Proveedor no soportado',
             'nombre.required'  => 'Debe indicar un nombre para el enlace',
         ]);
@@ -379,8 +386,10 @@ class FmArchivoController extends Controller
         $log = new Funciones();
 
         $validator = Validator::make($request->all(), [
-            'url'       => 'required|url|max:2000',
+            'url'       => ['required', 'url', 'max:2000', 'regex:/^https?:\/\//i'],
             'proveedor' => 'required|string|in:' . implode(',', FmEnlaceHelper::slugsValidos()),
+        ], [
+            'url.regex' => 'Solo se permiten enlaces http:// o https://',
         ]);
 
         if ($validator->fails()) {
@@ -1079,15 +1088,28 @@ class FmArchivoController extends Controller
             $carpetaId = (int) $request->input('carpeta_id');
             $nombres = $request->input('nombres');
 
-            $colisiones = FmArchivo::where('carpeta_id', $carpetaId)
+            $existentes = FmArchivo::where('carpeta_id', $carpetaId)
                 ->whereIn('nombre', $nombres)
                 ->where('es_version_actual', true)
                 ->whereNull('deleted_at')
-                ->pluck('nombre')
-                ->toArray();
+                ->get(['nombre', 'mime_type']);
+
+            // Los enlaces externos no admiten política de colisión (upload los
+            // rechaza siempre), así que van en una clave aparte para que el
+            // frontend pueda avisar sin abrir el diálogo de conflicto.
+            $colisiones = [];
+            $enlaces = [];
+            foreach ($existentes as $e) {
+                if (FmEnlaceHelper::esEnlace($e)) {
+                    $enlaces[] = $e->nombre;
+                } else {
+                    $colisiones[] = $e->nombre;
+                }
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'OK', [
                 'colisiones' => $colisiones,
+                'enlaces'    => $enlaces,
             ]));
         } catch (Exception $e) {
             $log->logError(self::class, 'Error en checkColisiones', $e);
@@ -1164,10 +1186,10 @@ class FmArchivoController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Versión no encontrada', null));
             }
 
-            if (FmEnlaceHelper::esEnlace($archivo)) {
+            if (FmEnlaceHelper::esEnlace($version)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Este elemento es un enlace externo, no se puede descargar', null));
             }
-            
+
             if (!FmStorageHelper::exists($version->disk, $version->ruta_fisica)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'Archivo físico no disponible', null));
             }
