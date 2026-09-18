@@ -38,16 +38,24 @@ class ClienteDynamoController extends Controller
         }
         try {
 
+            $identificacionCliente = $request->input('identificacion');
 
-            $entidad = DB::selectOne("SELECT 
-            *
-            FROM public.entidad e 
-            -- LEFT JOIN public.cliente c ON c.ent_id = e.ent_id 
-            WHERE e.ent_identificacion LIKE ?", ['%' . $request->input('identificacion') . '%']);
+            // Verificamos si la identificacion tiene 13 dígitos
+            if (strlen($identificacionCliente) === 13) {
+                // Cortamos los primeros 10 dígitos
+                $identificacionCliente = substr($identificacionCliente, 0, 10);
+            }
+            
+            // Realizamos las consultas con parámetros vinculados (seguras)
+            $entidad = DB::selectOne("SELECT * FROM public.entidad e 
+            WHERE e.ent_identificacion = ?", [$identificacionCliente]);
 
+            $clienteOpenceo = DB::selectOne("SELECT * FROM public.cliente c 
+                    WHERE c.cli_codigo = ?", [$identificacionCliente]);
 
-            if (!$entidad) {
-
+            if ($entidad || $clienteOpenceo) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $entidad));
+            } else {
                 $cliente = DB::transaction(function () use ($request) {
                     $direccion = $request->input('direccion');
                     $telefono = $request->input('telefono');
@@ -106,6 +114,7 @@ class ClienteDynamoController extends Controller
                     $newCliente->cli_sexo = 'M';
                     $newCliente->cli_estadocivil = 'S';
                     $newCliente->cli_ingresos = 'I';
+                    $newCliente->cli_activo = true; // ----------------------------------------------------------------------------------------------
                     $newCliente->save();
                     $cliTipoPago = DB::insert("insert into cliente_tipo_pago(cli_id, sfp_id) values (?, 1)", [$newCliente->cli_id]);
                     if ($identificacionConyugue && $nombreConyugue && $apellidoConyugue) {
@@ -116,10 +125,8 @@ class ClienteDynamoController extends Controller
                     }
                     return $newCliente;
                 });
-
+            
                 return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $cliente));
-            } else {
-                return response()->json(RespuestaApi::returnResultado('success', 'Listado con exito', $entidad));
             }
 
         } catch (\Throwable $th) {

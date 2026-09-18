@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class ClienteFae extends Model
 {
     use HasFactory;
-    protected $table = 'public.av_clientes_reiterativos';
+    // protected $table = 'public.av_clientes_reiterativos';
+    protected $table = 'public.av_clientes_cuotas';
 
     public $timestamps = false;
 
@@ -40,7 +41,7 @@ class ClienteFae extends Model
         "fecha_ultimo_recibo",
         "dias_atraso_recibo",
         "dias_atraso_alafecha",
-        "alamcen",
+        "almacen",
         "punto_venta",
     ];
 

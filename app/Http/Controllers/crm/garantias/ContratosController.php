@@ -16,7 +16,7 @@ class ContratosController extends Controller
     {
         $this->middleware('auth:api');
     }
-    
+
     public function listado()
     {
         $data = DB::select("select cg.nom_almacen,
@@ -87,7 +87,7 @@ class ContratosController extends Controller
                                     concat(trim(tp.tpr_nombre), ' / ', pr.pro_nombre) as producto,
                                     c.cfa_id,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as factura,
-                                    c.cfa_fecha as fecha_compra,
+                                    cast(c.cfa_fecha as date) as fecha_compra,
                                     m.mar_nombre as marca,
                                     c2.numero as num_despacho,
                                     string_agg(concat(d2.serie, ' ', (case d2.tipo when 'C' then 'COMPRESOR' when 'E' then 'EVAPORADOR' end)), '/')  as serie,
@@ -96,8 +96,8 @@ class ContratosController extends Controller
                                     c.cfa_id as cfa_id_gex,
                                     concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as factura_gex,
                                     cg.num_meses as meses_gex,
-                                    c.cfa_fecha as fecha_desde,
-                                    c.cfa_fecha + cg.num_meses * interval'1 month'  as fecha_hasta,
+                                    cast(c.cfa_fecha + 366 * interval'1 day' as date) as fecha_desde,
+                                    cast((c.cfa_fecha + 366 * interval'1 day') + cg.num_meses * interval'1 month' as date) as fecha_hasta,
                                     (select pc.km_garantia from gex.producto_config pc where pc.pro_id = pr.pro_id) as km_garantia,
                                     (2) as km_factor,
                                     (select pc.tipo_servicio from gex.producto_config pc where pc.pro_id = pr.pro_id) as tipo_servicio
@@ -134,9 +134,9 @@ class ContratosController extends Controller
                                             where p.alm_id = " . $almacen . " and c.cfa_id = " . $data['cfa_id'] . "
                                             group by c.cfa_id, t.cti_sigla,p.alm_id, p.pve_numero, c.cfa_numero");
 
-        if($data){
+        if ($data) {
             return response()->json(RespuestaApi::returnResultado('success', 'Contrato Encontrado', $data));
-        }else{
+        } else {
             return response()->json(RespuestaApi::returnResultado('error', 'El Contrato no existe', []));
         }
     }
@@ -149,12 +149,12 @@ class ContratosController extends Controller
             $numeros = [];
             $contratos = $request->all();
 
-            DB::transaction(function() use ($contratos, $numero, &$numeros, &$almacen){
+            DB::transaction(function () use ($contratos, $numero, &$numeros, &$almacen) {
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 foreach ($contratos as $c) {
                     if ($numero == 0) {
-                        $folio = FolioContratos::get()->where('alm_id',$c['alm_id'])->first();
+                        $folio = FolioContratos::get()->where('alm_id', $c['alm_id'])->first();
                         $numero = $folio['folio']  + 1;
                     } else {
                         $numero += 1;
@@ -162,7 +162,7 @@ class ContratosController extends Controller
 
                     array_push($numeros, $numero);
                     $almacen = $c['alm_id'];
-                    
+
                     $alm_id = $c['alm_id'];
                     $fecha = date("Y-m-d h:i:s");
                     $nom_almacen = $c['nom_almacen'];
@@ -199,67 +199,69 @@ class ContratosController extends Controller
 
                     DB::table('gex.contrato_gex')->insert(
                         [
-                        'alm_id' => $alm_id,
-                        'numero' => $numero,
-                        'fecha' => $fecha,
-                        'nom_almacen' => $nom_almacen,
-                        'nom_cliente' => $nom_cliente,
-                        'tipo_identificacion' => $tipo_identificacion,
-                        'identificacion' => $identificacion,
-                        'provincia' => $provincia,
-                        'ciudad' => $ciudad,
-                        'direccion' => $direccion,
-                        'telefono' => $telefono,
-                        'celular' => $celular,
-                        'email' => $email,
-                        'pro_id' => $pro_id,
-                        'producto' => $producto,
-                        'cfa_id' => $cfa_id,
-                        'factura' => $factura,
-                        'fecha_compra' => $fecha_compra,
-                        'marca' => $marca,
-                        'num_despacho' => $num_despacho,
-                        'serie' => $serie,
-                        'garantia_marca' => $garantia_marca,
-                        'ubicacion' => $ubicacion,
-                        'cfa_id_gex' => $cfa_id_gex,
-                        'factura_gex' => $factura_gex,
-                        'meses_gex' => $meses_gex,
-                        'fecha_desde' => $fecha_desde,
-                        'fecha_hasta' => $fecha_hasta,
-                        'usuario_crea' => $usuario_crea,
-                        'usuario_modifica' => $usuario_modifica,
-                        'fecha_crea' => $fecha_crea,
-                        'km_garantia' => $km_garantia,
-                        'km_factor' => $km_factor,
-                        'tipo_servicio' => $tipo_servicio,
-                        ]);
+                            'alm_id' => $alm_id,
+                            'numero' => $numero,
+                            'fecha' => $fecha,
+                            'nom_almacen' => $nom_almacen,
+                            'nom_cliente' => $nom_cliente,
+                            'tipo_identificacion' => $tipo_identificacion,
+                            'identificacion' => $identificacion,
+                            'provincia' => $provincia,
+                            'ciudad' => $ciudad,
+                            'direccion' => $direccion,
+                            'telefono' => $telefono,
+                            'celular' => $celular,
+                            'email' => $email,
+                            'pro_id' => $pro_id,
+                            'producto' => $producto,
+                            'cfa_id' => $cfa_id,
+                            'factura' => $factura,
+                            'fecha_compra' => $fecha_compra,
+                            'marca' => $marca,
+                            'num_despacho' => $num_despacho,
+                            'serie' => $serie,
+                            'garantia_marca' => $garantia_marca,
+                            'ubicacion' => $ubicacion,
+                            'cfa_id_gex' => $cfa_id_gex,
+                            'factura_gex' => $factura_gex,
+                            'meses_gex' => $meses_gex,
+                            'fecha_desde' => $fecha_desde,
+                            'fecha_hasta' => $fecha_hasta,
+                            'usuario_crea' => $usuario_crea,
+                            'usuario_modifica' => $usuario_modifica,
+                            'fecha_crea' => $fecha_crea,
+                            'km_garantia' => $km_garantia,
+                            'km_factor' => $km_factor,
+                            'tipo_servicio' => $tipo_servicio,
+                        ]
+                    );
 
                     DB::table('gex.folios_contratos')->updateOrInsert(
                         ['alm_id' => $alm_id],
                         [
-                        'alm_id' => $alm_id,
-                        'folio' => $numero,
-                        ]);
+                            'alm_id' => $alm_id,
+                            'folio' => $numero,
+                        ]
+                    );
                 }
             });
 
             $data = [];
 
-            foreach ($numeros as $n){
+            foreach ($numeros as $n) {
                 array_push($data, ContratoGex::get()->where('alm_id', $almacen)->where('numero', $n)->first());
             }
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Contratos generados con exito', $data));
-            
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
     }
 
-    public function eliminaContrato($almacen, $numero) {
+    public function eliminaContrato($almacen, $numero)
+    {
         try {
-            ContratoGex::where('alm_id',$almacen)->where('numero',$numero)->delete();
+            ContratoGex::where('alm_id', $almacen)->where('numero', $numero)->delete();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Contrato eliminado con exito', []));
         } catch (Exception $e) {

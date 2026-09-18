@@ -45,6 +45,24 @@ return [
             'auth_mode' => null,
         ],
 
+        // Segunda cuenta de correo (variables MAIL_*_2 del .env).
+        // El 'from' propio hace que los correos enviados con
+        // Mail::mailer('smtp2') salgan con este remitente y no con el global.
+        'smtp2' => [
+            'transport' => 'smtp',
+            'host' => env('MAIL_HOST_2', env('MAIL_HOST')),
+            'port' => env('MAIL_PORT_2', env('MAIL_PORT', 587)),
+            'encryption' => env('MAIL_ENCRYPTION_2', env('MAIL_ENCRYPTION', 'tls')),
+            'username' => env('MAIL_USERNAME_2'),
+            'password' => env('MAIL_PASSWORD_2'),
+            'timeout' => null,
+            'auth_mode' => null,
+            'from' => [
+                'address' => env('MAIL_FROM_ADDRESS_2'),
+                'name' => env('MAIL_FROM_NAME_2', env('MAIL_FROM_NAME')),
+            ],
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],

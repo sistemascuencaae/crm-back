@@ -2,11 +2,12 @@
 
 namespace App\Models\crm\series;
 
+use App\Models\openceo\Bodega;
+use App\Models\openceo\Producto;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
-use Illuminate\Support\Facades\DB;
 
 class Inventario extends Model implements Auditable
 {
@@ -36,6 +37,11 @@ class Inventario extends Model implements Auditable
     {
         return $this->hasMany(InventarioDet::class, "numero");
     }
+
+    public function bodega()
+    {
+        return $this->belongsTo(Bodega::class, "bod_id");
+    }
 }
 
 class InventarioDet extends Model implements Auditable
@@ -58,4 +64,9 @@ class InventarioDet extends Model implements Auditable
         "tipo",
         "procesado",
     ];
+
+    public function producto()
+    {
+        return $this->belongsTo(Producto::class, "pro_id");
+    }
 }

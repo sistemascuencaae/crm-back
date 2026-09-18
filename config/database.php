@@ -91,6 +91,22 @@ return [
             'prefix_indexes' => true,
         ],
 
+        'oracle' => [
+            'driver'         => 'oracle',
+            'tns'            => env('ORACLE_TNS', ''),
+            'host'           => env('ORACLE_HOST', '192.168.254.219'),
+            'port'           => env('ORACLE_PORT', '1521'),
+            'database'       => env('ORACLE_DATABASE', 'db19'),
+            'service_name'   => env('ORACLE_SERVICE_NAME', 'db19'),
+            'username'       => env('ORACLE_USERNAME', 'tableau'),
+            'password'       => env('ORACLE_PASSWORD', 'TABLEAU'),
+            'charset'        => env('ORACLE_CHARSET', 'AL32UTF8'),
+            'prefix'         => env('ORACLE_PREFIX', ''),
+            'schema'         => env('ORACLE_SCHEMA', 'STOCK'),
+            'edition'        => env('ORACLE_EDITION', 'ora$base'),
+            'server_version' => env('ORACLE_SERVER_VERSION', '19c'),
+        ],
+
     ],
 
     /*

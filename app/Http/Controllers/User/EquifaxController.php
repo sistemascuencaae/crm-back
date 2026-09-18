@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\user;
+namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\JWTController;
@@ -69,11 +69,12 @@ class EquifaxController extends Controller
     {
         try {
             // Verificar si la carpeta en NAS existe
-            $SQL = DB::select("INSERT INTO crm.tabla_pruebas
-(id, nombre, created_at, updated_at)
-VALUES(47, 'AAA', NULL, NULL);
-");
-            $folderPath = "691/archivos_sin_firma";
+            //             $SQL = DB::select("INSERT INTO crm.tabla_pruebas
+            // (id, nombre, created_at, updated_at)
+            // VALUES(47, 'AAA', NULL, NULL);
+            // ");
+            $folderPath = "casos/5912/archivos_sin_firma";
+
             if (!Storage::disk('nas')->exists($folderPath)) {
                 return response()->json(['message' => 'La carpeta no existe'], 404);
             }

@@ -23,4 +23,9 @@ class TableroUsuario extends Model
         return $this->belongsTo(User::class, "user_id", "id");
     }
 
+    public function tableros()
+    {
+        return $this->hasMany(Tablero::class, "id", "tab_id");
+    }
+
 }
