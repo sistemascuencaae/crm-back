@@ -28,12 +28,16 @@ class FmArchivo extends Model
         'es_version_actual',
         'creado_por',
         'descripcion',
+        'es_protegido',
+        'color',
+        'icono'
     ];
 
     protected $casts = [
         'tamano_bytes' => 'integer',
         'version' => 'integer',
         'es_version_actual' => 'boolean',
+        'es_protegido' => 'boolean'
     ];
 
     public function setCreatedAtAttribute($value)
