@@ -80,6 +80,8 @@ class FmArchivoController extends Controller
             'carpeta_id' => 'required|integer',
             'archivos'   => 'required|array|min:1',
             'archivos.*' => $reglaArchivo,
+            'color'      => 'nullable|string|max:20',
+            'icono'      => 'nullable|string|max:50',
         ], [
             'archivos.required' => 'Debe adjuntar al menos un archivo',
             'archivos.*.max'    => $maxMb !== null
@@ -188,6 +190,8 @@ class FmArchivoController extends Controller
                         'archivo_padre_id'   => $archivoPadreId,
                         'es_version_actual'  => true,
                         'creado_por'         => Auth::id(),
+                        'color'              => $request->input('color'),
+                        'icono'              => $request->input('icono'),
                     ]);
 
                     // Guardar físico ahora que tenemos el id
