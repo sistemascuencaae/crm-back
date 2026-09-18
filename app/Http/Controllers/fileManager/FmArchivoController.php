@@ -82,6 +82,8 @@ class FmArchivoController extends Controller
             'archivos.*' => $reglaArchivo,
             'color'      => 'nullable|string|max:20',
             'icono'      => 'nullable|string|max:50',
+            'nombre'     => 'nullable|string|max:255',
+            'descripcion' => 'nullable|string|max:1000',
         ], [
             'archivos.required' => 'Debe adjuntar al menos un archivo',
             'archivos.*.max'    => $maxMb !== null
@@ -131,6 +133,17 @@ class FmArchivoController extends Controller
                 foreach ($request->file('archivos') as $archivoSubido) {
                     $nombreOriginal = $archivoSubido->getClientOriginalName();
                     $extension = strtolower($archivoSubido->getClientOriginalExtension());
+
+                    // Nombre personalizado: solo cuando se sube un único archivo.
+                    // La extensión real manda siempre, aunque el usuario la borre
+                    // o escriba otra distinta.
+                    $nombrePersonalizado = $request->input('nombre');
+                    if ($nombrePersonalizado && count($request->file('archivos')) === 1) {
+                        $base = pathinfo(trim($nombrePersonalizado), PATHINFO_FILENAME);
+                        if ($base !== '') {
+                            $nombreOriginal = $extension !== '' ? $base . '.' . $extension : $base;
+                        }
+                    }
 
                     if (in_array($extension, self::EXTENSIONES_BLOQUEADAS, true)) {
                         throw new Exception("Extensión no permitida: .{$extension}");
@@ -192,6 +205,9 @@ class FmArchivoController extends Controller
                         'creado_por'         => Auth::id(),
                         'color'              => $request->input('color'),
                         'icono'              => $request->input('icono'),
+                        'descripcion' => count($request->file('archivos')) === 1
+                            ? $request->input('descripcion')
+                            : null,
                     ]);
 
                     // Guardar físico ahora que tenemos el id
@@ -399,6 +415,7 @@ class FmArchivoController extends Controller
             'url'       => ['required', 'url', 'max:2000', 'regex:/^https?:\/\//i'],
             'proveedor' => 'required|string|in:' . implode(',', FmEnlaceHelper::slugsValidos()),
             'protegido' => 'nullable|boolean',
+            'descripcion' => 'nullable|string|max:1000',
         ], [
             'url.regex' => 'Solo se permiten enlaces http:// o https://',
         ]);
@@ -425,6 +442,7 @@ class FmArchivoController extends Controller
                 'ruta_fisica'  => trim($request->input('url')),
                 'mime_type'    => FmEnlaceHelper::mimeDe($request->input('proveedor')),
                 'es_protegido' => $request->boolean('protegido', true),
+                'descripcion'  => $request->input('descripcion'),
             ]);
 
             FmAuditHelper::registrar(
@@ -535,9 +553,10 @@ class FmArchivoController extends Controller
         $log = new Funciones();
 
         $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
-            'color'  => 'nullable|string|max:20',
-            'icono'  => 'nullable|string|max:50',
+            'nombre'      => 'required|string|max:255',
+            'color'       => 'nullable|string|max:20',
+            'icono'       => 'nullable|string|max:50',
+            'descripcion' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -585,6 +604,9 @@ class FmArchivoController extends Controller
                 }
                 if ($request->has('icono')) {
                     $datos['icono'] = $request->input('icono');
+                }
+                if ($request->has('descripcion')) {
+                    $datos['descripcion'] = $request->input('descripcion');
                 }
 
                 $archivo->update($datos);
