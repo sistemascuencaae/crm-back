@@ -80,6 +80,10 @@ class FmArchivoController extends Controller
             'carpeta_id' => 'required|integer',
             'archivos'   => 'required|array|min:1',
             'archivos.*' => $reglaArchivo,
+            'color'      => 'nullable|string|max:20',
+            'icono'      => 'nullable|string|max:50',
+            'nombre'     => 'nullable|string|max:255',
+            'descripcion' => 'nullable|string|max:1000',
         ], [
             'archivos.required' => 'Debe adjuntar al menos un archivo',
             'archivos.*.max'    => $maxMb !== null
@@ -129,6 +133,17 @@ class FmArchivoController extends Controller
                 foreach ($request->file('archivos') as $archivoSubido) {
                     $nombreOriginal = $archivoSubido->getClientOriginalName();
                     $extension = strtolower($archivoSubido->getClientOriginalExtension());
+
+                    // Nombre personalizado: solo cuando se sube un único archivo.
+                    // La extensión real manda siempre, aunque el usuario la borre
+                    // o escriba otra distinta.
+                    $nombrePersonalizado = $request->input('nombre');
+                    if ($nombrePersonalizado && count($request->file('archivos')) === 1) {
+                        $base = pathinfo(trim($nombrePersonalizado), PATHINFO_FILENAME);
+                        if ($base !== '') {
+                            $nombreOriginal = $extension !== '' ? $base . '.' . $extension : $base;
+                        }
+                    }
 
                     if (in_array($extension, self::EXTENSIONES_BLOQUEADAS, true)) {
                         throw new Exception("Extensión no permitida: .{$extension}");
@@ -188,6 +203,11 @@ class FmArchivoController extends Controller
                         'archivo_padre_id'   => $archivoPadreId,
                         'es_version_actual'  => true,
                         'creado_por'         => Auth::id(),
+                        'color'              => $request->input('color'),
+                        'icono'              => $request->input('icono'),
+                        'descripcion' => count($request->file('archivos')) === 1
+                            ? $request->input('descripcion')
+                            : null,
                     ]);
 
                     // Guardar físico ahora que tenemos el id
@@ -291,6 +311,9 @@ class FmArchivoController extends Controller
             'nombre'     => 'required|string|max:255',
             'url'        => ['required', 'url', 'max:2000', 'regex:/^https?:\/\//i'],
             'proveedor'  => 'required|string|in:' . implode(',', FmEnlaceHelper::slugsValidos()),
+            'protegido'  => 'nullable|boolean',
+            'color'      => 'nullable|string|max:20',
+            'icono'      => 'nullable|string|max:50',
         ], [
             'url.url'          => 'El enlace no tiene formato de URL válido',
             'url.regex'        => 'Solo se permiten enlaces http:// o https://',
@@ -342,6 +365,9 @@ class FmArchivoController extends Controller
                     'es_version_actual' => true,
                     'creado_por'        => Auth::id(),
                     'descripcion'       => $request->input('descripcion'),
+                    'es_protegido'      => $request->boolean('protegido', true),
+                    'color'             => $request->input('color'),
+                    'icono'             => $request->input('icono'),
                 ]);
 
                 // Mismos permisos al creador que en upload.
@@ -388,6 +414,8 @@ class FmArchivoController extends Controller
         $validator = Validator::make($request->all(), [
             'url'       => ['required', 'url', 'max:2000', 'regex:/^https?:\/\//i'],
             'proveedor' => 'required|string|in:' . implode(',', FmEnlaceHelper::slugsValidos()),
+            'protegido' => 'nullable|boolean',
+            'descripcion' => 'nullable|string|max:1000',
         ], [
             'url.regex' => 'Solo se permiten enlaces http:// o https://',
         ]);
@@ -411,8 +439,10 @@ class FmArchivoController extends Controller
 
             $antes = $archivo->toArray();
             $archivo->update([
-                'ruta_fisica' => trim($request->input('url')),
-                'mime_type'   => FmEnlaceHelper::mimeDe($request->input('proveedor')),
+                'ruta_fisica'  => trim($request->input('url')),
+                'mime_type'    => FmEnlaceHelper::mimeDe($request->input('proveedor')),
+                'es_protegido' => $request->boolean('protegido', true),
+                'descripcion'  => $request->input('descripcion'),
             ]);
 
             FmAuditHelper::registrar(
@@ -523,7 +553,10 @@ class FmArchivoController extends Controller
         $log = new Funciones();
 
         $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
+            'nombre'      => 'required|string|max:255',
+            'color'       => 'nullable|string|max:20',
+            'icono'       => 'nullable|string|max:50',
+            'descripcion' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -560,10 +593,23 @@ class FmArchivoController extends Controller
                 $info = pathinfo($nombre);
                 $nuevaExt = isset($info['extension']) ? strtolower($info['extension']) : null;
 
-                $archivo->update([
+                $datos = [
                     'nombre'    => $nombre,
                     'extension' => $nuevaExt,
-                ]);
+                ];
+                // Solo se tocan si vienen en el request: así un cliente que no
+                // los manda no borra la personalización existente.
+                if ($request->has('color')) {
+                    $datos['color'] = $request->input('color');
+                }
+                if ($request->has('icono')) {
+                    $datos['icono'] = $request->input('icono');
+                }
+                if ($request->has('descripcion')) {
+                    $datos['descripcion'] = $request->input('descripcion');
+                }
+
+                $archivo->update($datos);
 
                 FmAuditHelper::registrar(
                     FmAuditHelper::ACCION_RENOMBRAR,

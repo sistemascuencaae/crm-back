@@ -416,27 +416,59 @@ class FmPermisosController extends Controller
     // Usuarios asignables (autocomplete)
     // ------------------------------------------------------------------------
 
+    /**
+     * GET /usuarios-asignables?q=&pagina=&tamanio=
+     * Autocomplete paginado. Se pide una fila de más que el tamaño de página
+     * para saber si queda algo, en vez de un COUNT sobre todo lo que hace match.
+     */
     public function usuariosAsignables(Request $request)
     {
         $log = new Funciones();
         try {
-            $q = trim((string) $request->input('q', ''));
+            $q       = trim((string) $request->query('q', ''));
+            $pagina  = max((int) $request->query('pagina', 1), 1);
+            // Tope para que nadie pida 10.000 filas cambiando el query string.
+            $tamanio = min(max((int) $request->query('tamanio', 15), 1), 50);
+
+            // Con menos de 2 caracteres el ILIKE calza con casi todo y no acota
+            // nada: mejor no ir a la base.
+            if (mb_strlen($q) < 4) {
+                return response()->json(RespuestaApi::returnResultado('success', 'Término muy corto', [
+                    'registros' => [],
+                    'hay_mas'   => false,
+                ]));
+            }
+
+            $qEscapado = FmQueryHelper::escaparLike($q);
+
             $query = DB::table('crm.users')
                 ->select('id', 'usu_alias', 'name', 'surname')
                 ->where('estado', 1)
-                ->orderBy('usu_alias');
-
-            if ($q !== '') {
-                $qEscapado = FmQueryHelper::escaparLike($q);
-                $query->where(function ($w) use ($qEscapado) {
+                ->where(function ($w) use ($qEscapado) {
                     $w->where('usu_alias', 'ILIKE', "%{$qEscapado}%")
                       ->orWhere('name', 'ILIKE', "%{$qEscapado}%")
                       ->orWhere('surname', 'ILIKE', "%{$qEscapado}%");
-                });
+                })
+                // Orden estable: sin un desempate por id, dos usuarios con el
+                // mismo alias pueden cambiar de posición entre páginas y
+                // repetirse o perderse.
+                ->orderBy('usu_alias')
+                ->orderBy('id');
+
+            $filas = $query
+                ->offset(($pagina - 1) * $tamanio)
+                ->limit($tamanio + 1)
+                ->get();
+
+            $hayMas = $filas->count() > $tamanio;
+            if ($hayMas) {
+                $filas = $filas->take($tamanio);
             }
 
-            $data = $query->limit(50)->get();
-            return response()->json(RespuestaApi::returnResultado('success', 'OK', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'OK', [
+                'registros' => $filas->values(),
+                'hay_mas'   => $hayMas,
+            ]));
         } catch (Exception $e) {
             $log->logError(self::class, 'Error en usuariosAsignables', $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
