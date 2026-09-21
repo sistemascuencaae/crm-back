@@ -54,4 +54,13 @@ class FmEnlaceHelper{
     {
         return array_keys(self::PROVEEDORES);
     }
+
+    /**
+     * Un enlace protegido se abre dentro del sistema (modal); si no, en una
+     * pestaña nueva del navegador. Solo aplica a enlaces.
+     */
+    public static function estaProtegido(FmArchivo $archivo): bool
+    {
+        return self::esEnlace($archivo) && (bool) $archivo->es_protegido;
+    }
 }
