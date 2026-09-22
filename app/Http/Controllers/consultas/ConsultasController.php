@@ -92,8 +92,10 @@ class ConsultasController extends Controller
         return $this->procesarConsulta($request, trim($request->input('identificacion')), trim($request->input('corredor')));
     }
 
-    // Mismo flujo para los dos canales; $corredor decide si hay vinculación multinivel.
-    private function procesarConsulta(Request $request, string $identificacion, ?string $corredor)
+    // Mismo flujo para los tres canales; $corredor decide si hay vinculación multinivel.
+    // $usuId: canal SIN JWT (el formulario público del corredor, que lo saca del token cifrado del
+    // enlace). Pública para que DynamoClienteController la llame desde la lupa del formulario.
+    public function procesarConsulta(Request $request, string $identificacion, ?string $corredor, ?int $usuId = null)
     {
         try {
             // 1. Identificación: 10 dígitos = cédula, 13 = RUC; cualquier otra cosa se rechaza.
@@ -102,9 +104,10 @@ class ConsultasController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'La identificación ingresada no es válida.', null));
             }
 
-            // 2. Usuario JWT: dueño de la consulta (usu_id) y autor de la auditoría.
-            $usuario = auth('api')->user();
-            if (!$usuario) {
+            // 2. Dueño de la consulta (usu_id) y autor de la auditoría. Del JWT, o del token del
+            // enlace cuando la llama el formulario público.
+            $usuarioId = auth('api')->id() ?? $usuId;
+            if (!$usuarioId) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se pudo identificar al usuario.', null));
             }
 
@@ -127,9 +130,9 @@ class ConsultasController extends Controller
             }
 
             $proveedor = new GarancheckService();
-            $contexto = ConsultasService::contextoAuditoria($request, $corredor);
+            $contexto = ConsultasService::contextoAuditoria($request, $corredor, $usuId);
             $base = [
-                'usu_id' => $usuario->id,
+                'usu_id' => $usuarioId,
                 'proveedor' => $proveedor->nombre(),
                 'corredor' => $corredor,
                 'identificacion' => $identificacion,
@@ -138,8 +141,10 @@ class ConsultasController extends Controller
 
             // 4. Caché por cliente (parámetro CONSULTA-CACHE, días; 0 = siempre en vivo). Con una
             // consulta vigente se copia desde el historial: no se va al proveedor ni se toca al cliente.
+            $cache = $this->modoCache();
+
             if ($cliId !== null) {
-                $idCache = $this->cacheVigente($cliId, $proveedor->nombre());
+                $idCache = $this->cacheVigente($cliId, $proveedor->nombre(), $cache);
                 if ($idCache !== null) {
                     $resultado = DB::transaction(function () use ($base, $cliId, $idCache, $corredor, $diasCorredor) {
                         $registro = $this->registrarConsulta($base + ['cli_id' => $cliId, 'es_cache' => true, 'id_cache' => $idCache, 'valor' => null]);
@@ -154,6 +159,7 @@ class ConsultasController extends Controller
                         'es_cache' => true,
                         'cliente_actualizado' => false,
                         'motivo' => null,
+                        'cache' => $cache,
                     ]));
                 }
             }
@@ -171,7 +177,7 @@ class ConsultasController extends Controller
 
             // 7. Todo o nada: cliente + consulta + vinculación en la misma transacción. La actualización
             // del cliente existente es best-effort dentro de un SAVEPOINT (transacción anidada).
-            $resultado = DB::transaction(function () use ($base, $foto, $cliId, $datos, $json, $contexto, $corredor, $diasCorredor) {
+            $resultado = DB::transaction(function () use ($base, $foto, $cliId, $datos, $json, $contexto, $corredor, $diasCorredor, $proveedor) {
                 $fichaActualizada = false;
                 $motivo = null;
 
@@ -196,8 +202,34 @@ class ConsultasController extends Controller
                     ConsultasService::vincularCorredor($cliId, $corredor, ConsultasService::TIPO_CORREDOR_STS, $diasCorredor);
                 }
 
-                return $registro + ['es_cache' => false, 'cliente_actualizado' => $fichaActualizada, 'motivo' => $motivo];
+                return $registro + [
+                    'es_cache' => false,
+                    'cliente_actualizado' => $fichaActualizada,
+                    'motivo' => $motivo,
+                    // Para el formulario del corredor: qué cliente quedó y con qué nombre.
+                    'cli_id' => $cliId,
+                    'nombres' => $datos['nombres'] ?? null,
+                    'apellidos' => $datos['apellidos'] ?? null,
+                    'nombre_comercial' => $datos['nombre_comercial'] ?? null,
+                    'tipo_sujeto' => $datos['tipo_sujeto'] ?? 'N',
+                    // Las dos evaluaciones completas (cabecera + detalle de políticas) para la
+                    // pantalla de resultado, con la fecha de corte y las instituciones que el
+                    // servicio deriva de la subtabla de evolución del buró.
+                    'evaluacion' => $proveedor->evaluacionParaPantalla($json),
+                ];
             });
+
+            $resultado['cache'] = $cache;
+
+            // Políticas críticas: si tumbaron la Evaluación de Fuentes, el resumen que se
+            // devuelve tiene que decir lo mismo que la pantalla. Lo guardado por la función
+            // PG conserva el veredicto del proveedor (ver 'resultado_general_proveedor').
+            $criticas = $resultado['evaluacion']['evaluacionGeneral']['rechazoAlmespana'] ?? [];
+            if ($criticas) {
+                $resultado['resultado_general_proveedor'] = $resultado['resultado_general'] ?? null;
+                $resultado['resultado_general'] = false;
+                $resultado['politicas_criticas'] = $criticas;
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Consulta realizada con éxito', $resultado));
         } catch (Throwable $e) {
@@ -231,18 +263,34 @@ class ConsultasController extends Controller
         return json_decode($fila->datos, true);
     }
 
-    // id de la última consulta real del cliente con este proveedor dentro de CONSULTA-CACHE días,
-    // o null si no hay (o si el parámetro está en 0).
-    private function cacheVigente(int $cliId, string $proveedor): ?int
+    // Qué caché manda. DOS parámetros, se elige por 'activar' y solo uno debería estar activo; si
+    // los dos lo están gana el mensual. Ninguno activo (o días <= 0) = siempre en vivo.
+    //   CONSULTA-CACHE          -> N días
+    //   CONSULTA-CACHE-MENSUAL  -> N días CON tope de mes calendario (al cambiar de mes ya no vale)
+    // Devuelve ['modo' => 'MENSUAL'|'DIAS'|'SIN_CACHE', 'dias' => int, 'por_mes' => bool].
+    private function modoCache(): array
     {
-        $parametro = DB::table('crm.parametro')->where('abreviacion', 'CONSULTA-CACHE')->first();
-        $dias = $parametro ? (int) trim((string) $parametro->valor) : 0;
+        $mensual = DB::table('crm.parametro')->where('abreviacion', 'CONSULTA-CACHE-MENSUAL')->first();
+        $porMes = $mensual && $mensual->activar;
+
+        $parametro = $porMes ? $mensual : DB::table('crm.parametro')->where('abreviacion', 'CONSULTA-CACHE')->first();
+        $dias = $parametro && $parametro->activar ? (int) trim((string) $parametro->valor) : 0;
 
         if ($dias <= 0) {
+            return ['modo' => 'SIN_CACHE', 'dias' => 0, 'por_mes' => false];
+        }
+
+        return ['modo' => $porMes ? 'MENSUAL' : 'DIAS', 'dias' => $dias, 'por_mes' => $porMes];
+    }
+
+    // id de la última consulta real del cliente con este proveedor dentro de la vigencia, o null.
+    private function cacheVigente(int $cliId, string $proveedor, array $cache): ?int
+    {
+        if ($cache['modo'] === 'SIN_CACHE') {
             return null;
         }
 
-        $fila = DB::selectOne('SELECT crm.fn_cliente_consultas_buscar_cache_existente(?, ?, ?) AS id', [$cliId, $proveedor, $dias]);
+        $fila = DB::selectOne('SELECT crm.fn_cliente_consultas_buscar_cache_existente(?, ?, ?, ?) AS id', [$cliId, $proveedor, $cache['dias'], $cache['por_mes']]);
 
         return !empty($fila->id) ? (int) $fila->id : null;
     }

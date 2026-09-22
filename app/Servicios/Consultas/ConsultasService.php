@@ -182,7 +182,9 @@ class ConsultasService
 
     // usuario_auditoria alimenta cliente.created_by/updated_by; el bloque auditoria va a la
     // auditoría forense. CRM: "usu_alias - APELLIDOS NOMBRES"; STS: "CORREDOR - <corredor>".
-    public static function contextoAuditoria(Request $request, ?string $corredor): array
+    // $usuId: canal SIN sesión JWT (el formulario público del corredor, que se autentica con el
+    // token cifrado del enlace). Sin él la auditoría de esas altas quedaría con usuario en NULL.
+    public static function contextoAuditoria(Request $request, ?string $corredor, ?int $usuId = null): array
     {
         $u = auth('api')->user();
         $nombreUsuario = $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : '';
@@ -191,12 +193,16 @@ class ConsultasService
             ? 'CORREDOR - ' . $corredor
             : trim(trim($u->usu_alias ?? '') . ' - ' . $nombreUsuario);
 
+        // Sin usuario JWT el autor es el corredor del token, igual que en DynamoClienteController.
+        $login = $u->usu_alias ?? ($corredor !== null ? mb_substr($corredor, 0, 100) : null);
+        $nombre = $nombreUsuario !== '' ? $nombreUsuario : ($u ? null : 'MULTINIVEL');
+
         return [
             'usuario_auditoria' => mb_substr($usuarioAuditoria, 0, 100),
             'auditoria' => [
-                'usuario_id' => $u->id ?? null,
-                'usuario_login' => $u->usu_alias ?? null,
-                'usuario_nombre' => $nombreUsuario !== '' ? $nombreUsuario : null,
+                'usuario_id' => $u->id ?? $usuId,
+                'usuario_login' => $login,
+                'usuario_nombre' => $nombre,
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
                 'request_id' => (string) Str::uuid(),
