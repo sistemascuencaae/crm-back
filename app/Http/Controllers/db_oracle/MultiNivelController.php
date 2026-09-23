@@ -18,6 +18,49 @@ class MultiNivelController extends Controller
         ]);
     }
 
+    // Version 3.0 — sin Oracle: el corredor sale de crm.vs_cel_prospecto + formulario STS
+    public function multinivel($anio, $mes, $dia)
+    {
+        try {
+            $data = DB::select("SELECT * FROM crm.fn_multinivel_listar_facturas_por_fecha(?, ?, ?)", [$anio, $mes, $dia]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
+        }
+    }
+
+    // Version 3.0 — sin Oracle: el corredor sale de crm.vs_cel_prospecto + formulario STS
+    public function multinivel_nce($anio, $mes, $dia)
+    {
+        try {
+            $data = DB::select("SELECT * FROM crm.fn_multinivel_listar_notas_credito(?, ?, ?)", [$anio, $mes, $dia]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
+        }
+    }
+
+    // Version 3.0 — sin Oracle: el corredor sale de crm.vs_cel_prospecto + formulario STS
+    public function multinivel2($anio, $mes, $dia)
+    {
+        try {
+            $data = DB::select("SELECT * FROM crm.fn_multinivel_listar_facturas_por_corte_ccm(?, ?, ?)", [$anio, $mes, $dia]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
+        }
+    }
+
+
+
+    // ====================================================================================================================
+    // HISTÓRICO — versiones con ORACLE (VS_CEL_PROSPECTO), reemplazadas por las de arriba. Se dejan comentadas.
+    // ====================================================================================================================
+
+    /*
     // Version 2.0
     public function multinivel($anio, $mes, $dia)
     {
@@ -165,7 +208,7 @@ class MultiNivelController extends Controller
             }
 
             // Obtener datos de PostgreSQL
-            $dataAlm = DB::select("SELECT 
+            $dataAlm = DB::select("SELECT
                                         identificacion,
                                         nombres,
                                         apellidos,
@@ -330,4 +373,5 @@ class MultiNivelController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
         }
     }
+    */
 }

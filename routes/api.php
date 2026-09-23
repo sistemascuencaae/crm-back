@@ -1628,11 +1628,13 @@ Route::group(["prefix" => "almacenesespana"], function ($router) {
 
 
     // ---------- START ORACLE DB Y POSTGRES ----------
+    // Sin Oracle: mismas URLs, el corredor sale de crm.vs_cel_prospecto + formulario STS
     Route::get('/multinivel/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel']);
     Route::get('/multinivel2/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel2']);
     Route::get('/multinivel_nce/{anio}/{mes}/{dia}', [MultiNivelController::class, 'multinivel_nce']);
 
-    Route::get('/listVsCelProspecto', [CelProspectoController::class, 'listVsCelProspecto']);
+    // HISTÓRICO — copiaba Oracle a crm.vs_cel_prospecto; ya no se sincroniza (Oracle fuera de circulación)
+    // Route::get('/listVsCelProspecto', [CelProspectoController::class, 'listVsCelProspecto']);
     // ---------- END ORACLE DB Y POSTGRES ----------
 });
 
