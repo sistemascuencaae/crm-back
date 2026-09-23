@@ -22,6 +22,15 @@ class ConsultasService
     // 1. Corredor ALM; 2. Corredor STS (misma columna clientes_multinivel.tipo_corredor que llena Dynamo)
     const TIPO_CORREDOR_STS = 2;
 
+    // Fuente que originó el alta. Van a public.cliente.proveedor y a
+    // clientes_multinivel_consultas.proveedor, con los mismos textos de crm.consulta_identidad.
+    const PROVEEDOR_GARANCHECK = 'GARANCHECK';
+    const PROVEEDOR_ECUADOR_LEGAL = 'ECUADOR LEGAL';
+    const PROVEEDOR_SRI = 'SRI';
+
+    // Dirección de los clientes creados por una fuente de identidad, que no devuelve domicilio.
+    const DIRECCION_MULTINIVEL = 'SN - MULTINIVEL';
+
     private const EMP_ID_DEFAULT = 1;
     private const SFP_ID_EFECTIVO = 1;
     private const TTE_ID_CELULAR = 2;
@@ -121,7 +130,12 @@ class ConsultasService
     public static function registrarCliente(array $datos, ?array $foto, array $contexto): int
     {
         $defaults = self::defaultsCanal();
-        $geo = self::geoPorNombre($datos['provincia'] ?? null, $datos['canton'] ?? null, $datos['parroquia'] ?? null, $defaults);
+
+        // Geo: GaranCheck trae domicilio, así que lo que no casa cae a la provincia por defecto.
+        // Las fuentes de identidad (Ecuador Legal) no traen dirección: ahí la geo queda en NULL
+        // antes que inventar un cantón que después ensucia zonas y reportes.
+        $geoDefaults = ($datos['geo_por_defecto'] ?? true) ? $defaults : [];
+        $geo = self::geoPorNombre($datos['provincia'] ?? null, $datos['canton'] ?? null, $datos['parroquia'] ?? null, $geoDefaults);
 
         $payload = [
             'ent_identificacion' => $datos['identificacion'],
@@ -153,6 +167,7 @@ class ConsultasService
             'tit_id' => $foto['tit_id'] ?? $defaults['tit_id'],
             'ent_fechanacimiento' => $foto['ent_fechanacimiento'] ?? null,
             'dinardap' => ['cli_tiposujeto' => $datos['tipo_sujeto'] ?: 'N'],
+            'proveedor' => $datos['proveedor'] ?? null,
             'usuario_auditoria' => $contexto['usuario_auditoria'],
             'auditoria' => $contexto['auditoria'],
         ];
@@ -160,6 +175,72 @@ class ConsultasService
         $fila = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
 
         return (int) $fila->cli_id;
+    }
+
+    // "PICHINCHA / QUITO / BELISARIO QUEVEDO / RUIZ DE LA CASTILLA N30-13 Y ANDAGOYA"
+    // → [provincia, cantón, parroquia, calle]. Con menos de 4 tramos no hay geo: todo es calle.
+    // El separador es " / " con espacios: una calle "S/N" no se parte.
+    public static function partirDireccionSri(string $direccion): array
+    {
+        $tramos = array_values(array_filter(array_map('trim', preg_split('#\s+/\s+#', $direccion)), 'strlen'));
+
+        if (count($tramos) < 4) {
+            return [null, null, null, trim($direccion)];
+        }
+
+        return [$tramos[0], $tramos[1], $tramos[2], implode(' / ', array_slice($tramos, 3))];
+    }
+
+    // PLAN B cuando GaranCheck no responde: traduce lo que devuelven Ecuador Legal (cédula) y el
+    // SRI (RUC) al mismo arreglo que extraerDatosCliente, para que el alta use un solo camino.
+    //
+    // Esas fuentes NO dan correo ni teléfono: el cliente nace sin ellos y el corredor los completa
+    // al Guardar. Tampoco dan domicilio —el endpoint obtenerPorNumerosRuc del SRI no trae dirección;
+    // la que usa GaranCheck sale de otra fuente que él agrega—, así que la calle queda en
+    // DIRECCION_MULTINIVEL y la geo en NULL. Si algún día llega una dirección, se usa.
+    public static function datosDesdeIdentidad(array $respuesta, string $identificacion, int $tipoIdentificacion, string $proveedor): array
+    {
+        $tipoSujeto = ($respuesta['tipo_sujeto'] ?? 'N') === 'J' ? 'J' : 'N';
+        $apellidos = trim((string) ($respuesta['apellidos'] ?? ''));
+        $nombres = trim((string) ($respuesta['nombres'] ?? ''));
+
+        if ($tipoSujeto === 'J') {
+            // Mismo estándar del ERP que usa GaranCheck: razón social COMPLETA en apellidos y un
+            // punto en nombres. El SRI la parte mitad/mitad y aquí se corrige.
+            $razonSocial = trim(preg_replace('/\s+/', ' ', (string) ($respuesta['razonSocial'] ?? trim("{$apellidos} {$nombres}"))));
+            $apellidos = $razonSocial !== '' ? mb_strtoupper($razonSocial, 'UTF-8') : null;
+            $nombres = $razonSocial !== '' ? '.' : null;
+            $nombreComercial = $apellidos;
+        } else {
+            $apellidos = $apellidos !== '' ? mb_strtoupper($apellidos, 'UTF-8') : null;
+            $nombres = $nombres !== '' ? mb_strtoupper($nombres, 'UTF-8') : null;
+            $nombreComercial = trim("{$apellidos} {$nombres}") ?: null;
+        }
+
+        if ($apellidos === null && $nombres === null) {
+            throw new RuntimeException('La fuente de identidad no devolvió el nombre; no se pudo registrar al cliente.');
+        }
+
+        // Domicilio: solo el SRI lo manda, en "PROVINCIA / CANTON / PARROQUIA / CALLE".
+        [$provincia, $canton, $parroquia, $calle] = self::partirDireccionSri((string) ($respuesta['direccion'] ?? ''));
+
+        return [
+            'tipo_sujeto' => $tipoSujeto,
+            'nombres' => $nombres,
+            'apellidos' => $apellidos,
+            'nombre_comercial' => $nombreComercial,
+            'email' => null,
+            'telefono' => null,
+            'direccion' => $calle !== '' ? mb_strtoupper($calle, 'UTF-8') : self::DIRECCION_MULTINIVEL,
+            'provincia' => $provincia,
+            'canton' => $canton,
+            'parroquia' => $parroquia,
+            'identificacion' => $identificacion,
+            'tipo_identificacion' => $tipoIdentificacion,
+            'proveedor' => $proveedor,
+            // Sin domicilio del proveedor no se inventa provincia: la geo queda en NULL.
+            'geo_por_defecto' => false,
+        ];
     }
 
     // Cliente existente: ficha COMPLETA de la foto (fn_clientes_modificar reescribe todo) pisando
@@ -182,7 +263,9 @@ class ConsultasService
 
     // usuario_auditoria alimenta cliente.created_by/updated_by; el bloque auditoria va a la
     // auditoría forense. CRM: "usu_alias - APELLIDOS NOMBRES"; STS: "CORREDOR - <corredor>".
-    public static function contextoAuditoria(Request $request, ?string $corredor): array
+    // $usuId: canal SIN sesión JWT (el formulario público del corredor, que se autentica con el
+    // token cifrado del enlace). Sin él la auditoría de esas altas quedaría con usuario en NULL.
+    public static function contextoAuditoria(Request $request, ?string $corredor, ?int $usuId = null): array
     {
         $u = auth('api')->user();
         $nombreUsuario = $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : '';
@@ -191,12 +274,16 @@ class ConsultasService
             ? 'CORREDOR - ' . $corredor
             : trim(trim($u->usu_alias ?? '') . ' - ' . $nombreUsuario);
 
+        // Sin usuario JWT el autor es el corredor del token, igual que en DynamoClienteController.
+        $login = $u->usu_alias ?? ($corredor !== null ? mb_substr($corredor, 0, 100) : null);
+        $nombre = $nombreUsuario !== '' ? $nombreUsuario : ($u ? null : 'MULTINIVEL');
+
         return [
             'usuario_auditoria' => mb_substr($usuarioAuditoria, 0, 100),
             'auditoria' => [
-                'usuario_id' => $u->id ?? null,
-                'usuario_login' => $u->usu_alias ?? null,
-                'usuario_nombre' => $nombreUsuario !== '' ? $nombreUsuario : null,
+                'usuario_id' => $u->id ?? $usuId,
+                'usuario_login' => $login,
+                'usuario_nombre' => $nombre,
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
                 'request_id' => (string) Str::uuid(),

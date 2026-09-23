@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\sts;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\consultas\ConsultasController;
 use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
 use App\Http\Resources\RespuestaApi;
 use App\Models\openceo\Direccion;
 use App\Models\openceo\Telefono;
 use App\Models\sts\ClientesMultinivel;
+use App\Models\sts\ClientesMultinivelConsulta;
+use App\Servicios\Consultas\ConsultasService;
 use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -119,6 +122,9 @@ class DynamoClienteController extends Controller
                 if (!ValidacionCedulaRucService::esRucValido($identificacion)) {
                     return response()->json(RespuestaApi::returnResultado('error', 'El RUC ingresado no es válido', null));
                 }
+            } else {
+                // Solo cédula y RUC: el pasaporte no tiene fuente oficial de la que sacar el nombre.
+                return response()->json(RespuestaApi::returnResultado('error', 'Solo se admite cédula o RUC.', null));
             }
 
             // La foto sale de la MISMA función que usa el CRUD del CRM
@@ -128,32 +134,84 @@ class DynamoClienteController extends Controller
             // YA existe en el sistema pero todavía no es cliente (p.ej. un proveedor).
             $foto = $this->fotoCliente($identificacion, (int) $tipoidentificacion);
 
-            // ESTADO A: no existe ni la entidad
-            if (!$foto) {
-                return response()->json(RespuestaApi::returnResultado('success', 'El cliente no existe', null));
+            // YA ES CLIENTE (cli_tipocli = 1): el formulario no lo toca —ni lo casa ni lo
+            // modifica—, esté libre o vinculado a cualquier corredor, y NO se consulta a
+            // GaranCheck. La consulta queda registrada igual, con existia = true.
+            if ($foto && !empty($foto['cli_id'])) {
+                $this->registrarConsultaCorredor($corredor, $identificacion, (int) $foto['cli_id'], true);
+
+                return response()->json(RespuestaApi::returnResultado('error', 'El cliente ya existe', null));
             }
 
-            // ESTADO B: la persona existe pero aún no es cliente. No puede tener vinculación
-            // (esa tabla cuelga de cli_id), así que está libre por definición.
-            if (empty($foto['cli_id'])) {
-                return response()->json(RespuestaApi::returnResultado('success', 'La persona ya está registrada. Verifique los datos para registrarla como cliente.', $this->datosFormulario($foto)));
+            // Estados A (no existe) y B (existe como proveedor/garante, sin cliente).
+            // ESTADO A/B anteriores, desactivados: el nombre ya no sale de Ecuador Legal/SRI
+            // ni de la ficha, sino del JSON de GaranCheck.
+            // if (!$foto) {
+            //     return response()->json(RespuestaApi::returnResultado('success', 'El cliente no existe', null));
+            // }
+            // if (empty($foto['cli_id'])) {
+            //     return response()->json(RespuestaApi::returnResultado('success', 'La persona ya está registrada. Verifique los datos para registrarla como cliente.', $this->datosFormulario($foto)));
+            // }
+
+            // NO es cliente (no existe la entidad, o existe como proveedor/garante): se registra la
+            // consulta y se va a GaranCheck, que crea al cliente con los datos del proveedor y
+            // guarda historial + resumen. El corredor solo completará email y celular al Guardar.
+            // Si GaranCheck no atiende, procesarConsulta cae a Ecuador Legal / SRI ($conRespaldo).
+            $consulta = $this->registrarConsultaCorredor($corredor, $identificacion, null, false, ConsultasService::PROVEEDOR_GARANCHECK);
+
+            $respuesta = app(ConsultasController::class)->procesarConsulta(
+                $request,
+                $identificacion,
+                $corredor,
+                isset($tokenData['usu_id']) ? (int) $tokenData['usu_id'] : null,
+                true
+            );
+
+            $datos = $respuesta->getData(true);
+
+            if (($datos['status'] ?? '') !== 'success') {
+                return $respuesta;
             }
 
-            // ESTADO C: ya es cliente. Si la vinculación vigente cumplió los días del
-            // parámetro CLICOR se desvincula y el cliente se evalúa como libre.
-            $vinculado = $this->corredorVinculado((int) $foto['cli_id'], $diasCorredor);
+            $cliId = $datos['data']['cli_id'] ?? null;
+            $proveedorUsado = $datos['data']['proveedor'] ?? ConsultasService::PROVEEDOR_GARANCHECK;
 
-            // Pertenece a otro corredor
-            if ($vinculado !== null && $vinculado !== $corredor) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece al corredor: ' . $vinculado, null));
+            if ($proveedorUsado === ConsultasService::PROVEEDOR_GARANCHECK) {
+                // Respondió el buró: se completa la fila que ya se había abierto.
+                if ($cliId) {
+                    $consulta->cli_id = (int) $cliId;
+                    $consulta->save();
+                }
+            } else {
+                // Hubo plan B. La fila de GaranCheck queda con cli_id NULL —es la evidencia de que
+                // se cayó— y el alta se registra en una fila nueva con la fuente que sí respondió.
+                $this->registrarConsultaCorredor($corredor, $identificacion, $cliId ? (int) $cliId : null, false, $proveedorUsado);
             }
 
-            // Libre, o ya vinculado a este mismo corredor
-            $mensaje = $vinculado === $corredor
-                ? 'El cliente ya existe'
-                : 'El cliente existe y está disponible';
+            // Solo lo que el formulario muestra. El cli_id y el detalle del buró no salen a un
+            // endpoint público que se abre con un enlace.
+            return response()->json(RespuestaApi::returnResultado('success', 'Consulta realizada con éxito', [
+                'nombres' => $datos['data']['nombres'] ?? null,
+                'apellidos' => $datos['data']['apellidos'] ?? null,
+                'tipo_sujeto' => $datos['data']['tipo_sujeto'] ?? 'N',
+                'proveedor' => $proveedorUsado,
+                'evaluacion' => $datos['data']['evaluacion'] ?? null,
+            ]));
 
-            return response()->json(RespuestaApi::returnResultado('success', $mensaje, $this->datosFormulario($foto)));
+            // Lógica anterior (libre / mismo corredor / otro corredor), desactivada:
+            // $vinculado = $this->corredorVinculado((int) $foto['cli_id'], $diasCorredor);
+            //
+            // // Pertenece a otro corredor
+            // if ($vinculado !== null && $vinculado !== $corredor) {
+            //     return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece al corredor: ' . $vinculado, null));
+            // }
+            //
+            // // Libre, o ya vinculado a este mismo corredor
+            // $mensaje = $vinculado === $corredor
+            //     ? 'El cliente ya existe'
+            //     : 'El cliente existe y está disponible';
+            //
+            // return response()->json(RespuestaApi::returnResultado('success', $mensaje, $this->datosFormulario($foto)));
         } catch (QueryException $e) {
             return $this->respuestaErrorFuncion($e, 'Error al consultar el cliente');
         } catch (Exception $e) {
@@ -248,7 +306,7 @@ class DynamoClienteController extends Controller
     // decide el estado REAL en la base, no el endpoint que llamó el formulario:
     //   A) no existe la entidad            -> fn_clientes_registrar
     //   B) existe la entidad, sin cliente  -> fn_clientes_registrar (la función la REUSA)
-    //   C) ya es cliente tipo 1            -> fn_clientes_modificar (con la ficha hidratada)
+    //   C) ya es cliente tipo 1            -> error "El cliente ya existe", no se toca
     private function guardarClienteDynamo(Request $request)
     {
         // El corredor sale del token cifrado de la URL, NUNCA del formulario.
@@ -277,13 +335,22 @@ class DynamoClienteController extends Controller
             $foto = $this->fotoCliente($campos['identificacion'], $campos['tipoidentificacion']);
 
             if ($foto && !empty($foto['cli_id'])) {
-                return $this->modificarClienteDesdeFoto($request, $campos, $foto, $corredor, $tipoCorredor, $diasCorredor);
+                // Única excepción a "cliente existente no se toca": el que la lupa acabó de crear
+                // con GaranCheck para ESTE corredor. Ahí solo se completan email y celular.
+                if ($this->consultaQueCreoElCliente($corredor, $campos['identificacion'], (int) $foto['cli_id'])) {
+                    return $this->completarContactoCliente($request, $campos, $foto, $corredor);
+                }
+
+                return response()->json(RespuestaApi::returnResultado('error', 'El cliente ya existe', null));
+                // return $this->modificarClienteDesdeFoto($request, $campos, $foto, $corredor, $tipoCorredor, $diasCorredor);
             }
 
-            return $this->registrarClienteContado($request, $campos, $foto, $corredor, $tipoCorredor, $diasCorredor);
+            // Sin cliente: la lupa no llegó a crearlo (no consultó, o GaranCheck falló).
+            return response()->json(RespuestaApi::returnResultado('error', 'Debe consultar la identificación antes de guardar.', null));
+            // return $this->registrarClienteContado($request, $campos, $foto, $corredor, $tipoCorredor, $diasCorredor);
         } catch (QueryException $e) {
             if ($this->esCarreraVinculacion($e)) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'El cliente ya existe', null));
             }
 
             return $this->respuestaErrorFuncion($e, 'Error al guardar el cliente');
@@ -301,6 +368,15 @@ class DynamoClienteController extends Controller
         if ($defaults instanceof JsonResponse) {
             return $defaults;
         }
+
+        // Nombre resuelto en el SERVIDOR: los nombres/apellidos que manda el formulario no se
+        // usan (el endpoint es público y el body se puede alterar). Ver nombreOficial().
+        $oficial = $this->nombreOficial($campos, $foto);
+        if ($oficial === null) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo validar la identidad del cliente. Intente nuevamente.', null));
+        }
+        $campos['nombres'] = $oficial['nombres'];
+        $campos['apellidos'] = $oficial['apellidos'];
 
         return $this->ejecutarGuardado($request, $corredor, $tipoCorredor, $diasCorredor, 'Cliente creado con éxito', function () use ($campos, $foto, $defaults) {
             $payload = [
@@ -379,6 +455,103 @@ class DynamoClienteController extends Controller
         });
     }
 
+    // Nombre oficial del cliente, resuelto en el servidor y nunca desde el request:
+    //   B) la entidad ya existe            -> su ent_nombres / ent_apellidos
+    //   A) última fila de crm.consulta_identidad (la deja consultarIdentidadDynamo); si no
+    //      hay fila —la fuente falló antes— se reconsulta aquí mismo una vez
+    // Devuelve null si no se pudo obtener el nombre: el alta no se hace. El pasaporte no llega
+    // aquí (validarCamposFormulario solo admite 1 y 2); si algún día vuelve, no tiene fuente:
+    // // if ($campos['tipoidentificacion'] === 3) {
+    // //     return ['nombres' => $campos['nombres'], 'apellidos' => $campos['apellidos']];
+    // // }
+    private function nombreOficial(array $campos, ?array $foto): ?array
+    {
+        if ($foto && trim((string) ($foto['ent_apellidos'] ?? '')) !== '') {
+            return [
+                'nombres' => mb_strtoupper(trim((string) ($foto['ent_nombres'] ?? ''))),
+                'apellidos' => mb_strtoupper(trim((string) $foto['ent_apellidos'])),
+            ];
+        }
+
+        $fila = DB::selectOne("SELECT nombres, apellidos, respuesta FROM crm.consulta_identidad
+                                WHERE identificacion = ?
+                                ORDER BY id DESC LIMIT 1", [$campos['identificacion']]);
+
+        if (!$fila) {
+            $consultas = app(ConsultaIdentidadExternoController::class);
+            $respuesta = $campos['tipoidentificacion'] === 2
+                ? $consultas->consultarRucSri($campos['identificacion'], $this->usuIdEnlace)
+                : $consultas->consultarCedulaEcuadorLegal($campos['identificacion'], $this->usuIdEnlace);
+            $data = $respuesta->getData(true);
+
+            if (($data['status'] ?? '') !== 'success' || empty($data['data'])) {
+                return null;
+            }
+
+            $fila = (object) [
+                'nombres' => $data['data']['nombres'] ?? null,
+                'apellidos' => $data['data']['apellidos'] ?? null,
+                'respuesta' => json_encode($data['data']),
+            ];
+        }
+
+        $respuesta = json_decode((string) $fila->respuesta, true) ?: [];
+
+        // Jurídica: razón social completa en apellidos y '.' en nombres, como guarda este canal.
+        if (($respuesta['tipo_sujeto'] ?? 'N') === 'J') {
+            $razonSocial = trim((string) ($respuesta['razonSocial'] ?? ''));
+            if ($razonSocial === '') {
+                $razonSocial = trim((string) $fila->apellidos . ' ' . (string) $fila->nombres);
+            }
+
+            return $razonSocial !== '' ? ['nombres' => '.', 'apellidos' => mb_strtoupper($razonSocial)] : null;
+        }
+
+        $apellidos = trim((string) $fila->apellidos);
+        if ($apellidos === '') {
+            return null;
+        }
+
+        return ['nombres' => mb_strtoupper(trim((string) $fila->nombres)), 'apellidos' => mb_strtoupper($apellidos)];
+    }
+
+    // Completa SOLO email y celular del cliente que la lupa acaba de crear con GaranCheck.
+    // Misma hidratación de siempre: se parte de la ficha completa y se pisan dos campos, así
+    // no se toca el nombre ni la dirección que trajo el proveedor.
+    private function completarContactoCliente(Request $request, array $campos, array $foto, string $corredor)
+    {
+        return $this->ejecutarGuardadoSinVincular($request, $corredor, 'Cliente guardado con éxito', function () use ($campos, $foto) {
+            $payload = $this->asegurarPrincipales($foto, $campos);
+
+            // El email solo se pisa si el corredor lo escribió: fn_entidad_modificar lo reescribe
+            // sin COALESCE y mandar '' se lo borraría al que ya tuviera uno.
+            if ($campos['email'] !== '') {
+                $payload['ent_email'] = $campos['email'];
+            }
+            $payload['telefono']['tel_numero'] = $campos['telefono'];
+            $payload['telefono']['tte_id'] = self::TTE_ID_CELULAR;
+            $payload['telefono']['tel_principal'] = true;
+            $payload['telefono']['tel_activo'] = true;
+
+            return ['crm.fn_clientes_modificar', $payload];
+        });
+    }
+
+    // Igual que ejecutarGuardado pero sin vincular: el cliente ya quedó vinculado cuando la
+    // consulta de GaranCheck lo creó.
+    private function ejecutarGuardadoSinVincular(Request $request, string $corredor, string $mensajeExito, callable $armarPayload)
+    {
+        DB::transaction(function () use ($request, $corredor, $armarPayload) {
+            [$funcion, $payload] = $armarPayload();
+
+            $payload = array_merge($payload, $this->contextoAuditoria($request, $corredor));
+
+            DB::selectOne("SELECT {$funcion}(?::jsonb) AS cli_id", [json_encode($payload)]);
+        });
+
+        return response()->json(RespuestaApi::returnResultado('success', $mensajeExito, null));
+    }
+
     // ESTADO C — HIDRATACIÓN. Se parte de la ficha COMPLETA que devuelve el buscador y solo se
     // pisan los campos del formulario. Es obligatorio: crm.fn_clientes_modificar reescribe el
     // cliente entero y solo 14 columnas llevan COALESCE, así que mandar únicamente los 8 campos
@@ -389,7 +562,7 @@ class DynamoClienteController extends Controller
     {
         $vinculado = $this->corredorVinculado((int) $foto['cli_id'], $diasCorredor);
         if ($vinculado !== null && $vinculado !== $corredor) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Este cliente ya pertenece a otro corredor.', null));
+            return response()->json(RespuestaApi::returnResultado('error', 'El cliente ya existe', null));
         }
 
         return $this->ejecutarGuardado($request, $corredor, $tipoCorredor, $diasCorredor, 'Cliente actualizado con éxito', function () use ($campos, $foto) {
@@ -516,7 +689,8 @@ class DynamoClienteController extends Controller
     private function validarCamposFormulario(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'tipoidentificacion' => 'required',
+            // Solo cédula (1) y RUC (2): sin pasaporte, que no tiene fuente oficial del nombre.
+            'tipoidentificacion' => 'required|in:1,2',
             'identificacion' => 'required|string',
             'nombres' => 'required|string',
             'apellidos' => 'required|string',
@@ -526,6 +700,7 @@ class DynamoClienteController extends Controller
             'direccion' => 'required|string',
             'dir_calle_secundaria' => 'required|string',
         ], [
+            'tipoidentificacion.in' => 'Solo se admite cédula o RUC.',
             'email.email' => 'Ingrese un email válido.',
             'telefono.digits' => 'El teléfono debe tener 10 dígitos.',
         ]);
@@ -661,6 +836,36 @@ class DynamoClienteController extends Controller
         return $foto;
     }
 
+    // Log de la consulta del corredor: una fila por cada clic en la lupa, exista o no el cliente.
+    // Sin auditoría forense: la tabla ya guarda corredor + identificación + fecha.
+    // $proveedor: a quién se consultó. NULL cuando el cliente ya existía y no se consultó a nadie.
+    private function registrarConsultaCorredor(string $corredor, string $identificacion, ?int $cliId, bool $existia, ?string $proveedor = null): ClientesMultinivelConsulta
+    {
+        $consulta = new ClientesMultinivelConsulta();
+        $consulta->corredor = $corredor;
+        $consulta->identificacion = $identificacion;
+        $consulta->cli_id = $cliId;
+        $consulta->existia = $existia;
+        $consulta->proveedor = $proveedor;
+        $consulta->save();
+
+        return $consulta;
+    }
+
+    // Permiso para completar email y celular de un cliente que YA existe porque la lupa acaba de
+    // crearlo con GaranCheck. Sale de la ÚLTIMA consulta de este corredor para esa identificación:
+    // si es la que lo creó (existia = false) y apunta al mismo cli_id, se deja actualizar.
+    // Nunca se acepta un cli_id del navegador: el endpoint es público.
+    private function consultaQueCreoElCliente(string $corredor, string $identificacion, int $cliId): bool
+    {
+        $fila = DB::selectOne("SELECT existia, cli_id
+                                 FROM public.clientes_multinivel_consultas
+                                WHERE corredor = ? AND identificacion = ?
+                                ORDER BY id DESC LIMIT 1", [$corredor, $identificacion]);
+
+        return $fila && $fila->existia === false && (int) $fila->cli_id === $cliId;
+    }
+
     // Corredor con vinculación VIGENTE, o null si está libre. Si la vinculación ya cumplió los
     // días del parámetro CLICOR se desvincula y el cliente pasa a considerarse libre.
     private function corredorVinculado(int $cliId, int $diasCorredor): ?string
@@ -728,6 +933,10 @@ class DynamoClienteController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'corredor' => 'required|string',
+                // La identificación YA NO viaja en el enlace (decisión del 22/Sep): el corredor
+                // la teclea en el formulario. Si se reactiva, descomentar aquí, en el token y
+                // en validarEnlace, más el patchValue del front.
+                // 'identificacion' => 'required|string',
             ]);
 
             if ($validator->fails()) {
@@ -735,6 +944,11 @@ class DynamoClienteController extends Controller
             }
 
             $corredor = trim($request->input('corredor'));
+
+            // $identificacion = trim($request->input('identificacion'));
+            // if (!preg_match('/^\d{10}$/', $identificacion) && !preg_match('/^\d{13}$/', $identificacion)) {
+            //     return response()->json(RespuestaApi::returnResultado('error', 'La identificación debe tener 10 dígitos (cédula) o 13 (RUC).', null));
+            // }
 
             $parametro = DB::table('crm.parametro')
                 ->where('abreviacion', 'URL-FRONTEND')
@@ -780,6 +994,7 @@ class DynamoClienteController extends Controller
                 'corredor' => $corredor,
                 'tipo_corredor' => 2,
                 'usu_id' => auth('api')->id(),
+                // 'identificacion' => $identificacion,   // ver generarLinkFormulario
                 'expires' => $expires,
             ]));
 
@@ -806,6 +1021,13 @@ class DynamoClienteController extends Controller
             if ($credenciales instanceof JsonResponse) {
                 return $credenciales;
             }
+
+            // El enlace ya no lleva la identificación: el corredor la teclea en el formulario.
+            // $identificacion = trim((string) ($credenciales['identificacion'] ?? ''));
+            // return response()->json(RespuestaApi::returnResultado('success', 'Enlace válido', [
+            //     'identificacion' => $identificacion !== '' ? $identificacion : null,
+            //     'tipoidentificacion' => strlen($identificacion) === 13 ? '2' : '1',
+            // ]));
 
             return response()->json(RespuestaApi::returnResultado('success', 'Enlace válido', null));
         } catch (Exception $e) {

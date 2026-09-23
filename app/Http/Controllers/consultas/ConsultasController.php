@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\consultas;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\Consultas\ConsultasService;
 use App\Servicios\Consultas\GarancheckService;
@@ -11,6 +12,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use RuntimeException;
 use Throwable;
 
 // Consulta de clientes a proveedores externos (GaranCheck hoy). Flujo genérico:
@@ -92,8 +94,13 @@ class ConsultasController extends Controller
         return $this->procesarConsulta($request, trim($request->input('identificacion')), trim($request->input('corredor')));
     }
 
-    // Mismo flujo para los dos canales; $corredor decide si hay vinculación multinivel.
-    private function procesarConsulta(Request $request, string $identificacion, ?string $corredor)
+    // Mismo flujo para los tres canales; $corredor decide si hay vinculación multinivel.
+    // $usuId: canal SIN JWT (el formulario público del corredor, que lo saca del token cifrado del
+    // enlace). Pública para que DynamoClienteController la llame desde la lupa del formulario.
+    // $conRespaldo: si GaranCheck no atiende, se crea igual al cliente con la fuente de identidad
+    // oficial (Ecuador Legal / SRI), sin evaluación. Solo lo usa el formulario del corredor, para
+    // que una caída del buró no le impida casar clientes; el canal del CRM sigue fallando duro.
+    public function procesarConsulta(Request $request, string $identificacion, ?string $corredor, ?int $usuId = null, bool $conRespaldo = false)
     {
         try {
             // 1. Identificación: 10 dígitos = cédula, 13 = RUC; cualquier otra cosa se rechaza.
@@ -102,9 +109,10 @@ class ConsultasController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'La identificación ingresada no es válida.', null));
             }
 
-            // 2. Usuario JWT: dueño de la consulta (usu_id) y autor de la auditoría.
-            $usuario = auth('api')->user();
-            if (!$usuario) {
+            // 2. Dueño de la consulta (usu_id) y autor de la auditoría. Del JWT, o del token del
+            // enlace cuando la llama el formulario público.
+            $usuarioId = auth('api')->id() ?? $usuId;
+            if (!$usuarioId) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se pudo identificar al usuario.', null));
             }
 
@@ -127,9 +135,9 @@ class ConsultasController extends Controller
             }
 
             $proveedor = new GarancheckService();
-            $contexto = ConsultasService::contextoAuditoria($request, $corredor);
+            $contexto = ConsultasService::contextoAuditoria($request, $corredor, $usuId);
             $base = [
-                'usu_id' => $usuario->id,
+                'usu_id' => $usuarioId,
                 'proveedor' => $proveedor->nombre(),
                 'corredor' => $corredor,
                 'identificacion' => $identificacion,
@@ -138,8 +146,10 @@ class ConsultasController extends Controller
 
             // 4. Caché por cliente (parámetro CONSULTA-CACHE, días; 0 = siempre en vivo). Con una
             // consulta vigente se copia desde el historial: no se va al proveedor ni se toca al cliente.
+            $cache = $this->modoCache();
+
             if ($cliId !== null) {
-                $idCache = $this->cacheVigente($cliId, $proveedor->nombre());
+                $idCache = $this->cacheVigente($cliId, $proveedor->nombre(), $cache);
                 if ($idCache !== null) {
                     $resultado = DB::transaction(function () use ($base, $cliId, $idCache, $corredor, $diasCorredor) {
                         $registro = $this->registrarConsulta($base + ['cli_id' => $cliId, 'es_cache' => true, 'id_cache' => $idCache, 'valor' => null]);
@@ -154,24 +164,52 @@ class ConsultasController extends Controller
                         'es_cache' => true,
                         'cliente_actualizado' => false,
                         'motivo' => null,
+                        'cache' => $cache,
                     ]));
                 }
             }
 
-            // 5. Proveedor. Si lanza (sin credenciales, red, HTTP, error del catálogo) se responde el
-            // error y NO se guarda nada.
-            $json = $proveedor->consultar($identificacion);
+            // 5 y 6. Proveedor + datos mínimos del cliente. El tipo de persona lo decide el número,
+            // no el JSON. Cualquier fallo (sin credenciales, red, HTTP, error del catálogo, o un 200
+            // sin datos de identidad) sube tal cual y NO se guarda nada... salvo con $conRespaldo,
+            // donde en vez de rendirse se va a la fuente oficial.
+            $json = null;
+            $datos = null;
+            $falloProveedor = null;
 
-            // 6. Datos mínimos del cliente. El tipo de persona lo decide el número, no el JSON.
-            $tipoSujeto = ValidacionCedulaRucService::tipoSujetoPorIdentificacion($identificacion, $tipoIdentificacion) ?: 'N';
-            $datos = $proveedor->extraerDatosCliente($json, $tipoSujeto) + [
-                'identificacion' => $identificacion,
-                'tipo_identificacion' => $tipoIdentificacion,
-            ];
+            try {
+                $json = $proveedor->consultar($identificacion);
+
+                $tipoSujeto = ValidacionCedulaRucService::tipoSujetoPorIdentificacion($identificacion, $tipoIdentificacion) ?: 'N';
+                $datos = $proveedor->extraerDatosCliente($json, $tipoSujeto) + [
+                    'identificacion' => $identificacion,
+                    'tipo_identificacion' => $tipoIdentificacion,
+                    'proveedor' => $proveedor->nombre(),
+                ];
+            } catch (Throwable $e) {
+                if (!$conRespaldo) {
+                    throw $e;
+                }
+                $falloProveedor = $e;
+            }
+
+            // PLAN B: el buró no atendió. Se crea al cliente con Ecuador Legal / SRI y sin evaluación.
+            if ($falloProveedor !== null) {
+                return $this->altaPorIdentidadOficial(
+                    $identificacion,
+                    $tipoIdentificacion,
+                    $foto,
+                    $corredor,
+                    $diasCorredor,
+                    $contexto,
+                    $usuarioId,
+                    $falloProveedor
+                );
+            }
 
             // 7. Todo o nada: cliente + consulta + vinculación en la misma transacción. La actualización
             // del cliente existente es best-effort dentro de un SAVEPOINT (transacción anidada).
-            $resultado = DB::transaction(function () use ($base, $foto, $cliId, $datos, $json, $contexto, $corredor, $diasCorredor) {
+            $resultado = DB::transaction(function () use ($base, $foto, $cliId, $datos, $json, $contexto, $corredor, $diasCorredor, $proveedor) {
                 $fichaActualizada = false;
                 $motivo = null;
 
@@ -196,14 +234,116 @@ class ConsultasController extends Controller
                     ConsultasService::vincularCorredor($cliId, $corredor, ConsultasService::TIPO_CORREDOR_STS, $diasCorredor);
                 }
 
-                return $registro + ['es_cache' => false, 'cliente_actualizado' => $fichaActualizada, 'motivo' => $motivo];
+                return $registro + [
+                    'es_cache' => false,
+                    'cliente_actualizado' => $fichaActualizada,
+                    'motivo' => $motivo,
+                    // Para el formulario del corredor: qué cliente quedó, con qué nombre y de qué
+                    // fuente salió (aquí siempre el buró; con plan B lo responde altaPorIdentidadOficial).
+                    'cli_id' => $cliId,
+                    'proveedor' => $datos['proveedor'] ?? null,
+                    'nombres' => $datos['nombres'] ?? null,
+                    'apellidos' => $datos['apellidos'] ?? null,
+                    'nombre_comercial' => $datos['nombre_comercial'] ?? null,
+                    'tipo_sujeto' => $datos['tipo_sujeto'] ?? 'N',
+                    // Las dos evaluaciones completas (cabecera + detalle de políticas) para la
+                    // pantalla de resultado, con la fecha de corte y las instituciones que el
+                    // servicio deriva de la subtabla de evolución del buró.
+                    'evaluacion' => $proveedor->evaluacionParaPantalla($json),
+                ];
             });
+
+            $resultado['cache'] = $cache;
+
+            // Políticas críticas: si tumbaron la Evaluación de Fuentes, el resumen que se
+            // devuelve tiene que decir lo mismo que la pantalla. Lo guardado por la función
+            // PG conserva el veredicto del proveedor (ver 'resultado_general_proveedor').
+            $criticas = $resultado['evaluacion']['evaluacionGeneral']['rechazoAlmespana'] ?? [];
+            if ($criticas) {
+                $resultado['resultado_general_proveedor'] = $resultado['resultado_general'] ?? null;
+                $resultado['resultado_general'] = false;
+                $resultado['politicas_criticas'] = $criticas;
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Consulta realizada con éxito', $resultado));
         } catch (Throwable $e) {
             // Nada guardado (las transacciones ya revirtieron). El mensaje crudo va en data, como en el corredor.
             return response()->json(RespuestaApi::returnResultado('error', $this->mensajeError($e, 'Error al consultar el cliente.'), $e->getMessage()));
         }
+    }
+
+    // PLAN B cuando GaranCheck no atiende: cédula → Ecuador Legal, RUC → SRI. Se crea el cliente
+    // con lo único que dan esas fuentes (el nombre, y el domicilio en el caso del SRI) y se lo
+    // vincula al corredor, para que la caída del buró no le pare el trabajo.
+    //
+    // NO se escriben crm.cliente_historial_consultas ni cliente_resumen_consultas: son las tablas
+    // del reporte del buró y aquí no hay evaluación que guardar. El rastro queda en
+    // crm.consulta_identidad (lo escribe la propia fuente) y en clientes_multinivel_consultas.
+    private function altaPorIdentidadOficial(
+        string $identificacion,
+        int $tipoIdentificacion,
+        ?array $foto,
+        ?string $corredor,
+        ?int $diasCorredor,
+        array $contexto,
+        int $usuarioId,
+        Throwable $falloProveedor
+    ) {
+        $esCedula = $tipoIdentificacion === 1;
+        $nombreProveedor = $esCedula ? ConsultasService::PROVEEDOR_ECUADOR_LEGAL : ConsultasService::PROVEEDOR_SRI;
+        $consultas = app(ConsultaIdentidadExternoController::class);
+
+        try {
+            $respuesta = $esCedula
+                ? $consultas->consultarCedulaEcuadorLegal($identificacion, $usuarioId)
+                : $consultas->consultarRucSri($identificacion, $usuarioId);
+
+            $cuerpo = $respuesta->getData(true);
+
+            if (($cuerpo['status'] ?? '') !== 'success') {
+                throw new RuntimeException((string) ($cuerpo['message'] ?? 'La fuente de identidad no respondió.'));
+            }
+
+            $datos = ConsultasService::datosDesdeIdentidad(
+                $cuerpo['data'] ?? [],
+                $identificacion,
+                $tipoIdentificacion,
+                $nombreProveedor
+            );
+
+            // Todo o nada: cliente + vinculación.
+            $cliId = DB::transaction(function () use ($datos, $foto, $contexto, $corredor, $diasCorredor) {
+                $cliId = ConsultasService::registrarCliente($datos, $foto, $contexto);
+
+                if ($corredor !== null) {
+                    ConsultasService::vincularCorredor($cliId, $corredor, ConsultasService::TIPO_CORREDOR_STS, $diasCorredor);
+                }
+
+                return $cliId;
+            });
+        } catch (Throwable $e) {
+            // Se cayeron las dos fuentes: no se crea nada. Se reporta el fallo de GaranCheck, que
+            // es el principal, y el de la fuente de respaldo queda en data.
+            return response()->json(RespuestaApi::returnResultado(
+                'error',
+                $this->mensajeError($falloProveedor, 'Error al consultar el cliente.'),
+                $e->getMessage()
+            ));
+        }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Consulta realizada con éxito', [
+            'cli_id' => $cliId,
+            'nombres' => $datos['nombres'],
+            'apellidos' => $datos['apellidos'],
+            'nombre_comercial' => $datos['nombre_comercial'],
+            'tipo_sujeto' => $datos['tipo_sujeto'],
+            'proveedor' => $nombreProveedor,
+            // Sin buró no hay nada que mostrar: el front se apoya en esto para no abrir el modal.
+            'evaluacion' => null,
+            'es_cache' => false,
+            'cliente_actualizado' => true,
+            'motivo' => null,
+        ]));
     }
 
     // 1 = cédula, 2 = RUC (mismos valores que ent_tipo_identificacion), null si no valida.
@@ -231,18 +371,34 @@ class ConsultasController extends Controller
         return json_decode($fila->datos, true);
     }
 
-    // id de la última consulta real del cliente con este proveedor dentro de CONSULTA-CACHE días,
-    // o null si no hay (o si el parámetro está en 0).
-    private function cacheVigente(int $cliId, string $proveedor): ?int
+    // Qué caché manda. DOS parámetros, se elige por 'activar' y solo uno debería estar activo; si
+    // los dos lo están gana el mensual. Ninguno activo (o días <= 0) = siempre en vivo.
+    //   CONSULTA-CACHE          -> N días
+    //   CONSULTA-CACHE-MENSUAL  -> N días CON tope de mes calendario (al cambiar de mes ya no vale)
+    // Devuelve ['modo' => 'MENSUAL'|'DIAS'|'SIN_CACHE', 'dias' => int, 'por_mes' => bool].
+    private function modoCache(): array
     {
-        $parametro = DB::table('crm.parametro')->where('abreviacion', 'CONSULTA-CACHE')->first();
-        $dias = $parametro ? (int) trim((string) $parametro->valor) : 0;
+        $mensual = DB::table('crm.parametro')->where('abreviacion', 'CONSULTA-CACHE-MENSUAL')->first();
+        $porMes = $mensual && $mensual->activar;
+
+        $parametro = $porMes ? $mensual : DB::table('crm.parametro')->where('abreviacion', 'CONSULTA-CACHE')->first();
+        $dias = $parametro && $parametro->activar ? (int) trim((string) $parametro->valor) : 0;
 
         if ($dias <= 0) {
+            return ['modo' => 'SIN_CACHE', 'dias' => 0, 'por_mes' => false];
+        }
+
+        return ['modo' => $porMes ? 'MENSUAL' : 'DIAS', 'dias' => $dias, 'por_mes' => $porMes];
+    }
+
+    // id de la última consulta real del cliente con este proveedor dentro de la vigencia, o null.
+    private function cacheVigente(int $cliId, string $proveedor, array $cache): ?int
+    {
+        if ($cache['modo'] === 'SIN_CACHE') {
             return null;
         }
 
-        $fila = DB::selectOne('SELECT crm.fn_cliente_consultas_buscar_cache_existente(?, ?, ?) AS id', [$cliId, $proveedor, $dias]);
+        $fila = DB::selectOne('SELECT crm.fn_cliente_consultas_buscar_cache_existente(?, ?, ?, ?) AS id', [$cliId, $proveedor, $cache['dias'], $cache['por_mes']]);
 
         return !empty($fila->id) ? (int) $fila->id : null;
     }
