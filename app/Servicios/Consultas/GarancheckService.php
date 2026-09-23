@@ -13,7 +13,11 @@ use Throwable;
 class GarancheckService
 {
     private const NOMBRE = 'GARANCHECK';
-    private const TIMEOUT_SEGUNDOS = 30;
+
+    // El proveedor se pone lento por rachas (se lo ha visto tardar minutos). Hasta aquí se espera;
+    // pasado esto se da por caído y entra el plan B (Ecuador Legal / SRI). Ojo al subirlo: mientras
+    // se espera, el corredor mira la pantalla y se ocupa un worker de PHP.
+    private const TIMEOUT_SEGUNDOS = 180;
 
     // Subtabla del buró con la deuda histórica por fuente (SEPS / SICOM) y mes. De ahí salen
     // la fecha de corte y las instituciones de las políticas "... Hasta 12 Meses".
@@ -347,7 +351,7 @@ class GarancheckService
             'nombres' => $razonSocial !== '' ? '.' : null,
         ];
 
-        [$provincia, $canton, $parroquia, $calle] = $this->partirDireccionSri((string) ($empresa['direccion'] ?? ''));
+        [$provincia, $canton, $parroquia, $calle] = ConsultasService::partirDireccionSri((string) ($empresa['direccion'] ?? ''));
         if ($calle === '') {
             $calle = $this->primerValor($contactos['direcciones'] ?? null);
         }
@@ -364,20 +368,6 @@ class GarancheckService
             'canton' => $canton,
             'parroquia' => $parroquia,
         ];
-    }
-
-    // "PICHINCHA / QUITO / BELISARIO QUEVEDO / RUIZ DE LA CASTILLA N30-13 Y ANDAGOYA"
-    // → [provincia, cantón, parroquia, calle]. Con menos de 4 tramos no hay geo: todo es calle.
-    // El separador es " / " con espacios: una calle "S/N" no se parte.
-    private function partirDireccionSri(string $direccion): array
-    {
-        $tramos = array_values(array_filter(array_map('trim', preg_split('#\s+/\s+#', $direccion)), 'strlen'));
-
-        if (count($tramos) < 4) {
-            return [null, null, null, trim($direccion)];
-        }
-
-        return [$tramos[0], $tramos[1], $tramos[2], implode(' / ', array_slice($tramos, 3))];
     }
 
     // Celular ecuatoriano (09 + 8 dígitos) de la fuente más reciente; si no hay, el primer número

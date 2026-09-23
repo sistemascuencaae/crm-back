@@ -19,6 +19,7 @@ class ClientesMultinivelConsulta extends Model
         "identificacion",
         "cli_id",
         "existia",
+        "proveedor",
     ];
 
     public function setCreatedAtAttribute($value)

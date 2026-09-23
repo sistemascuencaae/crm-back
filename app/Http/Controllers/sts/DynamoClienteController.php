@@ -10,6 +10,7 @@ use App\Models\openceo\Direccion;
 use App\Models\openceo\Telefono;
 use App\Models\sts\ClientesMultinivel;
 use App\Models\sts\ClientesMultinivelConsulta;
+use App\Servicios\Consultas\ConsultasService;
 use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -155,13 +156,15 @@ class DynamoClienteController extends Controller
             // NO es cliente (no existe la entidad, o existe como proveedor/garante): se registra la
             // consulta y se va a GaranCheck, que crea al cliente con los datos del proveedor y
             // guarda historial + resumen. El corredor solo completará email y celular al Guardar.
-            $consulta = $this->registrarConsultaCorredor($corredor, $identificacion, null, false);
+            // Si GaranCheck no atiende, procesarConsulta cae a Ecuador Legal / SRI ($conRespaldo).
+            $consulta = $this->registrarConsultaCorredor($corredor, $identificacion, null, false, ConsultasService::PROVEEDOR_GARANCHECK);
 
             $respuesta = app(ConsultasController::class)->procesarConsulta(
                 $request,
                 $identificacion,
                 $corredor,
-                isset($tokenData['usu_id']) ? (int) $tokenData['usu_id'] : null
+                isset($tokenData['usu_id']) ? (int) $tokenData['usu_id'] : null,
+                true
             );
 
             $datos = $respuesta->getData(true);
@@ -170,14 +173,30 @@ class DynamoClienteController extends Controller
                 return $respuesta;
             }
 
-            // El cliente ya existe en la base: se completa la fila de la consulta.
             $cliId = $datos['data']['cli_id'] ?? null;
-            if ($cliId) {
-                $consulta->cli_id = (int) $cliId;
-                $consulta->save();
+            $proveedorUsado = $datos['data']['proveedor'] ?? ConsultasService::PROVEEDOR_GARANCHECK;
+
+            if ($proveedorUsado === ConsultasService::PROVEEDOR_GARANCHECK) {
+                // Respondió el buró: se completa la fila que ya se había abierto.
+                if ($cliId) {
+                    $consulta->cli_id = (int) $cliId;
+                    $consulta->save();
+                }
+            } else {
+                // Hubo plan B. La fila de GaranCheck queda con cli_id NULL —es la evidencia de que
+                // se cayó— y el alta se registra en una fila nueva con la fuente que sí respondió.
+                $this->registrarConsultaCorredor($corredor, $identificacion, $cliId ? (int) $cliId : null, false, $proveedorUsado);
             }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Consulta realizada con éxito', $datos['data']));
+            // Solo lo que el formulario muestra. El cli_id y el detalle del buró no salen a un
+            // endpoint público que se abre con un enlace.
+            return response()->json(RespuestaApi::returnResultado('success', 'Consulta realizada con éxito', [
+                'nombres' => $datos['data']['nombres'] ?? null,
+                'apellidos' => $datos['data']['apellidos'] ?? null,
+                'tipo_sujeto' => $datos['data']['tipo_sujeto'] ?? 'N',
+                'proveedor' => $proveedorUsado,
+                'evaluacion' => $datos['data']['evaluacion'] ?? null,
+            ]));
 
             // Lógica anterior (libre / mismo corredor / otro corredor), desactivada:
             // $vinculado = $this->corredorVinculado((int) $foto['cli_id'], $diasCorredor);
@@ -819,13 +838,15 @@ class DynamoClienteController extends Controller
 
     // Log de la consulta del corredor: una fila por cada clic en la lupa, exista o no el cliente.
     // Sin auditoría forense: la tabla ya guarda corredor + identificación + fecha.
-    private function registrarConsultaCorredor(string $corredor, string $identificacion, ?int $cliId, bool $existia): ClientesMultinivelConsulta
+    // $proveedor: a quién se consultó. NULL cuando el cliente ya existía y no se consultó a nadie.
+    private function registrarConsultaCorredor(string $corredor, string $identificacion, ?int $cliId, bool $existia, ?string $proveedor = null): ClientesMultinivelConsulta
     {
         $consulta = new ClientesMultinivelConsulta();
         $consulta->corredor = $corredor;
         $consulta->identificacion = $identificacion;
         $consulta->cli_id = $cliId;
         $consulta->existia = $existia;
+        $consulta->proveedor = $proveedor;
         $consulta->save();
 
         return $consulta;
