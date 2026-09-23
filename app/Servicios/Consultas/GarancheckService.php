@@ -136,11 +136,18 @@ class GarancheckService
     }
 
     // Minúsculas y sin tildes, para que el nombre case aunque cambie el acento.
+    // Minúsculas y sin tildes, con un mapa explícito: iconv('ASCII//TRANSLIT') NO es portable
+    // —con libiconv (Windows) "Pensión" queda "Pensi'on", con apóstrofo, y la política de
+    // Pensión Alimenticia dejaba de reconocerse—. Mismo criterio que ConsultasService::normalizarNombre
+    // y que el normalize('NFD') del modal, para que los tres nombres casen igual.
     private function normalizar(string $texto): string
     {
-        $sinTildes = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
+        $texto = mb_strtolower(trim(preg_replace('/\s+/', ' ', $texto)), 'UTF-8');
 
-        return trim(mb_strtolower($sinTildes !== false ? $sinTildes : $texto, 'UTF-8'));
+        return strtr($texto, [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
+            'ü' => 'u', 'ñ' => 'n', 'à' => 'a', 'è' => 'e', 'ì' => 'i', 'ò' => 'o', 'ù' => 'u',
+        ]);
     }
 
     // Filas de la deuda histórica agrupadas por mes, solo los últimos 12.
