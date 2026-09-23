@@ -66,13 +66,29 @@ class FmPermisosHelper
     // API pública
     // ------------------------------------------------------------------------
 
+    /**
+     * Memo por request de esAdmin(). Indexado por userId — no global — porque
+     * el método acepta un userId opcional y se le pasan usuarios distintos
+     * dentro de una misma petición (papelera, búsqueda). usu_tipo no cambia
+     * a mitad de request.
+     *
+     * @var array<int,bool>
+     */
+    private static array $esAdminCache = [];
+
     public static function esAdmin(?int $userId = null): bool
     {
         $userId = $userId ?? Auth::id();
         if (!$userId) return false;
-        $user = DB::table('crm.users')->where('id', $userId)->first();
-        // Solo SUPER USUARIO (usu_tipo = 3) bypassa los permisos del File Manager.
-        return $user && (int) ($user->usu_tipo ?? 0) === 3;
+        $userId = (int) $userId;
+
+        if (!array_key_exists($userId, self::$esAdminCache)) {
+            $user = DB::table('crm.users')->where('id', $userId)->first();
+            // Solo SUPER USUARIO (usu_tipo = 3) bypassa los permisos del File Manager.
+            self::$esAdminCache[$userId] = $user && (int) ($user->usu_tipo ?? 0) === 3;
+        }
+
+        return self::$esAdminCache[$userId];
     }
 
     public static function puedeRealizarAccion(
@@ -234,11 +250,21 @@ class FmPermisosHelper
             $resultadoCarpetas[$c->id] = $flags;
         }
 
+        // Carpetas padre de los archivos: un solo SELECT por los carpeta_id
+        // únicos en vez de un find() por archivo (los 30 de una página suelen
+        // compartir carpeta). La caché es local al método a propósito: una
+        // estática quedaría stale en los flujos que mueven carpetas y siguen
+        // comprobando permisos en el mismo request (bulkMove).
+        $idsPadres = $archivos->pluck('carpeta_id')->filter()->unique()->values()->all();
+        $carpetasPadre = empty($idsPadres)
+            ? collect()
+            : FmCarpeta::whereIn('id', $idsPadres)->get()->keyBy('id');
+
         // --- Archivos: directo OR herencia desde carpeta padre + ancestros ---
         foreach ($archivos as $a) {
             $carpetaPadre = $a->carpeta_id;
-            // Obtener path de la carpeta padre (puede no estar en $subcarpetas: ej. archivo a 2 niveles)
-            $carpetaObj = FmCarpeta::find($carpetaPadre);
+            // Path de la carpeta padre (puede no estar en $subcarpetas: ej. archivo a 2 niveles)
+            $carpetaObj = $carpetasPadre->get($carpetaPadre);
             $cadenaCarpetas = [];
             if ($carpetaObj) {
                 $cadenaCarpetas = self::parsearIdsDesdePath($carpetaObj->materialized_path);
@@ -393,83 +419,163 @@ class FmPermisosHelper
     // ------------------------------------------------------------------------
 
     /**
+     * IDs de carpetas con puede_ver directo para el usuario. Lo piden tanto
+     * carpetasAlcanzables() como carpetasDePaso(); se consulta una sola vez.
+     *
+     * @var array<int, array<int,int>>
+     */
+    private static array $idsConVerCache = [];
+
+    /** @return array<int,int> */
+    private static function idsCarpetasConVerDirecto(int $userId): array
+    {
+        if (!array_key_exists($userId, self::$idsConVerCache)) {
+            self::$idsConVerCache[$userId] = FmCarpetaUsuario::where('user_id', $userId)
+                ->where('puede_ver', true)
+                ->pluck('carpeta_id')
+                ->map(fn ($v) => (int) $v)
+                ->all();
+        }
+
+        return self::$idsConVerCache[$userId];
+    }
+
+    /**
+     * Memo por request de carpetasAlcanzables(), indexado por userId.
+     *
+     * @var array<int, array<int,int>>
+     */
+    private static array $alcanzablesCache = [];
+
+    /**
      * Carpetas a las que el usuario tiene "vista completa": las que tienen
      * permiso directo (puede_ver=true), MÁS todos sus descendientes.
+     *
+     * Memoizado: dentro de una misma petición lo piden carpetasVisibles(),
+     * archivosVisiblesEnCarpeta() y subcarpetasVisibles(), con el mismo
+     * resultado las tres veces.
      */
     private static function carpetasAlcanzables(int $userId): Collection
     {
-        $directaIds = FmCarpetaUsuario::where('user_id', $userId)
-            ->where('puede_ver', true)
-            ->pluck('carpeta_id');
+        if (!array_key_exists($userId, self::$alcanzablesCache)) {
+            self::$alcanzablesCache[$userId] = self::calcularCarpetasAlcanzables($userId);
+        }
+
+        // Collection nueva en cada llamada: los llamadores encadenan merge() y
+        // push() sobre el resultado y no deben poder contaminar la caché.
+        return collect(self::$alcanzablesCache[$userId]);
+    }
+
+    /** @return array<int,int> */
+    private static function calcularCarpetasAlcanzables(int $userId): array
+    {
+        $directaIds = self::idsCarpetasConVerDirecto($userId);
 
         // Carpetas públicas: alcanzables por TODOS (lectura), como si tuvieran
         // puede_ver directo. Sus descendientes se agregan en el barrido de abajo.
-        $semillaIds = $directaIds->merge(self::idsPublicos())->unique();
+        $semillaIds = array_values(array_unique(array_merge($directaIds, self::idsPublicos())));
 
-        if ($semillaIds->isEmpty()) return collect();
+        if (empty($semillaIds)) return [];
 
-        $directas = FmCarpeta::whereIn('id', $semillaIds->all())->get();
+        $directas = FmCarpeta::whereIn('id', $semillaIds)->get();
+        if ($directas->isEmpty()) return [];
 
-        $alcanzables = collect();
+        $alcanzables = [];
+        $prefijos = [];
         foreach ($directas as $c) {
-            $alcanzables->push($c->id);
-            $prefijo = $c->materialized_path . $c->id . '/';
-            $descendientes = FmCarpeta::where('materialized_path', 'LIKE', $prefijo . '%')->pluck('id');
-            $alcanzables = $alcanzables->merge($descendientes);
+            $alcanzables[] = (int) $c->id;
+            $prefijos[] = $c->materialized_path . $c->id . '/';
         }
 
-        return $alcanzables->unique()->values();
+        // Un solo barrido de descendientes: el OR de los prefijos es la misma
+        // unión que un LIKE por prefijo, y sigue apoyándose en idx_fm_carpeta_path
+        // (btree materialized_path text_pattern_ops) vía bitmap OR.
+        $descendientes = FmCarpeta::where(function ($w) use ($prefijos) {
+            foreach ($prefijos as $prefijo) {
+                $w->orWhere('materialized_path', 'LIKE', $prefijo . '%');
+            }
+        })->pluck('id');
+
+        foreach ($descendientes as $id) {
+            $alcanzables[] = (int) $id;
+        }
+
+        return array_values(array_unique($alcanzables));
     }
+
+    /**
+     * Memo por request de carpetasDePaso(), indexado por userId.
+     *
+     * @var array<int, array<int,int>>
+     */
+    private static array $dePasoCache = [];
 
     /**
      * Carpetas de paso: aquellas que NO son alcanzables, pero el usuario
      * debe poder VERLAS (solo verlas, no su contenido completo) para llegar
      * a un archivo o carpeta hijo al que sí tiene permiso directo.
+     *
+     * Memoizado igual que carpetasAlcanzables().
      */
     private static function carpetasDePaso(int $userId): Collection
+    {
+        if (!array_key_exists($userId, self::$dePasoCache)) {
+            self::$dePasoCache[$userId] = self::calcularCarpetasDePaso($userId);
+        }
+
+        return collect(self::$dePasoCache[$userId]);
+    }
+
+    /** @return array<int,int> */
+    private static function calcularCarpetasDePaso(int $userId): array
     {
         // Archivos con permiso directo
         $archivoIds = FmArchivoUsuario::where('user_id', $userId)
             ->where('puede_ver', true)
             ->pluck('archivo_id');
 
-        $carpetasIdsDePaso = collect();
-
+        $carpetasDeArchivos = [];
         if ($archivoIds->isNotEmpty()) {
             $carpetasDeArchivos = FmArchivo::whereIn('id', $archivoIds)
-                ->pluck('carpeta_id')->unique();
-            foreach ($carpetasDeArchivos as $cid) {
-                $carpetasIdsDePaso = $carpetasIdsDePaso->merge(self::ancestrosIncluyente((int) $cid));
+                ->pluck('carpeta_id')
+                ->unique()
+                ->map(fn ($v) => (int) $v)
+                ->all();
+        }
+
+        // Carpetas con permiso directo: se incluyen sus ancestros como "de paso"
+        // (porque el usuario necesita poder llegar hasta esa carpeta)
+        $carpetaIdsDirectas = self::idsCarpetasConVerDirecto($userId);
+
+        // Un solo SELECT para las dos listas, en vez de un find() por iteración.
+        $necesarias = array_values(array_unique(array_merge($carpetasDeArchivos, $carpetaIdsDirectas)));
+        if (empty($necesarias)) return [];
+
+        $porId = FmCarpeta::whereIn('id', $necesarias)->get()->keyBy('id');
+
+        $carpetasIdsDePaso = [];
+
+        // Carpeta del archivo + sus ancestros.
+        foreach ($carpetasDeArchivos as $cid) {
+            $carpeta = $porId->get($cid);
+            if (!$carpeta) continue;
+            foreach (self::parsearIdsDesdePath($carpeta->materialized_path) as $id) {
+                $carpetasIdsDePaso[] = $id;
+            }
+            $carpetasIdsDePaso[] = (int) $carpeta->id;
+        }
+
+        // De las carpetas con permiso directo, SOLO los ancestros: la carpeta
+        // misma ya es alcanzable, no de paso.
+        foreach ($carpetaIdsDirectas as $cid) {
+            $carpeta = $porId->get($cid);
+            if (!$carpeta) continue;
+            foreach (self::parsearIdsDesdePath($carpeta->materialized_path) as $id) {
+                $carpetasIdsDePaso[] = $id;
             }
         }
 
-        // Carpetas con permiso directo: incluir también sus ancestros como "de paso"
-        // (porque el usuario necesita poder llegar hasta esa carpeta)
-        $carpetaIdsDirectas = FmCarpetaUsuario::where('user_id', $userId)
-            ->where('puede_ver', true)
-            ->pluck('carpeta_id');
-
-        foreach ($carpetaIdsDirectas as $cid) {
-            $carpeta = FmCarpeta::find($cid);
-            if (!$carpeta) continue;
-            $carpetasIdsDePaso = $carpetasIdsDePaso->merge(
-                self::parsearIdsDesdePath($carpeta->materialized_path)
-            );
-        }
-
-        return $carpetasIdsDePaso->unique()->values();
-    }
-
-    /**
-     * Devuelve los IDs de [ancestros + la carpeta misma].
-     */
-    private static function ancestrosIncluyente(int $carpetaId): array
-    {
-        $carpeta = FmCarpeta::find($carpetaId);
-        if (!$carpeta) return [];
-        $ids = self::parsearIdsDesdePath($carpeta->materialized_path);
-        $ids[] = $carpeta->id;
-        return $ids;
+        return array_values(array_unique($carpetasIdsDePaso));
     }
 
     /**
@@ -491,6 +597,21 @@ class FmPermisosHelper
      * una sola vez; el set es chico (solo carpetas a nivel de raíz pueden serlo).
      */
     private static ?array $idsPublicosCache = null;
+
+    /**
+     * Vacía todas las memos por request. En PHP-FPM no hace falta llamarlo (el
+     * proceso muere al terminar la petición), pero sí en procesos de vida larga
+     * —jobs de cola, Octane, tests— donde las estáticas sobrevivirían y darían
+     * permisos obsoletos.
+     */
+    public static function limpiarCacheRequest(): void
+    {
+        self::$esAdminCache     = [];
+        self::$idsConVerCache   = [];
+        self::$alcanzablesCache = [];
+        self::$dePasoCache      = [];
+        self::$idsPublicosCache = null;
+    }
 
     private static function idsPublicos(): array
     {
