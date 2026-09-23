@@ -475,6 +475,199 @@ class FmPermisosController extends Controller
         }
     }
 
+
+    /**
+     * GET /usuarios-por-departamento?dep_id=&q=&pagina=&tamanio=
+     *
+     * Lista los usuarios activos de un departamento, paginado. Sirve al modal
+     * de permisos como filtro: el departamento NO otorga permisos, solo acota
+     * la lista de personas a las que asignárselos una por una.
+     *
+     * Cada fila trae `ya_asignado` con el nombre de la columna si ya tiene
+     * permiso directo sobre la entidad, para avisar antes de reasignar.
+     */
+    public function usuariosPorDepartamento(Request $request)
+    {
+        $log = new Funciones();
+
+        $validator = Validator::make($request->all(), [
+            'dep_id'       => 'required|integer',
+            'entidad_tipo' => 'required|in:carpeta,archivo',
+            'entidad_id'   => 'required|integer',
+            'q'            => 'nullable|string|max:100',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos', $validator->messages()));
+        }
+
+        try {
+            $depId       = (int) $request->query('dep_id');
+            $entidadTipo = (string) $request->query('entidad_tipo');
+            $entidadId   = (int) $request->query('entidad_id');
+            $q           = trim((string) $request->query('q', ''));
+            $pagina      = max((int) $request->query('pagina', 1), 1);
+            $tamanio     = min(max((int) $request->query('tamanio', 20), 1), 50);
+
+            $query = DB::table('crm.users')
+                ->select('id', 'usu_alias', 'name', 'surname')
+                ->where('estado', 1)
+                ->where('dep_id', $depId)
+                ->orderBy('surname')
+                ->orderBy('name')
+                // Desempate estable: sin él, dos homónimos pueden cambiar de
+                // posición entre páginas y repetirse o perderse.
+                ->orderBy('id');
+
+            if ($q !== '') {
+                $qEscapado = FmQueryHelper::escaparLike($q);
+                $query->where(function ($w) use ($qEscapado) {
+                    $w->where('usu_alias', 'ILIKE', "%{$qEscapado}%")
+                      ->orWhere('name', 'ILIKE', "%{$qEscapado}%")
+                      ->orWhere('surname', 'ILIKE', "%{$qEscapado}%");
+                });
+            }
+
+            // Una fila de más para saber si hay página siguiente, sin COUNT.
+            $filas = $query
+                ->offset(($pagina - 1) * $tamanio)
+                ->limit($tamanio + 1)
+                ->get();
+
+            $hayMas = $filas->count() > $tamanio;
+            if ($hayMas) {
+                $filas = $filas->take($tamanio);
+            }
+
+            // Permisos directos ya existentes, solo para los ids de esta página.
+            $ids = $filas->pluck('id')->all();
+            $yaAsignados = [];
+            if (!empty($ids)) {
+                $yaAsignados = $entidadTipo === 'carpeta'
+                    ? FmCarpetaUsuario::where('carpeta_id', $entidadId)->whereIn('user_id', $ids)->get()->keyBy('user_id')
+                    : FmArchivoUsuario::where('archivo_id', $entidadId)->whereIn('user_id', $ids)->get()->keyBy('user_id');
+            }
+
+            $registros = $filas->map(function ($u) use ($yaAsignados) {
+                // Booleanos del permiso directo existente, o null si no tiene.
+                // El frontend lo convierte a preset con inferirPreset*().
+                $u->permiso_actual = $yaAsignados[$u->id] ?? null;
+                return $u;
+            })->values();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'OK', [
+                'registros' => $registros,
+                'hay_mas'   => $hayMas,
+            ]));
+        } catch (Exception $e) {
+            $log->logError(self::class, 'Error en usuariosPorDepartamento', $e);
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    /**
+     * POST /permisos/lote
+     * Asigna el mismo preset a varios usuarios de una vez sobre una carpeta o
+     * un archivo. Alternativa a N llamadas a storeCarpeta/storeArchivo cuando
+     * se eligen varias personas desde el filtro por departamento.
+     *
+     * Los que ya tienen permiso directo se ACTUALIZAN al preset nuevo; se
+     * informa cuántos fueron para que el frontend pueda avisar.
+     */
+    public function storeLote(Request $request)
+    {
+        $log = new Funciones();
+
+        $validator = Validator::make($request->all(), [
+            'entidad_tipo' => 'required|in:carpeta,archivo',
+            'entidad_id'   => 'required|integer',
+            'user_ids'     => 'required|array|min:1|max:200',
+            'user_ids.*'   => 'integer',
+        ], [
+            'user_ids.max' => 'No se pueden asignar más de 200 usuarios a la vez',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos', $validator->messages()));
+        }
+
+        try {
+            $entidadTipo = (string) $request->input('entidad_tipo');
+            $entidadId   = (int) $request->input('entidad_id');
+            $userIds     = array_values(array_unique(array_map('intval', $request->input('user_ids'))));
+
+            $puede = $entidadTipo === 'carpeta'
+                ? $this->puedeGestionarCarpeta($entidadId)
+                : $this->puedeGestionarArchivo($entidadId);
+            if (!$puede) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para gestionar este elemento', null));
+            }
+
+            $booleans = $entidadTipo === 'carpeta'
+                ? $this->extraerBooleansCarpeta($request)
+                : $this->extraerBooleansArchivo($request);
+
+            $resultado = DB::transaction(function () use ($entidadTipo, $entidadId, $userIds, $booleans) {
+                $creados = 0;
+                $actualizados = 0;
+
+                foreach ($userIds as $userId) {
+                    if ($entidadTipo === 'carpeta') {
+                        $existente = FmCarpetaUsuario::where('carpeta_id', $entidadId)
+                            ->where('user_id', $userId)->first();
+                    } else {
+                        $existente = FmArchivoUsuario::where('archivo_id', $entidadId)
+                            ->where('user_id', $userId)->first();
+                    }
+
+                    if ($existente) {
+                        $antes = $existente->toArray();
+                        $existente->update($booleans);
+                        $actualizados++;
+                        FmAuditHelper::registrar(
+                            FmAuditHelper::ACCION_PERMISO_ACTUALIZADO,
+                            $entidadTipo === 'carpeta' ? FmAuditHelper::ENTIDAD_CARPETA : FmAuditHelper::ENTIDAD_ARCHIVO,
+                            $entidadId,
+                            $antes,
+                            $existente->fresh()->toArray()
+                        );
+                        continue;
+                    }
+
+                    $datos = array_merge($booleans, [
+                        'user_id'      => $userId,
+                        'otorgado_por' => Auth::id(),
+                    ]);
+                    $datos[$entidadTipo === 'carpeta' ? 'carpeta_id' : 'archivo_id'] = $entidadId;
+
+                    $permiso = $entidadTipo === 'carpeta'
+                        ? FmCarpetaUsuario::create($datos)
+                        : FmArchivoUsuario::create($datos);
+                    $creados++;
+
+                    FmAuditHelper::registrar(
+                        FmAuditHelper::ACCION_PERMISO_OTORGADO,
+                        $entidadTipo === 'carpeta' ? FmAuditHelper::ENTIDAD_CARPETA : FmAuditHelper::ENTIDAD_ARCHIVO,
+                        $entidadId,
+                        null,
+                        $permiso->toArray()
+                    );
+                }
+
+                return ['creados' => $creados, 'actualizados' => $actualizados];
+            });
+
+            $msg = "Permisos asignados: {$resultado['creados']}";
+            if ($resultado['actualizados'] > 0) {
+                $msg .= " — actualizados: {$resultado['actualizados']}";
+            }
+
+            $log->logInfo(self::class, $msg);
+            return response()->json(RespuestaApi::returnResultado('success', $msg, $resultado));
+        } catch (Exception $e) {
+            $log->logError(self::class, 'Error en storeLote', $e);
+            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), null));
+        }
+    }
+
     // ------------------------------------------------------------------------
     // Helpers privados
     // ------------------------------------------------------------------------

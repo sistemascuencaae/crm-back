@@ -1704,6 +1704,10 @@ Route::group(['prefix' => 'crm/file-manager', 'middleware' => ['jwt.auth', 'usua
     // ----- Autocomplete de usuarios -----
     Route::get('/usuarios-asignables', [FmPermisosController::class, 'usuariosAsignables']);
 
+    // ----- Permisos por departamento -----
+    Route::get('/usuarios-por-departamento', [FmPermisosController::class, 'usuariosPorDepartamento']);
+    Route::post('/permisos/lote', [FmPermisosController::class, 'storeLote']);
+
     // ----- Papelera -----
     Route::get('/papelera', [FmCarpetaController::class, 'papelera']);
     Route::delete('/papelera/vaciar', [FmCarpetaController::class, 'vaciarPapelera']);
