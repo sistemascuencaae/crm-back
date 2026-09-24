@@ -18,11 +18,32 @@ class MultiNivelController extends Controller
         ]);
     }
 
-    // Version 3.0 — sin Oracle: el corredor sale de crm.vs_cel_prospecto + formulario STS
+    // Version 3.0 — sin Oracle
     public function multinivel($anio, $mes, $dia)
     {
         try {
-            $data = DB::select("SELECT * FROM crm.fn_multinivel_listar_facturas_por_fecha(?, ?, ?)", [$anio, $mes, $dia]);
+            $vfecha = sprintf('%s-%s-%s', $anio, $mes, $dia);
+
+            $data = DB::select("SELECT
+                                    m.fecha_ingreso,
+                                    m.identificacion_corredor,
+                                    m.corredor,
+                                    m.identificacion,
+                                    m.nombres,
+                                    m.apellidos,
+                                    m.ccm_id as id_factura,
+                                    m.fecha as fecha_factura,
+                                    m.periodo,
+                                    m.mes,
+                                    m.dia,
+                                    m.factura,
+                                    m.politica,
+                                    m.numero_cuotas,
+                                    m.subtotal,
+                                    m.forma_pago,
+                                    (m.total - m.valor_impuesto) as total_menos_valoriva
+                                FROM public.av_cfactura_multinivel_api m
+                                WHERE m.fecha > ?;", [$vfecha]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
@@ -30,31 +51,34 @@ class MultiNivelController extends Controller
         }
     }
 
-    // Version 3.0 — sin Oracle: el corredor sale de crm.vs_cel_prospecto + formulario STS
+    // Version 3.0 — sin Oracle
     public function multinivel_nce($anio, $mes, $dia)
     {
         try {
-            $data = DB::select("SELECT * FROM crm.fn_multinivel_listar_notas_credito(?, ?, ?)", [$anio, $mes, $dia]);
+            $data = DB::select("SELECT
+                                    fecha_ingreso,
+                                    cod_agente AS identificacion_corredor,
+                                    nombre_agente AS corredor,
+                                    identificacion,
+                                    nombres,
+                                    apellidos,
+                                    fecha AS fecha_nota_credito,
+                                    periodo,
+                                    mes,
+                                    dia,
+                                    comprobante AS nota_credito,
+                                    factura AS factura_afectada,
+                                    periodo_factura,
+                                    pol_nombre AS politica,
+                                    subtotalmenosdescuentos AS subtotal,
+                                    (total - valor_impuesto) AS total_menos_valoriva
+                                FROM public.af_nce_multinivel_api(?, ?, ?)", [$anio, $mes, $dia]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
         }
     }
-
-    // Version 3.0 — sin Oracle: el corredor sale de crm.vs_cel_prospecto + formulario STS
-    public function multinivel2($anio, $mes, $dia)
-    {
-        try {
-            $data = DB::select("SELECT * FROM crm.fn_multinivel_listar_facturas_por_corte_ccm(?, ?, ?)", [$anio, $mes, $dia]);
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito.', $data));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), $e->getMessage()));
-        }
-    }
-
-
 
     // ====================================================================================================================
     // HISTÓRICO — versiones con ORACLE (VS_CEL_PROSPECTO), reemplazadas por las de arriba. Se dejan comentadas.
