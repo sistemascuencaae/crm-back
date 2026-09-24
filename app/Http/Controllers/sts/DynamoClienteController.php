@@ -1136,11 +1136,11 @@ class DynamoClienteController extends Controller
 
 
 
-    // Version 1.0
+    // Version 2.0
     // LISTADO GENERAL DE CLIENTES CON EL RESPECTIVO CORREDOR
-    // Devuelve las vinculaciones VIGENTES (activo = true y fecha_desvinculacion NULL)
-    // con los datos del cliente, filtradas por rango de fecha de registro
-    // (BETWEEN sobre cm.created_at). fecha_inicio y fecha_fin son requeridas (YYYY-MM-DD).
+    // Clientes de Novasoft + formulario STS (vista crm.av_clientes_multinivel) vinculados en el
+    // rango de fechas (BETWEEN sobre fecha_ingreso), con su calificación y origen.
+    // fecha_inicio y fecha_fin son requeridas (YYYY-MM-DD).
     public function listClientesCorredor(Request $request)
     {
         try {
@@ -1162,28 +1162,69 @@ class DynamoClienteController extends Controller
             $fechaInicio = trim($request->input('fecha_inicio'));
             $fechaFin = trim($request->input('fecha_fin'));
 
-            // created_at es timestamp: se castea a date para que el BETWEEN
+            // fecha_ingreso es timestamp: se castea a date para que el BETWEEN
             // incluya los registros de todo el día de fechaFin
-            $resultado = DB::select("SELECT
-                                        cm.corredor,
-                                        cm.created_at AS fecha_registro,
-                                        c.cli_codigo AS identificacion,
-                                        e.ent_nombres AS nombres,
-                                        e.ent_apellidos AS apellidos,
-                                        e.ent_email AS email,
-                                        t.tel_numero AS telefono,
-                                        d.dir_calle_principal AS calle_principal,
-                                        d.dir_calle_secundaria AS calle_secundaria,
-                                        NULL AS calificacion_cliente
-                                    FROM public.clientes_multinivel cm
-                                        JOIN public.cliente c ON c.cli_id = cm.cli_id
-                                        JOIN public.entidad e ON e.ent_id = c.ent_id
-                                        LEFT JOIN public.telefono t ON t.tel_id = e.ent_telefono_principal
-                                        LEFT JOIN public.direccion d ON d.dir_id = e.ent_direccion_principal
-                                    WHERE cm.activo = true
-                                        AND cm.fecha_desvinculacion IS NULL
-                                        AND cm.created_at::date BETWEEN ? AND ?
-                                    ORDER BY cm.created_at ASC", [$fechaInicio, $fechaFin]);
+            $resultado = DB::select("WITH clientes AS MATERIALIZED (
+                                        -- Clientes de todos los corredores (Novasoft + formulario STS) vinculados en el rango de fechas
+                                        SELECT *
+                                        FROM crm.av_clientes_multinivel v
+                                        WHERE v.fecha_ingreso::date BETWEEN ? AND ?
+                                    ),
+                                    calificacion AS (
+                                        -- Caso 149/151 más alto abierto DESDE la vinculación y su 'Tipo Cliente' (NULL = todavía no calificado)
+                                        SELECT DISTINCT ON (cl.origen, cl.cod_agente, cl.cod_cliente)
+                                            cl.origen,
+                                            cl.cod_agente,
+                                            cl.cod_cliente,
+                                            rc.valor_varchar
+                                        FROM clientes cl
+                                            JOIN crm.caso caso
+                                                ON SUBSTRING(TRIM(caso.identificacion) FROM 1 FOR 10) = SUBSTRING(TRIM(cl.cod_cliente) FROM 1 FOR 10)
+                                                AND caso.created_at >= cl.fecha_ingreso
+                                                AND caso.tc_id IN (149, 151)
+                                            LEFT JOIN crm.requerimientos_caso rc ON rc.caso_id = caso.id
+                                                AND rc.titulo = 'Tipo Cliente'
+                                        ORDER BY cl.origen, cl.cod_agente, cl.cod_cliente, caso.id DESC, rc.id DESC
+                                    )
+                                    SELECT
+                                        v.cod_agente AS corredor,
+                                        v.fecha_ingreso AS fecha_registro,
+                                        v.cod_cliente AS identificacion,
+                                        v.nombres,
+                                        v.apellidos,
+                                        v.email,
+                                        v.celular AS telefono,
+                                        v.calle_principal,
+                                        v.transversal AS calle_secundaria,
+                                        cal.valor_varchar AS calificacion_cliente,
+                                        v.origen
+                                    FROM clientes v
+                                        LEFT JOIN calificacion cal ON cal.origen = v.origen
+                                            AND cal.cod_agente = v.cod_agente
+                                            AND cal.cod_cliente = v.cod_cliente
+                                    ORDER BY v.fecha_ingreso ASC", [$fechaInicio, $fechaFin]);
+
+            // Versión 1.0 (solo formulario STS, vinculaciones vigentes), reemplazada por la de arriba:
+            // $resultado = DB::select("SELECT
+            //                             cm.corredor,
+            //                             cm.created_at AS fecha_registro,
+            //                             c.cli_codigo AS identificacion,
+            //                             e.ent_nombres AS nombres,
+            //                             e.ent_apellidos AS apellidos,
+            //                             e.ent_email AS email,
+            //                             t.tel_numero AS telefono,
+            //                             d.dir_calle_principal AS calle_principal,
+            //                             d.dir_calle_secundaria AS calle_secundaria,
+            //                             NULL AS calificacion_cliente
+            //                         FROM public.clientes_multinivel cm
+            //                             JOIN public.cliente c ON c.cli_id = cm.cli_id
+            //                             JOIN public.entidad e ON e.ent_id = c.ent_id
+            //                             LEFT JOIN public.telefono t ON t.tel_id = e.ent_telefono_principal
+            //                             LEFT JOIN public.direccion d ON d.dir_id = e.ent_direccion_principal
+            //                         WHERE cm.activo = true
+            //                             AND cm.fecha_desvinculacion IS NULL
+            //                             AND cm.created_at::date BETWEEN ? AND ?
+            //                         ORDER BY cm.created_at ASC", [$fechaInicio, $fechaFin]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
         } catch (Exception $e) {
