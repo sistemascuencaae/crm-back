@@ -78,6 +78,21 @@ return [
             'sslmode' => 'prefer',
         ],
 
+        // Base espejo: variables propias ESPEJO_DB_* en el .env
+        'pgsql_espejo' => [
+            'driver' => 'pgsql',
+            'host' => env('ESPEJO_DB_HOST', '127.0.0.1'),
+            'port' => env('ESPEJO_DB_PORT', '5432'),
+            'database' => env('ESPEJO_DB_DATABASE', ''),
+            'username' => env('ESPEJO_DB_USERNAME', ''),
+            'password' => env('ESPEJO_DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'schema' => 'public',
+            'sslmode' => 'prefer',
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DATABASE_URL'),
@@ -92,18 +107,18 @@ return [
         ],
 
         'oracle' => [
-            'driver'         => 'oracle',
-            'tns'            => env('ORACLE_TNS', ''),
-            'host'           => env('ORACLE_HOST', '192.168.254.219'),
-            'port'           => env('ORACLE_PORT', '1521'),
-            'database'       => env('ORACLE_DATABASE', 'db19'),
-            'service_name'   => env('ORACLE_SERVICE_NAME', 'db19'),
-            'username'       => env('ORACLE_USERNAME', 'tableau'),
-            'password'       => env('ORACLE_PASSWORD', 'TABLEAU'),
-            'charset'        => env('ORACLE_CHARSET', 'AL32UTF8'),
-            'prefix'         => env('ORACLE_PREFIX', ''),
-            'schema'         => env('ORACLE_SCHEMA', 'STOCK'),
-            'edition'        => env('ORACLE_EDITION', 'ora$base'),
+            'driver' => 'oracle',
+            'tns' => env('ORACLE_TNS', ''),
+            'host' => env('ORACLE_HOST', '192.168.254.219'),
+            'port' => env('ORACLE_PORT', '1521'),
+            'database' => env('ORACLE_DATABASE', 'db19'),
+            'service_name' => env('ORACLE_SERVICE_NAME', 'db19'),
+            'username' => env('ORACLE_USERNAME', 'tableau'),
+            'password' => env('ORACLE_PASSWORD', 'TABLEAU'),
+            'charset' => env('ORACLE_CHARSET', 'AL32UTF8'),
+            'prefix' => env('ORACLE_PREFIX', ''),
+            'schema' => env('ORACLE_SCHEMA', 'STOCK'),
+            'edition' => env('ORACLE_EDITION', 'ora$base'),
             'server_version' => env('ORACLE_SERVER_VERSION', '19c'),
         ],
 
