@@ -61,7 +61,19 @@ class InventarioFechaSeriesController extends Controller
                                                                         join bodega b on c.bod_id = b.bod_id
                                 where c.estado = 'A' and cast(c.fecha as date) <= '" . $fecCorte . "'
                                                 and (b.bod_id = " . $bodega . " or 0 = " . $bodega . ")
-                                                and (p.pro_id = " . $producto . " or 0 = " . $producto . ")) as tabla
+                                                and (p.pro_id = " . $producto . " or 0 = " . $producto . ")
+                                union all
+                                select b.bod_nombre,
+                                                concat(p.pro_codigo,' - ',p.pro_nombre) as producto,
+                                                (case when d.tipo = 'N' then 1 else 0.5 end) as cantidad
+                                from gex.cdespacho c join gex.ddespacho d on c.numero = d.numero 
+                                                                        join producto p on d.pro_id  = p.pro_id
+                                                						left outer join cmovinv c2 on c.cmo_id = c2.cmo_id
+                                                						left outer join bodega b on c2.bod_id_fin = b.bod_id
+                                where c.estado = 'A' and cast(c.fecha as date) <= '" . $fecCorte . "'
+                                                and (b.bod_id = " . $bodega . " or 0 = " . $bodega . ")
+                                                and (p.pro_id = " . $producto . " or 0 = " . $producto . ")
+                                    			and c2.cti_id in (select cti_id from gex.doc_presenta where opcion = 'KAR')) as tabla
                                 group by bod_nombre, producto
                                 order by bod_nombre, producto");
 

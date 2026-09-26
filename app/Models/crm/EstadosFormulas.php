@@ -16,7 +16,7 @@ class EstadosFormulas extends Model
 
     protected $table = 'crm.estados_formulas';
 
-    protected $fillable = ["est_id_actual", "fase_id_actual", "resp_id", "est_id_proximo", "tablero_id", "fase_id", 'tab_id', 'validar_req'];
+    protected $fillable = ["est_id_actual", "fase_id_actual", "resp_id", "est_id_proximo", "tablero_id", "fase_id", 'tab_id', 'validar_req','tipo_caso_id'];
 
     public function setCreatedAtAttribute($value)
     {
@@ -38,6 +38,11 @@ class EstadosFormulas extends Model
     public function estado_actual()
     {
         return $this->belongsTo(Estados::class, "est_id_actual");
+    }
+
+    public function tipoCaso()
+    {
+        return $this->belongsTo(TipoCaso::class, "tipo_caso_id");
     }
 
     public function fase_actual()

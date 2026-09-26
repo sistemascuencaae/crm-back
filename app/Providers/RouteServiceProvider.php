@@ -44,6 +44,7 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/api.php'));
 
             Route::middleware('web')
+                ->middleware('api')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/web.php'));
 
@@ -58,6 +59,20 @@ class RouteServiceProvider extends ServiceProvider
                 ->namespace($this->namespace)
                 ->group(base_path('routes/openceo.php'));
 
+            Route::prefix('demo')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/demo.php'));
+
+            Route::prefix('sts')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/sts.php'));
+
+            Route::prefix('garancheck')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/garancheck.php'));
         });
     }
 

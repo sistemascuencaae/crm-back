@@ -24,13 +24,14 @@ class CrmController extends Controller
                 'fase.caso.user',
                 'fase.caso.tipocaso',
                 'fase.caso.clienteCrm',
-                'fase.caso.resumen',
+                // 'fase.caso.resumen',
                 'fase.caso.tareas',
-                'fase.caso.miembros.usuario',
+                // 'fase.caso.miembros.usuario',
                 'fase.caso.Actividad',
                 'fase.caso.Etiqueta',
                 'fase.caso.Galeria',
-                'fase.caso.Archivo'
+                'fase.caso.Archivo',
+                'fase.caso.agencia'
             )->where('id', $id)->first();
             //echo('data: '.json_encode($data));
 

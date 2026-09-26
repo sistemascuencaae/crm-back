@@ -2,6 +2,7 @@
 
 namespace App\Models\crm;
 
+use App\Models\configuracion\Agencia;
 use App\Models\crm\Estados;
 use App\Models\crm\Fase;
 use App\Models\crm\Tablero;
@@ -26,12 +27,16 @@ class TipoCasoFormulas extends Model
         "tiempo_vencimiento",
         "fase_id",
         "estado",
+        "acc_publico",
+        "codigo_agencia",
     ];
+
     public function setCreatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["created_at"] = Carbon::now();
     }
+
     public function setUpdatedAtAttribute($value)
     {
         date_default_timezone_set("America/Guayaquil");
@@ -68,4 +73,8 @@ class TipoCasoFormulas extends Model
         return $this->belongsTo(Fase::class, "fase_id");
     }
 
+    public function agencia()
+    {
+        return $this->belongsTo(Agencia::class, "codigo_agencia", "codigo");
+    }
 }

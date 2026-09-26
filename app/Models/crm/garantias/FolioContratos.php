@@ -7,10 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class FolioContratos extends Model implements Auditable
+class FolioContratos extends Model
 {
-    use AuditableTrait;
-
     use HasFactory;
 
     protected $table = 'gex.folios_contratos';
