@@ -390,6 +390,33 @@ class CasoController extends Controller
 
             // Si se quiere BLOQUEAR el caso
             if ($bloqueado === true || $bloqueado === "true" || $bloqueado === 1) {
+                // ¿El caso sigue en el tablero desde donde el usuario lo abrió? (si no, su tarjeta está vieja)
+                // Tablero que el usuario tiene abierto en pantalla (lo mandan el Kanban y la Lista)
+                $tableroId = $request->input('tableroId');
+                // Solo se valida si llegó el tablero; si no llega, se bloquea como antes
+                if ($tableroId) {
+                    // Buscar a qué tablero pertenece hoy la fase donde está el caso
+                    $faseCaso = DB::selectOne('SELECT tab_id FROM crm.fase WHERE id = ?', [$caso->fas_id]);
+                    // Si la fase no existe o es de otro tablero, el caso ya se movió
+                    if (!$faseCaso || $faseCaso->tab_id != $tableroId) {
+                        // Deshacer la transacción: no se bloquea nada
+                        DB::rollBack();
+
+                        // Dejar rastro en el log de quién intentó bloquear y desde qué tablero
+                        $log->logInfo(CasoController::class, 'Bloqueo rechazado - Caso #' . $casoId . ' ya no está en el tablero ' . $tableroId . '. Usuario que intentó: ' . $bloqueado_user);
+
+                        // Responder 409 para que la pantalla avise y quite la tarjeta vieja
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'El caso #' . $casoId . ' ya se movió a otro tablero',
+                            'data' => [
+                                'caso_id' => $casoId,
+                                'movido' => true
+                            ]
+                        ], 409); // HTTP 409 Conflict
+                    }
+                }
+
                 // Verificar si ya está bloqueado por OTRO usuario
                 if ($caso->bloqueado && $caso->bloqueado_user !== $bloqueado_user) {
 
@@ -457,8 +484,14 @@ class CasoController extends Controller
                 $data->tipo_admin = $usuarioActual->usu_tipo == 2 ? 'Administrador' : 'Superusuario';
             }
 
-            // Emitir evento WebSocket
-            broadcast(new TableroEvent($data));
+            // Avisar por websocket a los tableros abiertos que el caso cambió
+            try {
+                broadcast(new TableroEvent($data));
+            } catch (\Throwable $e) {
+                // Si el servidor de websockets está caído, el bloqueo YA quedó guardado:
+                // solo se anota el error en el log y se responde "success" igual
+                $log->logError(CasoController::class, 'No se pudo emitir el evento del bloqueo del caso #' . $casoId, $e);
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'El caso se actualizó con éxito', $data));
         } catch (\Throwable $e) {
