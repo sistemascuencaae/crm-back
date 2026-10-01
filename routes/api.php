@@ -662,10 +662,17 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // USUARIOS
 
     Route::get('allUsers', [UserController::class, 'allUsers']); // by caso_id
+    Route::get('listarUsuarios', [UserController::class, 'listarUsuarios']); // listado paginado (list-usuario)
     Route::get('listUsers', [UserController::class, 'listUsers']); // lista de usuario para el calendario
     Route::post('/addUser', [UserController::class, 'addUser']); // guardar
     Route::post('/editUser/{id}', [UserController::class, 'editUser']); // Editar
     Route::delete('/deleteUser/{id}', [UserController::class, 'deleteUser']); // Eliminar
+    Route::get('/listCatalogosUsuarioDynamo', [UserController::class, 'listCatalogosUsuarioDynamo']); // puntos de venta, comprobantes y perfiles casados
+    Route::get('/verificarAliasUsuario/{alias}', [UserController::class, 'verificarAliasUsuario']); // usu_alias en CRM y Dynamo
+    Route::get('/buscarUsuarioPorCedula/{cedula}', [UserController::class, 'buscarUsuarioPorCedula']); // precarga del alta por cédula
+    Route::get('/buscarUsuarioDynamoPorAlias/{alias}', [UserController::class, 'buscarUsuarioDynamoPorAlias']); // lo que el usuario tiene hoy en Dynamo (edición)
+    Route::get('/sugerirAbreviacionEmpleado', [UserController::class, 'sugerirAbreviacionEmpleado']); // abreviación sugerida del empleado de Dynamo
+    Route::get('/verificarAbreviacionEmpleado/{abreviacion}', [UserController::class, 'verificarAbreviacionEmpleado']); // abreviación ya usada en Dynamo
     Route::get('/listUsuariosByTableroId/{tablero_id}', [UserController::class, 'listUsuariosByTableroId']); // listar usuarios del tablero
     Route::get('/listUsuarioById/{user_id}', [UserController::class, 'listUsuarioById']); // listar usuario por ID
 

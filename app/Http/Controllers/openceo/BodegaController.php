@@ -125,14 +125,15 @@ class BodegaController extends Controller
                     }
                 }
 
-                // Cargar todos los usuarios de una vez
-                $aliases = array_column($usuarios, 'usu_alias');
-                $usuariosModelos = User::whereIn('usu_alias', $aliases)->get()->keyBy('usu_alias');
+                // Cargar todos los usuarios de una vez (alias sin importar mayúsculas ni espacios)
+                $aliases = array_map(fn ($alias) => mb_strtoupper(trim((string) $alias)), array_column($usuarios, 'usu_alias'));
+                $usuariosModelos = User::whereIn(DB::raw('UPPER(TRIM(usu_alias))'), $aliases)->get()
+                    ->keyBy(fn ($usuario) => mb_strtoupper(trim($usuario->usu_alias)));
 
                 // Actualizar usuarios
                 if ($bodegaData) {
                     foreach ($usuarios as $item) {
-                        $usuario = $usuariosModelos->get($item['usu_alias']);
+                        $usuario = $usuariosModelos->get(mb_strtoupper(trim((string) $item['usu_alias'])));
 
                         if ($usuario) {
                             $usuario->bod_id = $bodegaData->bod_add1;
@@ -191,7 +192,7 @@ class BodegaController extends Controller
                     $usuarioDynamo = DB::SelectOne("SELECT u.usu_id, u.usu_alias FROM public.usuario u where u.usu_id = ?", [$request->usu_id]);
 
                     if ($usuarioDynamo) {
-                        $usuario = User::where('usu_alias', $usuarioDynamo->usu_alias)->first();
+                        $usuario = User::whereRaw('UPPER(TRIM(usu_alias)) = UPPER(TRIM(?))', [$usuarioDynamo->usu_alias])->first();
 
                         if ($usuario) {
                             $usuario->bod_id = 1;
@@ -225,7 +226,7 @@ class BodegaController extends Controller
                     return;
                 }
 
-                $usuario = User::where('usu_alias', $usuarioDynamo->usu_alias)->first();
+                $usuario = User::whereRaw('UPPER(TRIM(usu_alias)) = UPPER(TRIM(?))', [$usuarioDynamo->usu_alias])->first();
 
                 if ($usuario && $ultimaBodega['bod_id']) {
                     // Calcular bodegas relacionadas

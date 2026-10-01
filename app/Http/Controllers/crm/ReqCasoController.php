@@ -442,7 +442,7 @@ class ReqCasoController extends Controller
         $usuAlias = optional(auth('api')->user())->usu_alias;
         $usuId = null;
         if ($usuAlias) {
-            $u = DB::selectOne('SELECT usu_id FROM usuario WHERE UPPER(usu_alias) = UPPER(?) LIMIT 1', [$usuAlias]);
+            $u = DB::selectOne('SELECT usu_id FROM usuario WHERE UPPER(TRIM(usu_alias)) = UPPER(TRIM(?)) LIMIT 1', [$usuAlias]);
             $usuId = $u->usu_id ?? null;
         }
         if (!$usuId) {
