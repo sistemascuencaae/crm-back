@@ -16,6 +16,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -107,6 +108,8 @@ class DynamoClienteController extends Controller
                 return $tokenData;
             }
             $corredor = trim($tokenData['corredor']);
+            // Usuario del proveedor (del token): lo usan nombreOficial() y la auditoría del alta de Novasoft.
+            $this->usuIdEnlace = isset($tokenData['usu_id']) ? (int) $tokenData['usu_id'] : null;
 
             // Días de vigencia de la vinculación cliente-corredor (parámetro CLICOR)
             $diasCorredor = $this->obtenerDiasParametroCorredor();
@@ -139,6 +142,39 @@ class DynamoClienteController extends Controller
             // GaranCheck. La consulta queda registrada igual, con existia = true.
             if ($foto && !empty($foto['cli_id'])) {
                 $this->registrarConsultaCorredor($corredor, $identificacion, (int) $foto['cli_id'], true);
+
+                return response()->json(RespuestaApi::returnResultado('error', 'El cliente ya existe', null));
+            }
+
+            // PROSPECTO DE NOVASOFT: ya tiene corredor allá, así que aquí también "ya existe" y NO se
+            // consulta a GaranCheck. Por detrás se crea como cliente igual que el formulario, sin casarlo.
+            $prospecto = $this->prospectoNovasoft($identificacion);
+            if ($prospecto) {
+                try {
+                    $celular = preg_replace('/\D/', '', (string) $prospecto->celular);
+
+                    $alta = $this->registrarClienteContado($request, [
+                        'identificacion' => $identificacion,
+                        'tipoidentificacion' => (int) $tipoidentificacion,
+                        // Nombres y apellidos los pone nombreOficial() dentro de registrarClienteContado.
+                        'nombres' => '',
+                        'apellidos' => '',
+                        'email' => '',
+                        'telefono' => strlen($celular) === 10 ? $celular : null,
+                        'direccion' => ConsultasService::DIRECCION_MULTINIVEL,
+                        'dir_calle_secundaria' => ConsultasService::DIRECCION_MULTINIVEL,
+                    ], $foto, $corredor, (int) $tokenData['tipo_corredor'], $diasCorredor, false)->getData(true);
+
+                    if (($alta['status'] ?? '') !== 'success') {
+                        Log::warning('Prospecto de Novasoft sin crear (' . $identificacion . '): ' . ($alta['message'] ?? ''));
+                    }
+                } catch (\Throwable $e) {
+                    // El corredor igual ve "ya existe"; se reintenta en la próxima búsqueda.
+                    Log::warning('Prospecto de Novasoft sin crear (' . $identificacion . '): ' . $e->getMessage());
+                }
+
+                $cliente = $this->fotoCliente($identificacion, (int) $tipoidentificacion);
+                $this->registrarConsultaCorredor($corredor, $identificacion, !empty($cliente['cli_id']) ? (int) $cliente['cli_id'] : null, true);
 
                 return response()->json(RespuestaApi::returnResultado('error', 'El cliente ya existe', null));
             }
@@ -362,7 +398,8 @@ class DynamoClienteController extends Controller
     // ESTADOS A y B. crm.fn_clientes_registrar mide el duplicado contra un CLIENTE tipo 1, no
     // contra la entidad: si la persona ya existe (proveedor, garante) la REUSA y baja su
     // dirección y teléfono anteriores a adicionales. Por eso un solo camino cubre los dos casos.
-    private function registrarClienteContado(Request $request, array $campos, ?array $foto, string $corredor, int $tipoCorredor, int $diasCorredor)
+    // $vincular = false: alta del prospecto de Novasoft desde la lupa, sin casarlo con ningún corredor.
+    private function registrarClienteContado(Request $request, array $campos, ?array $foto, string $corredor, int $tipoCorredor, int $diasCorredor, bool $vincular = true)
     {
         $defaults = $this->defaultsCanal();
         if ($defaults instanceof JsonResponse) {
@@ -378,7 +415,7 @@ class DynamoClienteController extends Controller
         $campos['nombres'] = $oficial['nombres'];
         $campos['apellidos'] = $oficial['apellidos'];
 
-        return $this->ejecutarGuardado($request, $corredor, $tipoCorredor, $diasCorredor, 'Cliente creado con éxito', function () use ($campos, $foto, $defaults) {
+        $armarPayload = function () use ($campos, $foto, $defaults) {
             $payload = [
                 'ent_identificacion' => $campos['identificacion'],
                 'ent_tipo_identificacion' => $campos['tipoidentificacion'],
@@ -452,7 +489,11 @@ class DynamoClienteController extends Controller
             }
 
             return ['crm.fn_clientes_registrar', $payload];
-        });
+        };
+
+        return $vincular
+            ? $this->ejecutarGuardado($request, $corredor, $tipoCorredor, $diasCorredor, 'Cliente creado con éxito', $armarPayload)
+            : $this->ejecutarGuardadoSinVincular($request, $corredor, 'Cliente creado con éxito', $armarPayload);
     }
 
     // Nombre oficial del cliente, resuelto en el servidor y nunca desde el request:
@@ -864,6 +905,17 @@ class DynamoClienteController extends Controller
                                 ORDER BY id DESC LIMIT 1", [$corredor, $identificacion]);
 
         return $fila && $fila->existia === false && (int) $fila->cli_id === $cliId;
+    }
+
+    // Prospecto que un corredor registró en Novasoft (crm.vs_cel_prospecto), por los 10 primeros
+    // dígitos; null si no está. Si está repetido, el registro más reciente (de ahí sale el celular).
+    private function prospectoNovasoft(string $identificacion): ?object
+    {
+        return DB::selectOne("SELECT p.celular
+                                FROM crm.vs_cel_prospecto p
+                               WHERE SUBSTRING(TRIM(REPLACE(p.cod_cliente, '-', '')) FROM 1 FOR 10) = ?
+                               ORDER BY p.fecha_ingreso DESC NULLS LAST, p.id DESC
+                               LIMIT 1", [substr($identificacion, 0, 10)]);
     }
 
     // Corredor con vinculación VIGENTE, o null si está libre. Si la vinculación ya cumplió los

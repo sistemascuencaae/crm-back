@@ -89,8 +89,8 @@ class UserDynamoController extends Controller
                         // 3. Verificamos que sea diferente de una feria para que no me cambie la agencia ni los permismos de la cajera.
                         // (Puntos de venta de las ferias que estan vinculados alm_id = 1 que es Luis_Cordero_2 (601...))
                         if (!in_array($request->pve_numero, $pveFeriasArray)) {
-                            // 4. Buscamos el usuario por usu_alias.
-                            $user = User::where('usu_alias', $request->usu_alias)->first();
+                            // 4. Buscamos el usuario por usu_alias (sin importar mayúsculas ni espacios).
+                            $user = User::whereRaw('UPPER(TRIM(usu_alias)) = UPPER(TRIM(?))', [$request->usu_alias])->first();
 
                             // 5. Si existe en el CRM ingresa para actualizar su agencia.
                             if ($user) {
