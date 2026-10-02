@@ -663,6 +663,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
     Route::get('allUsers', [UserController::class, 'allUsers']); // by caso_id
     Route::get('listarUsuarios', [UserController::class, 'listarUsuarios']); // listado paginado (list-usuario)
+    Route::get('usuarioAuditoria', [UserController::class, 'usuarioAuditoria']); // auditoría de un usuario (modal del listado)
     Route::get('listUsers', [UserController::class, 'listUsers']); // lista de usuario para el calendario
     Route::post('/addUser', [UserController::class, 'addUser']); // guardar
     Route::post('/editUser/{id}', [UserController::class, 'editUser']); // Editar

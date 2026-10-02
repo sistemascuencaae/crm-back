@@ -5,12 +5,14 @@ namespace App\Http\Controllers\User;
 use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\Access;
 use App\Models\configuracion\UsuarioCHorario;
 use App\Models\crm\Almacen;
 use App\Models\crm\Tablero;
 use App\Models\crm\TableroUsuario;
+use App\Models\mail\SendMailCredencialesUsuario;
 use App\Models\openceo\Usuario;
 use App\Models\User;
 use App\Models\UsuarioAlmacen;
@@ -18,6 +20,8 @@ use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -181,8 +185,8 @@ class UserController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', $mensaje, ''));
             }
 
-            // CRM y Dynamo en una sola transacción: si falla uno, no se guarda nada.
-            $aviso = DB::transaction(function () use ($request, $crearDynamo, $alias, $cedula) {
+            // CRM y Dynamo en una sola transacción, junto con la auditoría (abajo): si falla uno, no se guarda nada.
+            $guardar = function () use ($request, $crearDynamo, $alias, $cedula) {
                 $avisos = [];
                 $newUserData = null;
 
@@ -309,12 +313,36 @@ class UserController extends Controller
                 }
 
                 return $avisos ? implode(' ', $avisos) : null;
+            };
+
+            $aviso = DB::transaction(function () use ($request, $alias, $guardar) {
+                // Si el alias ya estaba en el CRM, solo se crea en Dynamo: queda como modificación de ese usuario.
+                $idExistente = $alias->existe_crm ? $this->idUsuarioPorAlias($request->input('usu_alias')) : null;
+                $fotoAntes = $idExistente ? $this->fotoAuditoriaUsuario($idExistente) : null;
+
+                $aviso = $guardar();
+
+                $this->registrarAuditoriaUsuario($request, $idExistente ?? $this->idUsuarioPorAlias($request->input('usu_alias')),
+                    $idExistente ? 'UPDATE' : 'INSERT', $fotoAntes);
+
+                return $aviso;
             });
+
+            // El correo sale después de guardar: si falla, el usuario ya quedó creado y solo se avisa.
+            $mensaje = 'Se guardó con éxito';
+            if ($request->boolean('enviar_credenciales')) {
+                $errorCorreo = $this->enviarCredencialesPorCorreo($request, true, $crearDynamo);
+                if ($errorCorreo) {
+                    $aviso = trim($aviso . ' ' . $errorCorreo);
+                } else {
+                    $mensaje .= '. Se enviaron las credenciales a ' . trim((string) $request->input('email'));
+                }
+            }
 
             $usuarios = User::orderBy("id", "desc")->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario', 'usuario_crea_actualiza')->get();
 
             // 'aviso' va aparte para que 'data' siga siendo la lista de usuarios.
-            return response()->json(RespuestaApi::returnResultado('success', 'Se guardó con éxito', $usuarios) + ['aviso' => $aviso]);
+            return response()->json(RespuestaApi::returnResultado('success', $mensaje, $usuarios) + ['aviso' => $aviso]);
         } catch (QueryException $e) {
             return $this->respuestaErrorConsulta($e);
         } catch (Exception $e) {
@@ -455,6 +483,103 @@ class UserController extends Controller
             ->exists();
     }
 
+    private function idUsuarioPorAlias($alias)
+    {
+        return User::whereRaw('UPPER(TRIM(usu_alias)) = UPPER(TRIM(?))', [$alias])->value('id');
+    }
+
+    // Foto del usuario (CRM y Dynamo, sin contraseñas) para la auditoría; null si no existe.
+    private function fotoAuditoriaUsuario($userId)
+    {
+        return DB::selectOne('SELECT crm.fn_usuario_auditoria_armar_foto(?) AS foto', [$userId])->foto;
+    }
+
+    // Una fila por alta o edición en auditoria.logs_cambios (módulo USUARIOS); la foto de después la arma la función.
+    private function registrarAuditoriaUsuario(Request $request, $userId, $operacion, $fotoAntes)
+    {
+        DB::select('SELECT crm.fn_usuario_auditoria_registrar(?, ?, ?::jsonb, ?::boolean, ?::jsonb)', [
+            $userId,
+            $operacion,
+            $fotoAntes,
+            $request->filled('password') ? 'true' : 'false',
+            json_encode($this->contextoAuditoriaForense($request)),
+        ]);
+    }
+
+    // Quién, desde dónde y en qué request, igual que en clientes.
+    private function contextoAuditoriaForense(Request $request): array
+    {
+        $u = auth('api')->user();
+
+        return [
+            'usuario_id' => $u->id ?? null,
+            'usuario_login' => $u->usu_alias ?? null,
+            'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'request_id' => (string) Str::uuid(),
+        ];
+    }
+
+    // Usuario y contraseña al correo del usuario, desde la cuenta de siempre (cotizaciones@). Devuelve el error o null.
+    private function enviarCredencialesPorCorreo(Request $request, $esAlta, $conDynamo)
+    {
+        $email = trim((string) $request->input('email'));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return 'No se enviaron las credenciales: el correo "' . $email . '" no es válido.';
+        }
+
+        try {
+            Mail::to($email)->send(new SendMailCredencialesUsuario((object) [
+                'asunto' => $esAlta ? 'Su usuario del CRM' : 'Sus credenciales del CRM cambiaron',
+                'es_alta' => $esAlta,
+                'nombres' => $request->input('name'),
+                'apellidos' => $request->input('surname'),
+                'usuario' => trim((string) $request->input('usu_alias')),
+                'contrasena' => $request->filled('password') ? $request->input('password') : null,
+                'dynamo' => $conDynamo,
+            ]));
+
+            return null;
+        } catch (\Throwable $e) {
+            (new Funciones())->logError(UserController::class, 'Error al enviar las credenciales a ' . $email, $e);
+
+            return 'No se pudieron enviar las credenciales por correo: ' . $e->getMessage();
+        }
+    }
+
+    // Auditoría de UN usuario (modal del listado): resumen y eventos de auditoria.logs_cambios, módulo USUARIOS.
+    public function usuarioAuditoria(Request $request)
+    {
+        if (!$this->tienePermisoUsuarios('audit')) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para ver la auditoría de usuarios', null));
+        }
+
+        try {
+            $userId = (int) $request->query('user_id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($userId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Usuario no válido', null));
+            }
+
+            $resumen = DB::selectOne('SELECT * FROM crm.fn_usuario_auditoria_resumen(?)', [$userId]);
+            $eventos = DB::select('SELECT * FROM crm.fn_usuario_auditoria_listar_paginacion(?, ?, ?, ?)', [$userId, $pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del usuario', $th->getMessage()));
+        }
+    }
+
     public function editUser(Request $request, $user_id)
     {
         if (!$this->tienePermisoUsuarios('edit')) {
@@ -503,8 +628,8 @@ class UserController extends Controller
             $tablerosSinQuitar = (int) $usuario->usu_tipo === 3 || (int) $usuario->id === (int) auth()->id()
                 || strpos((string) $usuario->name, 'USUARIO GENERAL') !== false;
 
-            // CRM y Dynamo en una sola transacción: si falla uno, no se guarda nada.
-            $aviso = DB::transaction(function () use ($request, $usuario, $user_id, $alias, $aliasAnterior, $aliasCambio, $cedula, $dynamoActual, $verificacion, $activo, $crearDynamo, $perfilCasado, $tablerosSinQuitar) {
+            // CRM y Dynamo en una sola transacción, junto con la auditoría (abajo): si falla uno, no se guarda nada.
+            $guardar = function () use ($request, $usuario, $user_id, $alias, $aliasAnterior, $aliasCambio, $cedula, $dynamoActual, $verificacion, $activo, $crearDynamo, $perfilCasado, $tablerosSinQuitar) {
                 $almAnterior = $usuario->alm_id;
 
                 $request->merge(['usu_alias' => $alias, 'cedula' => $cedula, 'id_usu_crea_actualiza' => auth()->id()]);
@@ -636,14 +761,35 @@ class UserController extends Controller
                 }
 
                 return $avisos ? implode(' ', $avisos) : null;
+            };
+
+            $aviso = DB::transaction(function () use ($request, $usuario, $guardar) {
+                $fotoAntes = $this->fotoAuditoriaUsuario($usuario->id);
+
+                $aviso = $guardar();
+
+                $this->registrarAuditoriaUsuario($request, $usuario->id, 'UPDATE', $fotoAntes);
+
+                return $aviso;
             });
+
+            // Credenciales por correo solo si cambiaron la contraseña o el alias y el usuario queda activo.
+            $mensaje = 'Se actualizó con éxito';
+            if ($request->boolean('enviar_credenciales') && $activo && ($request->filled('password') || $aliasCambio)) {
+                $errorCorreo = $this->enviarCredencialesPorCorreo($request, false, $crearDynamo || ($dynamoActual && $perfilCasado));
+                if ($errorCorreo) {
+                    $aviso = trim($aviso . ' ' . $errorCorreo);
+                } else {
+                    $mensaje .= '. Se enviaron las credenciales a ' . trim((string) $request->input('email'));
+                }
+            }
 
             $data = User::where('id', $usuario->id)
                 ->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia', 'horario.chorario', 'usuario_crea_actualiza')
                 ->first();
 
             // 'aviso' va aparte, igual que en el alta.
-            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $data) + ['aviso' => $aviso]);
+            return response()->json(RespuestaApi::returnResultado('success', $mensaje, $data) + ['aviso' => $aviso]);
         } catch (QueryException $e) {
             return $this->respuestaErrorConsulta($e);
         } catch (Exception $e) {
