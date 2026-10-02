@@ -62,15 +62,15 @@ class CambioAgenciaController extends Controller
                                         FROM public.usuario
                                     WHERE cme_id = 345
                                         AND usu_activo = true
-                                        AND usu_alias = ?) dynamo
+                                        AND UPPER(TRIM(usu_alias)) = UPPER(TRIM(?))) dynamo
                                 FULL OUTER JOIN
                                     (SELECT u.id, u.usu_alias, u.name, u.surname, a.nombre AS almacen_actual_crm
                                         FROM crm.users u
                                         LEFT JOIN crm.agencia a ON a.codigo = u.alm_id::varchar
                                     WHERE u.profile_id = 38
                                         AND u.estado = true
-                                        AND u.usu_alias = ?) crm
-                                ON dynamo.usu_alias = crm.usu_alias
+                                        AND UPPER(TRIM(u.usu_alias)) = UPPER(TRIM(?))) crm
+                                ON UPPER(TRIM(dynamo.usu_alias)) = UPPER(TRIM(crm.usu_alias))
                             ", [$request->identificacion, $request->identificacion]);
 
             if (!$data) {

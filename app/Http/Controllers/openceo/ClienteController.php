@@ -644,7 +644,7 @@ class ClienteController extends Controller
     }
 
     // Reporte "Solicitud de Cupo y Aceptación de Cesión de Derechos del Crédito" vía crm.fn_cliente_solicitud_credito.
-    // Resuelve el usu_id del ERP comparando UPPER(usu_alias) del usuario logueado contra UPPER(usu_alias) del ERP.
+    // Resuelve el usu_id del ERP comparando UPPER(TRIM(usu_alias)) del usuario logueado contra el del ERP.
     // Si no hay coincidencia, cae al usu_id del agente (empleado) asignado al cliente.
     public function solicitudCredito($cliId)
     {
@@ -654,7 +654,7 @@ class ClienteController extends Controller
 
             if ($usuAlias) {
                 $usuario = DB::selectOne(
-                    'SELECT usu_id FROM usuario WHERE UPPER(usu_alias) = UPPER(?) LIMIT 1',
+                    'SELECT usu_id FROM usuario WHERE UPPER(TRIM(usu_alias)) = UPPER(TRIM(?)) LIMIT 1',
                     [$usuAlias]
                 );
                 $usuId = $usuario->usu_id ?? null;
