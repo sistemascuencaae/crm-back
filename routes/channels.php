@@ -1,9 +1,9 @@
 <?php
 
+use App\Models\chat\ChatConversaciones;
+use App\Models\chat\ChatGrupos;
 use App\Models\crm\Caso;
-use App\Models\crm\Fase;
 use App\Models\crm\Tablero;
-use App\Models\crm\Tarea;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
@@ -43,7 +43,6 @@ Broadcast::channel('caso.comentarios.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('tablero.{id}', function ($user, $id) {
-
     $usuario = User::where("id", $user->id)->get();
     $tablero = Tablero::where("id", $id)->get();
     // echo('ingresamos al chanel'.json_encode($tablero));
@@ -52,15 +51,49 @@ Broadcast::channel('tablero.{id}', function ($user, $id) {
     } else {
         return false;
     }
+});
+
+Broadcast::channel('conversacion.{id}.{tipo}', function ($user, $id, $tipo) {
+    $usuario = User::where("id", $user->id)->first();
+    if ($tipo === 'NORMAL') {
+        $conversacionNormales = ChatConversaciones::find($id);
+        if ($conversacionNormales && $usuario) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    if ($tipo === 'GRUPAL') {
+        $conversacionGrupales = ChatGrupos::find($id);
+        if ($conversacionGrupales && $usuario) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+});
+
+Broadcast::channel('chat.refresh.conver.{id}', function ($user, $id) {
+    $usuario = User::where("id", $id)->first();
+    if ($usuario) {
+        return true;
+    } else {
+        return false;
+    }
+});
 
 
-    // $usuario = User::where("id", $user->id)->first();
-    // $caso = Caso::where("user_id", $user->id)->first();
-    // if ($caso && $usuario) {
-    //     return true;
-    // } else {
-    //     return false;
-    // }
+
+// JGSJ - NO LO ESTOY OCUPANDO EN NINGUN LADO (QUITAR ESTE COMENTARIO CUANDO SE LO OCUPE EN ALGUN LADO) 
+Broadcast::channel('usuario.{id}', function ($user) {
+    $usuario = User::where("id", $user->id)->first();
+
+    // echo('ingresamos al chanel'.json_encode($tablero));
+    if ($usuario) {
+        return true;
+    } else {
+        return false;
+    }
 });
 
 

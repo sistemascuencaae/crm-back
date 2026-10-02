@@ -3,16 +3,22 @@
 namespace App\Http\Controllers\crm\credito;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Archivo;
 use App\Models\crm\Audits;
 use App\Models\crm\Caso;
 use App\Models\crm\Galeria;
+use App\Models\crm\RequerimientoCaso;
+use App\Models\crm\Tablero;
+use App\Models\crm\TableroUsuario;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class GaleriaController extends Controller
 {
@@ -23,12 +29,32 @@ class GaleriaController extends Controller
 
     public function addGaleria(Request $request, $caso_id)
     {
+        $log = new Funciones();
+
         try {
             if ($request->hasFile("imagen_file")) {
                 $imagen = $request->file("imagen_file");
-                $titulo = $imagen->getClientOriginalName();
+                // $titulo = $imagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
 
-                $path = Storage::disk('nas')->putFileAs($caso_id . "/galerias", $imagen, $caso_id . '-' . $titulo);
+                // Fecha actual
+                $fechaActual = Carbon::now();
+
+                // Formatear la fecha en formato deseado
+                // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+
+                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
+                if ($parametro->nas == true) {
+                    $path = Storage::disk('nas')->putFileAs("casos/" . $caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                } else {
+                    $path = Storage::disk('local')->putFileAs("casos/" . $caso_id . "/galerias", $imagen, $caso_id . '-' . $fecha_actual . '-' . $titulo);
+                }
 
                 $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
             }
@@ -49,101 +75,115 @@ class GaleriaController extends Controller
             $audit->new_values = json_encode([]);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'addGaleria';
+            $audit->caso_id = $galeria->caso_id;
             $audit->save();
             // END Auditoria
 
+            $log->logInfo(GaleriaController::class, 'Se guardo con exito la imagen en el caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
         } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al guardar la imagen en el caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
-    // public function listGaleriaByCasoId($caso_id)
-    // {
-    //     try {
-    //         $galerias = Galeria::orderBy("id", "asc")->where('caso_id', $caso_id)->get();
-
-    //         // return response()->json([
-    //         //     "imagenes" => $imagenes,]);
-
-    //         // return response()->json([
-    //         //     "imagenes" => $galerias->map(function ($galeria) {
-    //         //         return [
-    //         //             "id" => $galeria->id,
-    //         //             "titulo" => $galeria->titulo,
-    //         //             "descripcion" => $galeria->descripcion,
-    //         //             // "imagen" => env("APP_URL") . "storage/app/public/" . $imagen->imagen,
-    //         //             "imagen" => $galeria->imagen,
-    //         //             "caso_id" => $galeria->caso_id,
-    //         //             "tipo_gal_id" => $galeria->tipo_gal_id
-    //         //         ];
-    //         //     }),
-    //         // ]);
-
-
-    //         return response()->json(
-    //             RespuestaApi::returnResultado(
-    //                 'success',
-    //                 'Se listo con éxito',
-    //                 $galerias
-    //                 // $galerias->map(function ($galeria) {
-    //                 //     return [
-    //                 //         "id" => $galeria->id,
-    //                 //         "titulo" => $galeria->titulo,
-    //                 //         "descripcion" => $galeria->descripcion,
-    //                 //         "imagen" => $galeria->imagen,
-    //                 //         "caso_id" => $galeria->caso_id,
-    //                 //         "tipo_gal_id" => $galeria->tipo_gal_id,
-    //                 //         "sc_id" => $galeria->sc_id,
-    //                 //     ];
-    //                 // })
-    //             )
-    //         );
-    //     } catch (Exception $e) {
-    //         return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-    //     }
-
-    // }
-
-    public function listGaleriaByCasoId($caso_id)
+    public function listGaleriaByCasoId($caso_id, $tabId)
     {
+        $log = new Funciones();
         try {
             // Recupera las galerías relacionadas con el caso_id desde la base de datos
-            $galerias = Galeria::where('caso_id', $caso_id)->get();
+            //$galerias = Galeria::where('caso_id', $caso_id)->get();
+            $userLoginId = Auth::id();
+            $user = DB::selectOne("SELECT * FROM crm.users where id = ?", [$userLoginId]);
+            $data = [];
+            if ($user->usu_tipo_analista !== 1) {
+                $data = Galeria::where('caso_id', $caso_id)->get();
+            } else {
+                $data = DB::select("SELECT * from (
+            select ga.* from crm.galerias ga
+            where ga.tipo_gal_id <> 8
+            union
+            select ga2.* from crm.galerias ga2
+            inner join crm.requerimientos_caso rc2 on rc2.galerias_id = ga2.id
+            where rc2.acc_publico = true or (rc2.acc_publico = false and rc2.tab_id = $tabId)
+            ) temp where temp.caso_id = $caso_id ORDER BY temp.id DESC");
+            }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $galerias));
+
+
+            $log->logInfo(GaleriaController::class, 'Se listo con exito las imagenes del caso #' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al listar la imagenes del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function editGaleria(Request $request, $id)
     {
+        $log = new Funciones();
         try {
-            $galeria = Galeria::findOrFail($id);
+            $galeria = Galeria::find($id);
 
             // Obtener el old_values (valor antiguo)
             $audit = new Audits();
             $valorAntiguo = $galeria;
             $audit->old_values = json_encode($valorAntiguo);
 
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
             if ($request->hasFile("imagen_file")) {
                 if ($galeria->imagen) {
-                    // Eliminamos la imagen anterior del disco NAS
-                    Storage::disk('nas')->delete($galeria->imagen);
+                    if ($parametro->nas == true) {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('nas')->delete($galeria->imagen);
+                    } else {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('local')->delete($galeria->imagen);
+                    }
                 }
 
                 // Obtener el nuevo archivo de imagen y su nombre original
                 $nuevaImagen = $request->file("imagen_file");
-                $titulo = $nuevaImagen->getClientOriginalName();
+                // $titulo = $nuevaImagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $nuevaImagen->getClientOriginalName()); // Reemplazar espacios por -
 
-                // Guardar la nueva imagen en el disco NAS con su nombre original
-                $path = Storage::disk('nas')->putFileAs($galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $titulo);
+
+                // Fecha actual
+                $fechaActual = Carbon::now();
+
+                // Formatear la fecha en formato deseado
+                // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+
+                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                if ($parametro->nas == true) {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('nas')->putFileAs("casos/" . $galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
+                } else {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('local')->putFileAs("casos/" . $galeria->caso_id . "/galerias", $nuevaImagen, $galeria->caso_id . '-' . $fecha_actual . '-' . $titulo);
+                }
 
                 $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
             }
 
             $galeria->update($request->all());
+
+            // si la imagen es de un requerimiento actualizar el requerimiento
+            $reqCaso = RequerimientoCaso::where('galerias_id', $galeria->id)->first();
+            if ($reqCaso) {
+                $reqCaso->descripcion = $galeria->descripcion;
+                $reqCaso->valor_varchar = $galeria->imagen;
+                $reqCaso->save();
+            }
 
             // START Bloque de código que genera un registro de auditoría manualmente
             $audit->user_id = Auth::id();
@@ -157,17 +197,23 @@ class GaleriaController extends Controller
             $audit->new_values = json_encode($galeria);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'editGaleria';
+            $audit->caso_id = $galeria->caso_id;
             $audit->save();
             // END Auditoria
 
+            $log->logInfo(GaleriaController::class, 'Se actualizo con exito la imagen, con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
         } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al actualizar la imagen, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function deleteGaleria(Request $request, $id)
     {
+        $log = new Funciones();
         try {
             $galeria = Galeria::findOrFail($id);
             // Obtener el old_values (valor antiguo)
@@ -176,7 +222,15 @@ class GaleriaController extends Controller
             // $url = str_replace("storage", "public", $galeria->imagen); //Reemplazamos la palabra storage por public (ruta de nuestra img public/galerias/name_img)
             // Storage::delete($url); //Mandamos a borrar la foto de nuestra carpeta storage
 
-            Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
+            if ($parametro->nas == true) {
+                Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            } else {
+                Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+            }
 
             $galeria->delete();
 
@@ -194,24 +248,250 @@ class GaleriaController extends Controller
             $audit->new_values = json_encode([]);
             $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
             $audit->accion = 'deleteGaleria';
+            $audit->caso_id = $galeria->caso_id;
             $audit->save();
             // END Auditoria
 
+            $log->logInfo(GaleriaController::class, 'Se elimino con exito la imagen, con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $galeria));
         } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al eliminar la imagen, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function listGaleriaBySolicitudCreditoId($sc_id)
     {
+        $log = new Funciones();
         try {
             $ultimaFoto = Galeria::where('sc_id', $sc_id)->latest('id')->first();
 
+            $log->logInfo(GaleriaController::class, 'Se listo con exito la ultima foto de la solicitud de credito, con el ID: ' . $sc_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $ultimaFoto));
         } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al listar la ultima imagen de la solicitud de credito, con el ID: ' . $sc_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
+
+    // FONDO DEL TABLERO
+
+    public function listFondoTablero($tab_id)
+    {
+        $log = new Funciones();
+        try {
+            $tablero = Tablero::find($tab_id);
+            $galerias = ($tablero && $tablero->gal_id) ? Galeria::find($tablero->gal_id) : null;
+
+            $log->logInfo(GaleriaController::class, 'Se listo con exito el fondo del tablero con el ID ' . $tab_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $galerias));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al listar el fondo del tablero con el ID ' . $tab_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function addFondoTablero(Request $request, $tab_id)
+    {
+        $log = new Funciones();
+
+        try {
+            if ($request->hasFile("imagen_file")) {
+                $imagen = $request->file("imagen_file");
+                // $titulo = $imagen->getClientOriginalName();
+                $titulo = str_replace(' ', '-', $imagen->getClientOriginalName()); // Reemplazar espacios por -
+
+                // Fecha actual
+                $fechaActual = Carbon::now();
+
+                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                $parametro = DB::table('crm.parametro')
+                    ->where('abreviacion', 'NAS')
+                    ->first();
+
+                if ($parametro->nas == true) {
+                    $path = Storage::disk('nas')->putFileAs("tableros/fondo_pantalla/" . $tab_id, $imagen, $tab_id . '-' . $fecha_actual . '-' . $titulo);
+                } else {
+                    $path = Storage::disk('local')->putFileAs("tableros/fondo_pantalla/" . $tab_id, $imagen, $tab_id . '-' . $fecha_actual . '-' . $titulo);
+                }
+
+                $request->request->add(["imagen" => $path]); // Aquí obtenemos la ruta de la imagen en la que se encuentra
+            }
+
+            $galeria = DB::transaction(function () use ($request, $tab_id) {
+                $galeria = Galeria::create($request->all());
+                // Apuntamos el tablero a su fondo recién creado
+                Tablero::where('id', $tab_id)->update(['gal_id' => $galeria->id]);
+                return $galeria;
+            });
+
+            $log->logInfo(GaleriaController::class, 'Se guardo con exito el fondo del tablero');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $galeria));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al guardar el fondo del tablero con el ID ' . $tab_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function editFondoTablero(Request $request, $id)
+    {
+        $log = new Funciones();
+        try {
+            $galeria = Galeria::find($id);
+
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
+            if ($request->hasFile("imagen_file")) {
+                if ($galeria->imagen) {
+                    if ($parametro->nas == true) {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('nas')->delete($galeria->imagen);
+                    } else {
+                        // Eliminamos la imagen anterior del disco NAS
+                        Storage::disk('local')->delete($galeria->imagen);
+                    }
+                }
+
+                // Obtener el nuevo archivo de imagen y su nombre original
+                $nuevaImagen = $request->file("imagen_file");
+                $titulo = str_replace(' ', '-', $nuevaImagen->getClientOriginalName());
+
+                // Fecha actual
+                $fechaActual = Carbon::now();
+
+                // Formatear la fecha en formato deseado
+                // $fechaFormateada = $fechaActual->format('Y-m-d H-i-s');
+
+                // Reemplazar los dos puntos por un guion medio (NO permite windows guardar con los : , por eso se le pone el - )
+                $fecha_actual = str_replace(':', '-', $fechaActual);
+
+                if ($parametro->nas == true) {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('nas')->putFileAs("tableros/fondo_pantalla/" . $galeria->tab_id, $nuevaImagen, $galeria->tab_id . '-' . $fecha_actual . '-' . $titulo);
+                } else {
+                    // Guardar la nueva imagen en el disco NAS con su nombre original
+                    $path = Storage::disk('local')->putFileAs("tableros/fondo_pantalla/" . $galeria->tab_id, $nuevaImagen, $galeria->tab_id . '-' . $fecha_actual . '-' . $titulo);
+                }
+
+                $request->request->add(["imagen" => $path]); // Obtener la nueva ruta de la imagen en la solicitud
+            }
+
+            $galeria->update($request->all());
+
+            $log->logInfo(GaleriaController::class, 'Se actualizo con exito el fondo del tablero');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $galeria));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al actualizar el fondo del tablero, con el ID de la imagen ' . $id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    public function deleteFondoTablero(Request $request, $id)
+    {
+        $log = new Funciones();
+        try {
+            $galeria = Galeria::find($id);
+
+            $parametro = DB::table('crm.parametro')
+                ->where('abreviacion', 'NAS')
+                ->first();
+
+            $galeria = DB::transaction(function () use ($id, $galeria, $parametro) {
+                // Primero soltamos la FK del tablero apuntando a esta galería
+                // (si existe), para no chocar con re_caso_galeria_fk u otras.
+                Tablero::where('gal_id', $id)->update(['gal_id' => null]);
+
+                if ($parametro->nas == true) {
+                    Storage::disk('nas')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta nas
+                } else {
+                    Storage::disk('local')->delete($galeria->imagen); //Mandamos a borrar la foto de nuestra carpeta storage
+                }
+
+                $galeria->delete();
+                return $galeria;
+            });
+
+            $log->logInfo(GaleriaController::class, 'Se elimino con exito el fondo del tablero, con el ID de la imagen ' . $id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', $galeria));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al eliminar el fondo del tablero, con el ID de la imagen ' . $id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    //! Lista Todos los archivos e imagenes del caso
+    public function listAllAdjuntosByCasoId($caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $userLoginId = Auth::id();
+
+            // Obtener galerías: públicas O privadas si tiene acceso al tab_id de la galería
+            $galerias = DB::select("SELECT ga.* FROM crm.galerias ga
+                WHERE ga.caso_id = ?
+                AND (
+                    ga.acc_publico = true
+                    OR ga.tab_id IS NULL
+                    OR (
+                        ga.acc_publico = false
+                        AND ga.tab_id IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1 FROM crm.tablero_user tu
+                            WHERE tu.tab_id = ga.tab_id
+                            AND tu.user_id = ?
+                        )
+                    )
+                )
+                ORDER BY ga.id DESC", [$caso_id, $userLoginId]);
+
+            // Obtener archivos: públicos O privados si tiene acceso al tab_id del archivo
+            $archivos = DB::select("SELECT arch.* FROM crm.archivos arch
+                WHERE arch.caso_id = ?
+                AND (
+                    arch.acc_publico = true
+                    OR arch.tab_id IS NULL
+                    OR (
+                        arch.acc_publico = false
+                        AND arch.tab_id IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1 FROM crm.tablero_user tu
+                            WHERE tu.tab_id = arch.tab_id
+                            AND tu.user_id = ?
+                        )
+                    )
+                )
+                ORDER BY arch.id DESC", [$caso_id, $userLoginId]);
+
+            // Combinar galerías y archivos
+            $data = collect($galerias)->merge(collect($archivos));
+
+            // Ordenar por created_at ascendente
+            $data = $data->sortBy('created_at')->values();
+
+            $log->logInfo(GaleriaController::class, 'Se listo con exito todos los adjuntos del caso: #' . $caso_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+        } catch (Exception $e) {
+            $log->logError(GaleriaController::class, 'Error al listar todos los adjuntos del caso: #' . $caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
 }

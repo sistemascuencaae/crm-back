@@ -24,16 +24,12 @@ class TableroEvent implements ShouldBroadcastNow
      */
     public function __construct($data)
     {
-
         $this->data = $data;
     }
 
 
     public function broadcastWith(): array
     {
-        // echo('aaaaaa--------------------------------');
-        // echo(json_encode($this->data));
-        // echo('aaaaaa--------------------------------');
         return [
             'data' => $this->data
         ];
@@ -54,8 +50,6 @@ class TableroEvent implements ShouldBroadcastNow
 
     public function broadcastOn()
     {
-
-
         $tableroId = DB::select('SELECT ta.id FROM crm.fase fa
         INNER JOIN crm.tablero ta on ta.id = fa.tab_id
         where fa.id = ' . $this->data->fas_id.' limit 1');
@@ -66,12 +60,5 @@ class TableroEvent implements ShouldBroadcastNow
 
             return new PrivateChannel('tablero.'.$tableroId[0]->id);
         }
-
-
-
-
-
-
-
     }
 }

@@ -25,6 +25,11 @@ class Entidad extends Model
         "ent_email",
         "ent_telefono_principal",
         "tii_id",
-
     ];
+
+    public function empleado()
+    {
+        return $this->belongsTo(Empleado::class, 'ent_id', 'ent_id');
+    }
+
 }

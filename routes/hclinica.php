@@ -9,6 +9,9 @@ use App\Http\Controllers\FormularioController;
 use App\Http\Controllers\GaleriaController;
 use App\Http\Controllers\FormAptiMedicaController;
 use App\Http\Controllers\FormConsumoDrogasController;
+use App\Http\Controllers\hclinico\FormGaleriaController;
+use App\Http\Controllers\hclinico\FormPeriodicoController;
+use App\Http\Controllers\hclinico\PacienteDosController;
 use App\Http\Controllers\PruebasApi;
 use App\Http\Controllers\ReporteFormularios;
 
@@ -48,6 +51,14 @@ Route::group([
 });
 
 Route::group([
+    'prefix' => 'paciente-dos',
+], function () {
+    Route::get('byIdentificacion/{ident}/{pacId}', [PacienteDosController::class, 'byIdentificacion']);
+    Route::put('edit/{id}', [PacienteDosController::class, 'edit']);
+    Route::post('add', [PacienteDosController::class, 'add']);
+});
+
+Route::group([
     'prefix' => 'ocupacional',
 ], function () {
     Route::post('guardarImagen', [FormOcupaController::class, 'guardarImagen']);
@@ -60,6 +71,10 @@ Route::group([
     Route::get('allActive', [FormOcupaController::class, 'allActive']);
     Route::get('todasImagenes/{formulario_id}', [FormOcupaController::class, 'todasImagenes']);
 
+    // Nueva version de imagenes
+    Route::get('imagenesFormulario/{formId}', [FormGaleriaController::class, 'imagenesFormulario']);
+    Route::post('addGaleriaForm/{formId}', [FormGaleriaController::class, 'addGaleriaForm']);
+    Route::post('editGaleriaForm/{formId}', [FormGaleriaController::class, 'editGaleriaForm']);//
 });
 
 Route::group([
@@ -84,6 +99,20 @@ Route::group([
     Route::get('byId/{id}', [FormularioController::class, 'byId']);
 });
 
+Route::group([
+    'prefix' => 'form-periodico',
+], function () {
+    Route::get('store/{pacId}', [FormPeriodicoController::class, 'store']);
+    Route::post('add', [FormPeriodicoController::class, 'add']);
+    Route::put('edit/{id}', [FormPeriodicoController::class, 'edit']);
+    Route::get('getFormulario/{numeroForm}', [FormPeriodicoController::class, 'getFormulario']);
+    Route::get('imagenesFormulario/{formId}', [FormPeriodicoController::class, 'imagenesFormulario']);
+    Route::post('addGaleriaFormPer/{formId}', [FormPeriodicoController::class, 'addGaleriaForm']);
+    Route::post('editGaleriaFormPer/{formId}', [FormPeriodicoController::class, 'editGaleriaForm']); //
+    Route::post('editPaciente/{pacId}/{formId}', [FormPeriodicoController::class, 'editPaciente']);
+});
+
+
 
 Route::group([
     'prefix' => 'galeria',
@@ -103,14 +132,14 @@ Route::group([
 Route::group([
     'prefix' => 'documentos',
 ], function(){
-    Route::get('/reporteFAM/{id}', [ReporteFormularios::class, 'documentFAM']);
-    Route::get('/reporteFO/{id}', [ReporteFormularios::class, 'documentFO']);
+    Route::get('/reporteFAM/{id}/{foId}', [ReporteFormularios::class, 'documentFAM']);
+    Route::get('/reporteFO/{id}/{foId}', [ReporteFormularios::class, 'documentFO']);
 });
 
 Route::group([
     'prefix' => 'pruebasApi',
 ], function(){
-    Route::get('/prueba', [PruebasApi::class, 'prueba']);
+    //Route::get('/prueba', [PruebasApi::class, 'prueba']);
 });
 
 

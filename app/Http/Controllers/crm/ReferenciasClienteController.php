@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\ClienteCrm;
 use App\Models\crm\ReferenciasCliente;
@@ -13,9 +14,13 @@ use Illuminate\Support\Facades\DB;
 
 class ReferenciasClienteController extends Controller
 {
+
+    private $log;
+
     public function __construct()
     {
         $this->middleware('auth:api');
+        $this->log = new Funciones();
     }
 
     // metodo que ocupe para insertar los datos de referencias y telefonos de icreativa
@@ -79,20 +84,24 @@ class ReferenciasClienteController extends Controller
 
             $respuesta = ReferenciasCliente::where('id', $ref->id)->with('telefonos')->first();
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Se agregó con éxito', $respuesta));
+            $this->log->logInfo(ReferenciasClienteController::class, 'Se guardo con exito las referencias del cliente');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $respuesta));
         } catch (Exception $e) {
             DB::rollback();
+
+            $this->log->logError(ReferenciasClienteController::class, 'Error al guardar las referencias del cliente', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
-
 
     public function editReferenciasCliente(Request $request, $id)
     {
         try {
             DB::beginTransaction();
 
-            $ref = ReferenciasCliente::findOrFail($id);
+            $ref = ReferenciasCliente::find($id);
             $ref->update($request->all());
 
             // Obtén los IDs de los teléfonos existentes en la base de datos
@@ -108,7 +117,7 @@ class ReferenciasClienteController extends Controller
             foreach ($request->telefonos as $telefonoData) {
                 if (isset($telefonoData['id'])) {
                     // Actualiza los teléfonos existentes
-                    $telefono = TelefonosReferencias::findOrFail($telefonoData['id']);
+                    $telefono = TelefonosReferencias::find($telefonoData['id']);
                     $telefono->update(['numero_telefono' => $telefonoData['numero_telefono'], 'tipo_telefono' => $telefonoData['tipo_telefono']]);
                 } else {
                     // Agrega nuevos teléfonos
@@ -120,13 +129,61 @@ class ReferenciasClienteController extends Controller
 
             $respuesta = ReferenciasCliente::where('id', $ref->id)->with('telefonos')->first();
 
+            $this->log->logInfo(ReferenciasClienteController::class, 'Se actualizo con exito las referencias del cliente');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $respuesta));
         } catch (Exception $e) {
             DB::rollback();
+
+            $this->log->logError(ReferenciasClienteController::class, 'Error al actualizar las referencias del cliente', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
+    public function editReferenciaObservacion(Request $request, $referencia_id)
+    {
+        $log = new Funciones();
+        try {
+            $referencia = ReferenciasCliente::find($referencia_id);
+
+            DB::transaction(function () use ($referencia, $request) {
+                $referencia->update([
+                    "observacion" => $request->observacion
+                ]);
+            });
+
+            $log->logInfo(CasoController::class, 'Se actualizo con exito la observación de la referencia con el ID: ' . $referencia_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $referencia));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar la observación de la referencia con el ID: ' . $referencia_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+    public function editReferenciaValida(Request $request, $referencia_id)
+    {
+        $log = new Funciones();
+        try {
+            $referencia = ReferenciasCliente::find($referencia_id);
+
+            DB::transaction(function () use ($referencia, $request) {
+                $referencia->update([
+                    "valido" => $request->valido
+                ]);
+            });
+
+            $log->logInfo(CasoController::class, 'Se actualizo con exito la observación de la referencia con el ID: ' . $referencia_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se actualizó con éxito', $referencia));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al actualizar la observación de la referencia con el ID: ' . $referencia_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
 
     // public function editReferenciasCliente(Request $request, $id)
     // {
@@ -158,13 +215,12 @@ class ReferenciasClienteController extends Controller
     //     }
     // }
 
-
     public function deleteReferenciasCliente(Request $request, $id)
     {
         try {
             DB::beginTransaction();
 
-            $respuesta = ReferenciasCliente::findOrFail($id);
+            $respuesta = ReferenciasCliente::find($id);
 
             // Elimina los teléfonos asociados a la referencia antes de eliminar la referencia
             $respuesta->telefonos()->delete();
@@ -174,9 +230,14 @@ class ReferenciasClienteController extends Controller
 
             DB::commit();
 
+            $this->log->logInfo(ReferenciasClienteController::class, 'Se elimino con exito la referencia con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $respuesta));
         } catch (Exception $e) {
             DB::rollback();
+
+            $this->log->logError(ReferenciasClienteController::class, 'Error al eliminar la referencia con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -186,6 +247,31 @@ class ReferenciasClienteController extends Controller
     {
         try {
             $respuesta = ReferenciasCliente::where('cli_id', $cli_id)->orderBy('id', 'ASC')->get();
+
+            $this->log->logInfo(ReferenciasClienteController::class, 'Se listo con exito las referencias del cliente con el ID: ' . $cli_id);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
+        } catch (Exception $e) {
+            $this->log->logError(ReferenciasClienteController::class, 'Error al listar las referencias del cliente con el ID: ' . $cli_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+
+    // referencias del cliente en el TAB REFERENCIAS
+    public function listReferenciasByIdentificacion($identificacion)
+    {
+        try {
+            $respuesta = DB::SELECT("SELECT
+		                                    refane.refane_nombre AS nombre_completo,
+                                            refane.refane_numero_telefono AS telefono1,
+		                                    refane.refane_descripcion AS relacion,
+                                            refane.refane_direccion AS direccion
+                                        FROM public.entidad ent
+                                        INNER JOIN public.referencias_anexo refane ON refane.ent_id = ent.ent_id
+                                        WHERE ent.ent_identificacion = ?
+                                        AND refane.refane_activo = true",[$identificacion]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $respuesta));
         } catch (Exception $e) {

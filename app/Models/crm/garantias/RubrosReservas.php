@@ -21,7 +21,7 @@ class RubrosReservas extends Model implements Auditable
     public $timestamps = false;
 
     protected $fillable = [
-        "rr_id".
+        "rr_id",
         "descripcion",
         "porc_calculo",
         "capital_sn",

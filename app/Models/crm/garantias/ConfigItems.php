@@ -16,11 +16,12 @@ class ConfigItems extends Model implements Auditable
 
     protected $table = 'gex.producto_config';
 
-    protected $primaryKey = 'pro_id';
+    protected $primaryKey = 'config_id';
 
     public $timestamps = false;
 
     protected $fillable = [
+        "config_id",
         "pro_id",
         "tipo_servicio",
         "porc_gex",
@@ -29,11 +30,13 @@ class ConfigItems extends Model implements Auditable
         "fecha_crea",
         "usuario_modifica",
         "fecha_modifica",
+        "km_garantia",
+        "km_factor"
     ];
     
     public function partes()
     {
-        return $this->hasMany(ConfigItemsPartes::class, "pro_id");
+        return $this->hasMany(ConfigItemsPartes::class, "config_id");
     }
 }
 
@@ -45,12 +48,12 @@ class ConfigItemsPartes extends Model implements Auditable
 
     protected $table = 'gex.producto_partes';
 
-    protected $primaryKey = 'pro_id';
+    protected $primaryKey = 'config_id, parte_id';
 
     public $timestamps = false;
 
     protected $fillable = [
-        "pro_id",
+        "config_id",
         "parte_id",
         "meses_garantia",
     ];

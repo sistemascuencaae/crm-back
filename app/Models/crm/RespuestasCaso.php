@@ -3,6 +3,7 @@
 namespace App\Models\crm;
 
 use App\Models\crm\Fase;
+use App\Models\crm\EstadosFormulas;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +36,11 @@ class RespuestasCaso extends Model
     public function fase()
     {
         return $this->belongsTo(Fase::class, "fase_id");
+    }
+
+    public function tipo_caso_formula()
+    {
+        return $this->belongsTo(EstadosFormulas::class, "id", "resp_id");
     }
 
     

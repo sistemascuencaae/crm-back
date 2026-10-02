@@ -2,15 +2,19 @@
 
 namespace App\Models\crm;
 
+use App\Models\configuracion\Agencia;
 use App\Models\crm\CTipoTarea;
 use App\Models\crm\Fase;
+use App\Models\crm\formularios2\CForm;
 use App\Models\User;
 use App\Models\crm\Entidad;
 use App\Models\crm\AVResumenCaso;
+use App\Models\Formulario\FormValor;
 use App\Models\views\ProductoClienteView;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
@@ -48,7 +52,33 @@ class Caso extends Model
         "fase_anterior_id_reasigna",
         "acc_publico",
         "cliente_id",
-        "cpp_id"
+        "cpp_id",
+        "form_id",
+        "form_id2",
+        "datos_formulario",
+        "fecha_inicio",
+        // "categoria",
+        "comprobante",
+
+        "tipo_identificacion",
+        "identificacion",
+        "cliente",
+        "estado_civil",
+        "email",
+        "sexo",
+        "pais",
+        "provincia",
+        "canton",
+        "parroquia",
+        "direccion",
+        "telefono_domicilio",
+        "celulares",
+        "acc_publico",
+
+        "edit_fecha_inicio",
+
+        "codigo_agencia",
+        "id_zona_agencia",
     ];
 
     public function userCreador()
@@ -63,7 +93,7 @@ class Caso extends Model
 
     public function tipocaso()
     {
-        return $this->belongsTo(TipoCaso::class, "user_id", "id");
+        return $this->belongsTo(TipoCaso::class, "tc_id", "id");
     }
     // public function entidad()
     // {
@@ -159,4 +189,30 @@ class Caso extends Model
     {
         return $this->hasMany(ProductoClienteView::class, "ent_id", "ent_id");
     }
+
+    public function formValores()
+    {
+        return $this->hasMany(FormValor::class, 'caso_id', 'id');
+    }
+
+    public function tiempo_caso()
+    {
+        return $this->hasMany(ControlTiemposCaso::class, 'caso_id', 'id');
+    }
+
+    public function tareas2()
+    {
+        return $this->hasMany(Tareas2::class, "caso_id");
+    }
+
+    // sacar las respuestas del formulario
+    public function cform() {
+        return $this->belongsTo(CForm::class, 'form_id2');
+    }
+
+    public function agencia()
+    {
+        return $this->belongsTo(Agencia::class, "codigo_agencia", "codigo");
+    }
+
 }

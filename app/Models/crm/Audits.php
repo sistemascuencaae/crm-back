@@ -12,7 +12,7 @@ class Audits extends Model
     use HasFactory;
 
     protected $table = 'crm.audits';
-    protected $fillable = ["accion", "estado_caso", "estado_caso_id"];
+    protected $fillable = ["accion", "estado_caso", "estado_caso_id", "caso_id"];
 
     public function user(): BelongsTo
     {

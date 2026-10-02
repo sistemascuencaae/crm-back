@@ -12,65 +12,228 @@ use Illuminate\Support\Facades\DB;
 
 class DespachoController extends Controller
 {
-    public function __construct()
+
+    protected $variosSeries;
+    public function __construct(VariosSeries $variosSeries)
     {
         $this->middleware('auth:api');
+        $this->variosSeries = $variosSeries;
     }
-    
+
     public function listado($bodega)
     {
-        $data = DB::select("select c.cmo_id,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
-                                    TO_CHAR(c.cmo_fecha::date, 'dd/mm/yyyy') as fecha,
-                                    concat(b.bod_nombre,' / ',b1.bod_nombre) as proveedor,
-                                    'INV' as op,
-                                    c.cmo_id as indice,
-                                    c.bod_id, c.bod_id_fin,
-                                    null as cli_id,
-                                    (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id) as cantidad,
-                                    (select count(*) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cmo_id = c.cmo_id) as despachado
-                            from cmovinv c join puntoventa p on c.pve_id = p.pve_id
-                                        join ctipocom t on c.cti_id = t.cti_id
-                                        join bodega b on c.bod_id = b.bod_id
-                                        join bodega b1 on c.bod_id_fin = b1.bod_id
-                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'DES') and c.cmo_fecha >= '2023-06-01'
-                                    and c.bod_id = " . $bodega . "
-                                    and (not exists (select 1 from gex.cdespacho c1 where c.cmo_id = c1.cmo_id) or
-                                        (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id) > (case when exists (select 1 from gex.cdespacho c1 where c.cmo_id = c1.cmo_id) and
-                                                                                                                            not exists (select 1 from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
-                                                                                                                                        where c2.cmo_id = c.cmo_id) then (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id)
-                                                                                                                else (select count(*)
-                                                                                                                        from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
-                                                                                                                        where c2.cmo_id = c.cmo_id) end))
-                            union
-                            select c.cfa_id,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
-                                    TO_CHAR(c.cfa_fecha::date, 'dd/mm/yyyy') as fecha,
-                                    concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
-                                    'VTA' as op,
-                                    c.cfa_id as indice,
-                                    p.bod_id, null,
-                                    c.cli_id,
-                                    (select sum(d.dfac_cantidad) from dfactura d where d.cfa_id = c.cfa_id) as cantidad,
-                                    (select count(*) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cfa_id = c.cfa_id) as despachado
-                            from cfactura c join puntoventa p on c.pve_id = p.pve_id
-                                        join ctipocom t on c.cti_id = t.cti_id
-                                        join cliente l on c.cli_id = l.cli_id
-                                        join entidad e on l.ent_id = e.ent_id
-                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'DES') and c.cfa_fecha >= '2023-06-01'
-                                    and p.bod_id = " . $bodega . "
-                                    and (not exists (select 1 from gex.cdespacho c1 where c1.cfa_id = c.cfa_id) or
-                                        (select sum(d.dfac_cantidad) from dfactura d where d.cfa_id = c.cfa_id) > (select count(*)
-                                                                                                                from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
-                                                                                                                where c2.cfa_id = c.cfa_id))
-                            order by fecha, numero");
+        // $data = DB::select("select c.cmo_id,
+        //                             concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
+        //                             c.cmo_fecha as fecha,
+        //                             concat(b.bod_nombre,' / ',b1.bod_nombre) as proveedor,
+        //                             'INV' as op,
+        //                             c.cmo_id as indice,
+        //                             c.bod_id, c.bod_id_fin,
+        //                             null as cli_id,
+        //                             (select cast(sum(d.dmo_cantidad) as integer) from dmovinv d where d.cmo_id = c.cmo_id) as cantidad,
+        //                             coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cmo_id = c.cmo_id),0) as despachado
+        //                     from cmovinv c join puntoventa p on c.pve_id = p.pve_id
+        //                                 join almacen a on p.alm_id = a.alm_id
+        //                                 join ctipocom t on c.cti_id = t.cti_id
+        //                                 join bodega b on c.bod_id = b.bod_id
+        //                                 join bodega b1 on c.bod_id_fin = b1.bod_id
+        //                     where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'DES') and c.cmo_fecha >= '2023-06-01'
+        //                             and c.bod_id = " . $bodega . "
+        //                             and (not exists (select 1 from gex.cdespacho c1 where c.cmo_id = c1.cmo_id) or
+        //                                 (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id) > (case when exists (select 1 from gex.cdespacho c1 where c.cmo_id = c1.cmo_id) and
+        //                                                                                                                     not exists (select 1 from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
+        //                                                                                                                                 where c2.cmo_id = c.cmo_id) then (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id)
+        //                                                                                                         else (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
+        //                                                                                                                 from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
+        //                                                                                                                 where c2.cmo_id = c.cmo_id) end))
+        //                     union
+        //                     select c.cfa_id,
+        //                             concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
+        //                             c.cfa_fecha as fecha,
+        //                             concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as proveedor,
+        //                             'VTA' as op,
+        //                             c.cfa_id as indice,
+        //                             p.bod_id, null,
+        //                             c.cli_id,
+        //                             (select cast(sum(d.dfac_cantidad) as integer)
+        //                              from dfactura d
+        //                              where d.cfa_id = c.cfa_id
+        //                                     and not exists (select 1 from gex.producto_config pc where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G')
+        //                                     and not exists (select 1 from producto p where p.pro_id = d.pro_id and p.pro_inventario = false)) as cantidad,
+        //                             coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero where c2.cfa_id = c.cfa_id),0) as despachado
+        //                     from cfactura c join puntoventa p on c.pve_id = p.pve_id
+        //                                 join almacen a on p.alm_id = a.alm_id
+        //                                 join ctipocom t on c.cti_id = t.cti_id
+        //                                 join cliente l on c.cli_id = l.cli_id
+        //                                 join entidad e on l.ent_id = e.ent_id
+        //                     where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'DES') and c.cfa_fecha >= '2023-06-01'
+        //                             and p.bod_id = " . $bodega . "
+        //                             and not exists (select 1 from cfactura dev where dev.cfa_transacc = 2 and cfa_facproveedor = concat(t.cti_sigla,'-', a.alm_codigo, '-', p.pve_numero, '-',  c.cfa_numero) and dev.cfa_periodo = c.cfa_periodo and dev.cfa_subtotal = c.cfa_subtotal)
+        //                             and (not exists (select 1 from gex.cdespacho c1 where c1.cfa_id = c.cfa_id and c1.estado = 'A') or
+        //                                     (select cast(sum(d.dfac_cantidad) as integer)
+        //                                     from dfactura d
+        //                                     where d.cfa_id = c.cfa_id
+        //                                             and not exists (select 1 from gex.producto_config pc where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G')) > (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
+        //                                                                                                         from gex.ddespacho d2 join gex.cdespacho c2 on d2.numero = c2.numero
+        //                                                                                                         where c2.cfa_id = c.cfa_id and c2.estado = 'A'))
+        //                     order by fecha, numero");
+
+
+
+
+
+        $data = DB::select("SELECT * from(
+    select
+        c.cmo_id,
+        concat(t.cti_sigla, ' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ', c.cmo_numero) as numero,
+        c.cmo_fecha as fecha,
+        concat(b.bod_nombre, ' / ', b1.bod_nombre) as proveedor,
+        'INV' as op,
+        c.cmo_id as indice,
+        c.bod_id,
+        c.bod_id_fin,
+        null as cli_id,
+        (
+            select cast(sum(d.dmo_cantidad) as integer)
+            from dmovinv d
+            where d.cmo_id = c.cmo_id
+        ) as cantidad,
+        coalesce(
+            (
+                select cast(sum(case d2.tipo when 'N' then 1 else 0.5 end) as integer)
+                from gex.ddespacho d2
+                join gex.cdespacho c2 on d2.numero = c2.numero
+                where c2.cmo_id = c.cmo_id
+            ), 0
+        ) as despachado
+    from cmovinv c
+    join puntoventa p on c.pve_id = p.pve_id
+    join almacen a on p.alm_id = a.alm_id
+    join ctipocom t on c.cti_id = t.cti_id
+    join bodega b on c.bod_id = b.bod_id
+    join bodega b1 on c.bod_id_fin = b1.bod_id
+    where c.cti_id in (
+        select r.cti_id from gex.doc_presenta r where r.opcion = 'DES'
+    )
+    and c.cmo_fecha >= '2023-06-01'
+    and c.bod_id = " . $bodega . "
+    and (
+        not exists (select 1 from gex.cdespacho c1 where c.cmo_id = c1.cmo_id)
+        or (
+            select sum(d.dmo_cantidad)
+            from dmovinv d
+            where d.cmo_id = c.cmo_id
+        ) > (
+            case
+                when exists (select 1 from gex.cdespacho c1 where c.cmo_id = c1.cmo_id)
+                    and not exists (
+                        select 1 from gex.ddespacho d2
+                        join gex.cdespacho c2 on d2.numero = c2.numero
+                        where c2.cmo_id = c.cmo_id
+                    )
+                then (
+                    select sum(d.dmo_cantidad)
+                    from dmovinv d
+                    where d.cmo_id = c.cmo_id
+                )
+                else (
+                    select cast(sum(case d2.tipo when 'N' then 1 else 0.5 end) as integer)
+                    from gex.ddespacho d2
+                    join gex.cdespacho c2 on d2.numero = c2.numero
+                    where c2.cmo_id = c.cmo_id
+                )
+            end
+        )
+    )
+    union
+    select
+        c.cfa_id,
+        concat(t.cti_sigla, ' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ', c.cfa_numero) as numero,
+        c.cfa_fecha as fecha,
+        concat(e.ent_identificacion, ' - ',
+            case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end
+        ) as proveedor,
+        'VTA' as op,
+        c.cfa_id as indice,
+        p.bod_id,
+        null,
+        c.cli_id,
+        (
+            select cast(sum(d.dfac_cantidad) as integer)
+            from dfactura d
+            where d.cfa_id = c.cfa_id
+            and not exists (
+                select 1 from gex.producto_config pc
+                where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G'
+            )
+            and not exists (
+                select 1 from producto p
+                where p.pro_id = d.pro_id and p.pro_inventario = false
+            )
+        ) as cantidad,
+        coalesce(
+            (
+                select cast(sum(case d2.tipo when 'N' then 1 else 0.5 end) as integer)
+                from gex.ddespacho d2
+                join gex.cdespacho c2 on d2.numero = c2.numero
+                where c2.cfa_id = c.cfa_id
+            ), 0
+        ) as despachado
+    from cfactura c
+    join puntoventa p on c.pve_id = p.pve_id
+    join almacen a on p.alm_id = a.alm_id
+    join ctipocom t on c.cti_id = t.cti_id
+    join cliente l on c.cli_id = l.cli_id
+    join entidad e on l.ent_id = e.ent_id
+    where c.cti_id in (
+        select r.cti_id from gex.doc_presenta r where r.opcion = 'DES'
+    )
+    and c.cfa_fecha >= '2023-06-01'
+    and p.bod_id = " . $bodega . "
+    and not exists (
+        select 1 from cfactura dev
+        where dev.cfa_transacc = 2
+        and cfa_facproveedor = concat(t.cti_sigla, '-', a.alm_codigo, '-', p.pve_numero, '-', c.cfa_numero)
+        and dev.cfa_periodo = c.cfa_periodo
+        and dev.cfa_subtotal = c.cfa_subtotal
+    )
+    and (
+        not exists (select 1 from gex.cdespacho c1 where c1.cfa_id = c.cfa_id and c1.estado = 'A')
+        or (
+            select cast(sum(d.dfac_cantidad) as integer)
+            from dfactura d
+            where d.cfa_id = c.cfa_id
+            and not exists (
+                select 1 from gex.producto_config pc
+                where pc.pro_id = d.pro_id and pc.tipo_servicio = 'G'
+            )
+        ) > (
+            select cast(sum(case d2.tipo when 'N' then 1 else 0.5 end) as integer)
+            from gex.ddespacho d2
+            join gex.cdespacho c2 on d2.numero = c2.numero
+            where c2.cfa_id = c.cfa_id and c2.estado = 'A'
+        )
+    )
+    order by fecha, numero) ttemp order by ttemp.fecha desc
+");
+
+
+
+
+
+
+
+
+
+
+
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function listadoDespachos()
     {
-        $data = DB::select("select c.numero, TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
+        $data = DB::select("select c.numero, c.fecha as fecha,
                                     bo.bod_nombre as bodega_origen,
                                     b.bod_nombre as bodega,
                                     (case when c.cmo_id is null then (select concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end))
@@ -79,8 +242,9 @@ class DespachoController extends Controller
                                                                     where c1.cfa_id = c.cfa_id) else (select b1.bod_nombre
                                                                                                         from cmovinv c1 join bodega b1 on c1.bod_id_fin = b1.bod_id
                                                                                                         where c1.cmo_id = c.cmo_id) end) as nombre,
-                                    (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
+                                    (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
                                                                     from cfactura c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                        join almacen a on p.alm_id = a.alm_id
                                                                                         join ctipocom t on c1.cti_id = t.cti_id
                                                                     where c1.cfa_id = c.cfa_id) else (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cmo_numero)
                                                                                                         from cmovinv c1 join puntoventa p on c1.pve_id = p.pve_id
@@ -96,34 +260,40 @@ class DespachoController extends Controller
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function productos($id, $tipo)
     {
         if ($tipo == 'INV') {
             $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta,
-                                        dmo_cantidad - (select count(*) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
-                                                        where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo,
-                                        0 as despachado
-                                from producto p join dmovinv d on p.pro_id = d.pro_id where cmo_id = " . $id);
+                                        cast(dmo_cantidad as integer) - coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
+                                                                                  where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id),0) as saldo,
+                                        0 as despachado,
+                                        pc.tipo_servicio as tipo
+                                from producto p join dmovinv d on p.pro_id = d.pro_id
+                                                left outer join gex.producto_config pc  on p.pro_id = pc.pro_id
+                                where cmo_id = " . $id);
         } else {
             $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta,
-                                        dfac_cantidad - (select count(*) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
-                                                        where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id) as saldo,
-                                        0 as despachado
-                                from producto p join dfactura d on p.pro_id = d.pro_id where cfa_id = " . $id);
+                                        cast(dfac_cantidad as integer) - coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cdespacho c join gex.ddespacho d2 on c.numero = d2.numero
+                                                                                   where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id),0) as saldo,
+                                        0 as despachado,
+                                        pc.tipo_servicio as tipo
+                                from producto p join dfactura d on p.pro_id = d.pro_id
+                                                left outer join gex.producto_config pc  on p.pro_id = pc.pro_id
+                                where cfa_id = " . $id);
         }
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function bodegas()
     {
         $data = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b order by presenta");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
-    public function clientes($tipo,$id)
+
+    public function clientes($tipo, $id)
     {
         if ($tipo == 'INV') {
             $data = DB::selectOne("select b.bod_id as cli_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $id);
@@ -137,7 +307,8 @@ class DespachoController extends Controller
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
 
-    public function bodegaUsuario($usuario) {
+    public function bodegaUsuario($usuario)
+    {
         $data = DB::selectOne("select b.bod_id, b.bod_nombre as presenta from bodega b join puntoventa p on b.bod_id = p.bod_id
                             where p.pve_id = (select (case when us.pve_id is null then u.pve_id else us.pve_id end) as ptoVta from crm.users u left outer join usuario us on u.usu_id  = us.usu_id
                                             where id = " . $usuario . ")");
@@ -149,13 +320,14 @@ class DespachoController extends Controller
     {
         $data = Despacho::with('detalle')->get()->where('numero', $numero)->first();
         $data['bodega'] = DB::selectOne("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $data['bod_id']);
-        
+
         if ($data['cmo_id'] == null) {
-            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
+            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
                                 from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                                join almacen a on p.alm_id = a.alm_id
                                                 join ctipocom t on c.cti_id = t.cti_id
                                 where c.cfa_id = " . $data['cfa_id']);
-        
+
             $data['doc_rela'] = $rela->numero;
 
             $data['cliente'] = DB::selectOne("select c1.cli_id, concat(e.ent_identificacion, ' - ',
@@ -164,11 +336,12 @@ class DespachoController extends Controller
                                                             join entidad e on l.ent_id = e.ent_id
                                             where c1.cfa_id = " . $data['cfa_id']);
         } else {
-            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
+            $rela = DB::selectOne("select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
                                         from cmovinv c join puntoventa p on c.pve_id = p.pve_id
+                                                    join almacen a on p.alm_id = a.alm_id
                                                     join ctipocom t on c.cti_id = t.cti_id
                                         where c.cmo_id = " . $data['cmo_id']);
-            
+
             $data['doc_rela'] = $rela->numero;
 
             $data['cliente'] = DB::selectOne("select b.bod_id as cli_id, b.bod_nombre as presenta
@@ -181,20 +354,20 @@ class DespachoController extends Controller
             $p['producto'] = $producto->presenta;
         }
 
-        if($data){
+        if ($data) {
             return response()->json(RespuestaApi::returnResultado('success', 'Despacho Encontrado', $data));
-        }else{
+        } else {
             return response()->json(RespuestaApi::returnResultado('error', 'El Despacho no existe', []));
         }
     }
 
-    public function validaSerie($producto, $serie, $bodega)
+    public function validaSerie($producto, $serie, $bodega, $tipo)
     {
-        $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.bod_id = " . $bodega);
-        
-        if($data) {
+        $data = DB::selectOne("select * from gex.stock_serie ss where ss.pro_id = " . $producto . " and ss.serie = '" . $serie . "' and ss.bod_id = " . $bodega . " and ss.tipo = '" . $tipo . "'");
+
+        if ($data) {
             return response()->json(RespuestaApi::returnResultado('success', 'Serie encontrada', []));
-        }else{
+        } else {
             return response()->json(RespuestaApi::returnResultado('error', 'La serie no existe para el producto y la bodega seleccionada', []));
         }
     }
@@ -210,9 +383,9 @@ class DespachoController extends Controller
                 $numero = $request->input('numero');
             }
 
-            DB::transaction(function() use ($request, $numero){
-                date_default_timezone_set("America/Guayaquil");                
-                
+            DB::transaction(function () use ($request, $numero) {
+                date_default_timezone_set("America/Guayaquil");
+
                 $fecha_crea = null;
                 $fecha_modifica = null;
 
@@ -223,33 +396,34 @@ class DespachoController extends Controller
                     $fecha_modifica = date("Y-m-d h:i:s");
                 }
 
-                $fecha = $request->input('fecha');
+                $fecha = $request->input('fecha') ? $request->input('fecha') : now();
                 $estado = $request->input('estado');
                 $bod_id = $request->input('bod_id');
                 $bod_id_fin = $request->input('bod_id_dest');
                 $cmo_id = $request->input('cmo_id');
                 $cfa_id = $request->input('cfa_id');
                 $bod_id_origen = $request->input('bod_id_origen');
-    
+
                 $usuario_crea = $request->input('usuario_crea');
                 $usuario_modifica = $request->input('usuario_modifica');
-    
+
                 DB::table('gex.cdespacho')->updateOrInsert(
                     ['numero' => $numero],
                     [
-                    'numero' => $numero,
-                    'fecha' => $fecha,
-                    'estado' => $estado,
-                    'bod_id' => $bod_id,
-                    'cmo_id' => $cmo_id,
-                    'cfa_id' => $cfa_id,
-                    'usuario_crea' => $usuario_crea,
-                    'fecha_crea' => $fecha_crea,
-                    'usuario_modifica' => $usuario_modifica,
-                    'fecha_modifica' => $fecha_modifica,
-                    'bod_id_origen' => $bod_id_origen,
-                    ]);
-            
+                        'numero' => $numero,
+                        'fecha' => $fecha,
+                        'estado' => $estado,
+                        'bod_id' => $bod_id,
+                        'cmo_id' => $cmo_id,
+                        'cfa_id' => $cfa_id,
+                        'usuario_crea' => $usuario_crea,
+                        'fecha_crea' => $fecha_crea,
+                        'usuario_modifica' => $usuario_modifica,
+                        'fecha_modifica' => $fecha_modifica,
+                        'bod_id_origen' => $bod_id_origen,
+                    ]
+                );
+
                 $detalle = $request->input('detalle');
 
                 foreach ($detalle as $d) {
@@ -263,34 +437,39 @@ class DespachoController extends Controller
                             'linea' => $d['linea'],
                             'pro_id' => $d['pro_id'],
                             'serie' => $d['serie'],
-                        ]);
+                            'tipo' => $d['tipo'],
+                        ]
+                    );
 
                     if ($bod_id_fin == null) {
-                        DB::table('gex.stock_serie')->where('pro_id',$d['pro_id'])->where('serie',$d['serie'])->where('bod_id',$bod_id)->delete();
+                        DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('bod_id', $bod_id)->where('tipo', $d['tipo'])->delete();
                     } else {
                         DB::table('gex.stock_serie')->updateOrInsert(
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id_fin,
-                            ]);
+                                'tipo' => $d['tipo'],
+                            ]
+                        );
                     }
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Despacho grabado con exito', $numero));
-            
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
     }
 
-    public function imprimeDespacho($numero) {
+    public function imprimeDespacho($numero)
+    {
         $data = DB::select("select TO_CHAR(c.fecha_crea::date, 'dd/mm/yyyy') as fechaEmision,
                                     TO_CHAR(c.fecha_crea::time, 'hh:ss') as horaEmision,
                                     c.numero,
@@ -305,8 +484,9 @@ class DespachoController extends Controller
                                                                                                         from cmovinv c1 join bodega b1 on c1.bod_id_fin = b1.bod_id
                                                                                                         where c1.cmo_id = c.cmo_id) end) as nombre,
                                     (case when c.cmo_id is null then 'Factura: ' else 'Traspaso: ' end) as etiquetaDR,
-                                    (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
+                                    (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
                                                                     from cfactura c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                        join almacen a on p.alm_id = a.alm_id
                                                                                         join ctipocom t on c1.cti_id = t.cti_id
                                                                     where c1.cfa_id = c.cfa_id) else (select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c1.cmo_numero)
                                                                                                         from cmovinv c1 join puntoventa p on c1.pve_id = p.pve_id
@@ -315,8 +495,8 @@ class DespachoController extends Controller
                                     p.pro_id,
                                     p.pro_codigo,
                                     p.pro_nombre,
-                                    count(d.pro_id) as cantidad,
-                                    (select count(*) from gex.ddespacho d2 where d2.numero = c.numero) as cantidadTotal,
+                                    cast(sum((case d.tipo when 'N' then 1 else 0.5 end)) as integer) as cantidad,
+                                    (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.ddespacho d2 where d2.numero = c.numero) as cantidadTotal,
                                     (case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end) as estado,
                                     min(d.linea) as linea
                             from gex.cdespacho c join bodega b on c.bod_id = b.bod_id
@@ -328,89 +508,97 @@ class DespachoController extends Controller
                             order by linea");
 
         foreach ($data as $i) {
-            if ($i->pro_id != null){
-                $i->series = DB::select("select d.serie
-                                    from gex.ddespacho d
-                                    where d.numero = " . $i->numero . " and d.pro_id = " . $i->pro_id);
+            if ($i->pro_id != null) {
+                $i->series = DB::select("select d.serie, (case d.tipo when 'C' then 'COMPRESOR' when 'E' then 'EVAPORADOR' end) as tipo
+                                        from gex.ddespacho d
+                                        where d.numero = " . $i->numero . " and d.pro_id = " . $i->pro_id);
             }
         }
 
         return response()->json(RespuestaApi::returnResultado('success', '', $data));
     }
 
-    public function anulaDespacho($numero,$bodDest)
+    public function anulaDespacho($numero, $bodDest)
     {
         try {
-            DB::transaction(function() use ($numero,$bodDest){
+            DB::transaction(function () use ($numero, $bodDest) {
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 $data = Despacho::with('detalle')->get()->where('numero', $numero)->first();
 
                 $fecha_crea = $data['fecha_crea'];
                 $fecha_modifica = date("Y-m-d h:i:s");
                 $estado = 'D';
                 $bod_id = $data['bod_id'];
-    
+
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $data['usuario_modifica'];
-    
+
                 DB::table('gex.cdespacho')->updateOrInsert(
                     ['numero' => $numero],
                     [
-                    'numero' => $numero,
-                    'estado' => $estado,
-                    'usuario_crea' => $usuario_crea,
-                    'fecha_crea' => $fecha_crea,
-                    'usuario_modifica' => $usuario_modifica,
-                    'fecha_modifica' => $fecha_modifica,
-                    ]);
+                        'numero' => $numero,
+                        'estado' => $estado,
+                        'usuario_crea' => $usuario_crea,
+                        'fecha_crea' => $fecha_crea,
+                        'usuario_modifica' => $usuario_modifica,
+                        'fecha_modifica' => $fecha_modifica,
+                    ]
+                );
 
                 foreach ($data['detalle'] as $d) {
-                    if ($bodDest == null) {
+                    if ($bodDest == "null") {
                         DB::table('gex.stock_serie')->updateOrInsert(
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
-                            ]);
+                                'tipo' => $d['tipo'],
+                            ]
+                        );
                     } else {
                         DB::table('gex.stock_serie')->updateOrInsert(
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bodDest,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
-                            ]);
+                                'tipo' => $d['tipo'],
+                            ]
+                        );
                     }
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Despacho anulado con exito', []));
-            
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
     }
 
-    public function eliminaDespacho($numero,$bodDest) {
+    public function eliminaDespacho($numero, $bodDest)
+    {
+
         try {
-            DB::transaction(function() use ($numero,$bodDest){
+            DB::transaction(function () use ($numero, $bodDest) {
                 $dato = Despacho::with('detalle')->get()->where('numero', $numero)->first();
                 $bod_id = $dato['bod_id'];
-                
+
                 $data = $dato['detalle'];
 
-                DB::table('gex.ddespacho')->where('numero',$numero)->delete();
-                DB::table('gex.cdespacho')->where('numero',$numero)->delete();
+                DB::table('gex.ddespacho')->where('numero', $numero)->delete();
+                DB::table('gex.cdespacho')->where('numero', $numero)->delete();
 
                 foreach ($data as $d) {
                     if ($bodDest == 'null') {
@@ -419,26 +607,33 @@ class DespachoController extends Controller
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
-                            ]);
+                                'tipo' => $d['tipo'],
+                            ]
+                        );
                     } else {
                         DB::table('gex.stock_serie')->updateOrInsert(
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bodDest,
+                                'tipo' => $d['tipo'],
                             ],
                             [
                                 'pro_id' => $d['pro_id'],
                                 'serie' => $d['serie'],
                                 'bod_id' => $bod_id,
-                            ]);
+                                'tipo' => $d['tipo'],
+                            ]
+                        );
                     }
                 }
+                $this->variosSeries->resEliminaDespacho($dato);
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Despacho eliminado con exito', []));

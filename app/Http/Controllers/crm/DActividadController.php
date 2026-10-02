@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Audits;
 use App\Models\crm\DTipoActividad;
@@ -107,8 +108,11 @@ class DActividadController extends Controller
 
 
     // LISTA PARA USUARIO COMUN
+
     public function listActividadesByDepIdCasoId($caso_id, $dep_id)
     {
+        $log = new Funciones();
+
         try {
             $actividades = DTipoActividad::where('caso_id', $caso_id)
                 ->where(function ($query) use ($dep_id) {
@@ -125,8 +129,31 @@ class DActividadController extends Controller
             END AS descripcion_pos_descripcion")
                 ->orderBy('id', 'DESC')->get();
 
+            // // Formatear las fechas
+            // $actividades->transform(function ($item) {
+            //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+            //     return $item;
+            // });
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $actividades->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            $log->logInfo(DActividadController::class, 'Se listo con exito las actividades del departamento con el ID: ' . $dep_id . ' del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al listar las actividades del departamento con el ID: ' . $dep_id . ' del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -134,6 +161,8 @@ class DActividadController extends Controller
     // LISTA PARA SUPER USUARIO
     public function listAllActividadesByCasoId($caso_id)
     {
+        $log = new Funciones();
+
         try {
             $actividades = DTipoActividad::where('caso_id', $caso_id)
                 ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
@@ -144,8 +173,31 @@ class DActividadController extends Controller
             END AS descripcion_pos_descripcion")
                 ->orderBy('id', 'DESC')->get();
 
+            // // Formatear las fechas
+            // $actividades->transform(function ($item) {
+            //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+            //     return $item;
+            // });
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $actividades->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            $log->logInfo(DActividadController::class, 'Se listo con exito todas las actividades del caso #' . $caso_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al listar todas las actividades del caso #' . $caso_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -153,6 +205,8 @@ class DActividadController extends Controller
 
     public function addDTipoActividad(Request $request)
     {
+        $log = new Funciones();
+
         try {
             $usuarioMiembro = $request->input('usuario');
 
@@ -175,6 +229,7 @@ class DActividadController extends Controller
                 $audit->new_values = json_encode([]);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'addDTipoActividad';
+                $audit->caso_id = $AuditActividad['caso_id'];
                 $audit->save();
                 // END Auditoria
 
@@ -186,14 +241,25 @@ class DActividadController extends Controller
                 //     ->get();
 
                 // Obtener la lista actualizada de actividades después de agregar una nueva
-                $data = DTipoActividad::where(function ($query) use ($request) {
-                    $query->where('user_id', $request->input('user_id'))
-                        ->orWhere('acc_publico', true);
-                })
-                    ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
-                    ->where('caso_id', $dta->caso_id)
-                    // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
+                // $data = DTipoActividad::where(function ($query) use ($request) {
+                //     $query->where('user_id', $request->input('user_id'))
+                //         ->orWhere('acc_publico', true);
+                // })
+                //     ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
+                //     ->where('caso_id', $dta->caso_id)
+                //     // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
 
+                //     ->selectRaw("*, 
+                //     CASE 
+                //         WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
+                //         ELSE descripcion 
+                //     END AS descripcion_pos_descripcion")
+
+                //     ->orderBy('id', 'DESC')
+                //     ->get(); 
+
+                $data = DTipoActividad::where('caso_id', $dta->caso_id)
+                    ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
                     ->selectRaw("*, 
                     CASE 
                         WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
@@ -212,19 +278,44 @@ class DActividadController extends Controller
                     $miembro->save();
                 }
 
+                // // Formatear las fechas
+                // $data->transform(function ($item) {
+                //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+                //     return $item;
+                // });
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                // Utilizar la función map para transformar y obtener una nueva colección
+                $data->map(function ($item) use ($dateFields) {
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
+                    return $item;
+                });
+
                 return $data;
             });
 
+            $log->logInfo(DActividadController::class, 'Se guardo con exito la actividad');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al guardar la actividad', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function updateDActividad(Request $request, $id)
     {
+        $log = new Funciones();
+
         try {
+
             $usuarioMiembro = $request->input('usuario');
 
             $actividad = DTipoActividad::findOrFail($id);
@@ -256,7 +347,7 @@ class DActividadController extends Controller
                 CASE 
                     WHEN pos_descripcion IS NOT NULL THEN descripcion || ' | ' || pos_descripcion 
                     ELSE descripcion 
-                END AS descripcion_pos_descripcion")
+                    END AS descripcion_pos_descripcion")
 
                     ->first();
 
@@ -265,6 +356,7 @@ class DActividadController extends Controller
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 // $audit->accion = 'editDActividad';
                 $audit->accion = 'editDTipoActividad';
+                $audit->caso_id = $actividad->caso_id;
                 $audit->save();
                 // END Auditoria
 
@@ -278,11 +370,27 @@ class DActividadController extends Controller
                     $miembro->save();
                 }
 
+                // Formatear las fechas
+                // $data->formatted_updated_at = Carbon::parse($data->updated_at)->format('Y-m-d H:i:s');
+                // $data->formatted_created_at = Carbon::parse($data->created_at)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_inicio = Carbon::parse($data->fecha_inicio)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_fin = Carbon::parse($data->fecha_fin)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_conclusion = Carbon::parse($data->fecha_conclusion)->format('Y-m-d H:i:s');
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($data, $dateFields);
+
                 return $data;
             });
 
+            $log->logInfo(DActividadController::class, 'Se actualizo con exito la actividad, con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al actualizar la actividad, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -291,6 +399,8 @@ class DActividadController extends Controller
 
     public function listActividadesByUserId($user_id)
     {
+        $log = new Funciones();
+
         try {
             $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id') // Aquí especificamos que solo queremos el campo 'cliente_id' de la tabla 'caso')
                 ->selectRaw("*, 
@@ -300,8 +410,31 @@ class DActividadController extends Controller
                 END AS descripcion_pos_descripcion")
                 ->orderBy('id', 'DESC')->get();
 
+            // // Formatear las fechas
+            // $actividades->transform(function ($item) {
+            //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+            //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+            //     return $item;
+            // });
+
+            // Especificar las propiedades que representan fechas en tu objeto Nota
+            $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+            // Utilizar la función map para transformar y obtener una nueva colección
+            $actividades->map(function ($item) use ($dateFields) {
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($item, $dateFields);
+                return $item;
+            });
+
+            $log->logInfo(DActividadController::class, 'Se listo con exito las actividades del usuario con el ID: ' . $user_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al listar las actividades del usuario con el ID: ' . $user_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -337,6 +470,8 @@ class DActividadController extends Controller
 
     public function addDTipoActividadTabla(Request $request, $user_id)
     {
+        $log = new Funciones();
+
         try {
             $usuarioMiembro = $request->input('usuario');
 
@@ -358,6 +493,7 @@ class DActividadController extends Controller
                 $audit->new_values = json_encode([]);
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 $audit->accion = 'addDTipoActividad';
+                $audit->caso_id = $AuditActividad['caso_id'];
                 $audit->save();
                 // END Auditoria
 
@@ -380,16 +516,42 @@ class DActividadController extends Controller
                     $miembro->save();
                 }
 
+                // // Formatear las fechas
+                // $data->transform(function ($item) {
+                //     $item->formatted_updated_at = Carbon::parse($item->updated_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_created_at = Carbon::parse($item->created_at)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_inicio = Carbon::parse($item->fecha_inicio)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_fin = Carbon::parse($item->fecha_fin)->format('Y-m-d H:i:s');
+                //     $item->formatted_fecha_conclusion = Carbon::parse($item->fecha_conclusion)->format('Y-m-d H:i:s');
+                //     return $item;
+                // });
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                // Utilizar la función map para transformar y obtener una nueva colección
+                $data->map(function ($item) use ($dateFields) {
+                    $funciones = new Funciones();
+                    $funciones->formatoFechaItem($item, $dateFields);
+                    return $item;
+                });
+
                 return $data;
             });
+
+            $log->logInfo(DActividadController::class, 'Se guardo con exito la actividad');
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al guardar la actividad', $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
 
     public function updateDActividadTabla(Request $request, $id, $user_id)
     {
+        $log = new Funciones();
+
         try {
             $usuarioMiembro = $request->input('usuario');
             $actividad = DTipoActividad::findOrFail($id);
@@ -427,6 +589,7 @@ class DActividadController extends Controller
                 $audit->user_agent = $request->header('User-Agent'); // Obtener el valor del User-Agent
                 // $audit->accion = 'editDActividad';
                 $audit->accion = 'editDTipoActividad';
+                $audit->caso_id = $actividad->caso_id;
                 $audit->save();
                 // END Auditoria
 
@@ -439,10 +602,27 @@ class DActividadController extends Controller
                     $miembro->save();
                 }
 
+                // // Formatear las fechas
+                // $data->formatted_updated_at = Carbon::parse($data->updated_at)->format('Y-m-d H:i:s');
+                // $data->formatted_created_at = Carbon::parse($data->created_at)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_inicio = Carbon::parse($data->fecha_inicio)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_fin = Carbon::parse($data->fecha_fin)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_conclusion = Carbon::parse($data->fecha_conclusion)->format('Y-m-d H:i:s');
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($data, $dateFields);
+
                 return $data;
             });
+
+            $log->logInfo(DActividadController::class, 'Se cerro con exito la actividad, con el ID: ' . $id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se cerro la actividad con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al cerrar la actividad, con el ID: ' . $id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -450,6 +630,8 @@ class DActividadController extends Controller
     // LISTA PARA EL CALENDARIO
     public function listActividadesIniciadasByUserId($user_id)
     {
+        $log = new Funciones();
+
         try {
             $actividades = DTipoActividad::where('user_id', $user_id)
                 ->whereHas('estado_actividad', function ($query) {
@@ -459,8 +641,12 @@ class DActividadController extends Controller
                 ->orderBy('id', 'DESC')
                 ->get();
 
+            $log->logInfo(DActividadController::class, 'Se listo con exito las actividades INICIADAS del usuario con el ID: ' . $user_id);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $actividades));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al listar las actividades INICIADAS del usuario con el ID: ' . $user_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
@@ -470,6 +656,8 @@ class DActividadController extends Controller
     // Editar el acceso publico o privado de una actividad
     public function editAccesoActividad(Request $request, $actividad_id)
     {
+        $log = new Funciones();
+
         try {
             $actividad = $request->all();
 
@@ -481,7 +669,7 @@ class DActividadController extends Controller
                     "acc_publico" => $request->acc_publico,
                 ]);
 
-                return DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')
+                $data = DTipoActividad::where('id', $actividad->id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id')
                     // ->selectRaw("*, descripcion || ' | ' || COALESCE(pos_descripcion, '') AS descripcion_pos_descripcion")
 
                     ->selectRaw("*, 
@@ -491,10 +679,28 @@ class DActividadController extends Controller
                 END AS descripcion_pos_descripcion")
 
                     ->first();
+
+                // // Formatear las fechas
+                // $data->formatted_updated_at = Carbon::parse($data->updated_at)->format('Y-m-d H:i:s');
+                // $data->formatted_created_at = Carbon::parse($data->created_at)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_inicio = Carbon::parse($data->fecha_inicio)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_fin = Carbon::parse($data->fecha_fin)->format('Y-m-d H:i:s');
+                // $data->formatted_fecha_conclusion = Carbon::parse($data->fecha_conclusion)->format('Y-m-d H:i:s');
+
+                // Especificar las propiedades que representan fechas en tu objeto Nota
+                $dateFields = ['created_at', 'updated_at', 'fecha_inicio', 'fecha_fin', 'fecha_conclusion'];
+                $funciones = new Funciones();
+                $funciones->formatoFechaItem($data, $dateFields);
+
+                return $data;
             });
+
+            $log->logInfo(DActividadController::class, 'Se actualizo con exito el acceso de la actividad, con el ID: ' . $actividad_id);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se actualizo con éxito', $data));
         } catch (Exception $e) {
+            $log->logError(DActividadController::class, 'Error al actualizar el acceso de la actividad, con el ID: ' . $actividad_id, $e);
+
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
         }
     }

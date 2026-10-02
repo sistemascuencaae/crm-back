@@ -16,10 +16,16 @@ class TableroUsuario extends Model
     protected $fillable = [
         "user_id",
         "tab_id",
+        "permisos"
     ];
     public function usuario()
     {
         return $this->belongsTo(User::class, "user_id", "id");
+    }
+
+    public function tableros()
+    {
+        return $this->hasMany(Tablero::class, "id", "tab_id");
     }
 
 }

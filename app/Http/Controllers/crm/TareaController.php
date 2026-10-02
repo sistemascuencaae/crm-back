@@ -7,7 +7,6 @@ use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Tareas;
 use Illuminate\Http\Request;
 use Exception;
-use Illuminate\Support\Facades\DB;
 
 class TareaController extends Controller
 {

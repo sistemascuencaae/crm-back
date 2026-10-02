@@ -16,12 +16,13 @@ class PreIngresoController extends Controller
     {
         $this->middleware('auth:api');
     }
-    
+
     public function listado()
     {
-        $data = DB::select("select c.numero, TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha, guia_remision,
+        $data = DB::select("select c.numero, c.fecha as fecha, guia_remision,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c2.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end as estado,
+                                    (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.dpreingreso d2 where d2.numero = c.numero) as preingresado,
                                     c.cmo_id,
                                     c.cfa_id
                             from gex.cpreingreso c join cliente c2 on c.cli_id = c2.cli_id
@@ -30,28 +31,61 @@ class PreIngresoController extends Controller
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function productos()
     {
-        $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p");
+        $data = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta, pc.tipo_servicio as tipo from producto p left outer join gex.producto_config pc  on p.pro_id = pc.pro_id");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
+
     public function bodegas()
     {
         $data = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b order by presenta");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
-    
-    public function clientes()
+
+    public function clientes($busqueda)
     {
-        $data = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
-                                    (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as presenta
-                            from cliente c join entidad e on c.ent_id = e.ent_id");
+        $data = DB::select("select *
+                            from (
+                            select c.cli_id, concat(e.ent_identificacion, ' - ',
+                                                                (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as presenta
+                                                        from cliente c join entidad e on c.ent_id = e.ent_id) as tabla
+                            where presenta like '%" . $busqueda . "%'");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
+    }
+
+    // public function validaSerie($producto, $serie, $tipo)
+    // {
+    //     $data = DB::selectOne("select * from gex.producto_serie ps where ps.pro_id = " . $producto . " and ps.serie = '" . $serie . "' and ps.tipo = '" . $tipo . "'");
+
+    //     if($data) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'La serie ingresada ya existe para el producto', []));
+    //     }else{
+    //         $data = DB::selectOne("select * from gex.dinventario d where d.pro_id = " . $producto . " and d.serie = '" . $serie . "' and d.tipo = '" . $tipo . "'");
+
+    //         if ($data) {
+    //             return response()->json(RespuestaApi::returnResultado('error', 'La serie ingresada ya existe para el producto', []));
+    //         }
+
+    //         return response()->json(RespuestaApi::returnResultado('success', '200', []));
+    //     }
+    // }
+
+    public function validaSerie($producto, $serie, $tipo)
+    {
+        $data = DB::selectOne("select * from gex.dpreingreso d where d.serie = ?", [$serie]);
+        $data2 = DB::selectOne("select * from gex.producto_serie d where d.serie = ?", [$serie]);
+        $data3 = DB::selectOne("select * from gex.stock_serie d where d.serie = ?", [$serie]);
+
+        if ($data || $data2 || $data3) {
+            return response()->json(RespuestaApi::returnResultado('error', 'La serie que intenta ingresar ya existe para un producto: ' . $serie, ""));
+        } else {
+            return response()->json(RespuestaApi::returnResultado('success', '200', []));
+        }
     }
 
     public function byPreIngreso($numero)
@@ -66,19 +100,21 @@ class PreIngresoController extends Controller
             if ($data['cfa_id'] == null) {
                 $data['doc_rela'] = null;
             } else {
-                $rela = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
+                $rela = DB::select("select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero
                                         from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                                        join almacen a on p.alm_id = a.alm_id
                                                         join ctipocom t on c.cti_id = t.cti_id
                                         where c.cfa_id = " . $data['cfa_id'])[0];
-            
+
                 $data['doc_rela'] = $rela->numero;
             }
         } else {
-            $rela = DB::select("select concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
+            $rela = DB::select("select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero
                                         from cmovinv c join puntoventa p on c.pve_id = p.pve_id
+                                                    join almacen a on p.alm_id = a.alm_id
                                                     join ctipocom t on c.cti_id = t.cti_id
                                         where c.cmo_id = " . $data['cmo_id'])[0];
-            
+
             $data['doc_rela'] = $rela->numero;
         }
 
@@ -97,10 +133,20 @@ class PreIngresoController extends Controller
                                         p.pro_id,
                                         p.pro_codigo,
                                         p.pro_nombre,
-                                        count(*) as cantidad,
-                                        (select count(*) from gex.dpreingreso d2 where d2.numero = c.numero) as cantidadTotal,
+                                        cast(sum((case d.tipo when 'N' then 1 else 0.5 end)) as integer) as cantidad,
+                                        (select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.dpreingreso d2 where d2.numero = c.numero) as cantidadTotal,
                                         (case when c.estado = 'A' then 'ACTIVO' else 'DESACTIVO' end) as estado,
-                                        min(d.linea) as linea
+                                        min(d.linea) as linea,
+                                        (case when c.cmo_id is null then 'Nota/Crédito: ' else 'Ingreso: ' end) as etiquetaDR,
+                                        (case when c.cmo_id is null then (select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c1.cfa_numero)
+                                                                        from cfactura c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                            join almacen a on p.alm_id = a.alm_id
+                                                                                            join ctipocom t on c1.cti_id = t.cti_id
+                                                                        where c1.cfa_id = c.cfa_id) else (select concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c1.cmo_numero)
+                                                                                                            from cmovinv c1 join puntoventa p on c1.pve_id = p.pve_id
+                                                                                                                            join almacen a on p.alm_id = a.alm_id
+                                                                                                                            join ctipocom t on c1.cti_id = t.cti_id
+                                                                                                            where c1.cmo_id = c.cmo_id) end) as doc_rela
                                 from gex.cpreingreso c join gex.dpreingreso d on c.numero = d.numero
                                                     join bodega b on c.bod_id = b.bod_id
                                                     join cliente l on c.cli_id = l.cli_id
@@ -111,7 +157,7 @@ class PreIngresoController extends Controller
                                 order by linea");
 
         foreach ($data['impresion'] as $i) {
-            $i->series = DB::select("select d.serie
+            $i->series = DB::select("select d.serie, (case d.tipo when 'C' then 'COMPRESOR' when 'E' then 'EVAPORADOR' end) as tipo
                                     from gex.dpreingreso d
                                     where d.numero = " . $i->numero . " and d.pro_id = " . $i->pro_id);
         }
@@ -128,7 +174,7 @@ class PreIngresoController extends Controller
         try {
             DB::transaction(function() use ($request){
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 $numero = 0;
                 $fecha_crea = null;
                 $fecha_modifica = null;
@@ -149,10 +195,10 @@ class PreIngresoController extends Controller
                 $cfa_id = null;
                 $guia_remision = $request->input('guia_remision');
                 $cli_id = $request->input('cli_id');
-    
+
                 $usuario_crea = $request->input('usuario_crea');
                 $usuario_modifica = $request->input('usuario_modifica');
-    
+
                 DB::table('gex.cpreingreso')->updateOrInsert(
                     ['numero' => $numero],
                     [
@@ -169,15 +215,16 @@ class PreIngresoController extends Controller
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
                     ]);
-            
+
                 $detalle = $request->input('detalle');
-                
+
                 $data = (PreIngreso::with('detalle')->get()->where('numero', $numero)->first())['detalle'];
 
                 DB::table('gex.dpreingreso')->where('numero',$numero)->delete();
 
                 foreach ($data as $d) {
-                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                    DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
+                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
                 }
 
                 foreach ($detalle as $d) {
@@ -185,10 +232,12 @@ class PreIngresoController extends Controller
                         [
                             'pro_id' => $d['pro_id'],
                             'serie' => $d['serie'],
+                            'tipo' => $d['tipo'],
                         ],
                         [
                             'pro_id' => $d['pro_id'],
                             'serie' => $d['serie'],
+                            'tipo' => $d['tipo'],
                         ]);
 
                     DB::table('gex.dpreingreso')->updateOrInsert(
@@ -201,13 +250,21 @@ class PreIngresoController extends Controller
                             'linea' => $d['linea'],
                             'pro_id' => $d['pro_id'],
                             'serie' => $d['serie'],
+                            'tipo' => $d['tipo'],
                         ]);
 
+                    DB::table('gex.stock_serie')->insert(
+                        [
+                            'pro_id' => $d['pro_id'],
+                            'serie' => $d['serie'],
+                            'bod_id' => $bod_id,
+                            'tipo' => $d['tipo'],
+                        ]);
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Preingreso grabado con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
@@ -218,16 +275,16 @@ class PreIngresoController extends Controller
         try {
             DB::transaction(function() use ($numero){
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 $data = PreIngreso::with('detalle')->get()->where('numero', $numero)->first();
 
                 $fecha_crea = $data['fecha_crea'];
                 $fecha_modifica = date("Y-m-d h:i:s");
                 $estado = 'D';
-    
+
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $data['usuario_modifica'];
-    
+
                 DB::table('gex.cpreingreso')->updateOrInsert(
                     ['numero' => $numero],
                     [
@@ -240,12 +297,12 @@ class PreIngresoController extends Controller
                     ]);
 
                 foreach ($data['detalle'] as $d) {
-                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                    DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Preingreso anulado con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
@@ -260,7 +317,8 @@ class PreIngresoController extends Controller
                 DB::table('gex.cpreingreso')->where('numero',$numero)->delete();
 
                 foreach ($data as $d) {
-                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
+                    DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
+                    DB::table('gex.producto_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->where('tipo', $d['tipo'])->delete();
                 }
             });
 
@@ -272,34 +330,42 @@ class PreIngresoController extends Controller
 
     public function cargaIngresos() {
         $data = DB::select("select c.cmo_id,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
-                                    TO_CHAR(c.cmo_fecha::date, 'dd/mm/yyyy') as fecha,
+                                    concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cmo_numero) as numero,
+                                    c.cmo_fecha as fecha,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     'INV' as op,
-                                    c.cmo_id as indice
+                                    (select cast(sum(d.dmo_cantidad) as integer) from dmovinv d where d.cmo_id = c.cmo_id) as cantidad,
+                                    coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
+                                            from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
+                                            where c2.cmo_id = c.cmo_id),0) as relacionado
                             from cmovinv c join puntoventa p on c.pve_id = p.pve_id
+                                        join almacen a on p.alm_id = a.alm_id
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join cliente l on c.cli_id = l.cli_id
                                         join entidad e on l.ent_id = e.ent_id
-                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cmo_fecha >= '2023-06-01'
-                                    and (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id) > (select count(*)
-                                                                                                                from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
-                                                                                                                where c2.cmo_id = c.cmo_id)
+                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cmo_fecha >= '2024-01-01'
+                                    and (select sum(d.dmo_cantidad) from dmovinv d where d.cmo_id = c.cmo_id) > coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
+                                                                                                                        from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
+                                                                                                                        where c2.cmo_id = c.cmo_id),0)
                             union
                             select c.cfa_id,
-                                    concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
-                                    TO_CHAR(c.cfa_fecha::date, 'dd/mm/yyyy') as fecha,
+                                    concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  c.cfa_numero) as numero,
+                                    c.cfa_fecha as fecha,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
                                     'VTA' as op,
-                                    c.cfa_id as indice
+                                    (select cast(sum(d.dfac_cantidad) as integer) from dfactura d where d.cfa_id = c.cfa_id) as cantidad,
+                                    coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
+                                            from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
+                                            where c2.cfa_id = c.cfa_id),0) as relacionado
                             from cfactura c join puntoventa p on c.pve_id = p.pve_id
+                                        join almacen a on p.alm_id = a.alm_id
                                         join ctipocom t on c.cti_id = t.cti_id
                                         join cliente l on c.cli_id = l.cli_id
                                         join entidad e on l.ent_id = e.ent_id
-                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cfa_fecha >= '2023-06-01'
-                                    and (select sum(d.dfac_cantidad) from dfactura d where d.cfa_id = c.cfa_id) > (select count(*)
-                                                                                                                from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
-                                                                                                                where c2.cfa_id = c.cfa_id)
+                            where c.cti_id in (select r.cti_id from gex.doc_presenta r where r.opcion = 'PRI') and c.cfa_fecha >= '2024-01-01'
+                                    and (select sum(d.dfac_cantidad) from dfactura d where d.cfa_id = c.cfa_id) > coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer)
+                                                                                                                            from gex.dpreingreso d2 join gex.cpreingreso c2 on d2.numero = c2.numero
+                                                                                                                            where c2.cfa_id = c.cfa_id),0)
                             order by fecha, numero");
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
@@ -307,12 +373,12 @@ class PreIngresoController extends Controller
 
     public function cargaDetalleIngreso($id, $tipo) {
         if ($tipo == 'INV') {
-            $data = DB::select("select pro_id, dmo_cantidad - (select count(*) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
-                                                                where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id) as saldo
+            $data = DB::select("select pro_id, dmo_cantidad - coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
+                                                                where c.cmo_id = d.cmo_id and d2.pro_id = d.pro_id),0) as saldo
                                 from dmovinv d where cmo_id = " . $id);
         } else {
-            $data = DB::select("select pro_id, dfac_cantidad - (select count(*) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
-                                                                where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id) as saldo
+            $data = DB::select("select pro_id, dfac_cantidad - coalesce((select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.cpreingreso c join gex.dpreingreso d2 on c.numero = d2.numero
+                                                                where c.cfa_id = d.cfa_id and d2.pro_id = d.pro_id),0) as saldo
                                 from dfactura d where cfa_id = " . $id);
         }
 
@@ -321,17 +387,18 @@ class PreIngresoController extends Controller
 
     public function cargaPreingresos() {
         $data = PreIngreso::with('detalle')->where('cmo_id', null)->where('estado', 'A')->get();
-        
+
         foreach ($data as $d) {
-            $d['bodega'] = DB::select("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $d['bod_id'])[0];
-            $d['cliente'] = DB::select("select c.cli_id, concat(e.ent_identificacion, ' - ',
-                                                (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as presenta
-                                        from cliente c join entidad e on c.ent_id = e.ent_id
-                                        where c.cli_id = " . $d['cli_id'])[0];
+            $d['bodega'] = DB::selectone("select b.bod_id, b.bod_nombre as presenta from bodega b where b.bod_id = " . $d['bod_id']);
+            $d['cliente'] = DB::selectone("select c.cli_id, concat(e.ent_identificacion, ' - ',
+                                                   (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when c.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as presenta
+                                           from cliente c join entidad e on c.ent_id = e.ent_id
+                                           where c.cli_id = " . $d['cli_id']);
             $d['fechaPresenta'] = date_format(date_create($d['fecha']),'d/m/Y');
+            $d['preingresado'] = DB::selectone("select cast(sum((case d2.tipo when 'N' then 1 else 0.5 end)) as integer) as valor from gex.dpreingreso d2 where d2.numero = " . $d['numero'])->valor;
 
             foreach ($d['detalle'] as $p) {
-                $producto = DB::select("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p where p.pro_id = " . $p['pro_id'])[0];
+                $producto = DB::selectone("select p.pro_id, concat(p.pro_codigo, ' - ', p.pro_nombre) as presenta from producto p where p.pro_id = " . $p['pro_id']);
                 $p['producto'] = $producto->presenta;
             }
         }
@@ -340,19 +407,21 @@ class PreIngresoController extends Controller
     }
 
     public function cargaRelaciones() {
-        $data = DB::select("select c.numero, (case when ci.cmo_numero is null then concat(t1.cti_sigla,' - ', p1.alm_id, ' - ', p1.pve_numero, ' - ',  cf.cfa_numero) else concat(t.cti_sigla,' - ', p.alm_id, ' - ', p.pve_numero, ' - ',  ci.cmo_numero) end) as relacionado,
-                                    TO_CHAR(c.fecha::date, 'dd/mm/yyyy') as fecha,
+        $data = DB::select("select c.numero, (case when ci.cmo_numero is null then concat(t1.cti_sigla,' - ', a1.alm_codigo, ' - ', p1.pve_numero, ' - ',  cf.cfa_numero) else concat(t.cti_sigla,' - ', a.alm_codigo, ' - ', p.pve_numero, ' - ',  ci.cmo_numero) end) as relacionado,
+                                    c.fecha as fecha,
                                     c.guia_remision, b.bod_nombre,
                                     concat(e.ent_identificacion, ' - ', (case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end), ' - ', (case when l.cli_tipocli = 1 then 'CLIENTE' else 'PROVEEDOR' end)) as proveedor,
-                                    (select count(*) from gex.dpreingreso d where d.numero = c.numero) as mov,
-                                    (select count(*) from gex.dpreingreso d join gex.stock_serie ss on d.pro_id = ss.pro_id and d.serie = ss.serie where d.numero = c.numero and ss.bod_id = c.bod_id) as stock
+                                    (select cast(sum((case d.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.dpreingreso d where d.numero = c.numero) as mov,
+                                    (select cast(sum((case d.tipo when 'N' then 1 else 0.5 end)) as integer) from gex.dpreingreso d join gex.stock_serie ss on d.pro_id = ss.pro_id and d.serie = ss.serie where d.numero = c.numero and ss.bod_id = c.bod_id and ss.tipo = d.tipo) as stock
                             from gex.cpreingreso c join bodega b on c.bod_id = b.bod_id
                                                 join cliente l on c.cli_id = l.cli_id
                                                 join entidad e on l.ent_id = e.ent_id
                                                 left outer join cmovinv ci on c.cmo_id = ci.cmo_id
                                                 left outer join cfactura cf on c.cfa_id = cf.cfa_id
                                                 left outer join puntoventa p on ci.pve_id = p.pve_id
+                                                left outer join almacen a on p.alm_id = a.alm_id
                                                 left outer join puntoventa p1 on cf.pve_id = p1.pve_id
+                                                left outer join almacen a1 on p1.alm_id = a1.alm_id
                                                 left outer join ctipocom t on ci.cti_id = t.cti_id
                                                 left outer join ctipocom t1 on cf.cti_id = t1.cti_id
                             where (c.cmo_id is not null or c.cfa_id is not null) and c.estado = 'A'");
@@ -367,14 +436,14 @@ class PreIngresoController extends Controller
 
             DB::transaction(function() use ($preIngresos){
                 date_default_timezone_set("America/Guayaquil");
-                
+
                 foreach ($preIngresos as $p) {
                     $numero = $p['numero'];
                     $fecha_crea = $p['fecha_crea'];
                     $fecha_modifica = date("Y-m-d h:i:s");
                     $cmo_id = $p['cmo_id'];
                     $cfa_id = $p['cfa_id'];
-        
+
                     $usuario_crea = $p['usuario_crea'];
                     $usuario_modifica = $p['usuario_modifica'];
 
@@ -389,24 +458,11 @@ class PreIngresoController extends Controller
                         'usuario_modifica' => $usuario_modifica,
                         'fecha_modifica' => $fecha_modifica,
                         ]);
-
-                    foreach ($p['detalle'] as $d) {
-                        $pro_id = $d['pro_id'];
-                        $serie = $d['serie'];
-                        $bod_id = $p['bod_id'];
-
-                        DB::table('gex.stock_serie')->insert(
-                            [
-                                'pro_id' => $pro_id,
-                                'serie' => $serie,
-                                'bod_id' => $bod_id,
-                            ]);
-                    }
                 }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Preingresos relacionados con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }
@@ -425,7 +481,7 @@ class PreIngresoController extends Controller
                 $fecha_modifica = date("Y-m-d h:i:s");
                 $cmo_id = null;
                 $cfa_id = null;
-        
+
                 $usuario_crea = $data['usuario_crea'];
                 $usuario_modifica = $usuario;
 
@@ -440,14 +496,10 @@ class PreIngresoController extends Controller
                     'usuario_modifica' => $usuario_modifica,
                     'fecha_modifica' => $fecha_modifica,
                     ]);
-
-                foreach ($data['detalle'] as $d) {
-                    DB::table('gex.stock_serie')->where('pro_id', $d['pro_id'])->where('serie', $d['serie'])->delete();
-                }
             });
-            
+
             return response()->json(RespuestaApi::returnResultado('success', 'Se quitó la relacion del preingreso con exito', []));
-            
+
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('exception', 'Error del servidor', $e->getmessage()));
         }

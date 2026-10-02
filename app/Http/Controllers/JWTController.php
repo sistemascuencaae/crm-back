@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\TableroEvent;
+use App\Http\Controllers\crm\CasoController;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Validator;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +33,7 @@ class JWTController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|min:2|max:100',
             'email' => 'required|string|email|max:100|unique:users',
-            'password' => 'required|string|confirmed|min:6',
+            'password' => 'required|string|confirmed|min:4',
         ]);
 
         if ($validator->fails()) {
@@ -58,7 +61,7 @@ class JWTController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'usu_alias' => 'required|string|min:4',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:4',
         ]);
 
         if ($validator->fails()) {
@@ -66,8 +69,37 @@ class JWTController extends Controller
         }
 
         if (!$token = auth()->attempt($validator->validated())) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            return response()->json(['error' => 'Usuario o contraseña incorrecta'], 401);
+            // return response()->json(['error' => 'Unauthorized'], 401);
         }
+
+        // Verifica si el usuario está activo
+        $user = Auth::user();
+        if (!$user || !$user->estado) {
+            // El usuario no está activo
+            return response()->json(['error' => 'El usuario NO esta activo'], 401);
+        }
+
+        // Lineas para poner "en Linea" al usuario al iniciar sesión
+        $usuario = User::findOrFail($user->id);
+
+        $usuario->update([
+            "en_linea" => true,
+            'ult_inicio_sesion' => now(), // ⬅️ Esta línea guarda el último login
+        ]);
+
+        // // buscar todos mis casos en los que el usuario este
+        // $query = DB::select(
+        //     'SELECT caso.id FROM crm.users usuario 
+        //             JOIN crm.caso caso 
+        //                 ON caso.user_id = usuario.id
+        //             WHERE usuario.id = ?', [$user->id]
+        // );
+        // foreach ($query as $key => $value) {
+        //     $caso = new CasoController();
+        //     $data = $caso->getCaso($value->id);
+        //     broadcast(new TableroEvent($data));
+        // }
 
         return $this->respondWithToken($token);
     }
@@ -111,26 +143,107 @@ class JWTController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
+
+
+    // Metodo original
+    // public function respondWithToken($token)
+    // {
+
+
+    //     $alm = DB::selectOne('SELECT alm.alm_nombre, alm.alm_codigo, alm.alm_id from crm.users u
+    //     inner join public.almacen alm on alm.alm_id = u.alm_id where u.id = ?', [auth('api')->user()->id]);
+
+    //     $alm_id = null;
+    //     $alm_nombre = '';
+    //     $alm_codigo = 0;
+
+
+    //     $accesos = DB::select("SELECT u.id as user_id, me.name, me.url from crm.users u
+    //     inner join crm.profiles p on p.id = u.profile_id
+    //     inner join crm.access acc on acc.profile_id = p.id and acc.ejecutar = 1
+    //     inner join crm.menu me on me.id = acc.menu_id
+    //     where u.id = ?;",[auth('api')->user()->id]);
+
+    //     if ($alm) {
+    //         $alm_nombre = $alm->alm_nombre;
+    //         $alm_id = $alm->alm_id;
+    //         $alm_codigo = $alm->alm_codigo;
+    //     }
+
+    //     $usuario = User::findOrFail(auth('api')->user()->id);
+
+    //     $usuario->update([
+    //         "en_linea" => true,
+    //     ]);
+
+    //     // echo (json_encode($alm_nombre[0]->alm_nombre));
+    //     return response()->json([
+    //         'access_token' => $token,
+    //         'token_type' => 'bearer',
+    //         'expires_in' => auth()->factory()->getTTL(),
+    //         'accesos' => $accesos,
+    //         'user' => [
+    //             "id" => auth('api')->user()->id,
+    //             "en_linea" => $usuario->en_linea,
+    //             "full_name" => auth('api')->user()->usu_alias . ' - ' . auth('api')->user()->name . ' ' . auth('api')->user()->surname,
+    //             "name" => auth('api')->user()->name,
+    //             "surname" => auth('api')->user()->surname,
+    //             "email" => auth('api')->user()->email,
+    //             "usu_tipo_analista" => auth('api')->user()->usu_tipo_analista,
+    //             "usu_tipo" => auth('api')->user()->usu_tipo,
+    //             "usu_alias" => auth('api')->user()->usu_alias,
+    //             "dep_id" => auth('api')->user()->dep_id,
+    //             "profile_id" => auth('api')->user()->profile_id,
+    //             "bod_id" => auth('api')->user()->bod_id,
+    //             "alm_nombre" => $alm_nombre,
+    //             "alm_id" => $alm_id,
+    //             "alm_codigo" => $alm_codigo,
+    //         ]
+    //     ]);
+
+
+
+    // }
+
+
+
     public function respondWithToken($token)
     {
+        // NO PUEDO SACAR EL ALM_CODIGO PORQUE EN MI TABLA AGENCIA NO EXISTE, POR LO TANTO LOS REPORTES DE VENTAS YA NO VAN A SERVIR
+        $alm = DB::selectOne('SELECT a.nombre AS alm_nombre, a.codigo AS alm_id 
+                                        FROM crm.users u
+                                    INNER JOIN crm.agencia a ON a.codigo = CAST(u.alm_id AS VARCHAR) 
+                                    WHERE u.id = ?', [auth('api')->user()->id]);
 
-
-        $alm = DB::select('SELECT alm.alm_nombre FROM public.puntoventa pve
-        inner join public.almacen alm on alm.alm_id = pve.alm_id where pve.pve_id = ?', [auth('api')->user()->pve_id,]);
-
+        $alm_id = null;
         $alm_nombre = '';
 
-        if (sizeof($alm) > 0) {
-            $alm_nombre = $alm[0]->alm_nombre;
+        $accesos = DB::select("SELECT u.id as user_id, me.name, me.url from crm.users u
+        inner join crm.profiles p on p.id = u.profile_id
+        inner join crm.access acc on acc.profile_id = p.id and acc.ejecutar = 1
+        inner join crm.menu me on me.id = acc.menu_id
+        where u.id = ?;",[auth('api')->user()->id]);
+
+        if ($alm) {
+            $alm_nombre = $alm->alm_nombre;
+            $alm_id = $alm->alm_id;
         }
 
-        // echo (json_encode($alm_nombre[0]->alm_nombre));
+        $usuario = User::findOrFail(auth('api')->user()->id);
+
+        $usuario->update([
+            "en_linea" => true,
+        ]);
+
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60 * 60 * 24 * 2000000,
+            'expires_in' => auth()->factory()->getTTL(),
+            'accesos' => $accesos,
             'user' => [
                 "id" => auth('api')->user()->id,
+                "en_linea" => $usuario->en_linea,
+                "full_name" => auth('api')->user()->usu_alias . ' - ' . auth('api')->user()->name . ' ' . auth('api')->user()->surname,
                 "name" => auth('api')->user()->name,
                 "surname" => auth('api')->user()->surname,
                 "email" => auth('api')->user()->email,
@@ -139,11 +252,12 @@ class JWTController extends Controller
                 "usu_alias" => auth('api')->user()->usu_alias,
                 "dep_id" => auth('api')->user()->dep_id,
                 "profile_id" => auth('api')->user()->profile_id,
+                "bod_id" => auth('api')->user()->bod_id,
                 "alm_nombre" => $alm_nombre,
+                "alm_id" => $alm_id,
             ]
         ]);
-
-
-
     }
+
+
 }
