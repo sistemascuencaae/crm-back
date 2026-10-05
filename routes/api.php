@@ -516,27 +516,28 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
 
     // !START TODOS LOS CASOS
-    // *por fechas
-    Route::get('/listTodosLosCasosPendientesSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosPendientesSuperUsuario']);
-    Route::get('/listTodosLosCasosTerminadosSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosTerminadosSuperUsuario']);
-    Route::get('/listTodosLosCasosRechazadosSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosRechazadosSuperUsuario']);
-    Route::get('/listTodosLosCasosPendientesAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesAdministrador']);
-    Route::get('/listTodosLosCasosTerminadosAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosAdministrador']);
-    Route::get('/listTodosLosCasosRechazadosAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosAdministrador']);
-    Route::get('/listTodosLosCasosPendientesUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesUsuarioComun']);
-    Route::get('/listTodosLosCasosTerminadosUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosUsuarioComun']);
-    Route::get('/listTodosLosCasosRechazadosUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosUsuarioComun']);
+    Route::get('/listarTodosLosCasos', [TableroController::class, 'listarTodosLosCasos']); // pantalla de auditores, paginada (reemplaza a las 18 de abajo)
+    // // *por fechas
+    // Route::get('/listTodosLosCasosPendientesSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosPendientesSuperUsuario']);
+    // Route::get('/listTodosLosCasosTerminadosSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosTerminadosSuperUsuario']);
+    // Route::get('/listTodosLosCasosRechazadosSuperUsuario/{fechaInicio}/{fechaFin}', [TableroController::class, 'listTodosLosCasosRechazadosSuperUsuario']);
+    // Route::get('/listTodosLosCasosPendientesAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesAdministrador']);
+    // Route::get('/listTodosLosCasosTerminadosAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosAdministrador']);
+    // Route::get('/listTodosLosCasosRechazadosAdministrador/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosAdministrador']);
+    // Route::get('/listTodosLosCasosPendientesUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesUsuarioComun']);
+    // Route::get('/listTodosLosCasosTerminadosUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosUsuarioComun']);
+    // Route::get('/listTodosLosCasosRechazadosUsuarioComun/{fechaInicio}/{fechaFin}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosUsuarioComun']);
 
-    // *por campo
-    Route::get('/listTodosLosCasosPendientesSuperUsuarioPorCampo/{tipo_campo}/{valor}', [TableroController::class, 'listTodosLosCasosPendientesSuperUsuarioPorCampo']);
-    Route::get('/listTodosLosCasosTerminadosSuperUsuarioPorCampo/{tipo_campo}/{valor}', [TableroController::class, 'listTodosLosCasosTerminadosSuperUsuarioPorCampo']);
-    Route::get('/listTodosLosCasosRechazadosSuperUsuarioPorCampo/{tipo_campo}/{valor}', [TableroController::class, 'listTodosLosCasosRechazadosSuperUsuarioPorCampo']);
-    Route::get('/listTodosLosCasosPendientesAdministradorPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesAdministradorPorCampo']);
-    Route::get('/listTodosLosCasosTerminadosAdministradorPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosAdministradorPorCampo']);
-    Route::get('/listTodosLosCasosRechazadosAdministradorPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosAdministradorPorCampo']);
-    Route::get('/listTodosLosCasosPendientesUsuarioComunPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesUsuarioComunPorCampo']);
-    Route::get('/listTodosLosCasosTerminadosUsuarioComunPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosUsuarioComunPorCampo']);
-    Route::get('/listTodosLosCasosRechazadosUsuarioComunPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosUsuarioComunPorCampo']);
+    // // *por campo
+    // Route::get('/listTodosLosCasosPendientesSuperUsuarioPorCampo/{tipo_campo}/{valor}', [TableroController::class, 'listTodosLosCasosPendientesSuperUsuarioPorCampo']);
+    // Route::get('/listTodosLosCasosTerminadosSuperUsuarioPorCampo/{tipo_campo}/{valor}', [TableroController::class, 'listTodosLosCasosTerminadosSuperUsuarioPorCampo']);
+    // Route::get('/listTodosLosCasosRechazadosSuperUsuarioPorCampo/{tipo_campo}/{valor}', [TableroController::class, 'listTodosLosCasosRechazadosSuperUsuarioPorCampo']);
+    // Route::get('/listTodosLosCasosPendientesAdministradorPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesAdministradorPorCampo']);
+    // Route::get('/listTodosLosCasosTerminadosAdministradorPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosAdministradorPorCampo']);
+    // Route::get('/listTodosLosCasosRechazadosAdministradorPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosAdministradorPorCampo']);
+    // Route::get('/listTodosLosCasosPendientesUsuarioComunPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosPendientesUsuarioComunPorCampo']);
+    // Route::get('/listTodosLosCasosTerminadosUsuarioComunPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosTerminadosUsuarioComunPorCampo']);
+    // Route::get('/listTodosLosCasosRechazadosUsuarioComunPorCampo/{tipo_campo}/{valor}/{tab_id}', [TableroController::class, 'listTodosLosCasosRechazadosUsuarioComunPorCampo']);
     // !END TODOS LOS CASOS
 
 
@@ -1478,6 +1479,9 @@ Route::group(['prefix' => 'profile', 'middleware' => ['jwt.auth', 'usuario.activ
     Route::delete('deleteProfile/{id}', [ProfileController::class, 'deleteProfile']);
     Route::post('clonProfile', [ProfileController::class, 'clonProfile']);
     Route::get('buscarAccesosByProfileId/{id}', [ProfileController::class, 'buscarAccesosByProfileId']);
+    Route::get('listarPerfiles', [ProfileController::class, 'listarPerfiles']); // listado paginado (profile-list)
+    Route::get('tiposCasoPerfil/{id}', [ProfileController::class, 'tiposCasoPerfil']); // tipos de caso de Todos los casos
+    Route::get('perfilAuditoria', [ProfileController::class, 'perfilAuditoria']); // modal de auditoría del perfil
 });
 
 Route::group(['prefix' => 'access', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {

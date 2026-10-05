@@ -10,6 +10,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use App\Models\Profile;
 use App\Models\Access;
 
@@ -138,6 +139,10 @@ class ProfileController extends Controller
 
     public function create(Request $request)
     {
+        if (!$this->tienePermisoPerfiles('create')) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para crear perfiles', ''));
+        }
+
         try {
             $error = null;
             $exitoso = null;
@@ -161,6 +166,9 @@ class ProfileController extends Controller
                         $accessData['profile_id'] = $profile->id;
                         Access::create($accessData);
                     }
+
+                    $this->guardarTiposCasoPerfil($request, $profile->id);
+                    $this->registrarAuditoriaPerfil($request, $profile->id, 'INSERT', null);
 
                     $exitoso = Profile::orderBy('id', 'asc')->get();
 
@@ -235,6 +243,10 @@ class ProfileController extends Controller
 
     public function edit(Request $request, $id)
     {
+        if (!$this->tienePermisoPerfiles('edit')) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para editar perfiles', ''));
+        }
+
         try {
             $error = null;
             $exitoso = null;
@@ -254,6 +266,9 @@ class ProfileController extends Controller
 
                     $perfil = Profile::findOrFail($id);
 
+                    // Foto antes de tocar nada, para el diff de la auditoría.
+                    $fotoAntes = $this->fotoAuditoriaPerfil($perfil->id);
+
                     $perfil->update($request->all());
 
                     //eliminos los access actuales
@@ -264,6 +279,9 @@ class ProfileController extends Controller
                         $accessData['profile_id'] = $perfil->id;
                         Access::create($accessData);
                     }
+
+                    $this->guardarTiposCasoPerfil($request, $perfil->id);
+                    $this->registrarAuditoriaPerfil($request, $perfil->id, 'UPDATE', $fotoAntes);
 
                     $exitoso = Profile::orderBy('id', 'asc')->get();
 
@@ -291,31 +309,38 @@ class ProfileController extends Controller
         }
     }
 
+    // Los perfiles no se eliminan, solo se desactivan (el botón Eliminar del listado quedó comentado).
     public function deleteProfile(Request $request, $id)
     {
-        try {
-            $data = DB::transaction(function () use ($id) {
-                $profile = Profile::findOrFail($id);
+        return response()->json(RespuestaApi::returnResultado('error', 'Los perfiles no se eliminan: desactívelo desde Editar.', ''));
 
-                // Verificar si existen usuarios relacionados con este perfil
-                if (User::where('profile_id', $profile->id)->exists()) {
-                    return response()->json(RespuestaApi::returnResultado('error', 'No se puede eliminar este perfil porque ya esta asignado a un usuario', ''));
-                }
+        // try {
+        //     $data = DB::transaction(function () use ($id) {
+        //         $profile = Profile::findOrFail($id);
 
-                // Elimina el perfil y sus registros relacionados
-                $profile->access()->delete();
-                $profile->delete();
+        //         // Verificar si existen usuarios relacionados con este perfil
+        //         if (User::where('profile_id', $profile->id)->exists()) {
+        //             return response()->json(RespuestaApi::returnResultado('error', 'No se puede eliminar este perfil porque ya esta asignado a un usuario', ''));
+        //         }
 
-                return $profile;
-            });
-            return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $data));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
-        }
+        //         // Elimina el perfil y sus registros relacionados
+        //         $profile->access()->delete();
+        //         $profile->delete();
+
+        //         return $profile;
+        //     });
+        //     return response()->json(RespuestaApi::returnResultado('success', 'Se eliminó con éxito', $data));
+        // } catch (Exception $e) {
+        //     return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        // }
     }
 
     public function clonProfile(Request $request)
     {
+        if (!$this->tienePermisoPerfiles('create')) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para clonar perfiles', ''));
+        }
+
         try {
             $error = null;
             $exitoso = null;
@@ -341,6 +366,10 @@ class ProfileController extends Controller
                         Access::create($accessData);
                     }
 
+                    // El request trae el id del perfil de origen: la auditoría anota de cuál salió.
+                    $this->guardarTiposCasoPerfil($request, $profile->id);
+                    $this->registrarAuditoriaPerfil($request, $profile->id, 'INSERT', null, (int) $request->input('id') ?: null);
+
                     $exitoso = Profile::orderBy('id', 'asc')->get();
 
                     // Especificar las propiedades que representan fechas en tu objeto
@@ -365,6 +394,132 @@ class ProfileController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
+    }
+
+    // Listado paginado de perfiles (grid de profile-list), mismo estándar que el de usuarios.
+    // Sin busqueda -> crm.fn_perfil_listar_paginacion | con busqueda -> crm.fn_perfil_buscar_paginacion
+    public function listarPerfiles(Request $request)
+    {
+        try {
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($busqueda !== '') {
+                $registros = DB::select('SELECT * FROM crm.fn_perfil_buscar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+            } else {
+                $registros = DB::select('SELECT * FROM crm.fn_perfil_listar_paginacion(?, ?)', [$pagina, $tamanio]);
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Perfiles listados con éxito', [
+                'registros' => $registros,
+                'total' => (int) ($registros[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los perfiles', $th->getMessage()));
+        }
+    }
+
+    // Tipos de caso con la marca del perfil, para la fila "Todos los casos" de la matriz. Perfil 0 = Nuevo.
+    public function tiposCasoPerfil($profile_id)
+    {
+        try {
+            $tipos = DB::select('SELECT * FROM crm.fn_perfil_tipo_caso_listar(?)', [(int) $profile_id]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $tipos));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los tipos de caso', $th->getMessage()));
+        }
+    }
+
+    // Auditoría de UN perfil (modal del listado): resumen y eventos de auditoria.logs_cambios, módulo PERFILES.
+    public function perfilAuditoria(Request $request)
+    {
+        if (!$this->tienePermisoPerfiles('audit')) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No tiene permiso para ver la auditoría de perfiles', null));
+        }
+
+        try {
+            $profileId = (int) $request->query('profile_id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($profileId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Perfil no válido', null));
+            }
+
+            $resumen = DB::selectOne('SELECT * FROM crm.fn_perfil_auditoria_resumen(?)', [$profileId]);
+            $eventos = DB::select('SELECT * FROM crm.fn_perfil_auditoria_listar_paginacion(?, ?, ?, ?)', [$profileId, $pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del perfil', $th->getMessage()));
+        }
+    }
+
+    // Permisos del menú Perfiles (crm.menu.name = 'PROFILES') del usuario que hace la petición.
+    private function tienePermisoPerfiles($accion)
+    {
+        return Access::where('profile_id', auth()->user()->profile_id)
+            ->where($accion, 1)
+            ->whereHas('menu', function ($query) {
+                $query->where('name', 'PROFILES');
+            })
+            ->exists();
+    }
+
+    // Sin tipos_caso en el request no se tocan, así nada los borra por accidente.
+    private function guardarTiposCasoPerfil(Request $request, $profileId)
+    {
+        if (!$request->has('tipos_caso')) {
+            return;
+        }
+
+        $ids = array_values(array_unique(array_map('intval', (array) $request->input('tipos_caso', []))));
+
+        DB::select('SELECT crm.fn_perfil_tipo_caso_reemplazar(?, ?::jsonb)', [$profileId, json_encode($ids)]);
+    }
+
+    // Foto del perfil (nombre, estado, permisos por menú y tipos de caso) para la auditoría; null si no existe.
+    private function fotoAuditoriaPerfil($profileId)
+    {
+        return DB::selectOne('SELECT crm.fn_perfil_auditoria_armar_foto(?) AS foto', [$profileId])->foto;
+    }
+
+    // Una fila por alta, clon o edición en auditoria.logs_cambios (módulo PERFILES); la foto de después la arma la función.
+    private function registrarAuditoriaPerfil(Request $request, $profileId, $operacion, $fotoAntes, $clonadoDe = null)
+    {
+        DB::select('SELECT crm.fn_perfil_auditoria_registrar(?, ?, ?::jsonb, ?::integer, ?::jsonb)', [
+            $profileId,
+            $operacion,
+            $fotoAntes,
+            $clonadoDe,
+            json_encode($this->contextoAuditoriaForense($request)),
+        ]);
+    }
+
+    // Quién, desde dónde y en qué request, igual que en usuarios y clientes.
+    private function contextoAuditoriaForense(Request $request): array
+    {
+        $u = auth('api')->user();
+
+        return [
+            'usuario_id' => $u->id ?? null,
+            'usuario_login' => $u->usu_alias ?? null,
+            'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'request_id' => (string) Str::uuid(),
+        ];
     }
 
 }
