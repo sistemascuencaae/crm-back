@@ -95,7 +95,7 @@ class ConsultaIdentidadExternoController extends Controller
                 'Referer' => 'https://www.ecuadorlegalonline.com/consultas/registro-civil/consultar-cedulas/',
                 'X-Requested-With' => 'XMLHttpRequest',
                 'Origin' => 'https://www.ecuadorlegalonline.com',
-            ])->timeout(4) // aborta si Ecuador Legal no responde en 4 segundos
+            ])->timeout(10) // aborta si Ecuador Legal no responde en 10 segundos
                 ->post(self::URL_ECUADOR_LEGAL, ['name' => $identificacion, 'tipo' => 'I']);
 
             // Este endpoint solo acepta cédulas, y una persona jurídica NO tiene cédula: el Tipo Persona es
@@ -111,6 +111,9 @@ class ConsultaIdentidadExternoController extends Controller
             if (empty($nombre)) {
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron datos en Ecuador Legal', $tipoSujetoLocal));
             }
+
+            // Ecuador Legal lo manda con los nombres primero: se vuelve al orden del Registro Civil.
+            $nombre = $this->restaurarOrdenRegistroCivil($nombre);
 
             $partes = ConsultasService::separarNombreCompleto($nombre);
 
@@ -163,6 +166,48 @@ class ConsultaIdentidadExternoController extends Controller
         }
 
         return null;
+    }
+
+    // Desde oct/2026 Ecuador Legal devuelve "NOMBRES APELLIDOS": pasa al final las 2 primeras palabras
+    // (1 si son 2), sin respetar partículas. Se devuelven al inicio para dejar "APELLIDOS NOMBRES".
+    private function restaurarOrdenRegistroCivil(string $nombre): string
+    {
+        $palabras = preg_split('/\s+/u', trim($nombre));
+        $total = count($palabras);
+
+        if ($total < 2) {
+            return trim($nombre);
+        }
+
+        $movidas = $total === 2 ? 1 : 2;
+
+        // Con 3 palabras mueve 1 o 2: si la del medio es nombre de pila, movió solo 1.
+        if ($total === 3 && $this->esNombreDePila($palabras[1])) {
+            $movidas = 1;
+        }
+
+        return implode(' ', array_merge(array_slice($palabras, -$movidas), array_slice($palabras, 0, $total - $movidas)));
+    }
+
+    // Nombre de pila si en entidad aparece más como nombre que como apellido. Si la consulta falla, apellido.
+    private function esNombreDePila(string $palabra): bool
+    {
+        try {
+            // Se escapan los comodines del LIKE: la palabra viene de una página externa.
+            $patron = '% ' . addcslashes(mb_strtoupper($palabra, 'UTF-8'), '%_\\') . ' %';
+
+            $conteo = DB::selectOne(
+                "SELECT count(*) FILTER (WHERE (' ' || upper(trim(ent_nombres)) || ' ') LIKE ?) AS como_nombre,
+                        count(*) FILTER (WHERE (' ' || upper(trim(ent_apellidos)) || ' ') LIKE ?) AS como_apellido
+                 FROM entidad",
+                [$patron, $patron]
+            );
+
+            return $conteo->como_nombre > $conteo->como_apellido;
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo clasificar la palabra del nombre de Ecuador Legal: ' . $e->getMessage());
+            return false;
+        }
     }
 
     // Caché de identidad: LOG APPEND-ONLY (un INSERT por CADA consulta a la fuente externa, no 1 fila por
