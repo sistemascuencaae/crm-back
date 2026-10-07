@@ -21,6 +21,10 @@ class FaseController extends Controller
     // Modo Lista: solo los tamaños del selector de la pantalla, y el tope del Excel
     private const TAMANIOS_LISTA = [10, 20, 30, 50, 100];
     private const TOPE_EXCEL_LISTA = 5000;
+    // Orden por llegada a la fase (crm.caso.fecha_ingreso_fase): en el Kanban lo primero que llego arriba;
+    // en la lista lo ultimo que llego arriba, para que un caso que regresa salga en la pagina 1
+    private const ORDEN_KANBAN = 'PRIMEROS_EN_LLEGAR';
+    private const ORDEN_LISTA = 'ULTIMOS_EN_LLEGAR';
 
     public function __construct()
     {
@@ -428,10 +432,20 @@ class FaseController extends Controller
             return collect();
         }
 
-        return Caso::with($this->relacionesCaso())
-            ->whereIn('id', $casoIds)
-            ->orderByDesc('id') // whereIn no conserva el orden por si solo
-            ->get();
+        return $this->ordenarComoLaFuncion(
+            Caso::with($this->relacionesCaso())->whereIn('id', $casoIds)->get(),
+            $casoIds
+        );
+    }
+
+    // whereIn no conserva el orden: se deja el de los ids que devolvio la funcion (orden de llegada)
+    private function ordenarComoLaFuncion($casos, array $casoIds)
+    {
+        $posicion = array_flip($casoIds);
+
+        return $casos->sortBy(function ($caso) use ($posicion) {
+            return $posicion[$caso->id];
+        })->values();
     }
 
     // Kanban: los casos de la pagina repartidos por columna
@@ -473,11 +487,33 @@ class FaseController extends Controller
         ];
     }
 
-    // El usuario sale del token, nunca del body: por Postman no se puede pedir por otro
-    private function consultarKanban(Request $request, $user, $fasId, $cursorId, int $tamanio): array
+    // Llegada a la fase del cursor, tal como la mando el servidor (con microsegundos); null si no es una fecha
+    private function cursorIngreso($valor): ?string
+    {
+        if (!is_string($valor) || trim($valor) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($valor)->format('Y-m-d H:i:s.uP');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    // Hora de la consulta, al segundo como fecha_ingreso_fase: con ella el front sabe si un caso que llega
+    // por WebSocket entro a la fase despues (no estaba contado) o ya estaba en el total
+    private function consultadoEn(): string
+    {
+        return now()->startOfSecond()->toJSON();
+    }
+
+    // El usuario sale del token, nunca del body: por Postman no se puede pedir por otro.
+    // El cursor es la pareja (llegada a la fase, id) del ultimo caso de la pagina anterior.
+    private function consultarKanban(Request $request, $user, $fasId, $cursorId, ?string $cursorIngreso, int $tamanio): array
     {
         $fila = DB::selectOne(
-            'SELECT crm.fn_caso_kanban_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?, ?::integer[], ?, ?) AS resultado',
+            'SELECT crm.fn_caso_kanban_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?, ?::integer[], ?, ?, ?, ?::timestamptz) AS resultado',
             [
                 (int) $request->input('tabId'), // siempre numerico: con letras fallaba la base
                 $user->id,
@@ -487,17 +523,19 @@ class FaseController extends Controller
                 $cursorId,
                 $tamanio,
                 ...$this->filtrosTablero($request),
+                self::ORDEN_KANBAN,
+                $cursorIngreso,
             ]
         );
 
         return json_decode($fila->resultado, true);
     }
 
-    // Modo Lista: los ids de una pagina (los mas nuevos primero), el total y el contexto del usuario
+    // Modo Lista: los ids de una pagina (lo ultimo que llego a su fase primero), el total y el contexto
     private function consultarLista(Request $request, $user, int $pagina, int $tamanio): array
     {
         $fila = DB::selectOne(
-            'SELECT crm.fn_caso_lista_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?::integer[], ?, ?) AS resultado',
+            'SELECT crm.fn_caso_lista_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?::integer[], ?, ?, ?) AS resultado',
             [
                 (int) $request->input('tabId'),
                 $user->id,
@@ -506,6 +544,7 @@ class FaseController extends Controller
                 $pagina,
                 $tamanio,
                 ...$this->filtrosTablero($request),
+                self::ORDEN_LISTA,
             ]
         );
 
@@ -552,8 +591,8 @@ class FaseController extends Controller
     }
 
     /**
-     * Carga inicial del Kanban: fases con su primera pagina de casos, el total real de cada
-     * columna y el contexto del usuario (rol, solo lectura, agencias). POST /api/crm/listFaseKanban
+     * Carga inicial del Kanban: fases con su primera pagina de casos (lo primero que llego arriba), el total
+     * real de cada columna y el contexto del usuario (rol, solo lectura, agencias). POST /api/crm/listFaseKanban
      */
     public function listFaseKanban(Request $request)
     {
@@ -562,9 +601,10 @@ class FaseController extends Controller
 
         try {
             $user = auth('api')->user();
+            $consultadoEn = $this->consultadoEn(); // antes de consultar: lo que llegue despues no esta contado
 
             // Se pide uno de mas por columna para saber si quedan paginas
-            $kanban = $this->consultarKanban($request, $user, null, null, $perPage + 1);
+            $kanban = $this->consultarKanban($request, $user, null, null, null, $perPage + 1);
             $porFase = collect($kanban['fases'])->keyBy('fas_id');
 
             $fases = $this->fasesDelTablero($request);
@@ -582,11 +622,15 @@ class FaseController extends Controller
 
             foreach ($fases as $fase) {
                 $ids = $idsPorFase[$fase->id];
+                $ingresos = array_slice($porFase[$fase->id]['ingresos'] ?? [], 0, $perPage);
 
                 $fase->setRelation('caso', $casosPorFase->get($fase->id, collect())->values());
                 $fase->total_casos = (int) ($porFase[$fase->id]['total_casos'] ?? 0);
-                $fase->cursor_id = count($ids) ? end($ids) : null; // id mas bajo de la pagina
+                // Cursor de la pagina siguiente: el ultimo caso de esta (su id y su llegada a la fase)
+                $fase->cursor_id = count($ids) ? end($ids) : null;
+                $fase->cursor_ingreso = count($ingresos) ? end($ingresos) : null;
                 $fase->hay_mas = count($porFase[$fase->id]['ids'] ?? []) > $perPage;
+                $fase->consultado_en = $consultadoEn;
             }
 
             $log->logInfo(FaseController::class, 'Se listo con exito el kanban paginado');
@@ -602,7 +646,7 @@ class FaseController extends Controller
     }
 
     /**
-     * Siguiente pagina de UNA columna. Paginacion por cursor (id < cursorId): a diferencia
+     * Siguiente pagina de UNA columna. Paginacion por cursor (llegada a la fase, id): a diferencia
      * del offset, no repite ni salta casos cuando entran o salen casos por WebSocket.
      * POST /api/crm/listCasosByFase
      */
@@ -612,18 +656,25 @@ class FaseController extends Controller
         $fasId = (int) $request->input('fasId');
         // Siempre numerico (con letras fallaba la base); vacio = primera pagina
         $cursorId = $request->filled('cursorId') ? (int) $request->input('cursorId') : null;
+        $cursorIngreso = $this->cursorIngreso($request->input('cursorIngreso'));
+        // El cursor va en pareja: sin una llegada valida se pide la primera pagina (el front quita repetidos)
+        if ($cursorIngreso === null) {
+            $cursorId = null;
+        }
         $perPage = self::CASOS_POR_PAGINA; // fijo: lo que mande el front en perPage no se usa
 
         try {
             $user = auth('api')->user();
+            $consultadoEn = $this->consultadoEn();
 
             // Se pide uno de mas para saber si quedan paginas, sin una segunda consulta
-            $kanban = $this->consultarKanban($request, $user, $fasId, $cursorId, $perPage + 1);
+            $kanban = $this->consultarKanban($request, $user, $fasId, $cursorId, $cursorIngreso, $perPage + 1);
             $columna = collect($kanban['fases'])->firstWhere('fas_id', $fasId);
 
             $ids = $columna['ids'] ?? [];
             $hayMas = count($ids) > $perPage;
             $ids = array_slice($ids, 0, $perPage);
+            $ingresos = array_slice($columna['ingresos'] ?? [], 0, $perPage);
 
             $casos = $this->hidratarCasos($ids)->get($fasId, collect())->values();
 
@@ -634,7 +685,9 @@ class FaseController extends Controller
                 'caso' => $casos,
                 'total_casos' => (int) ($columna['total_casos'] ?? 0),
                 'cursor_id' => count($ids) ? end($ids) : $cursorId,
+                'cursor_ingreso' => count($ingresos) ? end($ingresos) : $cursorIngreso,
                 'hay_mas' => $hayMas,
+                'consultado_en' => $consultadoEn,
             ] + $this->contextoKanban($kanban)));
         } catch (\Throwable $e) {
             return $this->respuestaErrorKanban($e, 'Error al listar la pagina de la fase');
@@ -642,8 +695,8 @@ class FaseController extends Controller
     }
 
     /**
-     * Modo Lista: una pagina de casos de todo el tablero (los mas nuevos primero), el total, las fases y
-     * el contexto del usuario. Mismos permisos y filtros que el Kanban. POST /api/crm/listCasosLista
+     * Modo Lista: una pagina de casos de todo el tablero (lo ultimo que llego a su fase primero), el total,
+     * las fases y el contexto del usuario. Mismos permisos y filtros que el Kanban. POST /api/crm/listCasosLista
      */
     public function listCasosLista(Request $request)
     {
@@ -655,6 +708,7 @@ class FaseController extends Controller
 
         try {
             $user = auth('api')->user();
+            $consultadoEn = $this->consultadoEn();
             $lista = $this->consultarLista($request, $user, $pagina, $tamanio);
 
             $log->logInfo(FaseController::class, 'Se listo con exito el modo lista paginado');
@@ -665,6 +719,7 @@ class FaseController extends Controller
                 'total' => (int) $lista['total'],
                 'pagina' => $pagina,
                 'tamanio' => $tamanio,
+                'consultado_en' => $consultadoEn,
             ] + $this->contextoKanban($lista)));
         } catch (\Throwable $e) {
             return $this->respuestaErrorKanban($e, 'Error al listar el modo lista paginado');
@@ -672,8 +727,9 @@ class FaseController extends Controller
     }
 
     /**
-     * Excel del Modo Lista: todos los casos que cumplen los filtros, hasta 5.000 (los mas nuevos), solo con
-     * las columnas del reporte, y el total para avisar si quedaron casos fuera. POST /api/crm/exportCasosLista
+     * Excel del Modo Lista: todos los casos que cumplen los filtros, hasta 5.000 (los ultimos en llegar a su
+     * fase), solo con las columnas del reporte, y el total para avisar si quedaron casos fuera.
+     * POST /api/crm/exportCasosLista
      */
     public function exportCasosLista(Request $request)
     {
@@ -685,11 +741,13 @@ class FaseController extends Controller
 
             $casos = empty($lista['ids'])
                 ? collect()
-                : Caso::select(['id', 'nombre', 'fecha_inicio', 'fecha_vencimiento', 'estado_2', 'prioridad', 'user_id', 'fas_id', 'identificacion', 'cliente', 'comprobante'])
-                    ->with(['estadodos:id,nombre', 'user:id,usu_alias'])
-                    ->whereIn('id', $lista['ids'])
-                    ->orderByDesc('id')
-                    ->get();
+                : $this->ordenarComoLaFuncion(
+                    Caso::select(['id', 'nombre', 'fecha_inicio', 'fecha_vencimiento', 'estado_2', 'prioridad', 'user_id', 'fas_id', 'identificacion', 'cliente', 'comprobante'])
+                        ->with(['estadodos:id,nombre', 'user:id,usu_alias'])
+                        ->whereIn('id', $lista['ids'])
+                        ->get(),
+                    $lista['ids']
+                );
 
             $log->logInfo(FaseController::class, 'Se exporto con exito el modo lista: ' . $casos->count() . ' de ' . $lista['total']);
 
