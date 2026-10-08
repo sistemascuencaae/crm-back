@@ -81,6 +81,12 @@ class Caso extends Model
         "id_zona_agencia",
     ];
 
+    // fecha_ingreso_fase (orden de llegada a la fase) NO va en $fillable: solo la escriben crear y mover
+    // el caso, nunca el front. Como fecha sale en JSON igual que created_at (ISO, UTC).
+    protected $casts = [
+        'fecha_ingreso_fase' => 'datetime',
+    ];
+
     public function userCreador()
     {
         return $this->belongsTo(User::class, "user_creador_id", "id");
