@@ -858,6 +858,12 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
     //------------------------------------------------------------------>FASE
     Route::post('/listFase', [FaseController::class, 'list']);
+    // Kanban paginado: carga inicial (10 por columna) y siguiente pagina de una columna
+    Route::post('/listFaseKanban', [FaseController::class, 'listFaseKanban']);
+    Route::post('/listCasosByFase', [FaseController::class, 'listCasosByFase']);
+    // Modo Lista paginado (mismos permisos y filtros que el Kanban) y su Excel
+    Route::post('/listCasosLista', [FaseController::class, 'listCasosLista']);
+    Route::post('/exportCasosLista', [FaseController::class, 'exportCasosLista']);
     Route::post('/addFase', [FaseController::class, 'add']);
     Route::put('/editFase', [FaseController::class, 'edit']);
     Route::get('/faseActualById/{faseId}', [FaseController::class, 'faseActualById']); //actualizarOrdenFases
