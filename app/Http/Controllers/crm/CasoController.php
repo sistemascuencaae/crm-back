@@ -77,6 +77,7 @@ class CasoController extends Controller
 
 
             $caso = new Caso($casoInput);
+            $caso->fecha_ingreso_fase = now(); // orden de llegada: entra a su primera fase ahora
             $caso->save();
             if ($dataFormStatic) {
                 $this->crearFormularioStatico($dataFormStatic, $caso->id);
@@ -287,6 +288,10 @@ class CasoController extends Controller
             $valorAntiguo = $casoAudit;
             $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
 
+            // Orden de llegada: la hora en que entra a la fase nueva (solo si de verdad cambia de fase)
+            if ($caso->fas_id != $faseId) {
+                $caso->fecha_ingreso_fase = now();
+            }
             $caso->update([
                 'fas_id' => $faseId,
                 'fase_anterior_id' => $faseAnteriorId
@@ -751,6 +756,9 @@ class CasoController extends Controller
                     'estadodos',
                 )->find($caso_id);
 
+                if ($casoEnProceso->fas_id != $new_fase_id) {
+                    $casoEnProceso->fecha_ingreso_fase = now(); // orden de llegada a la fase
+                }
                 $casoEnProceso->fas_id = $new_fase_id;
                 $casoEnProceso->user_id = $new_user_id;
                 $casoEnProceso->estado_2 = $estado_2;
@@ -855,6 +863,9 @@ class CasoController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Error', 'El caso no existe.'));
             }
 
+            if ($casoEnProceso->fas_id != $formula->fase_id) {
+                $casoEnProceso->fecha_ingreso_fase = now(); // orden de llegada a la fase
+            }
             $casoEnProceso->fas_id = $formula->fase_id;
             $casoEnProceso->estado_2 = $formula->est_id_proximo;
             $casoEnProceso->save();
@@ -2468,6 +2479,7 @@ class CasoController extends Controller
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
 
                 $caso = new Caso($casoInput);
+                $caso->fecha_ingreso_fase = now(); // orden de llegada: entra a su primera fase ahora
                 $caso->save();
 
                 $estadoInicial = Estados::where('tab_id', $caso->tablero_creacion_id)->where('tipo_estado_id', 1)->first();

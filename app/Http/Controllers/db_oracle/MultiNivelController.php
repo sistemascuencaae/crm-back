@@ -70,7 +70,7 @@ class MultiNivelController extends Controller
                                     factura AS factura_afectada,
                                     periodo_factura,
                                     pol_nombre AS politica,
-                                    subtotalmenosdescuentos AS subtotal,
+                                    subtotal,
                                     (total - valor_impuesto) AS total_menos_valoriva
                                 FROM public.af_nce_multinivel_api(?, ?, ?)", [$anio, $mes, $dia]);
 
