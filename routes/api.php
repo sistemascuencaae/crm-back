@@ -161,6 +161,12 @@ use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ServidorController;
+use App\Http\Controllers\paginaWeb\SeccionController;
+use App\Http\Controllers\paginaWeb\MenuGrupoController;
+use App\Http\Controllers\paginaWeb\SeccionPublicaController;
+use App\Http\Controllers\paginaWeb\SucursalCiudadController;
+use App\Http\Controllers\paginaWeb\SucursalController;
+use App\Http\Controllers\paginaWeb\SucursalPublicaController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -226,6 +232,10 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
 
 });
+
+// PÁGINA WEB (tienda): secciones visibles, sin login
+Route::get('public/pagina-web/secciones', [SeccionPublicaController::class, 'index']);
+Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
 
 // ----------------- END RUTAS SIN TOKEN -------------
 // ----------------- END RUTAS SIN TOKEN -------------
@@ -1764,4 +1774,33 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::get('/config', [AnunciosUsuarioController::class, 'config']);
     Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
+});
+
+// PÁGINA WEB: administración de secciones y menú de la tienda desde el CRM
+Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+    Route::get('secciones/{clave}', [SeccionController::class, 'show']);
+    Route::put('secciones/{secId}', [SeccionController::class, 'update'])->whereNumber('secId');
+    Route::post('secciones/{secId}/menu-items', [SeccionController::class, 'crearMenuItem'])->whereNumber('secId');
+    Route::put('secciones/{secId}/menu-items/orden', [SeccionController::class, 'ordenarMenuItems'])->whereNumber('secId');
+    Route::put('menu-items/{mitId}', [SeccionController::class, 'modificarMenuItem'])->whereNumber('mitId');
+    Route::delete('menu-items/{mitId}', [SeccionController::class, 'eliminarMenuItem'])->whereNumber('mitId');
+
+    // Columnas del footer
+    Route::post('secciones/{secId}/menu-grupos', [MenuGrupoController::class, 'store'])->whereNumber('secId');
+    Route::put('secciones/{secId}/menu-grupos/orden', [MenuGrupoController::class, 'ordenar'])->whereNumber('secId');
+    Route::put('menu-grupos/{mgrId}', [MenuGrupoController::class, 'update'])->whereNumber('mgrId');
+    Route::delete('menu-grupos/{mgrId}', [MenuGrupoController::class, 'destroy'])->whereNumber('mgrId');
+
+    // Nuestras tiendas: ciudades
+    Route::post('sucursales/ciudades', [SucursalCiudadController::class, 'crear']);
+    Route::put('sucursales/ciudades/orden', [SucursalCiudadController::class, 'ordenar']);
+    Route::put('sucursales/ciudades/{sciId}', [SucursalCiudadController::class, 'modificar'])->whereNumber('sciId');
+    Route::delete('sucursales/ciudades/{sciId}', [SucursalCiudadController::class, 'eliminar'])->whereNumber('sciId');
+
+    // Nuestras tiendas: sucursales
+    Route::get('sucursales', [SucursalController::class, 'listar']);
+    Route::post('sucursales', [SucursalController::class, 'crear']);
+    Route::put('sucursales/orden', [SucursalController::class, 'ordenar']);
+    Route::put('sucursales/{sucId}', [SucursalController::class, 'modificar'])->whereNumber('sucId');
+    Route::delete('sucursales/{sucId}', [SucursalController::class, 'eliminar'])->whereNumber('sucId');
 });
