@@ -32,6 +32,8 @@ class SeccionController extends PaginaWebController
             'mit_enlace' => $request->input('mit_enlace'),
             'mit_icono'  => $request->input('mit_icono'),
             'mit_activo' => $request->boolean('mit_activo', true),
+            // La base guarda false si el enlace no empieza por https://
+            'mit_nueva_pestana' => $request->boolean('mit_nueva_pestana', true),
             'usu_id'     => $this->usuarioId(),
         ]), 201);
     }
@@ -39,13 +41,20 @@ class SeccionController extends PaginaWebController
     // PUT pagina-web/menu-items/{mitId}
     public function modificarMenuItem(Request $request, int $mitId)
     {
-        return $this->responder($this->paginaWeb->modificarMenuItem($mitId, [
+        $datos = [
             'mit_texto'  => $request->input('mit_texto'),
             'mit_enlace' => $request->input('mit_enlace'),
             'mit_icono'  => $request->input('mit_icono'),
             'mit_activo' => $request->boolean('mit_activo', true),
             'usu_id'     => $this->usuarioId(),
-        ]));
+        ];
+
+        // Si no llega, la base conserva el valor actual
+        if ($request->has('mit_nueva_pestana')) {
+            $datos['mit_nueva_pestana'] = $request->boolean('mit_nueva_pestana');
+        }
+
+        return $this->responder($this->paginaWeb->modificarMenuItem($mitId, $datos));
     }
 
     // DELETE pagina-web/menu-items/{mitId}

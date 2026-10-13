@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\SucursalService;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Ciudades de la página "Nuestras tiendas" (CRM).
- * Solo deja pasar los campos permitidos y agrega el usuario autenticado;
- * las validaciones están en la base (fn_sucursal_ciudad_validaciones).
+ * Validación ligera aquí; las reglas de negocio están en ecommerce.fn_sucursal_ciudad_validaciones.
  */
 class SucursalCiudadController extends Controller
 {
@@ -20,44 +22,103 @@ class SucursalCiudadController extends Controller
     {
     }
 
-    public function crear(Request $request): JsonResponse
+    public function crear(Request $request)
     {
-        $datos = array_merge($request->only(self::CAMPOS), ['usu_id' => $this->usuarioId()]);
+        $validator = Validator::make($request->all(), [
+            'sci_nombre' => 'required|string',
+            'sci_activo' => 'sometimes|boolean',
+        ]);
 
-        return $this->responder($this->servicio->crearCiudad($datos), 201);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Validación de datos', $validator->errors()));
+        }
+
+        try {
+            $sciId = $this->servicio->crearCiudad($this->payload($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Ciudad creada con éxito', ['sci_id' => $sciId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al crear la ciudad');
+        }
     }
 
-    public function modificar(Request $request, int $sciId): JsonResponse
+    // Acepta solo los campos que cambian (por ejemplo, solo sci_activo desde el interruptor)
+    public function modificar(Request $request, int $sciId)
     {
-        // only() trae solo los campos que llegaron: permite modificar uno solo
-        $datos = array_merge($request->only(self::CAMPOS), ['usu_id' => $this->usuarioId()]);
+        $validator = Validator::make($request->all(), [
+            'sci_nombre' => 'sometimes|string',
+            'sci_activo' => 'sometimes|boolean',
+        ]);
 
-        return $this->responder($this->servicio->modificarCiudad($sciId, $datos));
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Validación de datos', $validator->errors()));
+        }
+
+        try {
+            $this->servicio->modificarCiudad($sciId, $this->payload($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Ciudad modificada con éxito', ['sci_id' => $sciId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al modificar la ciudad');
+        }
     }
 
-    public function eliminar(int $sciId): JsonResponse
+    public function eliminar(int $sciId)
     {
-        return $this->responder($this->servicio->eliminarCiudad($sciId));
+        try {
+            $this->servicio->eliminarCiudad($sciId);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Ciudad eliminada con éxito', ['sci_id' => $sciId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al eliminar la ciudad');
+        }
     }
 
     /** Body: {"ids": [3, 1, 2]} con todas las ciudades en el nuevo orden. */
-    public function ordenar(Request $request): JsonResponse
+    public function ordenar(Request $request)
     {
-        $datos = [
-            'ids'    => $request->input('ids'),
-            'usu_id' => $this->usuarioId(),
-        ];
+        $validator = Validator::make($request->all(), [
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
 
-        return $this->responder($this->servicio->ordenarCiudades($datos));
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Validación de datos', $validator->errors()));
+        }
+
+        try {
+            $this->servicio->ordenarCiudades([
+                'ids'    => $request->input('ids'),
+                'usu_id' => $this->usuarioId(),
+            ]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Orden de ciudades actualizado', null));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al ordenar las ciudades');
+        }
     }
 
-    /** ok:true → código de éxito; ok:false → 422 con el mensaje y los errores de la base. */
-    private function responder(array $resultado, int $codigoExito = 200): JsonResponse
+    // -----------------------------------------------------------------
+
+    private function payload(Request $request): array
     {
-        return response()->json($resultado, !empty($resultado['ok']) ? $codigoExito : 422);
+        return $request->only(self::CAMPOS) + ['usu_id' => $this->usuarioId()];
     }
 
-    /** Clave primaria del usuario autenticado (usu_id). Si en SeccionController lo obtienes de otra forma, usa esa. */
+    /** Código conocido → su mensaje. Desconocido → mensaje genérico; el detalle queda en el log, no en la respuesta. */
+    private function error(QueryException $e, string $mensajeGenerico)
+    {
+        $mensaje = $this->servicio->mensajeError($e);
+
+        if ($mensaje === null) {
+            Log::error($mensajeGenerico, ['error' => $e->getMessage()]);
+            $mensaje = $mensajeGenerico;
+        }
+
+        return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+    }
+
+    /** Clave primaria del usuario autenticado (usu_id). */
     private function usuarioId(): ?int
     {
         return auth()->id();
