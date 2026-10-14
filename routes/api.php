@@ -167,6 +167,8 @@ use App\Http\Controllers\paginaWeb\SeccionPublicaController;
 use App\Http\Controllers\paginaWeb\SucursalCiudadController;
 use App\Http\Controllers\paginaWeb\SucursalController;
 use App\Http\Controllers\paginaWeb\SucursalPublicaController;
+use App\Http\Controllers\paginaWeb\PaginaInformativaController;
+use App\Http\Controllers\paginaWeb\PaginaInformativaPublicaController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -236,6 +238,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // PÁGINA WEB (tienda): secciones visibles, sin login
 Route::get('public/pagina-web/secciones', [SeccionPublicaController::class, 'index']);
 Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
+Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z_]+');
 
 // ----------------- END RUTAS SIN TOKEN -------------
 // ----------------- END RUTAS SIN TOKEN -------------
@@ -1803,4 +1806,9 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::put('sucursales/orden', [SucursalController::class, 'ordenar']);
     Route::put('sucursales/{sucId}', [SucursalController::class, 'modificar'])->whereNumber('sucId');
     Route::delete('sucursales/{sucId}', [SucursalController::class, 'eliminar'])->whereNumber('sucId');
+
+    // Páginas informativas (Términos, Garantías, Conócenos…)
+    Route::get('paginas', [PaginaInformativaController::class, 'listar']);
+    Route::get('paginas/{clave}', [PaginaInformativaController::class, 'buscar'])->where('clave', '[a-z_]+');
+    Route::put('paginas/{clave}', [PaginaInformativaController::class, 'modificar'])->where('clave', '[a-z_]+');
 });
