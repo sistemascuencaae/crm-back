@@ -6,16 +6,14 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Orquestador de las páginas informativas (Términos, Garantías, Conócenos, etc.).
- * Llama a las funciones ecommerce.fn_pagina_informativa_* (que validan con RAISE EXCEPTION
- * y devuelven nada / filas) y prepara los datos que responden los controladores.
- * Cada modificación exitosa limpia la caché pública de esa página.
- */
 class PaginaInformativaService
 {
     private const CACHE_PREFIJO = 'pagina_web.paginas.publica.';
     private const CACHE_MINUTOS = 10;
+
+    public function __construct(private LimpiadorHtml  $limpiador)
+    {
+    }
 
     // Mensaje amigable para cada código que lanzan las funciones ecommerce.fn_pagina_informativa_*
     public const MENSAJES_ERROR = [
@@ -26,6 +24,13 @@ class PaginaInformativaService
         'PAGINA_TITULO_LARGO'            => 'El título de la página no puede superar 120 caracteres.',
         'PAGINA_ACTIVO_INVALIDO'         => 'La visibilidad de la página debe ser verdadero o falso.',
         'PAGINA_CONTENIDO_INVALIDO'      => 'El contenido de la página no es válido.',
+        // Páginas de texto con editor (Garantía…)
+        'PAGINA_TEXTO_REQUERIDO'         => 'Escribe el contenido de la página.',
+        'PAGINA_TEXTO_LARGO'             => 'El contenido de la página es demasiado largo.',
+        'PAGINA_TEXTO_NO_PERMITIDO'      => 'El contenido tiene elementos no permitidos (código o scripts).',
+        'PAGINA_IMAGEN_INVALIDA'         => 'La dirección de la imagen debe empezar con https://.',
+        'PAGINA_IMAGEN_LARGA'            => 'La dirección de la imagen no puede superar 500 caracteres.',
+        'PAGINA_IMAGEN_TEXTO_LARGO'      => 'La descripción de la imagen no puede superar 150 caracteres.',
         // Términos y condiciones
         'TERMINOS_EMPRESA_REQUERIDA'     => 'El nombre de la empresa es obligatorio.',
         'TERMINOS_EMPRESA_LARGA'         => 'El nombre de la empresa no puede superar 120 caracteres.',
@@ -33,10 +38,13 @@ class PaginaInformativaService
         'TERMINOS_TITULO_LARGO'          => 'El título del documento no puede superar 150 caracteres.',
         'TERMINOS_SECCIONES_INVALIDAS'   => 'Las secciones no tienen un formato válido.',
         'TERMINOS_DEMASIADAS_SECCIONES'  => 'La página no puede tener más de 50 secciones.',
-        'TERMINOS_SECCION_VACIA'         => 'Hay una sección vacía. Agrega un título, párrafos, una lista o una tabla, o elimínala.',
+        'TERMINOS_SECCION_VACIA'         => 'Hay una sección vacía. Agrega un título o un bloque, o elimínala.',
         'TERMINOS_SECCION_TITULO_LARGO'  => 'El título de una sección no puede superar 200 caracteres.',
         'TERMINOS_PARRAFO_LARGO'         => 'Un párrafo no puede superar 3000 caracteres.',
         'TERMINOS_DEMASIADOS_PARRAFOS'   => 'Una sección no puede tener más de 30 párrafos.',
+        'TERMINOS_BLOQUES_INVALIDOS'     => 'Los bloques de una sección no tienen un formato válido.',
+        'TERMINOS_BLOQUE_TIPO_INVALIDO'  => 'Hay un bloque de un tipo no permitido. Solo se aceptan párrafos, listas y tablas.',
+        'TERMINOS_DEMASIADOS_BLOQUES'    => 'Una sección no puede tener más de 60 bloques.',
         'TERMINOS_LISTA_ITEM_LARGO'      => 'Un elemento de la lista no puede superar 500 caracteres.',
         'TERMINOS_DEMASIADOS_ITEMS'      => 'Una lista no puede tener más de 50 elementos.',
         'TERMINOS_TABLA_FILA_INCOMPLETA' => 'Cada fila de la tabla necesita el dato y el valor.',
@@ -65,6 +73,11 @@ class PaginaInformativaService
     /** Guarda solo lo que llega (todo el contenido, o solo la visibilidad). */
     public function modificar(string $clave, array $datos): void
     {
+        // Páginas con editor: el HTML se limpia aquí, antes de que llegue a la base
+        if (isset($datos['pin_contenido']['texto']) && is_string($datos['pin_contenido']['texto'])) {
+            $datos['pin_contenido']['texto'] = $this->limpiador->limpiar($datos['pin_contenido']['texto']);
+        }
+
         DB::statement('SELECT ecommerce.fn_pagina_informativa_modificar(?, ?::jsonb)', [$clave, $this->json($datos)]);
         Cache::forget(self::CACHE_PREFIJO . $clave);
     }
