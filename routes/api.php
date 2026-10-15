@@ -169,7 +169,7 @@ use App\Http\Controllers\paginaWeb\SucursalController;
 use App\Http\Controllers\paginaWeb\SucursalPublicaController;
 use App\Http\Controllers\paginaWeb\PaginaInformativaController;
 use App\Http\Controllers\paginaWeb\PaginaInformativaPublicaController;
-use App\Http\Controllers\paginaWeb\ImagenPaginaWebController;
+use App\Http\Controllers\paginaWeb\ArchivoPaginaWebController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -240,8 +240,10 @@ Route::group(["prefix" => "formulario"], function ($router) {
 Route::get('public/pagina-web/secciones', [SeccionPublicaController::class, 'index']);
 Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
 Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z_]+');
-Route::get('public/pagina-web/imagenes/{nombre}', [ImagenPaginaWebController::class, 'ver'])
+Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
+Route::get('public/pagina-web/documentos/{nombre}', [ArchivoPaginaWebController::class, 'verPdf'])
+    ->where('nombre', '[A-Za-z0-9]+\.pdf');
 
 // ----------------- END RUTAS SIN TOKEN -------------
 // ----------------- END RUTAS SIN TOKEN -------------
@@ -1815,6 +1817,7 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('paginas/{clave}', [PaginaInformativaController::class, 'buscar'])->where('clave', '[a-z_]+');
     Route::put('paginas/{clave}', [PaginaInformativaController::class, 'modificar'])->where('clave', '[a-z_]+');
 
-    // Imágenes de las páginas informativas
-    Route::post('imagenes', [ImagenPaginaWebController::class, 'subir']);
+    // Imágenes y PDF de las páginas informativas
+    Route::post('imagenes',   [ArchivoPaginaWebController::class, 'subirImagen']);
+    Route::post('documentos', [ArchivoPaginaWebController::class, 'subirPdf']);
 });

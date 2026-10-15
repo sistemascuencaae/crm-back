@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Orquestador de las páginas informativas (Términos, Garantías, Conócenos, etc.).
+ * Orquestador de las páginas informativas (Términos, Garantía, etc.).
  * Llama a las funciones ecommerce.fn_pagina_informativa_* (que validan con RAISE EXCEPTION
  * y devuelven nada / filas) y prepara los datos que responden los controladores.
  * Cada modificación exitosa limpia la caché pública de esa página.
@@ -37,25 +37,13 @@ class PaginaInformativaService
         'PAGINA_IMAGEN_INVALIDA'         => 'La dirección de la imagen no es válida.',
         'PAGINA_IMAGEN_LARGA'            => 'La dirección de la imagen no puede superar 500 caracteres.',
         'PAGINA_IMAGEN_TEXTO_LARGO'      => 'La descripción de la imagen no puede superar 150 caracteres.',
-        // Términos y condiciones
-        'TERMINOS_EMPRESA_REQUERIDA'     => 'El nombre de la empresa es obligatorio.',
-        'TERMINOS_EMPRESA_LARGA'         => 'El nombre de la empresa no puede superar 120 caracteres.',
-        'TERMINOS_TITULO_REQUERIDO'      => 'El título del documento es obligatorio.',
-        'TERMINOS_TITULO_LARGO'          => 'El título del documento no puede superar 150 caracteres.',
-        'TERMINOS_SECCIONES_INVALIDAS'   => 'Las secciones no tienen un formato válido.',
-        'TERMINOS_DEMASIADAS_SECCIONES'  => 'La página no puede tener más de 50 secciones.',
-        'TERMINOS_SECCION_VACIA'         => 'Hay una sección vacía. Agrega un título o un bloque, o elimínala.',
-        'TERMINOS_SECCION_TITULO_LARGO'  => 'El título de una sección no puede superar 200 caracteres.',
-        'TERMINOS_PARRAFO_LARGO'         => 'Un párrafo no puede superar 3000 caracteres.',
-        'TERMINOS_DEMASIADOS_PARRAFOS'   => 'Una sección no puede tener más de 30 párrafos.',
-        'TERMINOS_BLOQUES_INVALIDOS'     => 'Los bloques de una sección no tienen un formato válido.',
-        'TERMINOS_BLOQUE_TIPO_INVALIDO'  => 'Hay un bloque de un tipo no permitido. Solo se aceptan párrafos, listas y tablas.',
-        'TERMINOS_DEMASIADOS_BLOQUES'    => 'Una sección no puede tener más de 60 bloques.',
-        'TERMINOS_LISTA_ITEM_LARGO'      => 'Un elemento de la lista no puede superar 500 caracteres.',
-        'TERMINOS_DEMASIADOS_ITEMS'      => 'Una lista no puede tener más de 50 elementos.',
-        'TERMINOS_TABLA_FILA_INCOMPLETA' => 'Cada fila de la tabla necesita el dato y el valor.',
-        'TERMINOS_TABLA_TEXTO_LARGO'     => 'El dato de la tabla no puede superar 100 caracteres, y el valor 500.',
-        'TERMINOS_DEMASIADAS_FILAS'      => 'Una tabla no puede tener más de 30 filas.',
+        'PAGINA_PDF_INVALIDO'            => 'La dirección del PDF no es válida.',
+        'PAGINA_PDF_LARGO'               => 'La dirección del PDF no puede superar 500 caracteres.',
+        'PAGINA_DEMASIADOS_DESPLEGABLES'      => 'La página no puede tener más de 6 desplegables.',
+        'PAGINA_DESPLEGABLE_TITULO_REQUERIDO' => 'Cada desplegable necesita un título.',
+        'PAGINA_DESPLEGABLE_TITULO_LARGO'     => 'El título de un desplegable no puede superar 100 caracteres.',
+        'PAGINA_DESPLEGABLE_TEXTO_REQUERIDO'  => 'Cada desplegable necesita un texto.',
+        'PAGINA_DESPLEGABLE_TEXTO_LARGO'      => 'El texto de un desplegable es demasiado largo.',
     ];
 
     // -----------------------------------------------------------------
@@ -82,6 +70,15 @@ class PaginaInformativaService
         // Páginas con editor: el HTML se limpia aquí, antes de que llegue a la base
         if (isset($datos['pin_contenido']['texto']) && is_string($datos['pin_contenido']['texto'])) {
             $datos['pin_contenido']['texto'] = $this->limpiador->limpiar($datos['pin_contenido']['texto']);
+        }
+
+        // Y el texto de cada desplegable (Garantía extendida…)
+        if (isset($datos['pin_contenido']['desplegables']) && is_array($datos['pin_contenido']['desplegables'])) {
+            foreach ($datos['pin_contenido']['desplegables'] as $i => $desplegable) {
+                if (isset($desplegable['texto']) && is_string($desplegable['texto'])) {
+                    $datos['pin_contenido']['desplegables'][$i]['texto'] = $this->limpiador->limpiar($desplegable['texto']);
+                }
+            }
         }
 
         DB::statement('SELECT ecommerce.fn_pagina_informativa_modificar(?, ?::jsonb)', [$clave, $this->json($datos)]);
