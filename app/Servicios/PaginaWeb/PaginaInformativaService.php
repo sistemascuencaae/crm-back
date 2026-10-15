@@ -6,12 +6,18 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Orquestador de las páginas informativas (Términos, Garantías, Conócenos, etc.).
+ * Llama a las funciones ecommerce.fn_pagina_informativa_* (que validan con RAISE EXCEPTION
+ * y devuelven nada / filas) y prepara los datos que responden los controladores.
+ * Cada modificación exitosa limpia la caché pública de esa página.
+ */
 class PaginaInformativaService
 {
     private const CACHE_PREFIJO = 'pagina_web.paginas.publica.';
     private const CACHE_MINUTOS = 10;
 
-    public function __construct(private LimpiadorHtml  $limpiador)
+    public function __construct(private LimpiadorHtml $limpiador)
     {
     }
 
@@ -28,7 +34,7 @@ class PaginaInformativaService
         'PAGINA_TEXTO_REQUERIDO'         => 'Escribe el contenido de la página.',
         'PAGINA_TEXTO_LARGO'             => 'El contenido de la página es demasiado largo.',
         'PAGINA_TEXTO_NO_PERMITIDO'      => 'El contenido tiene elementos no permitidos (código o scripts).',
-        'PAGINA_IMAGEN_INVALIDA'         => 'La dirección de la imagen debe empezar con https://.',
+        'PAGINA_IMAGEN_INVALIDA'         => 'La dirección de la imagen no es válida.',
         'PAGINA_IMAGEN_LARGA'            => 'La dirección de la imagen no puede superar 500 caracteres.',
         'PAGINA_IMAGEN_TEXTO_LARGO'      => 'La descripción de la imagen no puede superar 150 caracteres.',
         // Términos y condiciones
