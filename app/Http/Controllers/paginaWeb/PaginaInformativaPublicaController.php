@@ -38,4 +38,21 @@ class PaginaInformativaPublicaController extends Controller
                 ->header('Cache-Control', 'no-store');
         }
     }
+
+    // Diálogo de documentos: todos los documentos visibles, por carpeta y en su orden.
+    // Una lista vacía también es éxito (el diálogo muestra que no hay documentos).
+    public function documentos(PaginaInformativaService $servicio)
+    {
+        try {
+            return response()
+                ->json(RespuestaApi::returnResultado('success', 'Documentos', $servicio->listarPublicas()))
+                ->header('Cache-Control', 'no-cache');
+        } catch (\Throwable $th) {
+            Log::error('No se pudieron cargar los documentos públicos', ['error' => $th->getMessage()]);
+
+            return response()
+                ->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los documentos', null), 500)
+                ->header('Cache-Control', 'no-store');
+        }
+    }
 }

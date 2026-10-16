@@ -30,6 +30,11 @@ class PaginaInformativaService
         'PAGINA_TITULO_LARGO'            => 'El título de la página no puede superar 120 caracteres.',
         'PAGINA_ACTIVO_INVALIDO'         => 'La visibilidad de la página debe ser verdadero o falso.',
         'PAGINA_CONTENIDO_INVALIDO'      => 'El contenido de la página no es válido.',
+        'PAGINA_FIJA'                    => 'Esta página tiene un diseño propio en la tienda: no se puede eliminar ni poner en una carpeta. Puedes ocultarla.',
+        'ORDEN_INVALIDO'                 => 'El nuevo orden no es válido.',
+        'ORDEN_DESACTUALIZADO'           => 'La lista cambió mientras la ordenabas. Recarga la página e inténtalo de nuevo.',
+        'PAGINA_GRUPO_INVALIDO'          => 'La carpeta elegida no es válida.',
+        'GRUPO_NO_EXISTE'                => 'La carpeta no existe.',
         // Páginas de texto con editor (Garantía…)
         'PAGINA_TEXTO_REQUERIDO'         => 'Escribe el contenido de la página.',
         'PAGINA_TEXTO_LARGO'             => 'El contenido de la página es demasiado largo.',
@@ -85,6 +90,27 @@ class PaginaInformativaService
         Cache::forget(self::CACHE_PREFIJO . $clave);
     }
 
+    /** Crea una página de documento (oculta). Devuelve su clave, que sale del título. */
+    public function crear(array $datos): string
+    {
+        $pinId = DB::selectOne('SELECT ecommerce.fn_pagina_informativa_crear(?::jsonb) AS id', [$this->json($datos)])->id;
+
+        return DB::selectOne('SELECT pin_clave FROM ecommerce.pagina_informativa WHERE pin_id = ?', [$pinId])->pin_clave;
+    }
+
+    /** Elimina una página que no sea fija. */
+    public function eliminar(string $clave): void
+    {
+        DB::statement('SELECT ecommerce.fn_pagina_informativa_eliminar(?)', [$clave]);
+        Cache::forget(self::CACHE_PREFIJO . $clave);
+    }
+
+    /** Nuevo orden de los documentos de una carpeta. $datos: {pig_id (o null), ids: [pin_id…], usu_id} */
+    public function ordenar(array $datos): void
+    {
+        DB::statement('SELECT ecommerce.fn_pagina_informativa_ordenar(?::jsonb)', [$this->json($datos)]);
+    }
+
     // -----------------------------------------------------------------
     // Tienda
     // -----------------------------------------------------------------
@@ -97,6 +123,32 @@ class PaginaInformativaService
 
             return $fila ? $this->decodificarContenido($fila) : null;   // null no se guarda en caché
         });
+    }
+
+    /**
+     * Diálogo de documentos de la tienda: los documentos visibles agrupados por carpeta, en orden.
+     * [ {pig_id, pig_nombre, documentos: [{pin_clave, pin_titulo}, …]}, … ]
+     * Los que no tienen carpeta van al final, en una sección con pig_id y pig_nombre en null.
+     * Sin caché: es una consulta pequeña.
+     */
+    public function listarPublicas(): array
+    {
+        $filas = DB::select('SELECT * FROM ecommerce.fn_pagina_informativa_listar_publicas()');
+        $secciones = [];
+
+        foreach ($filas as $fila) {
+            $ultima = count($secciones) - 1;
+
+            // Las filas vienen ordenadas por carpeta: cuando cambia la carpeta, empieza otra sección
+            if ($ultima < 0 || $secciones[$ultima]['pig_id'] !== $fila->pig_id) {
+                $secciones[] = ['pig_id' => $fila->pig_id, 'pig_nombre' => $fila->pig_nombre, 'documentos' => []];
+                $ultima++;
+            }
+
+            $secciones[$ultima]['documentos'][] = ['pin_clave' => $fila->pin_clave, 'pin_titulo' => $fila->pin_titulo];
+        }
+
+        return $secciones;
     }
 
     // -----------------------------------------------------------------

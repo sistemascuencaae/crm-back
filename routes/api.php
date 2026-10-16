@@ -169,6 +169,7 @@ use App\Http\Controllers\paginaWeb\SucursalController;
 use App\Http\Controllers\paginaWeb\SucursalPublicaController;
 use App\Http\Controllers\paginaWeb\PaginaInformativaController;
 use App\Http\Controllers\paginaWeb\PaginaInformativaPublicaController;
+use App\Http\Controllers\paginaWeb\PaginaInformativaGrupoController;
 use App\Http\Controllers\paginaWeb\ArchivoPaginaWebController;
 use Illuminate\Support\Facades\Route;
 
@@ -239,7 +240,8 @@ Route::group(["prefix" => "formulario"], function ($router) {
 // PÁGINA WEB (tienda): secciones visibles, sin login
 Route::get('public/pagina-web/secciones', [SeccionPublicaController::class, 'index']);
 Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
-Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z_]+');
+Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
+Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
 Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
 Route::get('public/pagina-web/documentos/{nombre}', [ArchivoPaginaWebController::class, 'verPdf'])
@@ -1814,8 +1816,18 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
 
     // Páginas informativas (Términos, Garantías, Conócenos…)
     Route::get('paginas', [PaginaInformativaController::class, 'listar']);
-    Route::get('paginas/{clave}', [PaginaInformativaController::class, 'buscar'])->where('clave', '[a-z_]+');
-    Route::put('paginas/{clave}', [PaginaInformativaController::class, 'modificar'])->where('clave', '[a-z_]+');
+    Route::get('paginas/{clave}', [PaginaInformativaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
+    Route::put('paginas/{clave}', [PaginaInformativaController::class, 'modificar'])->where('clave', '[a-z0-9_-]+');
+    Route::post('paginas', [PaginaInformativaController::class, 'crear']);
+    Route::put('paginas-orden', [PaginaInformativaController::class, 'ordenar']);
+    Route::delete('paginas/{clave}', [PaginaInformativaController::class, 'eliminar'])->where('clave', '[a-z0-9_-]+');
+
+    // Grupos de páginas informativas
+    Route::get('paginas-grupos', [PaginaInformativaGrupoController::class, 'listar']);
+    Route::post('paginas-grupos', [PaginaInformativaGrupoController::class, 'crear']);
+    Route::put('paginas-grupos/orden', [PaginaInformativaGrupoController::class, 'ordenar']);
+    Route::put('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'modificar'])->whereNumber('pigId');
+    Route::delete('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'eliminar'])->whereNumber('pigId');
 
     // Imágenes y PDF de las páginas informativas
     Route::post('imagenes',   [ArchivoPaginaWebController::class, 'subirImagen']);

@@ -11,13 +11,13 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Páginas informativas (CRM): listar, ver una y modificar.
- * Las páginas se crean por script; desde el CRM solo se editan.
- * Validación ligera aquí; las reglas de cada página están en la base.
+ * Páginas informativas (CRM): listar, ver una, crear, modificar, eliminar y ordenar.
+ * Desde el CRM solo se crean documentos; las fijas (Garantía…) vienen por script, no se eliminan
+ * y no van en carpetas. Validación ligera aquí; las reglas están en la base.
  */
 class PaginaInformativaController extends Controller
 {
-    private const CAMPOS = ['pin_titulo', 'pin_activo', 'pin_contenido'];
+    private const CAMPOS = ['pin_titulo', 'pin_activo', 'pig_id', 'pin_contenido'];
 
     public function __construct(private PaginaInformativaService $servicio)
     {
@@ -53,6 +53,7 @@ class PaginaInformativaController extends Controller
         $validator = Validator::make($request->all(), [
             'pin_titulo'    => 'sometimes|string',
             'pin_activo'    => 'sometimes|boolean',
+            'pig_id'        => 'sometimes|nullable|integer',
             'pin_contenido' => 'sometimes|array',
         ]);
 
@@ -66,6 +67,60 @@ class PaginaInformativaController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Página guardada con éxito', ['pin_clave' => $clave]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al guardar la página');
+        }
+    }
+
+    // Página de documento nueva: título y carpeta (opcional). Nace oculta.
+    public function crear(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'pin_titulo' => 'required|string',
+            'pig_id'     => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Escribe el título de la página.', $validator->errors()));
+        }
+
+        try {
+            $clave = $this->servicio->crear($request->only('pin_titulo', 'pig_id') + ['usu_id' => $this->usuarioId()]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Página creada con éxito', ['pin_clave' => $clave]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al crear la página');
+        }
+    }
+
+    public function eliminar(string $clave)
+    {
+        try {
+            $this->servicio->eliminar($clave);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Página eliminada con éxito', ['pin_clave' => $clave]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al eliminar la página');
+        }
+    }
+
+    // Recibe TODOS los documentos de una carpeta en el nuevo orden: {pig_id: 1 (o null), ids: [7, 5, 6]}
+    public function ordenar(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'pig_id' => 'present|nullable|integer',
+            'ids'    => 'required|array|min:1',
+            'ids.*'  => 'integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'El nuevo orden no es válido.', $validator->errors()));
+        }
+
+        try {
+            $this->servicio->ordenar($request->only('pig_id', 'ids') + ['usu_id' => $this->usuarioId()]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al guardar el orden');
         }
     }
 
