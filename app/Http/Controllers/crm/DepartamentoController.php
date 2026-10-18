@@ -33,7 +33,7 @@ class DepartamentoController extends Controller
     {
         $log = new Funciones();
         try {
-            $departamentos = Departamento::orderBy("id", "desc")->where('estado', true)->get();
+            $departamentos = Departamento::where('estado', true)->orderBy("dep_nombre", "asc")->get();
 
             // return response()->json([
             //     "departamentos" => $departamentos,

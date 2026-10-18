@@ -25,6 +25,7 @@ class FormCampo extends Model
         'form_secc_id',
         'par_id',
         'modificar',
+        'lista',
         'deleted_at',
     ];
     protected $hidden = ['created_at', 'updated_at'];

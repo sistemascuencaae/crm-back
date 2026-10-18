@@ -9,15 +9,20 @@
     "license": "MIT",
     "require": {
         "php": "^7.3|^8.0",
+        "beyondcode/laravel-websockets": "^2.0@beta",
         "doctrine/dbal": "^3.6",
+        "firebase/php-jwt": "*",
+        "fruitcake/laravel-cors": "^3.0",
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^8.54",
         "laravel/tinker": "^2.5",
-        "owen-it/laravel-auditing": "^13.5",
-        "tymon/jwt-auth": "^1.0",
         "mpdf/mpdf": "^8.2.2",
-        "beyondcode/laravel-websockets": "^2.0@beta",
-        "pusher/pusher-php-server": "^4.0.0"
+        "owen-it/laravel-auditing": "^13.5",
+        "phpoffice/phpspreadsheet": "^5.1",
+        "phpseclib/phpseclib": "~3.0",
+        "pusher/pusher-php-server": "^4.0.0",
+        "tymon/jwt-auth": "^1.0",
+        "yajra/laravel-oci8": "^8.8"
     },
     "require-dev": {
         "facade/ignition": "^2.5",

@@ -17,13 +17,13 @@ class OpenceoController extends Controller
     {
         $this->middleware('auth:admin', [
             'except' =>
-                [
-                    'agencias',
-                    'departamentos',
-                    'ciudades',
-                    'cargos',
-                    'v_dmovinv',
-                ]
+            [
+                'agencias',
+                'departamentos',
+                'ciudades',
+                'cargos',
+                'v_dmovinv',
+            ]
         ]);
     }
 
@@ -138,5 +138,7 @@ class OpenceoController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
     }
+
+
 
 }

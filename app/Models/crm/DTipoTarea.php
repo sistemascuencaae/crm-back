@@ -13,11 +13,11 @@ class DTipoTarea extends Model
 {
     use HasFactory;
 
-    use SoftDeletes;
+    // use SoftDeletes;
 
     protected $table = 'crm.dtipo_tarea';
 
-    protected $fillable = ["nombre", "requerido", "estado", "ctt_id", "tab_id"];
+    protected $fillable = ["nombre", "requerido", "estado", "ctt_id"];
 
     public function setCreatedAtAttribute($value)
     {
@@ -30,10 +30,10 @@ class DTipoTarea extends Model
         $this->attributes["updated_at"] = Carbon::now();
     }
 
-    public function setDeletedAtAttribute($value)
-    {
-        date_default_timezone_set("America/Guayaquil");
-        $this->attributes["deleted_at"] = Carbon::now();
-    }
+    // public function setDeletedAtAttribute($value)
+    // {
+    //     date_default_timezone_set("America/Guayaquil");
+    //     $this->attributes["deleted_at"] = Carbon::now();
+    // }
 
 }

@@ -29,7 +29,8 @@ class SoporteController extends Controller
                     ->first();
 
                 foreach ($archivos as $archivoData) {
-                    $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName();
+                    // $nombreUnico = $caso_id . '-' . $archivoData->getClientOriginalName();
+                    $nombreUnico = $caso_id . '-' . str_replace(' ', '-', $archivoData->getClientOriginalName()); // Reemplazar espacios por -
                     $extension = $archivoData->getClientOriginalExtension();
 
                     if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif'])) {

@@ -37,15 +37,16 @@ return [
 
         'nas' => [
             'driver' => 'ftp',
-            // 'host' => '192.168.1.248', // La dirección IP o nombre de dominio de tu servidor FTP
-            'host' => '191.100.27.176', // La dirección IP o nombre de dominio de tu servidor FTP
-            'username' => 'lagila', // Tu nombre de usuario FTP
-            'password' => 'GnanHk0e', // Tu contraseña FTP
-            'root' => '/crm', // Ruta raíz en el servidor FTP
-            'port' => 2159, // Puerto FTP (normalmente 21)
-            'passive' => true, // Modo pasivo (opcional)
-            'ssl' => false, // Usar SSL (opcional)
-            'timeout' => 30, // Tiempo de espera (opcional)
+            // Credenciales únicas: SIN fallback. Deben estar en .env. Si faltan, falla limpio.
+            'host'     => env('NAS_FTP_HOST'),
+            'username' => env('NAS_FTP_USER'),
+            'password' => env('NAS_FTP_PASSWORD'),
+            'root'     => env('NAS_FTP_ROOT'),
+            // Flags técnicos: defaults genéricos seguros.
+            'port'     => (int) env('NAS_FTP_PORT', 21),
+            'passive'  => (bool) env('NAS_FTP_PASSIVE', true),
+            'ssl'      => (bool) env('NAS_FTP_SSL', false),
+            'timeout'  => (int) env('NAS_FTP_TIMEOUT', 30),
         ],
 
         'local' => [
