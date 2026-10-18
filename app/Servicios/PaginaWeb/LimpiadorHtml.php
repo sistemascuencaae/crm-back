@@ -8,13 +8,37 @@ use DOMNode;
 
 /**
  * Limpia el HTML que llega del editor del CRM antes de guardarlo.
+ *
+ * - Conserva solo etiquetas de texto (párrafos, subtítulos, negrita, listas, enlaces, tablas…), sin atributos.
+ * - Excepciones: el href seguro de los enlaces, colspan/rowspan de las celdas, y la alineación.
+ *   La alineación llega como style="text-align: center" (o data-align="center") y se guarda así:
+ *       class="ae-alinear-centro" style="text-align: center"
+ *   La clase es para la tienda (Angular quita los style al mostrar el HTML) y el style es para
+ *   que el editor del CRM la reconozca al volver a abrir el documento. Ese style lo escribe
+ *   el limpiador con uno de 3 valores fijos: el style que llega nunca se copia.
+ * - Borra con todo su contenido las peligrosas (script, iframe, style, form…).
+ * - Las demás (span, div, font, h1…) se quitan pero su texto se conserva.
+ * - En los enlaces solo deja href seguro: https://, mailto:, tel: o una ruta de la tienda (/garantia).
+ *   Los https:// se abren en pestaña nueva.
+ *
+ * Usa DOMDocument, que ya viene con PHP: no hace falta instalar paquetes.
  */
 class LimpiadorHtml
 {
     // Se conservan (sin atributos, salvo el href de <a>)
     private const PERMITIDAS = [
-        'p', 'br', 'h2', 'h3', 'h4', 'strong', 'b', 'em', 'i', 'u', 's',
+        'p', 'br', 'hr', 'h2', 'h3', 'h4', 'strong', 'b', 'em', 'i', 'u', 's',
         'ul', 'ol', 'li', 'a', 'blockquote',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    ];
+
+    // Etiquetas que pueden ir alineadas, y la clase que se guarda para cada alineación
+    // (izquierda es la normal: no lleva clase)
+    private const CON_ALINEACION = ['p', 'h2', 'h3', 'h4'];
+    private const CLASES_ALINEACION = [
+        'center'  => 'ae-alinear-centro',
+        'right'   => 'ae-alinear-derecha',
+        'justify' => 'ae-alinear-justificado',
     ];
 
     // Se borran con todo su contenido
@@ -87,10 +111,17 @@ class LimpiadorHtml
         }
     }
 
-    // Quita todos los atributos. En <a> deja solo un href seguro; false si el enlace no tiene uno.
+    // Quita todos los atributos. Vuelve a poner solo los permitidos: href seguro en <a>,
+    // colspan/rowspan en celdas y la clase de alineación. false si un enlace no tiene href seguro.
     private function limpiarAtributos(DOMElement $elemento, string $etiqueta): bool
     {
-        $href = $etiqueta === 'a' ? trim($elemento->getAttribute('href')) : '';
+        // Lo que se conserva se lee antes de borrar todo
+        $href    = $etiqueta === 'a' ? trim($elemento->getAttribute('href')) : '';
+        $alineacion = in_array($etiqueta, self::CON_ALINEACION, true)
+            ? $this->alineacion($elemento->getAttribute('style'), $elemento->getAttribute('data-align'))
+            : null;
+        $colspan = $elemento->getAttribute('colspan');
+        $rowspan = $elemento->getAttribute('rowspan');
 
         $nombres = [];
         foreach ($elemento->attributes as $atributo) {
@@ -98,6 +129,21 @@ class LimpiadorHtml
         }
         foreach ($nombres as $nombre) {
             $elemento->removeAttribute($nombre);
+        }
+
+        if ($alineacion !== null) {
+            $elemento->setAttribute('class', self::CLASES_ALINEACION[$alineacion]);
+            $elemento->setAttribute('style', 'text-align: ' . $alineacion);
+        }
+
+        // Celdas combinadas: solo números de 2 a 20
+        if ($etiqueta === 'td' || $etiqueta === 'th') {
+            if (preg_match('/^([2-9]|1[0-9]|20)$/', $colspan)) {
+                $elemento->setAttribute('colspan', $colspan);
+            }
+            if (preg_match('/^([2-9]|1[0-9]|20)$/', $rowspan)) {
+                $elemento->setAttribute('rowspan', $rowspan);
+            }
         }
 
         if ($etiqueta !== 'a') {
@@ -115,6 +161,20 @@ class LimpiadorHtml
         }
 
         return true;
+    }
+
+    // Lee la alineación de style="text-align: …" o de data-align="…".
+    // Devuelve center, right o justify; null si no hay o es la normal (izquierda).
+    private function alineacion(string $estilo, string $dataAlign): ?string
+    {
+        if (preg_match('/text-align\s*:\s*(center|right|justify)\b/i', $estilo, $m)) {
+            return strtolower($m[1]);
+        }
+        if (preg_match('/^(center|right|justify)$/i', trim($dataAlign), $m)) {
+            return strtolower($m[1]);
+        }
+
+        return null;
     }
 
     // Cambia la etiqueta conservando su contenido

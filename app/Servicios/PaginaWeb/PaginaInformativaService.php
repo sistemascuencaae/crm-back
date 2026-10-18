@@ -49,6 +49,9 @@ class PaginaInformativaService
         'PAGINA_DESPLEGABLE_TITULO_LARGO'     => 'El título de un desplegable no puede superar 100 caracteres.',
         'PAGINA_DESPLEGABLE_TEXTO_REQUERIDO'  => 'Cada desplegable necesita un texto.',
         'PAGINA_DESPLEGABLE_TEXTO_LARGO'      => 'El texto de un desplegable es demasiado largo.',
+        'PAGINA_DESPLEGABLE_PDF_INVALIDO'     => 'La dirección del PDF de un desplegable no es válida.',
+        'PAGINA_DESPLEGABLE_PDF_LARGO'        => 'La dirección del PDF de un desplegable no puede superar 500 caracteres.',
+        'PAGINA_DESPLEGABLE_BOTON_LARGO'      => 'El texto del botón no puede superar 40 caracteres.',
     ];
 
     // -----------------------------------------------------------------

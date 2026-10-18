@@ -161,16 +161,21 @@ use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ServidorController;
-use App\Http\Controllers\paginaWeb\SeccionController;
-use App\Http\Controllers\paginaWeb\MenuGrupoController;
-use App\Http\Controllers\paginaWeb\SeccionPublicaController;
+use App\Http\Controllers\paginaWeb\EncabezadoController;
+use App\Http\Controllers\paginaWeb\PiePaginaController;
+use App\Http\Controllers\paginaWeb\EncabezadoPiePublicoController;
 use App\Http\Controllers\paginaWeb\SucursalCiudadController;
 use App\Http\Controllers\paginaWeb\SucursalController;
 use App\Http\Controllers\paginaWeb\SucursalPublicaController;
 use App\Http\Controllers\paginaWeb\PaginaInformativaController;
 use App\Http\Controllers\paginaWeb\PaginaInformativaPublicaController;
 use App\Http\Controllers\paginaWeb\PaginaInformativaGrupoController;
+// Alias: ya existe crm\credito\GaleriaController
+use App\Http\Controllers\paginaWeb\GaleriaController as GaleriaPaginaWebController;
+use App\Http\Controllers\paginaWeb\GaleriaPublicaController;
 use App\Http\Controllers\paginaWeb\ArchivoPaginaWebController;
+use App\Models\ItemPruebaFlutter;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 
@@ -237,15 +242,30 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
 });
 
-// PÁGINA WEB (tienda): secciones visibles, sin login
-Route::get('public/pagina-web/secciones', [SeccionPublicaController::class, 'index']);
+// PÁGINA WEB (tienda): encabezado, pie de página y contenido visible, sin login
+Route::get('public/pagina-web/secciones', [EncabezadoPiePublicoController::class, 'listar']);
 Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
 Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
 Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
+Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
 Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
 Route::get('public/pagina-web/documentos/{nombre}', [ArchivoPaginaWebController::class, 'verPdf'])
     ->where('nombre', '[A-Za-z0-9]+\.pdf');
+
+// ==================== PRUEBA FLUTTER (temporal) ====================
+// Rutas de prueba para la app Flutter, sin token. Tabla: crm.pruebas_flutter
+Route::get('/items', function () {
+    return ItemPruebaFlutter::all();
+});
+
+Route::post('/items_sincronizar', function (Request $request) {
+    return ItemPruebaFlutter::updateOrCreate(
+        ['uuid' => $request->uuid],
+        ['nombre' => $request->nombre]
+    );
+});
+// ================== FIN PRUEBA FLUTTER (temporal) ==================
 
 // ----------------- END RUTAS SIN TOKEN -------------
 // ----------------- END RUTAS SIN TOKEN -------------
@@ -1786,20 +1806,27 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
 });
 
-// PÁGINA WEB: administración de secciones y menú de la tienda desde el CRM
+// PÁGINA WEB: administración del encabezado, pie de página y contenido de la tienda desde el CRM
 Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
-    Route::get('secciones/{clave}', [SeccionController::class, 'show']);
-    Route::put('secciones/{secId}', [SeccionController::class, 'update'])->whereNumber('secId');
-    Route::post('secciones/{secId}/menu-items', [SeccionController::class, 'crearMenuItem'])->whereNumber('secId');
-    Route::put('secciones/{secId}/menu-items/orden', [SeccionController::class, 'ordenarMenuItems'])->whereNumber('secId');
-    Route::put('menu-items/{mitId}', [SeccionController::class, 'modificarMenuItem'])->whereNumber('mitId');
-    Route::delete('menu-items/{mitId}', [SeccionController::class, 'eliminarMenuItem'])->whereNumber('mitId');
+    // Encabezado (header)
+    Route::get('encabezado', [EncabezadoController::class, 'buscar']);
+    Route::put('encabezado', [EncabezadoController::class, 'modificar']);
+    Route::post('encabezado/enlaces', [EncabezadoController::class, 'crearEnlace']);
+    Route::put('encabezado/enlaces-orden', [EncabezadoController::class, 'ordenarEnlaces']);
+    Route::put('encabezado/enlaces/{eenId}', [EncabezadoController::class, 'modificarEnlace'])->whereNumber('eenId');
+    Route::delete('encabezado/enlaces/{eenId}', [EncabezadoController::class, 'eliminarEnlace'])->whereNumber('eenId');
 
-    // Columnas del footer
-    Route::post('secciones/{secId}/menu-grupos', [MenuGrupoController::class, 'store'])->whereNumber('secId');
-    Route::put('secciones/{secId}/menu-grupos/orden', [MenuGrupoController::class, 'ordenar'])->whereNumber('secId');
-    Route::put('menu-grupos/{mgrId}', [MenuGrupoController::class, 'update'])->whereNumber('mgrId');
-    Route::delete('menu-grupos/{mgrId}', [MenuGrupoController::class, 'destroy'])->whereNumber('mgrId');
+    // Pie de página (footer)
+    Route::get('pie-pagina', [PiePaginaController::class, 'buscar']);
+    Route::put('pie-pagina', [PiePaginaController::class, 'modificar']);
+    Route::post('pie-pagina/columnas', [PiePaginaController::class, 'crearColumna']);
+    Route::put('pie-pagina/columnas-orden', [PiePaginaController::class, 'ordenarColumnas']);
+    Route::put('pie-pagina/columnas/{pcoId}', [PiePaginaController::class, 'modificarColumna'])->whereNumber('pcoId');
+    Route::delete('pie-pagina/columnas/{pcoId}', [PiePaginaController::class, 'eliminarColumna'])->whereNumber('pcoId');
+    Route::post('pie-pagina/columnas/{pcoId}/enlaces', [PiePaginaController::class, 'crearEnlace'])->whereNumber('pcoId');
+    Route::put('pie-pagina/columnas/{pcoId}/enlaces-orden', [PiePaginaController::class, 'ordenarEnlaces'])->whereNumber('pcoId');
+    Route::put('pie-pagina/enlaces/{penId}', [PiePaginaController::class, 'modificarEnlace'])->whereNumber('penId');
+    Route::delete('pie-pagina/enlaces/{penId}', [PiePaginaController::class, 'eliminarEnlace'])->whereNumber('penId');
 
     // Nuestras tiendas: ciudades
     Route::post('sucursales/ciudades', [SucursalCiudadController::class, 'crear']);
@@ -1828,6 +1855,14 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::put('paginas-grupos/orden', [PaginaInformativaGrupoController::class, 'ordenar']);
     Route::put('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'modificar'])->whereNumber('pigId');
     Route::delete('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'eliminar'])->whereNumber('pigId');
+
+    // Galerías de imágenes
+    Route::get('galerias', [GaleriaPaginaWebController::class, 'listar']);
+    Route::get('galerias/{galId}/imagenes', [GaleriaPaginaWebController::class, 'listarImagenes'])->whereNumber('galId');
+    Route::post('galerias/{galId}/imagenes', [GaleriaPaginaWebController::class, 'crearImagen'])->whereNumber('galId');
+    Route::put('galerias/{galId}/imagenes-orden', [GaleriaPaginaWebController::class, 'ordenarImagenes'])->whereNumber('galId');
+    Route::put('galerias-imagenes/{gimId}', [GaleriaPaginaWebController::class, 'modificarImagen'])->whereNumber('gimId');
+    Route::delete('galerias-imagenes/{gimId}', [GaleriaPaginaWebController::class, 'eliminarImagen'])->whereNumber('gimId');
 
     // Imágenes y PDF de las páginas informativas
     Route::post('imagenes',   [ArchivoPaginaWebController::class, 'subirImagen']);
