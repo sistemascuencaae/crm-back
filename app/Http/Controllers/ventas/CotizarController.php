@@ -33,6 +33,34 @@ class CotizarController extends Controller
         }
     }
 
+    // Modal "Buscar producto" de Cotizar: productos activos paginados, igual que el listado de clientes.
+    // Sin busqueda -> ventas.fn_producto_cotizar_listar_paginacion | con busqueda -> _buscar_paginacion
+    public function listarProductosCotizar(Request $request)
+    {
+        try {
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = min(max((int) $request->query('tamanio', 10), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($busqueda !== '') {
+                $registros = DB::select('SELECT * FROM ventas.fn_producto_cotizar_buscar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+            } else {
+                $registros = DB::select('SELECT * FROM ventas.fn_producto_cotizar_listar_paginacion(?, ?)', [$pagina, $tamanio]);
+            }
+
+            $total = $registros[0]->total_registros ?? 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Productos listados con éxito', [
+                'registros' => $registros,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los productos', $e->getMessage()));
+        }
+    }
+
     // Calificaciones activas de la politica, la predeterminada primero.
     public function calificacionesPoliticaCotizar($polId)
     {

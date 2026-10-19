@@ -1811,6 +1811,7 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::get('/aporteCotizadorAuditoria', [AporteCotizadorController::class, 'aporteCotizadorAuditoria']);
     // Cotizar: contado o credito con N productos (calcular = vista previa; guardar = foto completa).
     Route::get('/combosCotizar', [CotizarController::class, 'combosCotizar']);
+    Route::get('/listarProductosCotizar', [CotizarController::class, 'listarProductosCotizar']);
     Route::get('/calificacionesPoliticaCotizar/{pol_id}', [CotizarController::class, 'calificacionesPoliticaCotizar']);
     Route::post('/calcularCotizacion', [CotizarController::class, 'calcularCotizacion']);
     Route::post('/guardarCotizacion', [CotizarController::class, 'guardarCotizacion']);
