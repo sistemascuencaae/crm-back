@@ -160,6 +160,11 @@ use App\Http\Controllers\gestionClientes\CSemaforoController;
 use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
+use App\Http\Controllers\ventas\ParametrosCotizadorController;
+use App\Http\Controllers\ventas\MarkupCotizadorController;
+use App\Http\Controllers\ventas\AporteCotizadorController;
+use App\Http\Controllers\ventas\CotizarController;
+use App\Http\Controllers\ventas\CotizacionesController;
 use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
 use App\Http\Controllers\formulario\EmpresaController;
@@ -1779,4 +1784,37 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::get('/config', [AnunciosUsuarioController::class, 'config']);
     Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
+});
+
+// VENTAS > COTIZADOR: configuracion (pestanas 1 Parametros, 2 Markup y 3 Aportes) y Cotizar.
+Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+    Route::get('/listParametrosCotizador', [ParametrosCotizadorController::class, 'listParametrosCotizador']);
+    Route::get('/listTiposParametrosCotizador', [ParametrosCotizadorController::class, 'listTiposParametrosCotizador']);
+    Route::post('/addParametroCotizador', [ParametrosCotizadorController::class, 'addParametroCotizador']);
+    Route::post('/editParametroCotizador/{id}', [ParametrosCotizadorController::class, 'editParametroCotizador']);
+    Route::get('/parametroCotizadorAuditoria', [ParametrosCotizadorController::class, 'parametroCotizadorAuditoria']);
+    // Pestana 2: markup (cabecera + detalles) y su asignacion a productos.
+    Route::get('/listMarkupCotizador', [MarkupCotizadorController::class, 'listMarkupCotizador']);
+    Route::get('/combosMarkupCotizador', [MarkupCotizadorController::class, 'combosMarkupCotizador']);
+    Route::get('/getMarkupCotizador/{id}', [MarkupCotizadorController::class, 'getMarkupCotizador']);
+    Route::post('/addMarkupCotizador', [MarkupCotizadorController::class, 'addMarkupCotizador']);
+    Route::post('/editMarkupCotizador/{id}', [MarkupCotizadorController::class, 'editMarkupCotizador']);
+    Route::get('/catalogoProductosMarkupCotizador', [MarkupCotizadorController::class, 'catalogoProductosMarkupCotizador']);
+    Route::get('/markupCotizadorAuditoria', [MarkupCotizadorController::class, 'markupCotizadorAuditoria']);
+    // Pestana 3: aportes (cabecera + detalles, en dolares) y su asignacion a productos.
+    Route::get('/listAporteCotizador', [AporteCotizadorController::class, 'listAporteCotizador']);
+    Route::get('/combosAporteCotizador', [AporteCotizadorController::class, 'combosAporteCotizador']);
+    Route::get('/getAporteCotizador/{id}', [AporteCotizadorController::class, 'getAporteCotizador']);
+    Route::post('/addAporteCotizador', [AporteCotizadorController::class, 'addAporteCotizador']);
+    Route::post('/editAporteCotizador/{id}', [AporteCotizadorController::class, 'editAporteCotizador']);
+    Route::get('/catalogoProductosAporteCotizador', [AporteCotizadorController::class, 'catalogoProductosAporteCotizador']);
+    Route::get('/aporteCotizadorAuditoria', [AporteCotizadorController::class, 'aporteCotizadorAuditoria']);
+    // Cotizar: contado o credito con N productos (calcular = vista previa; guardar = foto completa).
+    Route::get('/combosCotizar', [CotizarController::class, 'combosCotizar']);
+    Route::get('/calificacionesPoliticaCotizar/{pol_id}', [CotizarController::class, 'calificacionesPoliticaCotizar']);
+    Route::post('/calcularCotizacion', [CotizarController::class, 'calcularCotizacion']);
+    Route::post('/guardarCotizacion', [CotizarController::class, 'guardarCotizacion']);
+    // Cotizaciones guardadas: listado paginado y una cotizacion completa (solo lectura).
+    Route::get('/listCotizaciones', [CotizacionesController::class, 'listCotizaciones']);
+    Route::get('/getCotizacion/{id}', [CotizacionesController::class, 'getCotizacion']);
 });

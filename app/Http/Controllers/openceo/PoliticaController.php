@@ -217,6 +217,15 @@ class PoliticaController extends Controller
             'por_porcentaje_comision' => 'nullable|numeric',
             'pol_pordefecto'          => 'required|boolean',
             'pol_activo'              => 'required|boolean',
+            // Parametros de calificacion: solo la forma; el negocio va en
+            // crm.fn_politica_validar_parametros.
+            'parametros'                             => 'nullable|array',
+            'parametros.*.id'                        => 'nullable|integer',
+            'parametros.*.nombre'                    => 'required|string|max:255',
+            'parametros.*.predeterminado'            => 'required|boolean',
+            'parametros.*.margen_financiero_general' => 'required|numeric',
+            'parametros.*.incremento'                => 'required|numeric',
+            'parametros.*.activo'                    => 'required|boolean',
         ];
     }
 
@@ -243,7 +252,24 @@ class PoliticaController extends Controller
             'por_porcentaje_comision' => $request->input('por_porcentaje_comision'),
             'pol_pordefecto'          => $request->boolean('pol_pordefecto'),
             'pol_activo'              => $request->boolean('pol_activo'),
+            'parametros'              => $this->payloadParametros($request),
         ];
+    }
+
+    // Parametros de calificacion que se guardan junto con la politica.
+    // Sin id = nuevo; con id = existente (la funcion verifica que sea de esta politica).
+    private function payloadParametros(Request $request): array
+    {
+        return array_map(function ($p) {
+            return [
+                'id'                        => isset($p['id']) && $p['id'] !== '' ? (int) $p['id'] : null,
+                'nombre'                    => $p['nombre'] ?? null,
+                'predeterminado'            => filter_var($p['predeterminado'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'margen_financiero_general' => $p['margen_financiero_general'] ?? null,
+                'incremento'                => $p['incremento'] ?? null,
+                'activo'                    => filter_var($p['activo'] ?? true, FILTER_VALIDATE_BOOLEAN),
+            ];
+        }, array_values((array) $request->input('parametros', [])));
     }
 
     // Contexto forense que las funciones guardan en auditoria.logs_cambios.
