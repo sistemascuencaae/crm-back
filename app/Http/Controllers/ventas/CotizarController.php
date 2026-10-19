@@ -9,12 +9,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
-// Cotizar (ae/ventas/COTIZAR): una cotizacion de contado o de credito con N productos.
+// Cotizar (modal de Ventas > Cotizaciones, sin menu propio): una cotizacion de contado o de credito con N productos.
 // El negocio vive en ventas.fn_cotizar_* y fn_ccotizacion_registrar (PLANES/COTIZADOR): este
 // controller solo valida la forma, arma el jsonb y traduce la respuesta. Calcular es la vista
 // previa (no guarda); Guardar recalcula en el servidor y guarda la foto completa.
+// Sin report en COTIZACIONES las respuestas van sin costos, aportes, CAME, markup ni margenes.
 class CotizarController extends Controller
 {
+    use PermisosCotizacionTrait;
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -61,7 +64,7 @@ class CotizarController extends Controller
         }
     }
 
-    // Calificaciones activas de la politica, la predeterminada primero.
+    // Calificaciones activas de la politica, la predeterminada primero (el margen, solo con report).
     public function calificacionesPoliticaCotizar($polId)
     {
         try {
@@ -75,6 +78,9 @@ class CotizarController extends Controller
             foreach ($registros as $r) {
                 $r->margen_financiero = (float) $r->margen_financiero;
             }
+
+            // Filas como arreglos para quitar el margen a quien no tiene report.
+            $registros = $this->datosSegunPermisoCostos(json_decode(json_encode($registros), true));
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $registros));
         } catch (Exception $e) {
@@ -97,7 +103,7 @@ class CotizarController extends Controller
             $respuesta = json_decode($fila->resultado, true);
 
             if ($respuesta['success']) {
-                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], $respuesta['data']));
+                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], $this->datosSegunPermisoCostos($respuesta['data'])));
             }
 
             return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
@@ -126,10 +132,10 @@ class CotizarController extends Controller
 
             // Sin ningun producto calculado no se guarda nada.
             if (empty($respuesta['data']['ccotizacion_id'])) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Ningún producto se pudo calcular: la cotización no se guardó.', $respuesta['data']));
+                return response()->json(RespuestaApi::returnResultado('error', 'Ningún producto se pudo calcular: la cotización no se guardó.', $this->datosSegunPermisoCostos($respuesta['data'])));
             }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Cotización N° ' . $respuesta['data']['ccotizacion_id'] . ' guardada.', $respuesta['data']));
+            return response()->json(RespuestaApi::returnResultado('success', 'Cotización N° ' . $respuesta['data']['ccotizacion_id'] . ' guardada.', $this->datosSegunPermisoCostos($respuesta['data'])));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo guardar la cotización', $e->getMessage()));
         }

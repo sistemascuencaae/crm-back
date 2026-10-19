@@ -12,8 +12,11 @@ use Illuminate\Support\Facades\Validator;
 // Cotizaciones guardadas (ae/ventas/COTIZACIONES): listado paginado y una cotizacion completa.
 // El negocio vive en ventas.fn_ccotizacion_* (PLANES/COTIZADOR/produccion_cotizaciones.sql): este
 // controller solo valida la forma y traduce la respuesta. Solo lectura.
+// El superusuario ve todas; el resto solo las suyas. Costos, solo con report en COTIZACIONES.
 class CotizacionesController extends Controller
 {
+    use PermisosCotizacionTrait;
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -49,6 +52,12 @@ class CotizacionesController extends Controller
             }
 
             $filtros = $request->only(['fecha_desde', 'fecha_hasta', 'tipo', 'busqueda', 'pagina', 'tamanio']);
+
+            // El filtro por vendedor lo pone el servidor (no se acepta del request): sin el, todas.
+            if (!$this->esSuperusuario()) {
+                $filtros['usuario_id'] = (int) auth('api')->id();
+            }
+
             $fila = DB::selectOne('SELECT ventas.fn_ccotizacion_listar_paginacion(?::jsonb) AS resultado', [json_encode((object) $filtros)]);
             $respuesta = json_decode($fila->resultado, true);
 
@@ -73,11 +82,16 @@ class CotizacionesController extends Controller
             $fila = DB::selectOne('SELECT ventas.fn_ccotizacion_buscar(?) AS resultado', [(int) $id]);
             $respuesta = json_decode($fila->resultado, true);
 
-            if ($respuesta['success']) {
-                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], $respuesta['data']));
+            if (!$respuesta['success']) {
+                return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
             }
 
-            return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
+            // Una cotizacion ajena solo la abre el superusuario.
+            if (!$this->esSuperusuario() && (int) $respuesta['data']['user_id'] !== (int) auth('api')->id()) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No tiene acceso a esta cotización.', null));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], $this->datosSegunPermisoCostos($respuesta['data'])));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la cotización', $e->getMessage()));
         }

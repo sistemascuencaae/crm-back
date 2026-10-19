@@ -264,6 +264,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     // ? START POLITICAS
     Route::get('/listPoliticasPaginado', [PoliticaController::class, 'listPoliticasPaginado']);
+    Route::get('/listPoliticasActivasClientes', [PoliticaController::class, 'listPoliticasActivasClientes']);
     Route::get('/getPolitica/{id}', [PoliticaController::class, 'getPolitica']);
     Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
     Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);

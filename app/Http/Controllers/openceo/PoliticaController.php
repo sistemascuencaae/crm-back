@@ -53,6 +53,34 @@ class PoliticaController extends Controller
         }
     }
 
+    // Pantalla Parametros de calificacion: solo politicas ACTIVAS de clientes, con su
+    // modalidad (credito true = CREDITO). Misma respuesta que listPoliticasPaginado.
+    public function listPoliticasActivasClientes(Request $request)
+    {
+        try {
+            // Topes: tamanio 1..100 y pagina sin desbordar el OFFSET (integer) de la funcion.
+            $pagina   = min(max((int) $request->query('pagina', 1), 1), 1000000);
+            $tamanio  = min(max((int) $request->query('tamanio', 20), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            $registros = DB::select(
+                'SELECT * FROM crm.fn_politica_activas_clientes_listar_paginado(?, ?, ?)',
+                [$pagina, $tamanio, $busqueda]
+            );
+
+            $total = $registros[0]->total_registros ?? 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', [
+                'registros' => $registros,
+                'total'     => (int) $total,
+                'pagina'    => $pagina,
+                'tamanio'   => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar las políticas', $e->getMessage()));
+        }
+    }
+
     // Ficha completa de una politica, para precargar el modal de editar.
     public function getPolitica($id)
     {
@@ -129,11 +157,12 @@ class PoliticaController extends Controller
     public function guardarParametrosPolitica(Request $request, $id)
     {
         try {
+            // Los id con tope de integer de PostgreSQL: uno mayor revienta el cast en SQL.
             $validator = Validator::make(['pol_id' => $id] + $request->all(), [
-                'pol_id'                                 => 'required|integer|min:1',
+                'pol_id'                                 => 'required|integer|min:1|max:2147483647',
                 'parametros'                             => 'present|array',
                 'parametros.*'                           => 'array',
-                'parametros.*.id'                        => 'nullable|integer',
+                'parametros.*.id'                        => 'nullable|integer|max:2147483647',
                 'parametros.*.nombre'                    => 'required|string|max:255',
                 'parametros.*.margen_financiero_general' => 'required|numeric',
                 'parametros.*.incremento'                => 'required|numeric',
@@ -259,23 +288,15 @@ class PoliticaController extends Controller
             'por_porcentaje_comision' => 'nullable|numeric',
             'pol_pordefecto'          => 'required|boolean',
             'pol_activo'              => 'required|boolean',
-            // Parametros de calificacion: solo la forma; el negocio va en
-            // crm.fn_politica_validar_parametros.
-            'parametros'                             => 'nullable|array',
-            'parametros.*.id'                        => 'nullable|integer',
-            'parametros.*.nombre'                    => 'required|string|max:255',
-            'parametros.*.predeterminado'            => 'required|boolean',
-            'parametros.*.margen_financiero_general' => 'required|numeric',
-            'parametros.*.incremento'                => 'required|numeric',
-            'parametros.*.activo'                    => 'required|boolean',
         ];
     }
 
     // Arma el jsonb que consumen las funciones. Los nulos se dejan pasar tal cual:
     // la funcion aplica su COALESCE y la regla de modalidad (contado/credito).
+    // Sin 'parametros': solo los guarda guardarParametrosPolitica (politicas de clientes).
     private function payloadPolitica(Request $request): array
     {
-        $payload = [
+        return [
             'pol_nombre'              => $request->input('pol_nombre'),
             'pol_tipocli'             => (int) $request->input('pol_tipocli'),
             'pol_valordesde'          => $request->input('pol_valordesde'),
@@ -295,16 +316,9 @@ class PoliticaController extends Controller
             'pol_pordefecto'          => $request->boolean('pol_pordefecto'),
             'pol_activo'              => $request->boolean('pol_activo'),
         ];
-
-        // Los parametros ya tienen su pantalla: aqui solo viajan si el request los trae.
-        if (is_array($request->input('parametros'))) {
-            $payload['parametros'] = $this->payloadParametros($request);
-        }
-
-        return $payload;
     }
 
-    // Parametros de calificacion del request (pantalla propia, o add/edit si los trae).
+    // Parametros de calificacion del request (pantalla Parametros de calificacion).
     // Sin id = nuevo; con id = existente (la funcion verifica que sea de esta politica).
     private function payloadParametros(Request $request): array
     {
@@ -328,10 +342,12 @@ class PoliticaController extends Controller
             'pol_id.required'                                 => 'No se recibió la política.',
             'pol_id.integer'                                  => 'La política no es válida.',
             'pol_id.min'                                      => 'La política no es válida.',
+            'pol_id.max'                                      => 'La política no es válida.',
             'parametros.present'                              => 'No se recibieron los parámetros de calificación.',
             'parametros.array'                                => 'Los parámetros de calificación no tienen un formato válido.',
             'parametros.*.array'                              => 'Los parámetros de calificación no tienen un formato válido.',
             'parametros.*.id.integer'                         => 'Uno de los parámetros de calificación no es válido.',
+            'parametros.*.id.max'                             => 'Uno de los parámetros de calificación no es válido.',
             'parametros.*.nombre.required'                    => 'El nombre del parámetro de calificación es obligatorio.',
             'parametros.*.nombre.string'                      => 'El nombre del parámetro de calificación debe ser texto.',
             'parametros.*.nombre.max'                         => 'El nombre del parámetro de calificación no puede pasar de 255 caracteres.',
