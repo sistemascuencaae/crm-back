@@ -139,7 +139,7 @@ class CotizarController extends Controller
     // Helpers
     // ------------------------------------------------------------------------
 
-    // Solo la forma; el negocio (politica, calificacion, vigencias...) lo valida ventas.fn_cotizar_calcular.
+    // Solo la forma; el negocio (politica, vigencias...) lo valida ventas.fn_cotizar_calcular.
     private function reglasCalculo(): array
     {
         return [
@@ -150,7 +150,6 @@ class CotizarController extends Controller
             'items.*.cantidad' => 'required|numeric|gt:0',
             'items.*.precio'   => 'nullable|numeric|gt:0',
             'pol_id'           => 'nullable|integer',
-            'calificacion_id'  => 'nullable|integer',
             'entrada'          => 'nullable|numeric|min:0',
             'identificacion'   => ['nullable', 'regex:/^(\d{10}|\d{13})$/'],
         ];
@@ -174,7 +173,6 @@ class CotizarController extends Controller
             'items.*.precio.numeric'    => 'El precio debe ser un número mayor que cero.',
             'items.*.precio.gt'         => 'El precio debe ser un número mayor que cero.',
             'pol_id.integer'            => 'La política no existe.',
-            'calificacion_id.integer'   => 'La calificación no existe.',
             'entrada.numeric'           => 'La entrada debe ser un número mayor o igual a cero.',
             'entrada.min'               => 'La entrada debe ser un número mayor o igual a cero.',
             'identificacion.regex'      => 'La cédula o RUC del cliente debe tener 10 o 13 dígitos.',
@@ -182,8 +180,8 @@ class CotizarController extends Controller
     }
 
     // Ids como enteros; montos tal cual (la funcion los toma como numeric). Lo vacio va null.
-    // Fecha, region, plazo, tasa e IVA no se reciben: la funcion usa la hora del servidor, el punto de
-    // venta del usuario de la SESION (usuario_id del token), los pagos de la politica y los valores por defecto.
+    // Fecha, region, calificacion, plazo, tasa e IVA no se reciben: la funcion usa la hora del servidor, el punto de venta
+    // del usuario de la SESION (token), la calificacion predeterminada, los pagos de la politica y los valores por defecto.
     private function payloadCalculo(Request $request): array
     {
         return [
@@ -196,7 +194,6 @@ class CotizarController extends Controller
                 'precio'   => (isset($i['precio']) && trim((string) $i['precio']) !== '') ? $i['precio'] : null,
             ], array_values($request->input('items'))),
             'pol_id'          => $this->enteroONulo($request->input('pol_id')),
-            'calificacion_id' => $this->enteroONulo($request->input('calificacion_id')),
             'entrada'         => $request->input('entrada'),
             'identificacion'  => trim((string) $request->input('identificacion')) === '' ? null : trim((string) $request->input('identificacion')),
         ];

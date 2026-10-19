@@ -267,6 +267,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/getPolitica/{id}', [PoliticaController::class, 'getPolitica']);
     Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
     Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);
+    Route::post('/guardarParametrosPolitica/{id}', [PoliticaController::class, 'guardarParametrosPolitica']);
     Route::post('/cambiarEstadoPolitica/{id}', [PoliticaController::class, 'cambiarEstadoPolitica']);
     Route::get('/politicaAuditoria', [PoliticaController::class, 'politicaAuditoria']);
     // ? END POLITICAS

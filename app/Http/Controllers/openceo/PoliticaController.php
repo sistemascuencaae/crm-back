@@ -124,6 +124,48 @@ class PoliticaController extends Controller
         }
     }
 
+    // Pantalla Parametros de calificacion: guarda todos los parametros de UNA politica
+    // de clientes. Quitar uno guardado = activo false (la funcion nunca borra).
+    public function guardarParametrosPolitica(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make(['pol_id' => $id] + $request->all(), [
+                'pol_id'                                 => 'required|integer|min:1',
+                'parametros'                             => 'present|array',
+                'parametros.*'                           => 'array',
+                'parametros.*.id'                        => 'nullable|integer',
+                'parametros.*.nombre'                    => 'required|string|max:255',
+                'parametros.*.margen_financiero_general' => 'required|numeric',
+                'parametros.*.incremento'                => 'required|numeric',
+                'parametros.*.predeterminado'            => 'required|boolean',
+                'parametros.*.activo'                    => 'required|boolean',
+            ], $this->mensajesParametros());
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
+            }
+
+            $payload = [
+                'pol_id'     => (int) $id,
+                'parametros' => $this->payloadParametros($request),
+                'auditoria'  => $this->contextoAuditoriaForense($request),
+            ];
+
+            $resultado = DB::selectOne('SELECT crm.fn_politica_parametros_modificar(?::jsonb) AS resultado', [json_encode($payload)]);
+            $respuesta = json_decode($resultado->resultado, true);
+
+            if ($respuesta['success']) {
+                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], [
+                    'parametros' => $respuesta['parametros'] ?? [],
+                ]));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron guardar los parámetros de calificación', $e->getMessage()));
+        }
+    }
+
     // Activar / desactivar desde la grilla. La Principal NO se puede desactivar, y
     // al activar se revalida el nombre contra las activas del mismo tipo.
     public function cambiarEstadoPolitica(Request $request, $id)
@@ -233,7 +275,7 @@ class PoliticaController extends Controller
     // la funcion aplica su COALESCE y la regla de modalidad (contado/credito).
     private function payloadPolitica(Request $request): array
     {
-        return [
+        $payload = [
             'pol_nombre'              => $request->input('pol_nombre'),
             'pol_tipocli'             => (int) $request->input('pol_tipocli'),
             'pol_valordesde'          => $request->input('pol_valordesde'),
@@ -252,11 +294,17 @@ class PoliticaController extends Controller
             'por_porcentaje_comision' => $request->input('por_porcentaje_comision'),
             'pol_pordefecto'          => $request->boolean('pol_pordefecto'),
             'pol_activo'              => $request->boolean('pol_activo'),
-            'parametros'              => $this->payloadParametros($request),
         ];
+
+        // Los parametros ya tienen su pantalla: aqui solo viajan si el request los trae.
+        if (is_array($request->input('parametros'))) {
+            $payload['parametros'] = $this->payloadParametros($request);
+        }
+
+        return $payload;
     }
 
-    // Parametros de calificacion que se guardan junto con la politica.
+    // Parametros de calificacion del request (pantalla propia, o add/edit si los trae).
     // Sin id = nuevo; con id = existente (la funcion verifica que sea de esta politica).
     private function payloadParametros(Request $request): array
     {
@@ -270,6 +318,32 @@ class PoliticaController extends Controller
                 'activo'                    => filter_var($p['activo'] ?? true, FILTER_VALIDATE_BOOLEAN),
             ];
         }, array_values((array) $request->input('parametros', [])));
+    }
+
+    // Mensajes de la forma de guardarParametrosPolitica; el negocio lo valida
+    // crm.fn_politica_validar_parametros con sus propios textos.
+    private function mensajesParametros(): array
+    {
+        return [
+            'pol_id.required'                                 => 'No se recibió la política.',
+            'pol_id.integer'                                  => 'La política no es válida.',
+            'pol_id.min'                                      => 'La política no es válida.',
+            'parametros.present'                              => 'No se recibieron los parámetros de calificación.',
+            'parametros.array'                                => 'Los parámetros de calificación no tienen un formato válido.',
+            'parametros.*.array'                              => 'Los parámetros de calificación no tienen un formato válido.',
+            'parametros.*.id.integer'                         => 'Uno de los parámetros de calificación no es válido.',
+            'parametros.*.nombre.required'                    => 'El nombre del parámetro de calificación es obligatorio.',
+            'parametros.*.nombre.string'                      => 'El nombre del parámetro de calificación debe ser texto.',
+            'parametros.*.nombre.max'                         => 'El nombre del parámetro de calificación no puede pasar de 255 caracteres.',
+            'parametros.*.margen_financiero_general.required' => 'El margen financiero general del parámetro de calificación es obligatorio.',
+            'parametros.*.margen_financiero_general.numeric'  => 'El margen financiero general del parámetro de calificación debe ser numérico.',
+            'parametros.*.incremento.required'                => 'El incremento del parámetro de calificación es obligatorio.',
+            'parametros.*.incremento.numeric'                 => 'El incremento del parámetro de calificación debe ser numérico.',
+            'parametros.*.predeterminado.required'            => 'Falta indicar si el parámetro de calificación es predeterminado.',
+            'parametros.*.predeterminado.boolean'             => 'El valor de predeterminado del parámetro de calificación no es válido.',
+            'parametros.*.activo.required'                    => 'Falta indicar si el parámetro de calificación está activo.',
+            'parametros.*.activo.boolean'                     => 'El valor de activo del parámetro de calificación no es válido.',
+        ];
     }
 
     // Contexto forense que las funciones guardan en auditoria.logs_cambios.
