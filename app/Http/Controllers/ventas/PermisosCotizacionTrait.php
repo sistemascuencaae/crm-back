@@ -31,7 +31,7 @@ trait PermisosCotizacionTrait
     private function clavesCostoCotizacion(): array
     {
         return [
-            'costo', 'aportes', 'total_aportes', 'came', 'markup',
+            'costo', 'origen_costo', 'aportes', 'total_aportes', 'came', 'markup',
             'margen_financiero', 'margen_financiero_general', 'incremento',
             'pcotizador_id', 'concepto_markup', 'origen_markup', 'cmarkup_id', 'cabecera_markup',
             'dmarkup_id', 'orden_markup', 'vigencia_inicio_markup', 'vigencia_fin_markup',

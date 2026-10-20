@@ -195,6 +195,73 @@ class PoliticaController extends Controller
         }
     }
 
+    // Pantalla Parametros de calificacion > Clonar parametros: que pasaria en cada
+    // politica destino (solo lectura). Mismas validaciones que el clonado.
+    public function vistaPreviaClonarParametrosPolitica(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make(['pol_id' => $id] + $request->only('pol_ids_destino'),
+                $this->reglasClonarParametros(), $this->mensajesClonarParametros());
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
+            }
+
+            // Los id ya se validaron como enteros: el arreglo de PostgreSQL se arma sin riesgo.
+            $destinos = '{' . implode(',', $this->idsDestinoClonar($request)) . '}';
+
+            $resultado = DB::selectOne(
+                'SELECT crm.fn_politica_parametros_clonar_vista_previa(?, ?::integer[]) AS resultado',
+                [(int) $id, $destinos]
+            );
+            $respuesta = json_decode($resultado->resultado, true);
+
+            if ($respuesta['success']) {
+                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], [
+                    'origen'   => $respuesta['origen'] ?? null,
+                    'destinos' => $respuesta['destinos'] ?? [],
+                ]));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo preparar el clonado de los parámetros de calificación', $e->getMessage()));
+        }
+    }
+
+    // Pantalla Parametros de calificacion > Clonar parametros: cada destino queda con
+    // exactamente los parametros activos guardados de la politica {id}. Todo o nada.
+    public function clonarParametrosPolitica(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make(['pol_id' => $id] + $request->only('pol_ids_destino'),
+                $this->reglasClonarParametros(), $this->mensajesClonarParametros());
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
+            }
+
+            $payload = [
+                'pol_id_origen'   => (int) $id,
+                'pol_ids_destino' => $this->idsDestinoClonar($request),
+                'auditoria'       => $this->contextoAuditoriaForense($request),
+            ];
+
+            $resultado = DB::selectOne('SELECT crm.fn_politica_parametros_clonar(?::jsonb) AS resultado', [json_encode($payload)]);
+            $respuesta = json_decode($resultado->resultado, true);
+
+            if ($respuesta['success']) {
+                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], [
+                    'destinos' => $respuesta['destinos'] ?? [],
+                ]));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron clonar los parámetros de calificación', $e->getMessage()));
+        }
+    }
+
     // Activar / desactivar desde la grilla. La Principal NO se puede desactivar, y
     // al activar se revalida el nombre contra las activas del mismo tipo.
     public function cambiarEstadoPolitica(Request $request, $id)
@@ -360,6 +427,40 @@ class PoliticaController extends Controller
             'parametros.*.activo.required'                    => 'Falta indicar si el parámetro de calificación está activo.',
             'parametros.*.activo.boolean'                     => 'El valor de activo del parámetro de calificación no es válido.',
         ];
+    }
+
+    // Forma del pedido de Clonar parametros (vista previa y clonado); el negocio lo valida
+    // crm.fn_politica_parametros_clonar_validar.
+    private function reglasClonarParametros(): array
+    {
+        return [
+            'pol_id'            => 'required|integer|min:1|max:2147483647',
+            'pol_ids_destino'   => 'required|array|max:200',
+            'pol_ids_destino.*' => 'required|integer|min:1|max:2147483647',
+        ];
+    }
+
+    private function mensajesClonarParametros(): array
+    {
+        return [
+            'pol_id.required'            => 'No se recibió la política origen.',
+            'pol_id.integer'             => 'La política origen no es válida.',
+            'pol_id.min'                 => 'La política origen no es válida.',
+            'pol_id.max'                 => 'La política origen no es válida.',
+            'pol_ids_destino.required'   => 'Elija al menos una política destino.',
+            'pol_ids_destino.array'      => 'Las políticas destino no tienen un formato válido.',
+            'pol_ids_destino.max'        => 'Puede clonar a 200 políticas como máximo a la vez.',
+            'pol_ids_destino.*.required' => 'Una de las políticas destino no es válida.',
+            'pol_ids_destino.*.integer'  => 'Una de las políticas destino no es válida.',
+            'pol_ids_destino.*.min'      => 'Una de las políticas destino no es válida.',
+            'pol_ids_destino.*.max'      => 'Una de las políticas destino no es válida.',
+        ];
+    }
+
+    // Los pol_id destino del pedido como enteros (ya validados).
+    private function idsDestinoClonar(Request $request): array
+    {
+        return array_values(array_map('intval', (array) $request->input('pol_ids_destino', [])));
     }
 
     // Contexto forense que las funciones guardan en auditoria.logs_cambios.

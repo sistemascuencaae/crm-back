@@ -165,6 +165,7 @@ use App\Http\Controllers\ventas\MarkupCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
 use App\Http\Controllers\ventas\CotizarController;
 use App\Http\Controllers\ventas\CotizacionesController;
+use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
 use App\Http\Controllers\formulario\EmpresaController;
@@ -269,6 +270,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
     Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);
     Route::post('/guardarParametrosPolitica/{id}', [PoliticaController::class, 'guardarParametrosPolitica']);
+    // Clonar parametros: vista previa (solo lectura) y clonado a varias politicas.
+    Route::post('/vistaPreviaClonarParametrosPolitica/{id}', [PoliticaController::class, 'vistaPreviaClonarParametrosPolitica']);
+    Route::post('/clonarParametrosPolitica/{id}', [PoliticaController::class, 'clonarParametrosPolitica']);
     Route::post('/cambiarEstadoPolitica/{id}', [PoliticaController::class, 'cambiarEstadoPolitica']);
     Route::get('/politicaAuditoria', [PoliticaController::class, 'politicaAuditoria']);
     // ? END POLITICAS
@@ -1820,4 +1824,15 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     // Cotizaciones guardadas: listado paginado y una cotizacion completa (solo lectura).
     Route::get('/listCotizaciones', [CotizacionesController::class, 'listCotizaciones']);
     Route::get('/getCotizacion/{id}', [CotizacionesController::class, 'getCotizacion']);
+});
+
+// INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).
+Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+    Route::get('/arbolTiposProducto', [ProductoController::class, 'arbolTiposProducto']);
+    Route::get('/listProductos', [ProductoController::class, 'listProductos']);
+    Route::get('/catalogosProducto', [ProductoController::class, 'catalogosProducto']);
+    Route::get('/getProducto/{id}', [ProductoController::class, 'getProducto']);
+    Route::post('/crearProducto', [ProductoController::class, 'crearProducto']);
+    Route::post('/editarProducto/{id}', [ProductoController::class, 'editarProducto']);
+    Route::get('/productoAuditoria', [ProductoController::class, 'productoAuditoria']);
 });
