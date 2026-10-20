@@ -174,6 +174,9 @@ use App\Http\Controllers\paginaWeb\PaginaInformativaGrupoController;
 use App\Http\Controllers\paginaWeb\GaleriaController as GaleriaPaginaWebController;
 use App\Http\Controllers\paginaWeb\GaleriaPublicaController;
 use App\Http\Controllers\paginaWeb\ArchivoPaginaWebController;
+use App\Http\Controllers\paginaWeb\CategoriaWebController;
+use App\Http\Controllers\paginaWeb\CategoriaWebPublicaController;
+use App\Http\Controllers\paginaWeb\InicioSeccionController;
 use App\Http\Controllers\ItemPruebaFlutterController;
 use Illuminate\Support\Facades\Route;
 
@@ -246,6 +249,8 @@ Route::get('public/pagina-web/secciones', [EncabezadoPiePublicoController::class
 Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
 Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
 Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
+Route::get('public/pagina-web/categorias-destacadas', [CategoriaWebPublicaController::class, 'listar']);
+Route::get('public/pagina-web/categorias-menu', [CategoriaWebPublicaController::class, 'menu']);
 Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
 Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
@@ -1860,4 +1865,13 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     // Imágenes y PDF de las páginas informativas
     Route::post('imagenes',   [ArchivoPaginaWebController::class, 'subirImagen']);
     Route::post('documentos', [ArchivoPaginaWebController::class, 'subirPdf']);
+
+    // Categorías destacadas en la página web
+    Route::get('categorias-web', [CategoriaWebController::class, 'listar']);
+    Route::put('categorias-web-orden', [CategoriaWebController::class, 'ordenar']);
+    Route::put('categorias-web/{tprId}', [CategoriaWebController::class, 'modificar'])->whereNumber('tprId');
+
+    // Secciones de la página de inicio
+    Route::get('inicio-secciones', [InicioSeccionController::class, 'listar']);
+    Route::put('inicio-secciones/{clave}', [InicioSeccionController::class, 'modificar'])->where('clave', '[a-z_]+');
 });
