@@ -8,8 +8,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Categorías de la tienda. Las categorías vienen del ERP (public.tipo_producto, solo lectura);
- * aquí se maneja lo que decide marketing: qué departamentos salen en la tienda, cuáles son
- * destacadas, su imagen redonda, un nombre visible y su orden.
+ * aquí se maneja lo que decide marketing: qué departamentos salen en la tienda, qué categorías
+ * se ocultan, cuáles son destacadas, su imagen redonda, un nombre visible y su orden.
+ * La regla de "qué está en la tienda" está en la base (fn_categoria_web_en_tienda).
  * Llama a las funciones ecommerce.fn_categoria_web_*. La tienda lee con caché.
  */
 class CategoriaWebService
@@ -29,6 +30,8 @@ class CategoriaWebService
         'CATEGORIA_SIN_IMAGEN'         => 'Sube una imagen antes de marcarla como destacada.',
         'CATEGORIA_VISIBLE_INVALIDO'   => 'El valor de "mostrar en la tienda" debe ser verdadero o falso.',
         'CATEGORIA_SOLO_DEPARTAMENTO'  => 'Solo los departamentos se pueden mostrar u ocultar en la tienda.',
+        'CATEGORIA_OCULTA_INVALIDO'    => 'El valor de "oculta" debe ser verdadero o falso.',
+        'CATEGORIA_NO_SE_OCULTA_DEPARTAMENTO' => 'Un departamento no se oculta: apágalo con "En la tienda".',
         'ORDEN_INVALIDO'               => 'El nuevo orden no es válido.',
         'ORDEN_DESACTUALIZADO'         => 'La lista cambió mientras la ordenabas. Recarga la página e inténtalo de nuevo.',
     ];
@@ -50,7 +53,13 @@ class CategoriaWebService
         return DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar()');
     }
 
-    /** $datos: solo lo que cambia (cwe_destacada, cwe_imagen, cwe_nombre, cwe_visible) + usu_id. */
+    /** Antes de ocultar: cuántas subcategorías y productos activos tiene esa rama. {subcategorias, productos} */
+    public function impacto(int $tprId): object
+    {
+        return DB::selectOne('SELECT * FROM ecommerce.fn_categoria_web_impacto(?)', [$tprId]);
+    }
+
+    /** $datos: solo lo que cambia (cwe_destacada, cwe_imagen, cwe_nombre, cwe_visible, cwe_oculta) + usu_id. */
     public function modificar(int $tprId, array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_categoria_web_modificar(?, ?::jsonb)', [$tprId, $this->json($datos)]);

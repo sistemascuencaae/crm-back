@@ -6,7 +6,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Interruptores de las secciones del inicio de la tienda (por ahora: categorias_destacadas).
+ * Interruptores de las secciones del inicio de la tienda (banner_principal, categorias_destacadas).
  * Llama a las funciones ecommerce.fn_inicio_seccion_*.
  */
 class InicioSeccionService
@@ -28,8 +28,9 @@ class InicioSeccionService
     {
         DB::statement('SELECT ecommerce.fn_inicio_seccion_modificar(?, ?::jsonb)', [$clave, json_encode($datos)]);
 
-        // Las destacadas dependen de su interruptor: la tienda debe ver el cambio al momento
+        // Lo que ve la tienda depende de estos interruptores: debe ver el cambio al momento
         CategoriaWebService::limpiarCache();
+        GaleriaService::limpiarCacheInicioBanner();
     }
 
     /** Traduce el código que lanzó la base a un mensaje amigable; null si no es un código conocido. */

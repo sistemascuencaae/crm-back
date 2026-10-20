@@ -48,11 +48,12 @@ class EncabezadoController extends Controller
         }
     }
 
-    // POST pagina-web/encabezado/enlaces
+    // POST pagina-web/encabezado/enlaces   (con een_padre_id es un sub-enlace de ese principal)
     public function crearEnlace(Request $request)
     {
         try {
-            $eenId = $this->servicio->crearEnlace($request->only(self::CAMPOS_ENLACE) + ['usu_id' => auth()->id()]);
+            $datos = $request->only(self::CAMPOS_ENLACE) + ['een_padre_id' => $request->input('een_padre_id'), 'usu_id' => auth()->id()];
+            $eenId = $this->servicio->crearEnlace($datos);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Enlace creado con éxito', ['een_id' => $eenId]));
         } catch (QueryException $e) {
@@ -60,7 +61,7 @@ class EncabezadoController extends Controller
         }
     }
 
-    // PUT pagina-web/encabezado/enlaces/{eenId}   (solo lo que cambia)
+    // PUT pagina-web/encabezado/enlaces/{eenId}   (solo lo que cambia; no cambia de padre)
     public function modificarEnlace(Request $request, int $eenId)
     {
         try {
@@ -72,7 +73,7 @@ class EncabezadoController extends Controller
         }
     }
 
-    // DELETE pagina-web/encabezado/enlaces/{eenId}
+    // DELETE pagina-web/encabezado/enlaces/{eenId}   (un principal se lleva sus sub-enlaces)
     public function eliminarEnlace(int $eenId)
     {
         try {
@@ -84,11 +85,18 @@ class EncabezadoController extends Controller
         }
     }
 
-    // PUT pagina-web/encabezado/enlaces-orden   {ids: [3, 1, 2]} (todos, en el nuevo orden)
+    // PUT pagina-web/encabezado/enlaces-orden
+    //   {een_padre_id: null, ids: [3, 1, 2]}  → los principales
+    //   {een_padre_id: 8,    ids: [10, 9]}    → los sub-enlaces del principal 8
+    // Siempre todos los del grupo, en el nuevo orden.
     public function ordenarEnlaces(Request $request)
     {
         try {
-            $this->servicio->ordenarEnlaces(['ids' => $request->input('ids'), 'usu_id' => auth()->id()]);
+            $this->servicio->ordenarEnlaces([
+                'een_padre_id' => $request->input('een_padre_id'),
+                'ids'          => $request->input('ids'),
+                'usu_id'       => auth()->id(),
+            ]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
         } catch (QueryException $e) {

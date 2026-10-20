@@ -13,14 +13,15 @@ use Illuminate\Support\Facades\DB;
  */
 class GaleriaService
 {
-    private const CACHE_PREFIJO = 'pagina_web.galerias.publica.';
-    private const CACHE_MINUTOS = 10;
+    private const CACHE_PREFIJO       = 'pagina_web.galerias.publica.';
+    private const CACHE_INICIO_BANNER = 'pagina_web.inicio_banner.publica';
+    private const CACHE_MINUTOS       = 10;
 
     // Mensaje amigable para cada código que lanzan las funciones ecommerce.fn_galeria_*
     public const MENSAJES_ERROR = [
         'REQUIERE_USUARIO'        => 'No se identificó al usuario que realiza el cambio.',
         'GALERIA_NO_EXISTE'       => 'La galería no existe.',
-        'GALERIA_LLENA'           => 'La galería ya tiene 50 imágenes. Elimina alguna antes de subir otra.',
+        'GALERIA_LLENA'           => 'La galería llegó a su máximo de imágenes. Elimina alguna antes de subir otra.',
         'IMAGEN_NO_EXISTE'        => 'La imagen no existe.',
         'IMAGEN_REQUERIDA'        => 'Sube una imagen.',
         'IMAGEN_INVALIDA'         => 'La dirección de la imagen no es válida.',
@@ -28,6 +29,13 @@ class GaleriaService
         'IMAGEN_NOMBRE_REQUERIDO' => 'Escribe el nombre de la imagen.',
         'IMAGEN_NOMBRE_LARGO'     => 'El nombre de la imagen no puede superar 100 caracteres.',
         'IMAGEN_ACTIVO_INVALIDO'  => 'La visibilidad de la imagen debe ser verdadero o falso.',
+        'IMAGEN_MOVIL_INVALIDA'   => 'La dirección de la imagen para celular no es válida.',
+        'IMAGEN_MOVIL_LARGA'      => 'La dirección de la imagen para celular no puede superar 500 caracteres.',
+        'IMAGEN_MOSTRAR_INVALIDO' => '"Mostrar en" debe ser computadora y celular, solo computadora o solo celular.',
+        // En galerías estos tres solo los lanza el enlace de la imagen (las mismas reglas del header)
+        'CAMPO_ENLACE'            => 'El enlace no es válido: usa una ruta de la tienda (/...) o una dirección https://.',
+        'CAMPO_LARGO'             => 'El enlace no puede superar 250 caracteres.',
+        'CAMPO_INVALIDO'          => 'El valor de "abrir en pestaña nueva" debe ser verdadero o falso.',
         'ORDEN_INVALIDO'          => 'El nuevo orden no es válido.',
         'ORDEN_DESACTUALIZADO'    => 'La lista cambió mientras la ordenabas. Recarga la página e inténtalo de nuevo.',
     ];
@@ -48,7 +56,11 @@ class GaleriaService
         return DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_listar(?)', [$galId]);
     }
 
-    /** Agrega una imagen al final de su galería. $datos: {gal_id, gim_imagen, gim_nombre, usu_id}. Devuelve su id. */
+    /**
+     * Agrega una imagen al final de su galería (si no llegó a su máximo). Devuelve su id.
+     * $datos: {gal_id, gim_imagen, gim_nombre, usu_id} y, en banners, gim_imagen_movil, gim_enlace,
+     * gim_nueva_pestana, gim_mostrar_en.
+     */
     public function crearImagen(array $datos): int
     {
         $gimId = DB::selectOne('SELECT ecommerce.fn_galeria_imagen_crear(?::jsonb) AS id', [$this->json($datos)])->id;
@@ -57,7 +69,7 @@ class GaleriaService
         return $gimId;
     }
 
-    /** Cambia el nombre, la imagen o si está visible. */
+    /** Cambia los datos de la imagen (solo lo que llega). */
     public function modificarImagen(int $gimId, array $datos): void
     {
         $galId = $this->galeriaDeImagen($gimId);
@@ -83,12 +95,29 @@ class GaleriaService
     // Tienda
     // -----------------------------------------------------------------
 
-    /** Las imágenes visibles de una galería, en orden y solo las que se muestran: [{gim_imagen, gim_nombre}] */
+    /**
+     * Las imágenes visibles de una galería, en orden y solo las que se muestran:
+     * [{gim_imagen, gim_imagen_movil, gim_nombre, gim_enlace, gim_nueva_pestana, gim_mostrar_en}]
+     */
     public function listarPublicas(string $galClave): array
     {
         return Cache::remember(self::CACHE_PREFIJO . $galClave, now()->addMinutes(self::CACHE_MINUTOS), function () use ($galClave) {
             return DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_listar_publicas(?)', [$galClave]);
         });
+    }
+
+    /** El banner del inicio; lista vacía si su sección está apagada. Mismo formato que listarPublicas. */
+    public function listarInicioBanner(): array
+    {
+        return Cache::remember(self::CACHE_INICIO_BANNER, now()->addMinutes(self::CACHE_MINUTOS), function () {
+            return DB::select('SELECT * FROM ecommerce.fn_galeria_inicio_banner_publicas()');
+        });
+    }
+
+    /** Lo llama InicioSeccionService al prender o apagar una sección del inicio. */
+    public static function limpiarCacheInicioBanner(): void
+    {
+        Cache::forget(self::CACHE_INICIO_BANNER);
     }
 
     // -----------------------------------------------------------------
@@ -121,6 +150,13 @@ class GaleriaService
         $fila = DB::selectOne('SELECT gal_clave FROM ecommerce.galeria WHERE gal_id = ?', [$galId]);
         if ($fila) {
             Cache::forget(self::CACHE_PREFIJO . $fila->gal_clave);
+
+            if ($fila->gal_clave === 'inicio_banner') {
+                self::limpiarCacheInicioBanner();
+            }
+
+            // Las páginas de marca traen sus imágenes dentro de su JSON
+            PaginaMarcaService::limpiarCache();
         }
     }
 

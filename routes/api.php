@@ -177,6 +177,8 @@ use App\Http\Controllers\paginaWeb\ArchivoPaginaWebController;
 use App\Http\Controllers\paginaWeb\CategoriaWebController;
 use App\Http\Controllers\paginaWeb\CategoriaWebPublicaController;
 use App\Http\Controllers\paginaWeb\InicioSeccionController;
+use App\Http\Controllers\paginaWeb\PaginaMarcaController;
+use App\Http\Controllers\paginaWeb\PaginaMarcaPublicaController;
 use App\Http\Controllers\ItemPruebaFlutterController;
 use Illuminate\Support\Facades\Route;
 
@@ -251,6 +253,8 @@ Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaControl
 Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
 Route::get('public/pagina-web/categorias-destacadas', [CategoriaWebPublicaController::class, 'listar']);
 Route::get('public/pagina-web/categorias-menu', [CategoriaWebPublicaController::class, 'menu']);
+Route::get('public/pagina-web/inicio-banner', [GaleriaPublicaController::class, 'inicioBanner']);
+Route::get('public/pagina-web/marcas/{direccion}', [PaginaMarcaPublicaController::class, 'buscar']);
 Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
 Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
@@ -1870,8 +1874,21 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('categorias-web', [CategoriaWebController::class, 'listar']);
     Route::put('categorias-web-orden', [CategoriaWebController::class, 'ordenar']);
     Route::put('categorias-web/{tprId}', [CategoriaWebController::class, 'modificar'])->whereNumber('tprId');
+    Route::get('categorias-web/{tprId}/impacto', [CategoriaWebController::class, 'impacto'])->whereNumber('tprId');
 
     // Secciones de la página de inicio
     Route::get('inicio-secciones', [InicioSeccionController::class, 'listar']);
     Route::put('inicio-secciones/{clave}', [InicioSeccionController::class, 'modificar'])->where('clave', '[a-z_]+');
+
+    // Páginas de marca
+    Route::get('paginas-marca-marcas-erp', [PaginaMarcaController::class, 'marcasErp']);
+    Route::get('paginas-marca', [PaginaMarcaController::class, 'listar']);
+    Route::post('paginas-marca', [PaginaMarcaController::class, 'crear']);
+    Route::get('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'buscar']);
+    Route::put('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'modificar']);
+    Route::delete('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'eliminar']);
+    Route::post('paginas-marca/{pmaId}/bloques', [PaginaMarcaController::class, 'crearBloque']);
+    Route::put('paginas-marca/{pmaId}/bloques-orden', [PaginaMarcaController::class, 'ordenarBloques']);
+    Route::put('paginas-marca-bloques/{pmbId}', [PaginaMarcaController::class, 'modificarBloque']);
+    Route::delete('paginas-marca-bloques/{pmbId}', [PaginaMarcaController::class, 'eliminarBloque']);
 });

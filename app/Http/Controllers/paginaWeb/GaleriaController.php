@@ -17,6 +17,10 @@ use Illuminate\Support\Facades\Validator;
  */
 class GaleriaController extends Controller
 {
+    // Lo único que se acepta de una imagen. Los de banner (celular, enlace, mostrar en) son opcionales.
+    private const CAMPOS = ['gim_imagen', 'gim_imagen_movil', 'gim_nombre', 'gim_enlace',
+                            'gim_nueva_pestana', 'gim_mostrar_en', 'gim_activo'];
+
     public function __construct(private GaleriaService $servicio)
     {
     }
@@ -40,6 +44,7 @@ class GaleriaController extends Controller
     }
 
     // {gim_imagen (URL de la imagen ya subida), gim_nombre}
+    // En banners además: gim_imagen_movil, gim_enlace, gim_nueva_pestana, gim_mostrar_en (todos | computadora | celular)
     public function crearImagen(Request $request, int $galId)
     {
         $validator = Validator::make($request->all(), [
@@ -53,7 +58,7 @@ class GaleriaController extends Controller
 
         try {
             $gimId = $this->servicio->crearImagen(
-                $request->only('gim_imagen', 'gim_nombre') + ['gal_id' => $galId, 'usu_id' => auth()->id()]
+                $request->only(self::CAMPOS) + ['gal_id' => $galId, 'usu_id' => auth()->id()]
             );
 
             return response()->json(RespuestaApi::returnResultado('success', 'Imagen agregada con éxito', ['gim_id' => $gimId]));
@@ -62,7 +67,7 @@ class GaleriaController extends Controller
         }
     }
 
-    // Solo lo que cambia: {gim_nombre}, {gim_imagen} o {gim_activo}
+    // Solo lo que cambia (cualquiera de CAMPOS)
     public function modificarImagen(Request $request, int $gimId)
     {
         $validator = Validator::make($request->all(), [
@@ -78,7 +83,7 @@ class GaleriaController extends Controller
         try {
             $this->servicio->modificarImagen(
                 $gimId,
-                $request->only('gim_imagen', 'gim_nombre', 'gim_activo') + ['usu_id' => auth()->id()]
+                $request->only(self::CAMPOS) + ['usu_id' => auth()->id()]
             );
 
             return response()->json(RespuestaApi::returnResultado('success', 'Imagen guardada con éxito', ['gim_id' => $gimId]));

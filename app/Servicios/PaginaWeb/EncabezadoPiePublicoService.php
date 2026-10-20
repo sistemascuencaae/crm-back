@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Lo que ve la tienda del header y del footer, en un solo JSON (con caché de 10 minutos).
  * Las funciones de la base devuelven filas; aquí se arma el mismo JSON que la tienda ya usa:
- *   [ {clave: 'header', config, menu: [...], grupos: []},
+ *   [ {clave: 'header', config, menu: [{texto, enlace, icono, nueva_pestana, hijos: [...]}], grupos: []},
  *     {clave: 'footer', config, menu: [],    grupos: [{titulo, items: [...]}]} ]
  * Solo van los enlaces, columnas y redes activos.
  */
@@ -33,12 +33,7 @@ class EncabezadoPiePublicoService
     {
         $fila = DB::selectOne('SELECT * FROM ecommerce.fn_encabezado_buscar()');
 
-        $menu = [];
-        foreach (DB::select('SELECT * FROM ecommerce.fn_encabezado_enlace_listar()') as $enlace) {
-            if ($enlace->een_activo) {
-                $menu[] = $this->enlace($enlace->een_texto, $enlace->een_enlace, $enlace->een_icono, $enlace->een_nueva_pestana);
-            }
-        }
+        $menu = $this->menuEncabezado(DB::select('SELECT * FROM ecommerce.fn_encabezado_enlace_listar()'));
 
         // clave, tipo, ubicacion, orden y titulo se mantienen como antes para que la tienda no cambie
         return [
@@ -51,6 +46,44 @@ class EncabezadoPiePublicoService
             'menu'      => $menu,
             'grupos'    => [],
         ];
+    }
+
+    /**
+     * Menú del header con sus sub-enlaces (solo los activos):
+     *   - principal con sub-enlaces activos → menú: enlace null y sus "hijos"
+     *   - principal sin sub-enlaces y con enlace → enlace normal, hijos vacío
+     *   - principal sin sub-enlaces y sin enlace → no se muestra (no lleva a ningún lado)
+     * La base devuelve primero los principales y después los sub-enlaces.
+     */
+    private function menuEncabezado(array $filas): array
+    {
+        $principales = [];
+        foreach ($filas as $fila) {
+            if (!$fila->een_activo) {
+                continue;
+            }
+
+            if ($fila->een_padre_id === null) {
+                $principales[$fila->een_id] = $this->enlace($fila->een_texto, $fila->een_enlace, $fila->een_icono, $fila->een_nueva_pestana)
+                                            + ['hijos' => []];
+            } elseif (isset($principales[$fila->een_padre_id])) {
+                // Si el principal está oculto no llega aquí, y sus sub-enlaces tampoco se muestran
+                $principales[$fila->een_padre_id]['hijos'][] = $this->enlace($fila->een_texto, $fila->een_enlace, $fila->een_icono, $fila->een_nueva_pestana);
+            }
+        }
+
+        $menu = [];
+        foreach ($principales as $principal) {
+            if ($principal['hijos']) {
+                $principal['enlace']        = null;
+                $principal['nueva_pestana'] = false;
+                $menu[] = $principal;
+            } elseif ($principal['enlace'] !== null) {
+                $menu[] = $principal;
+            }
+        }
+
+        return $menu;
     }
 
     private function piePagina(): array

@@ -11,14 +11,14 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Categorías de la tienda (CRM): listar las del ERP, mostrar u ocultar departamentos en la tienda,
- * marcar destacadas, imagen, nombre visible y orden.
+ * ocultar categorías (con aviso del impacto), marcar destacadas, imagen, nombre visible y orden.
  * La imagen se sube antes con POST pagina-web/imagenes, que devuelve su URL.
  * Validación ligera aquí; las reglas están en la base.
  */
 class CategoriaWebController extends Controller
 {
     // Lo único que se acepta al modificar
-    private const CAMPOS = ['cwe_destacada', 'cwe_imagen', 'cwe_nombre', 'cwe_visible'];
+    private const CAMPOS = ['cwe_destacada', 'cwe_imagen', 'cwe_nombre', 'cwe_visible', 'cwe_oculta'];
 
     public function __construct(private CategoriaWebService $servicio)
     {
@@ -31,6 +31,16 @@ class CategoriaWebController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Categorías listadas con éxito', $this->servicio->listar()));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudieron listar las categorías');
+        }
+    }
+
+    // GET pagina-web/categorias-web/{tprId}/impacto → {subcategorias, productos} (para avisar antes de ocultar)
+    public function impacto(int $tprId)
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Impacto', $this->servicio->impacto($tprId)));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo calcular el impacto');
         }
     }
 

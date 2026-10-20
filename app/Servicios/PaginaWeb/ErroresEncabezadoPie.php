@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
  *     CAMPO_REQUERIDO:pco_titulo
  *     CAMPO_LARGO:barra_superior.texto:80
  * En ese caso la respuesta lleva data = {campo: mensaje}, y el CRM pinta el mensaje debajo del campo.
+ * Otros módulos que usan los mismos CAMPO_* (páginas de marca) pasan sus códigos propios en $extra.
  */
 class ErroresEncabezadoPie
 {
@@ -31,6 +32,8 @@ class ErroresEncabezadoPie
         'RED_REPETIDA'         => 'No repitas la misma red social.',
         'REQUIERE_USUARIO'     => 'No se identificó al usuario que realiza el cambio.',
         'ENLACE_NO_EXISTE'     => 'El enlace no existe.',
+        'ENLACE_PADRE_INVALIDO' => 'El enlace principal no existe o ya es un sub-enlace (solo se permite un nivel).',
+        'ENLACE_HIJOS_MAXIMO'  => 'Un enlace principal puede tener como máximo 10 sub-enlaces.',
         'COLUMNA_NO_EXISTE'    => 'La columna no existe.',
         'PIE_COLUMNAS_MAXIMO'  => 'El footer admite como máximo 6 columnas.',
         'ORDEN_INVALIDO'       => 'El nuevo orden no es válido.',
@@ -38,12 +41,14 @@ class ErroresEncabezadoPie
     ];
 
     /** Respuesta de error para el CRM. Código desconocido → mensaje genérico (el detalle queda en el log). */
-    public static function respuesta(QueryException $e, string $mensajeGenerico)
+    public static function respuesta(QueryException $e, string $mensajeGenerico, array $extra = [])
     {
+        $mensajes = $extra + self::MENSAJES;
+
         // El código viene después de "ERROR:", por ejemplo:  ERROR:  CAMPO_LARGO:barra_superior.texto:80
         if (preg_match('/ERROR:\s+([A-Z_]+)(?::([a-z0-9_.]+))?(?::(\d+))?/', $e->getMessage(), $m)
-            && isset(self::MENSAJES[$m[1]])) {
-            $mensaje = sprintf(self::MENSAJES[$m[1]], $m[3] ?? '');
+            && isset($mensajes[$m[1]])) {
+            $mensaje = sprintf($mensajes[$m[1]], $m[3] ?? '');
             $campo   = $m[2] ?? '';
 
             if ($campo !== '') {
