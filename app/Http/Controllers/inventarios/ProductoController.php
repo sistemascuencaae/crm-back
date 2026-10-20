@@ -32,7 +32,7 @@ class ProductoController extends Controller
         'TIPO_CON_OTRAS_CUENTAS' => 'No se puede cambiar a ese tipo: sus cuentas contables son distintas a las del tipo actual.',
         'TIPO_NO_VALIDO' => 'El tipo de producto no es válido: debe estar activo y ser del último nivel.',
         'MARCA_NO_VALIDA' => 'La marca no es válida o no está activa.',
-        'IVA_NO_VALIDO' => 'Debe seleccionar el IVA.',
+        'IVA_NO_VALIDO' => 'Indique si el producto graba IVA.',
         'IVA_BLOQUEADO' => 'No se puede cambiar el IVA: el producto ya tiene movimientos o facturas.',
         'INVENTARIO_BLOQUEADO' => 'No se puede cambiar "Maneja inventario": el producto ya tiene movimientos o facturas.',
         'MEDIDA_NO_VALIDA' => 'El peso y las medidas no pueden ser negativos.',
@@ -50,7 +50,7 @@ class ProductoController extends Controller
         'tpr_id',
         'mar_id',
         'uni_id',
-        'iva',
+        'pro_impuesto',
         'pro_inventario',
         'pro_peso',
         'pro_largo',
@@ -65,7 +65,7 @@ class ProductoController extends Controller
         'pro_nombre',
         'tpr_id',
         'mar_id',
-        'iva',
+        'pro_impuesto',
         'pro_inventario',
         'pro_activo',
         'pro_peso',
@@ -80,7 +80,7 @@ class ProductoController extends Controller
         'pro_nombre' => 'required|string|max:500',
         'tpr_id' => 'required|integer',
         'mar_id' => 'required|integer',
-        'iva' => 'required|integer|in:0,1,2,3',
+        'pro_impuesto' => 'required|boolean',
         'pro_inventario' => 'required|boolean',
         'pro_peso' => 'nullable|numeric|min:0',
         'pro_largo' => 'nullable|numeric|min:0',
@@ -116,6 +116,18 @@ class ProductoController extends Controller
 
             $registros = DB::select('SELECT * FROM crm.fn_producto_listar_paginacion(?, ?, ?, ?)', [$pagina, $tamanio, $busqueda, $tprId]);
             $total = $registros[0]->total_registros ?? 0;
+
+            // Stock global (todas las bodegas) solo de los productos de esta página.
+            $ids = array_map(fn ($r) => (int) $r->pro_id, $registros);
+            $stock = [];
+            if ($ids) {
+                foreach (DB::select('SELECT * FROM crm.fn_producto_stock_global_por_productos(?::integer[])', ['{' . implode(',', $ids) . '}']) as $s) {
+                    $stock[(int) $s->pro_id] = $s->stock_actual;
+                }
+            }
+            foreach ($registros as $r) {
+                $r->stock_actual = $stock[(int) $r->pro_id] ?? 0;
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Productos listados con éxito', [
                 'registros' => $registros,
@@ -159,6 +171,18 @@ class ProductoController extends Controller
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el producto', $th->getMessage()));
+        }
+    }
+
+    // Stock actual del producto en cada bodega (modal "Stock por bodega"), de mayor a menor.
+    public function stockBodegasProducto($id)
+    {
+        try {
+            $registros = DB::select('SELECT * FROM crm.fn_producto_stock_por_bodega(?)', [(int) $id]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Stock cargado con éxito', ['registros' => $registros]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el stock del producto', $th->getMessage()));
         }
     }
 

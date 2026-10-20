@@ -1832,6 +1832,7 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::get('/listProductos', [ProductoController::class, 'listProductos']);
     Route::get('/catalogosProducto', [ProductoController::class, 'catalogosProducto']);
     Route::get('/getProducto/{id}', [ProductoController::class, 'getProducto']);
+    Route::get('/stockBodegasProducto/{id}', [ProductoController::class, 'stockBodegasProducto']);
     Route::post('/crearProducto', [ProductoController::class, 'crearProducto']);
     Route::post('/editarProducto/{id}', [ProductoController::class, 'editarProducto']);
     Route::get('/productoAuditoria', [ProductoController::class, 'productoAuditoria']);
