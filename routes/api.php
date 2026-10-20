@@ -174,8 +174,7 @@ use App\Http\Controllers\paginaWeb\PaginaInformativaGrupoController;
 use App\Http\Controllers\paginaWeb\GaleriaController as GaleriaPaginaWebController;
 use App\Http\Controllers\paginaWeb\GaleriaPublicaController;
 use App\Http\Controllers\paginaWeb\ArchivoPaginaWebController;
-use App\Models\ItemPruebaFlutter;
-use Illuminate\Http\Request;
+use App\Http\Controllers\ItemPruebaFlutterController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -255,16 +254,10 @@ Route::get('public/pagina-web/documentos/{nombre}', [ArchivoPaginaWebController:
 
 // ==================== PRUEBA FLUTTER (temporal) ====================
 // Rutas de prueba para la app Flutter, sin token. Tabla: crm.pruebas_flutter
-Route::get('/items', function () {
-    return ItemPruebaFlutter::all();
-});
-
-Route::post('/items_sincronizar', function (Request $request) {
-    return ItemPruebaFlutter::updateOrCreate(
-        ['uuid' => $request->uuid],
-        ['nombre' => $request->nombre]
-    );
-});
+Route::get('prueba-flutter/items', [ItemPruebaFlutterController::class, 'listar']);
+Route::post('prueba-flutter/items/sincronizar', [ItemPruebaFlutterController::class, 'sincronizar']);
+Route::put('prueba-flutter/items/{uuid}/ubicacion', [ItemPruebaFlutterController::class, 'registrarUbicacion']);
+Route::delete('prueba-flutter/items/{uuid}', [ItemPruebaFlutterController::class, 'eliminar']);
 // ================== FIN PRUEBA FLUTTER (temporal) ==================
 
 // ----------------- END RUTAS SIN TOKEN -------------
