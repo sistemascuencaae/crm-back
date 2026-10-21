@@ -5,7 +5,7 @@ namespace App\Http\Controllers\paginaWeb;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\EncabezadoService;
-use App\Servicios\PaginaWeb\ErroresEncabezadoPie;
+use App\Servicios\PaginaWeb\ErroresPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 
@@ -28,7 +28,7 @@ class EncabezadoController extends Controller
         try {
             return response()->json(RespuestaApi::returnResultado('success', 'Encabezado', $this->servicio->buscar()));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'No se pudo cargar el encabezado');
+            return ErroresPaginaWeb::respuesta($e, 'No se pudo cargar el encabezado');
         }
     }
 
@@ -44,7 +44,7 @@ class EncabezadoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Encabezado guardado con éxito', null));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al guardar el encabezado');
+            return ErroresPaginaWeb::respuesta($e, 'Error al guardar el encabezado');
         }
     }
 
@@ -57,7 +57,7 @@ class EncabezadoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Enlace creado con éxito', ['een_id' => $eenId]));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al crear el enlace');
+            return ErroresPaginaWeb::respuesta($e, 'Error al crear el enlace');
         }
     }
 
@@ -69,7 +69,7 @@ class EncabezadoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Enlace guardado con éxito', ['een_id' => $eenId]));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al guardar el enlace');
+            return ErroresPaginaWeb::respuesta($e, 'Error al guardar el enlace');
         }
     }
 
@@ -81,7 +81,7 @@ class EncabezadoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Enlace eliminado con éxito', ['een_id' => $eenId]));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al eliminar el enlace');
+            return ErroresPaginaWeb::respuesta($e, 'Error al eliminar el enlace');
         }
     }
 
@@ -100,7 +100,7 @@ class EncabezadoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al guardar el orden');
+            return ErroresPaginaWeb::respuesta($e, 'Error al guardar el orden');
         }
     }
 }

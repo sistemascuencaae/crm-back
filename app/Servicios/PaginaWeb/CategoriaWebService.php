@@ -2,7 +2,6 @@
 
 namespace App\Servicios\PaginaWeb;
 
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -41,6 +40,10 @@ class CategoriaWebService
     {
         Cache::forget(self::CACHE_DESTACADAS);
         Cache::forget(self::CACHE_MENU);
+
+        // Un bloque cuya categoría se oculta deja de verse en el inicio y en las páginas de marca
+        InicioSeccionService::limpiarCache();
+        PaginaMarcaService::limpiarCache();
     }
 
     // -----------------------------------------------------------------
@@ -114,22 +117,6 @@ class CategoriaWebService
 
             return $menu;
         });
-    }
-
-    // -----------------------------------------------------------------
-    // Errores
-    // -----------------------------------------------------------------
-
-    /** Traduce el código que lanzó la base a un mensaje amigable; null si no es un código conocido. */
-    public function mensajeError(QueryException $e): ?string
-    {
-        foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-            if (preg_match('/\b' . $codigo . '\b/', $e->getMessage())) {
-                return $mensaje;
-            }
-        }
-
-        return null;
     }
 
     private function json(array $datos): string

@@ -4,16 +4,20 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ErroresPaginaWeb;
 use App\Servicios\PaginaWeb\InicioSeccionService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 /**
- * Interruptores de las secciones del inicio (CRM): mostrar u ocultar una sección completa.
+ * Secciones del inicio (CRM): el interruptor de cada sección y, en la grilla, su título y cantidad.
+ * Los errores de un campo llegan como data {campo: mensaje}.
  */
 class InicioSeccionController extends Controller
 {
+    // Lo único que se acepta (título y cantidad solo los usa la grilla)
+    private const CAMPOS = ['ise_activo', 'ise_titulo', 'ise_cantidad'];
+
     public function __construct(private InicioSeccionService $servicio)
     {
     }
@@ -28,11 +32,11 @@ class InicioSeccionController extends Controller
         }
     }
 
-    // PUT pagina-web/inicio-secciones/{clave}   {ise_activo: true|false}
+    // PUT pagina-web/inicio-secciones/{clave}   (solo lo que cambia: {ise_activo} o, en la grilla, {ise_titulo, ise_cantidad})
     public function modificar(Request $request, string $clave)
     {
         try {
-            $this->servicio->modificar($clave, ['ise_activo' => $request->input('ise_activo'), 'usu_id' => auth()->id()]);
+            $this->servicio->modificar($clave, $request->only(self::CAMPOS) + ['usu_id' => auth()->id()]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Sección guardada con éxito', ['ise_clave' => $clave]));
         } catch (QueryException $e) {
@@ -42,16 +46,8 @@ class InicioSeccionController extends Controller
 
     // -----------------------------------------------------------------
 
-    /** Código conocido → su mensaje. Desconocido → mensaje genérico; el detalle queda en el log. */
     private function error(QueryException $e, string $mensajeGenerico)
     {
-        $mensaje = $this->servicio->mensajeError($e);
-
-        if ($mensaje === null) {
-            Log::error($mensajeGenerico, ['error' => $e->getMessage()]);
-            $mensaje = $mensajeGenerico;
-        }
-
-        return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+        return ErroresPaginaWeb::respuesta($e, $mensajeGenerico, InicioSeccionService::MENSAJES_ERROR);
     }
 }

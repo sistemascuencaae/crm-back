@@ -4,7 +4,7 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Servicios\PaginaWeb\ErroresEncabezadoPie;
+use App\Servicios\PaginaWeb\ErroresPaginaWeb;
 use App\Servicios\PaginaWeb\PiePaginaService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -29,7 +29,7 @@ class PiePaginaController extends Controller
         try {
             return response()->json(RespuestaApi::returnResultado('success', 'Pie de página', $this->servicio->buscar()));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'No se pudo cargar el pie de página');
+            return ErroresPaginaWeb::respuesta($e, 'No se pudo cargar el pie de página');
         }
     }
 
@@ -45,7 +45,7 @@ class PiePaginaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Pie de página guardado con éxito', null));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al guardar el pie de página');
+            return ErroresPaginaWeb::respuesta($e, 'Error al guardar el pie de página');
         }
     }
 
@@ -59,7 +59,7 @@ class PiePaginaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Columna creada con éxito', ['pco_id' => $pcoId]));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al crear la columna');
+            return ErroresPaginaWeb::respuesta($e, 'Error al crear la columna');
         }
     }
 
@@ -71,7 +71,7 @@ class PiePaginaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Columna guardada con éxito', ['pco_id' => $pcoId]));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al guardar la columna');
+            return ErroresPaginaWeb::respuesta($e, 'Error al guardar la columna');
         }
     }
 
@@ -83,7 +83,7 @@ class PiePaginaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Columna eliminada con éxito', ['pco_id' => $pcoId]));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al eliminar la columna');
+            return ErroresPaginaWeb::respuesta($e, 'Error al eliminar la columna');
         }
     }
 
@@ -95,7 +95,7 @@ class PiePaginaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al guardar el orden');
+            return ErroresPaginaWeb::respuesta($e, 'Error al guardar el orden');
         }
     }
 
@@ -111,7 +111,7 @@ class PiePaginaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Enlace creado con éxito', ['pen_id' => $penId]));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al crear el enlace');
+            return ErroresPaginaWeb::respuesta($e, 'Error al crear el enlace');
         }
     }
 
@@ -123,7 +123,7 @@ class PiePaginaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Enlace guardado con éxito', ['pen_id' => $penId]));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al guardar el enlace');
+            return ErroresPaginaWeb::respuesta($e, 'Error al guardar el enlace');
         }
     }
 
@@ -135,7 +135,7 @@ class PiePaginaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Enlace eliminado con éxito', ['pen_id' => $penId]));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al eliminar el enlace');
+            return ErroresPaginaWeb::respuesta($e, 'Error al eliminar el enlace');
         }
     }
 
@@ -147,7 +147,7 @@ class PiePaginaController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
         } catch (QueryException $e) {
-            return ErroresEncabezadoPie::respuesta($e, 'Error al guardar el orden');
+            return ErroresPaginaWeb::respuesta($e, 'Error al guardar el orden');
         }
     }
 }

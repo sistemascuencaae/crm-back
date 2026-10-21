@@ -2,7 +2,6 @@
 
 namespace App\Servicios\PaginaWeb;
 
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -52,18 +51,6 @@ class PaginaInformativaGrupoService
     public function ordenar(array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_pagina_informativa_grupo_ordenar(?::jsonb)', [$this->json($datos)]);
-    }
-
-    /** Traduce el código que lanzó la base a un mensaje amigable; null si no es un código conocido. */
-    public function mensajeError(QueryException $e): ?string
-    {
-        foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-            if (preg_match('/\b' . $codigo . '\b/', $e->getMessage())) {
-                return $mensaje;
-            }
-        }
-
-        return null;
     }
 
     private function json(array $datos): string

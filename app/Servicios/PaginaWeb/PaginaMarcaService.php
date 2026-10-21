@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
  * Páginas de marca: una por marca del ERP, con la misma plantilla (banner, bloques destacados,
  * grilla, fotos y contacto). Llama a las funciones ecommerce.fn_pagina_marca_*.
  * Las imágenes se editan con las rutas de galerías (cada página y cada bloque tiene las suyas).
+ * Los bloques destacados se editan con BloqueProductoService (los mismos que usa el inicio).
  * La tienda lee cada página por su dirección, con caché.
  */
 class PaginaMarcaService
@@ -16,7 +17,11 @@ class PaginaMarcaService
     private const CACHE_PREFIJO = 'pagina_web.marca.publica.';
     private const CACHE_MINUTOS = 10;
 
-    // Códigos propios de las páginas de marca (los CAMPO_* comunes están en ErroresEncabezadoPie)
+    public function __construct(private BloqueProductoService $bloques)
+    {
+    }
+
+    // Códigos propios de las páginas de marca (los CAMPO_* comunes están en ErroresPaginaWeb)
     public const MENSAJES_ERROR = [
         'MARCA_NO_EXISTE'                 => 'La marca no existe o está inactiva en el sistema.',
         'MARCA_CON_PAGINA'                => 'Esa marca ya tiene su página.',
@@ -24,10 +29,6 @@ class PaginaMarcaService
         'PAGINA_MARCA_DIRECCION_REPETIDA' => 'Otra página ya usa esta dirección.',
         'CAMPO_DIRECCION'                 => 'Usa solo minúsculas, números y guiones (por ejemplo: mach-potence).',
         'CAMPO_IMAGEN'                    => 'La dirección de la imagen no es válida.',
-        'CAMPO_CANTIDAD'                  => 'Debe ser un número entero entre 1 y %s.',
-        'BLOQUE_NO_EXISTE'                => 'El bloque no existe.',
-        'BLOQUES_MAXIMO'                  => 'Una página puede tener como máximo 10 bloques.',
-        'CATEGORIA_NO_EXISTE'             => 'La categoría no existe o está inactiva en el sistema.',
     ];
 
     /** Tras un cambio, la tienda debe ver lo nuevo. También lo llama GaleriaService al cambiar una imagen. */
@@ -58,9 +59,10 @@ class PaginaMarcaService
     }
 
     /**
-     * La página con todo lo que necesita el editor, o null si no existe:
-     *   {…campos de la página, galerias: {banner, fotos}, bloques: [{…campos del bloque, galeria}]}
+     * La página con lo que necesita el editor, o null si no existe:
+     *   {…campos de la página, galerias: {banner, fotos}}
      * Cada galería viene como en GET galerias (gal_id, gal_tipo, gal_maximo, total_imagenes…).
+     * Los bloques los pide el editor aparte: GET bloques-productos?pma_id=.
      */
     public function buscar(int $pmaId): ?object
     {
@@ -74,11 +76,6 @@ class PaginaMarcaService
             'banner' => $this->galeria($pagina->gal_banner_id),
             'fotos'  => $this->galeria($pagina->gal_fotos_id),
         ];
-
-        $pagina->bloques = DB::select('SELECT * FROM ecommerce.fn_pagina_marca_bloque_listar(?)', [$pmaId]);
-        foreach ($pagina->bloques as $bloque) {
-            $bloque->galeria = $this->galeria($bloque->gal_id);
-        }
 
         return $pagina;
     }
@@ -108,39 +105,6 @@ class PaginaMarcaService
     }
 
     // -----------------------------------------------------------------
-    // CRM: bloques
-    // -----------------------------------------------------------------
-
-    /** $datos: {pma_id, pmb_titulo, tpr_id, pmb_cantidad, pmb_activo, usu_id}. Devuelve su id. */
-    public function crearBloque(array $datos): int
-    {
-        $pmbId = DB::selectOne('SELECT ecommerce.fn_pagina_marca_bloque_crear(?::jsonb) AS id', [$this->json($datos)])->id;
-        self::limpiarCache();
-
-        return $pmbId;
-    }
-
-    /** $datos: solo lo que cambia + usu_id */
-    public function modificarBloque(int $pmbId, array $datos): void
-    {
-        DB::statement('SELECT ecommerce.fn_pagina_marca_bloque_modificar(?, ?::jsonb)', [$pmbId, $this->json($datos)]);
-        self::limpiarCache();
-    }
-
-    public function eliminarBloque(int $pmbId): void
-    {
-        DB::statement('SELECT ecommerce.fn_pagina_marca_bloque_eliminar(?)', [$pmbId]);
-        self::limpiarCache();
-    }
-
-    /** $datos: {pma_id, ids: [pmb_id…] (todos los bloques de la página, en el nuevo orden), usu_id} */
-    public function ordenarBloques(array $datos): void
-    {
-        DB::statement('SELECT ecommerce.fn_pagina_marca_bloque_ordenar(?::jsonb)', [$this->json($datos)]);
-        self::limpiarCache();
-    }
-
-    // -----------------------------------------------------------------
     // Tienda
     // -----------------------------------------------------------------
 
@@ -150,7 +114,7 @@ class PaginaMarcaService
      *   {direccion, titulo, logo, mar_id,
      *    marcas: [mar_id…]               la marca y sus sub-marcas (de ahí salen los productos),
      *    banner: [imágenes],
-     *    bloques: [{titulo, tpr_id, cantidad, imagenes: [...]}],
+     *    bloques: [{titulo, tpr_id, cantidad, imagen_lado ('izquierda' | 'derecha'), imagenes: [...]}],
      *    grilla: {titulo, cantidad} | null,
      *    fotos: [imágenes],
      *    contacto: {titulo, texto, boton_texto, boton_enlace, boton_nueva_pestana} | null}
@@ -164,18 +128,6 @@ class PaginaMarcaService
                 return null;
             }
 
-            $bloques = [];
-            if ($p->pma_bloques_visible) {
-                foreach (DB::select('SELECT * FROM ecommerce.fn_pagina_marca_bloque_listar_publicos(?)', [$p->pma_id]) as $b) {
-                    $bloques[] = [
-                        'titulo'   => $b->pmb_titulo,
-                        'tpr_id'   => $b->tpr_id,
-                        'cantidad' => $b->pmb_cantidad,
-                        'imagenes' => $this->imagenes($b->gal_clave),
-                    ];
-                }
-            }
-
             return [
                 'direccion' => $p->pma_direccion,
                 'titulo'    => $p->pma_titulo,
@@ -184,7 +136,7 @@ class PaginaMarcaService
                 'marcas'    => array_map(fn ($m) => (int) $m->mar_id,
                                          DB::select('SELECT * FROM ecommerce.fn_pagina_marca_marcas_incluidas(?)', [$p->mar_id])),
                 'banner'    => $p->pma_banner_visible ? $this->imagenes($p->banner_clave) : [],
-                'bloques'   => $bloques,
+                'bloques'   => $p->pma_bloques_visible ? $this->bloques->listarPublicos($p->pma_id) : [],
                 'grilla'    => $p->pma_grilla_visible
                     ? ['titulo' => $p->pma_grilla_titulo, 'cantidad' => $p->pma_grilla_cantidad]
                     : null,

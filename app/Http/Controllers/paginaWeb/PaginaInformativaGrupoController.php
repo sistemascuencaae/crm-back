@@ -4,10 +4,10 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ErroresPaginaWeb;
 use App\Servicios\PaginaWeb\PaginaInformativaGrupoService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -97,16 +97,9 @@ class PaginaInformativaGrupoController extends Controller
 
     // -----------------------------------------------------------------
 
-    /** Código conocido → su mensaje. Desconocido → mensaje genérico; el detalle queda en el log. */
+    /** Código conocido → su mensaje (arriba, como siempre). Desconocido → mensaje genérico; el detalle queda en el log. */
     private function error(QueryException $e, string $mensajeGenerico)
     {
-        $mensaje = $this->servicio->mensajeError($e);
-
-        if ($mensaje === null) {
-            Log::error($mensajeGenerico, ['error' => $e->getMessage()]);
-            $mensaje = $mensajeGenerico;
-        }
-
-        return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+        return ErroresPaginaWeb::respuesta($e, $mensajeGenerico, PaginaInformativaGrupoService::MENSAJES_ERROR, false);
     }
 }

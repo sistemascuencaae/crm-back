@@ -2,7 +2,6 @@
 
 namespace App\Servicios\PaginaWeb;
 
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -152,22 +151,6 @@ class PaginaInformativaService
         }
 
         return $secciones;
-    }
-
-    // -----------------------------------------------------------------
-    // Errores
-    // -----------------------------------------------------------------
-
-    /** Traduce el código que lanzó la base a un mensaje amigable; null si no es un código conocido. */
-    public function mensajeError(QueryException $e): ?string
-    {
-        foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-            if (preg_match('/\b' . $codigo . '\b/', $e->getMessage())) {
-                return $mensaje;
-            }
-        }
-
-        return null;
     }
 
     // -----------------------------------------------------------------
