@@ -4,13 +4,16 @@ namespace App\Http\Controllers\ventas;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Models\crm\Audits;
+use App\Models\crm\RequerimientoCaso;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 // Cotizar (modal de Ventas > Cotizaciones, sin menu propio): una cotizacion de contado o de credito con N productos.
-// El negocio vive en ventas.fn_cotizar_* y fn_ccotizacion_registrar (PLANES/COTIZADOR): este
+// El negocio vive en ventas.fn_cotizar_* y fn_cproforma_registrar (PLANES/COTIZADOR): este
 // controller solo valida la forma, arma el jsonb y traduce la respuesta. Calcular es la vista
 // previa (no guarda); Guardar recalcula en el servidor y guarda la foto completa.
 // Sin report en COTIZACIONES las respuestas van sin costos, aportes, CAME, markup ni margenes.
@@ -123,7 +126,14 @@ class CotizarController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
             }
 
-            $fila = DB::selectOne('SELECT ventas.fn_ccotizacion_registrar(?::jsonb) AS resultado', [json_encode($this->payloadCalculo($request))]);
+            // Proforma: viene del requerimiento Proformar de un caso.
+            $casoId = $this->enteroONulo($request->input('caso_id'));
+            $reqCasoId = $this->enteroONulo($request->input('req_caso_id'));
+            if ($casoId !== null || $reqCasoId !== null) {
+                return $this->guardarProforma($request, $casoId, $reqCasoId);
+            }
+
+            $fila = DB::selectOne('SELECT ventas.fn_cproforma_registrar(?::jsonb) AS resultado', [json_encode($this->payloadCalculo($request))]);
             $respuesta = json_decode($fila->resultado, true);
 
             if (!$respuesta['success']) {
@@ -139,6 +149,57 @@ class CotizarController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo guardar la cotización', $e->getMessage()));
         }
+    }
+
+    // Proforma (requerimiento Proformar del caso): en una transaccion guarda la cotizacion con caso_id
+    // (cliente y calificacion salen del caso), marca el requerimiento (marcado, valor_int = la ultima
+    // version) y deja el registro en la bitacora del caso, como la solicitud credito vendedor. Cada
+    // Guardar es una version nueva. Devuelve lo mismo que Guardar mas reqCaso (los del caso).
+    private function guardarProforma(Request $request, ?int $casoId, ?int $reqCasoId)
+    {
+        $reqCaso = $reqCasoId !== null ? RequerimientoCaso::find($reqCasoId) : null;
+        if (!$reqCaso || $casoId === null || (int) $reqCaso->caso_id !== $casoId || $reqCaso->tipo_campo !== 'proformar') {
+            return response()->json(RespuestaApi::returnResultado('error', 'El requerimiento Proformar no es de este caso.', null));
+        }
+
+        return DB::transaction(function () use ($request, $reqCaso, $casoId) {
+            $fila = DB::selectOne('SELECT ventas.fn_cproforma_registrar(?::jsonb) AS resultado', [json_encode($this->payloadCalculo($request))]);
+            $respuesta = json_decode($fila->resultado, true);
+
+            if (!$respuesta['success']) {
+                return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
+            }
+
+            if (empty($respuesta['data']['ccotizacion_id'])) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Ningún producto se pudo calcular: la proforma no se guardó.', $this->datosSegunPermisoCostos($respuesta['data'])));
+            }
+
+            $audit = new Audits();
+            $audit->old_values = json_encode($reqCaso);
+
+            $reqCaso->marcado = true;
+            $reqCaso->valor_int = $respuesta['data']['ccotizacion_id'];
+            $reqCaso->save();
+
+            // Bitacora: accion 'editRequerimiento' + tipo_campo 'proformar' (muestra el mensaje resumido).
+            $audit->user_id = auth('api')->id();
+            $audit->event = 'updated';
+            $audit->auditable_type = RequerimientoCaso::class;
+            $audit->auditable_id = $reqCaso->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip();
+            $audit->url = $request->fullUrl();
+            $audit->new_values = json_encode($reqCaso);
+            $audit->user_agent = $request->header('User-Agent');
+            $audit->accion = 'editRequerimiento';
+            $audit->caso_id = $casoId;
+            $audit->save();
+
+            $data = $this->datosSegunPermisoCostos($respuesta['data']);
+            $data['reqCaso'] = RequerimientoCaso::where('caso_id', $casoId)->orderBy('id', 'asc')->get();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Proforma N° ' . $respuesta['data']['ccotizacion_id'] . ' guardada.', $data));
+        });
     }
 
     // ------------------------------------------------------------------------
@@ -158,6 +219,8 @@ class CotizarController extends Controller
             'pol_id'           => 'nullable|integer',
             'entrada'          => 'nullable|numeric|min:0',
             'identificacion'   => ['nullable', 'regex:/^(\d{10}|\d{13})$/'],
+            'caso_id'          => 'nullable|integer',
+            'req_caso_id'      => 'nullable|integer',
         ];
     }
 
@@ -182,6 +245,8 @@ class CotizarController extends Controller
             'entrada.numeric'           => 'La entrada debe ser un número mayor o igual a cero.',
             'entrada.min'               => 'La entrada debe ser un número mayor o igual a cero.',
             'identificacion.regex'      => 'La cédula o RUC del cliente debe tener 10 o 13 dígitos.',
+            'caso_id.integer'           => 'El caso no existe.',
+            'req_caso_id.integer'       => 'El requerimiento Proformar no es de este caso.',
         ];
     }
 
@@ -202,6 +267,8 @@ class CotizarController extends Controller
             'pol_id'          => $this->enteroONulo($request->input('pol_id')),
             'entrada'         => $request->input('entrada'),
             'identificacion'  => trim((string) $request->input('identificacion')) === '' ? null : trim((string) $request->input('identificacion')),
+            // Proforma: con el caso, la funcion toma su cliente y la calificacion de su Tipo Cliente.
+            'caso_id'         => $this->enteroONulo($request->input('caso_id')),
         ];
     }
 

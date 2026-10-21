@@ -1815,14 +1815,14 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::post('/editAporteCotizador/{id}', [AporteCotizadorController::class, 'editAporteCotizador']);
     Route::get('/catalogoProductosAporteCotizador', [AporteCotizadorController::class, 'catalogoProductosAporteCotizador']);
     Route::get('/aporteCotizadorAuditoria', [AporteCotizadorController::class, 'aporteCotizadorAuditoria']);
-    // Cotizar: contado o credito con N productos (calcular = vista previa; guardar = foto completa).
+    // Cotizar: contado o credito con N productos (calcular = vista previa; guardar = la proforma del caso).
     Route::get('/combosCotizar', [CotizarController::class, 'combosCotizar']);
     Route::get('/listarProductosCotizar', [CotizarController::class, 'listarProductosCotizar']);
     Route::get('/calificacionesPoliticaCotizar/{pol_id}', [CotizarController::class, 'calificacionesPoliticaCotizar']);
     Route::post('/calcularCotizacion', [CotizarController::class, 'calcularCotizacion']);
     Route::post('/guardarCotizacion', [CotizarController::class, 'guardarCotizacion']);
-    // Cotizaciones guardadas: listado paginado y una cotizacion completa (solo lectura).
-    Route::get('/listCotizaciones', [CotizacionesController::class, 'listCotizaciones']);
+    // Proformas: el historial paginado y una proforma completa (solo lectura).
+    Route::get('/listProformas', [CotizacionesController::class, 'listProformas']);
     Route::get('/getCotizacion/{id}', [CotizacionesController::class, 'getCotizacion']);
 });
 

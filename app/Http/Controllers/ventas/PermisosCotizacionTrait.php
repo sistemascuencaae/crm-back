@@ -5,7 +5,8 @@ namespace App\Http\Controllers\ventas;
 use App\Models\Access;
 
 // Permisos del cotizador que aplica el servidor: el superusuario (usu_tipo 3) ve todas las cotizaciones
-// y el resto solo las suyas; costos, aportes, CAME, markup y margenes solo con report en COTIZACIONES.
+// y el resto solo las suyas; costos, aportes, CAME, markup y margenes solo con report en PROFORMAS (20-oct;
+// antes en COTIZACIONES, que paso a ser el historial de proformas).
 trait PermisosCotizacionTrait
 {
     private function esSuperusuario(): bool
@@ -13,7 +14,8 @@ trait PermisosCotizacionTrait
         return (int) (auth('api')->user()->usu_tipo ?? 0) === 3;
     }
 
-    // Mismo permiso que lee el front: crm.access del menu COTIZACIONES para el perfil del usuario.
+    // crm.access del menu PROFORMAS (Reporte) para el perfil del usuario: vale en Cotizar, en la proforma del
+    // caso, en el historial y en Ver.
     private function puedeVerCostosCotizacion(): bool
     {
         $usuario = auth('api')->user();
@@ -21,7 +23,7 @@ trait PermisosCotizacionTrait
         return $usuario !== null && Access::where('profile_id', $usuario->profile_id)
             ->where('report', 1)
             ->whereHas('menu', function ($query) {
-                $query->where('name', 'COTIZACIONES');
+                $query->where('name', 'PROFORMAS');
             })
             ->exists();
     }
