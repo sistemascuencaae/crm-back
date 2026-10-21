@@ -5,8 +5,8 @@ namespace App\Http\Controllers\ventas;
 use App\Models\Access;
 
 // Permisos del cotizador que aplica el servidor: el superusuario (usu_tipo 3) ve todas las cotizaciones
-// y el resto solo las suyas; costos, aportes, CAME, markup y margenes solo con report en PROFORMAS (20-oct;
-// antes en COTIZACIONES, que paso a ser el historial de proformas).
+// y el resto solo las suyas; costos, aportes, CAME, markup y margenes solo con "Ver costos" (ver_costos) en
+// PROFORMAS (21-oct: antes era report, que en Perfiles se llama Imprimir y ahora queda solo para el Excel).
 trait PermisosCotizacionTrait
 {
     private function esSuperusuario(): bool
@@ -14,14 +14,14 @@ trait PermisosCotizacionTrait
         return (int) (auth('api')->user()->usu_tipo ?? 0) === 3;
     }
 
-    // crm.access del menu PROFORMAS (Reporte) para el perfil del usuario: vale en Cotizar, en la proforma del
+    // crm.access del menu PROFORMAS (Ver costos) para el perfil del usuario: vale en Cotizar, en la proforma del
     // caso, en el historial y en Ver.
     private function puedeVerCostosCotizacion(): bool
     {
         $usuario = auth('api')->user();
 
         return $usuario !== null && Access::where('profile_id', $usuario->profile_id)
-            ->where('report', 1)
+            ->where('ver_costos', 1)
             ->whereHas('menu', function ($query) {
                 $query->where('name', 'PROFORMAS');
             })
@@ -41,7 +41,7 @@ trait PermisosCotizacionTrait
         ];
     }
 
-    // Con report, la respuesta tal cual; sin el, sin esas claves (se quitan, no van en null).
+    // Con Ver costos, la respuesta tal cual; sin el, sin esas claves (se quitan, no van en null).
     private function datosSegunPermisoCostos($datos)
     {
         if (!is_array($datos) || $this->puedeVerCostosCotizacion()) {

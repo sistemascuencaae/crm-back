@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Validator;
 // El negocio vive en ventas.fn_cotizar_* y fn_cproforma_registrar (PLANES/COTIZADOR): este
 // controller solo valida la forma, arma el jsonb y traduce la respuesta. Calcular es la vista
 // previa (no guarda); Guardar recalcula en el servidor y guarda la foto completa.
-// Sin report en COTIZACIONES las respuestas van sin costos, aportes, CAME, markup ni margenes.
+// Sin "Ver costos" (ver_costos) en PROFORMAS las respuestas van sin costos, aportes, CAME, markup ni margenes.
 class CotizarController extends Controller
 {
     use PermisosCotizacionTrait;
@@ -27,11 +27,13 @@ class CotizarController extends Controller
     }
 
     // Punto de venta y region del usuario de la sesion (solo informativos), politicas de
-    // credito de clientes y valores por defecto (tasa e IVA).
-    public function combosCotizar()
+    // credito de clientes y valores por defecto (tasa e IVA). Con caso_id (la proforma del caso) el
+    // servidor dice si el caso puede proformar (mensaje_caso) y da solo las politicas de hasta su Plazo.
+    public function combosCotizar(Request $request)
     {
         try {
-            $fila = DB::selectOne('SELECT ventas.fn_cotizar_combos(?) AS resultado', [(int) auth('api')->id()]);
+            $casoId = $this->enteroONulo($request->query('caso_id'));
+            $fila = DB::selectOne('SELECT ventas.fn_cotizar_combos(?, ?::integer) AS resultado', [(int) auth('api')->id(), $casoId]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', json_decode($fila->resultado, true)));
         } catch (Exception $e) {
@@ -67,7 +69,7 @@ class CotizarController extends Controller
         }
     }
 
-    // Calificaciones activas de la politica, la predeterminada primero (el margen, solo con report).
+    // Calificaciones activas de la politica, la predeterminada primero (el margen, solo con Ver costos).
     public function calificacionesPoliticaCotizar($polId)
     {
         try {
@@ -82,7 +84,7 @@ class CotizarController extends Controller
                 $r->margen_financiero = (float) $r->margen_financiero;
             }
 
-            // Filas como arreglos para quitar el margen a quien no tiene report.
+            // Filas como arreglos para quitar el margen a quien no tiene Ver costos.
             $registros = $this->datosSegunPermisoCostos(json_decode(json_encode($registros), true));
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $registros));

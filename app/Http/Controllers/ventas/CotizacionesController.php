@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 // El negocio vive en ventas.fn_cproforma_* (PLANES/COTIZADOR/produccion_cotizaciones.sql): este
 // controller solo valida la forma y traduce la respuesta. Solo lectura.
 // Como Todos los casos: el superusuario ve todas; el resto, las de los tipos de caso de su perfil.
-// Costos, solo con report en PROFORMAS.
+// Costos, solo con Ver costos (ver_costos) en PROFORMAS; el Excel sigue con report (Imprimir).
 class CotizacionesController extends Controller
 {
     use PermisosCotizacionTrait;
