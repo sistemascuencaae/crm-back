@@ -1882,6 +1882,7 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     // Secciones de la página de inicio
     Route::get('inicio-secciones', [InicioSeccionController::class, 'listar']);
     Route::put('inicio-secciones/{clave}', [InicioSeccionController::class, 'modificar'])->where('clave', '[a-z_]+');
+    Route::put('inicio-secciones-orden', [InicioSeccionController::class, 'ordenar']);
 
     // Páginas de marca
     Route::get('paginas-marca-marcas-erp', [PaginaMarcaController::class, 'marcasErp']);

@@ -16,8 +16,8 @@ use Illuminate\Http\Request;
  */
 class BloqueProductoController extends Controller
 {
-    // Lo único que se acepta de un bloque
-    private const CAMPOS = ['bpr_titulo', 'tpr_id', 'bpr_cantidad', 'bpr_activo', 'bpr_imagen_lado'];
+    // Lo único que se acepta de un bloque (bpr_desde / bpr_hasta: "YYYY-MM-DDTHH:MM", hora de Ecuador, o null)
+    private const CAMPOS = ['bpr_titulo', 'tpr_id', 'bpr_cantidad', 'bpr_activo', 'bpr_imagen_lado', 'bpr_desde', 'bpr_hasta'];
 
     public function __construct(private BloqueProductoService $servicio)
     {
@@ -34,7 +34,7 @@ class BloqueProductoController extends Controller
         }
     }
 
-    // POST pagina-web/bloques-productos   {pma_id (opcional), bpr_titulo, tpr_id, bpr_cantidad, bpr_imagen_lado}
+    // POST pagina-web/bloques-productos   {pma_id (opcional), bpr_titulo, tpr_id, bpr_cantidad, bpr_imagen_lado, bpr_desde, bpr_hasta}
     public function crear(Request $request)
     {
         try {

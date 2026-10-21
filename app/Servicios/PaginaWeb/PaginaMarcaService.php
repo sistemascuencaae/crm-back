@@ -10,12 +10,11 @@ use Illuminate\Support\Facades\DB;
  * grilla, fotos y contacto). Llama a las funciones ecommerce.fn_pagina_marca_*.
  * Las imágenes se editan con las rutas de galerías (cada página y cada bloque tiene las suyas).
  * Los bloques destacados se editan con BloqueProductoService (los mismos que usa el inicio).
- * La tienda lee cada página por su dirección, con caché.
+ * La tienda lee cada página por su dirección, con caché que respeta la vigencia (CachePaginaWeb).
  */
 class PaginaMarcaService
 {
     private const CACHE_PREFIJO = 'pagina_web.marca.publica.';
-    private const CACHE_MINUTOS = 10;
 
     public function __construct(private BloqueProductoService $bloques)
     {
@@ -121,7 +120,7 @@ class PaginaMarcaService
      */
     public function publica(string $direccion): ?array
     {
-        return Cache::remember(self::CACHE_PREFIJO . $direccion, now()->addMinutes(self::CACHE_MINUTOS), function () use ($direccion) {
+        return Cache::remember(self::CACHE_PREFIJO . $direccion, fn () => CachePaginaWeb::vencimiento(), function () use ($direccion) {
             $p = DB::selectOne('SELECT * FROM ecommerce.fn_pagina_marca_buscar_publica(?)', [$direccion]);
 
             if ($p === null) {

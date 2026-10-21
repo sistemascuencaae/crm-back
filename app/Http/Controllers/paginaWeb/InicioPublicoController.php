@@ -8,8 +8,8 @@ use App\Servicios\PaginaWeb\InicioSeccionService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Endpoint público (sin autenticación) que usa la tienda para la grilla, los bloques y las marcas del inicio.
- * El banner y las categorías destacadas siguen en sus propios endpoints.
+ * Endpoint público (sin autenticación) con todo el inicio de la tienda: {secciones: [...]},
+ * solo las visibles y en su orden (ver InicioSeccionService::publica).
  */
 class InicioPublicoController extends Controller
 {

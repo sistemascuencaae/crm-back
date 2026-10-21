@@ -26,6 +26,8 @@ class ErroresPaginaWeb
         'CAMPO_ENLACE'         => 'Debe ser una ruta que empiece por /, una dirección https://, un mailto: o un tel:.',
         'CAMPO_INVALIDO'       => 'El valor no es válido.',
         'CAMPO_CANTIDAD'       => 'Debe ser un número entero entre 1 y %s.',
+        'CAMPO_FECHA'          => 'La fecha no es válida.',
+        'FECHAS_RANGO'         => '"Hasta" debe ser posterior a "Desde".',
         'ICONO_INVALIDO'       => 'El ícono no es válido.',
         'FRASES_CANTIDAD'      => 'Ingresa entre 1 y 5 frases.',
         'FRASE_INVALIDA'       => 'Cada frase debe tener entre 1 y 60 caracteres.',

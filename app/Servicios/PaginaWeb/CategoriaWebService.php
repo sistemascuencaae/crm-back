@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\DB;
  * aquí se maneja lo que decide marketing: qué departamentos salen en la tienda, qué categorías
  * se ocultan, cuáles son destacadas, su imagen redonda, un nombre visible y su orden.
  * La regla de "qué está en la tienda" está en la base (fn_categoria_web_en_tienda).
- * Llama a las funciones ecommerce.fn_categoria_web_*. La tienda lee con caché.
+ * Llama a las funciones ecommerce.fn_categoria_web_*. La tienda lee con caché
+ * (las destacadas, con la que respeta la vigencia: CachePaginaWeb).
  */
 class CategoriaWebService
 {
@@ -83,7 +84,7 @@ class CategoriaWebService
     /** Las destacadas del home, en orden: [{tpr_id, nombre, imagen}] */
     public function listarPublicas(): array
     {
-        return Cache::remember(self::CACHE_DESTACADAS, now()->addMinutes(self::CACHE_MINUTOS), function () {
+        return Cache::remember(self::CACHE_DESTACADAS, fn () => CachePaginaWeb::vencimiento(), function () {
             return DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_publicas()');
         });
     }

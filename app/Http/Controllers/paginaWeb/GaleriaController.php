@@ -17,9 +17,11 @@ use Illuminate\Support\Facades\Validator;
  */
 class GaleriaController extends Controller
 {
-    // Lo único que se acepta de una imagen. Los de banner (celular, enlace, mostrar en) son opcionales.
+    // Lo único que se acepta de una imagen. La vigencia (desde / hasta), los de banner (celular, enlace,
+    // mostrar en) y los de tarjetas (título, subtítulo, color, botón) son opcionales.
     private const CAMPOS = ['gim_imagen', 'gim_imagen_movil', 'gim_nombre', 'gim_enlace',
-                            'gim_nueva_pestana', 'gim_mostrar_en', 'gim_activo'];
+                            'gim_nueva_pestana', 'gim_mostrar_en', 'gim_activo', 'gim_desde', 'gim_hasta',
+                            'gim_titulo', 'gim_subtitulo', 'gim_color', 'gim_boton'];
 
     public function __construct(private GaleriaService $servicio)
     {
@@ -44,7 +46,9 @@ class GaleriaController extends Controller
     }
 
     // {gim_imagen (URL de la imagen ya subida), gim_nombre}
+    // Opcional: gim_desde, gim_hasta ("YYYY-MM-DDTHH:MM", hora de Ecuador, o null)
     // En banners además: gim_imagen_movil, gim_enlace, gim_nueva_pestana, gim_mostrar_en (todos | computadora | celular)
+    // En tarjetas además: gim_titulo, gim_subtitulo, gim_color (rojo | oscuro | claro | gris), gim_boton
     public function crearImagen(Request $request, int $galId)
     {
         $validator = Validator::make($request->all(), [

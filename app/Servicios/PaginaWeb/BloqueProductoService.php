@@ -32,7 +32,8 @@ class BloqueProductoService
     // -----------------------------------------------------------------
 
     /**
-     * Los bloques del inicio ($pmaId null) o de una página, en orden, cada uno con su galería
+     * Los bloques del inicio ($pmaId null) o de una página, en orden, con bpr_desde, bpr_hasta y vigencia
+     * ('siempre' | 'programada' | 'vigente' | 'vencida'), cada uno con su galería
      * (igual que un elemento de GET galerias: gal_id, gal_tipo, gal_maximo, total_imagenes…).
      */
     public function listar(?int $pmaId): array
@@ -46,7 +47,7 @@ class BloqueProductoService
         return $bloques;
     }
 
-    /** $datos: {pma_id (null = inicio), bpr_titulo, tpr_id, bpr_cantidad, bpr_activo, bpr_imagen_lado, usu_id}. Devuelve su id. */
+    /** $datos: {pma_id (null = inicio), bpr_titulo, tpr_id, bpr_cantidad, bpr_activo, bpr_imagen_lado, bpr_desde, bpr_hasta, usu_id}. Devuelve su id. */
     public function crear(array $datos): int
     {
         $bprId = DB::selectOne('SELECT ecommerce.fn_bloque_producto_crear(?::jsonb) AS id', [$this->json($datos)])->id;
@@ -80,7 +81,7 @@ class BloqueProductoService
     // Tienda (lo usan InicioSeccionService y PaginaMarcaService, que ya tienen su caché)
     // -----------------------------------------------------------------
 
-    /** Los bloques visibles: [{titulo, tpr_id, cantidad, imagen_lado, imagenes: [...]}] */
+    /** Los bloques visibles y vigentes: [{titulo, tpr_id, cantidad, imagen_lado, imagenes: [...]}] */
     public function listarPublicos(?int $pmaId): array
     {
         $bloques = [];

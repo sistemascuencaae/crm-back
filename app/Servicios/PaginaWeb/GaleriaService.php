@@ -6,15 +6,16 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Galerías de imágenes (logos de pago, marcas aliadas, fotos de Beneficios…).
+ * Galerías de imágenes (logos de pago, marcas aliadas, fotos de Beneficios, tarjetas del mosaico…).
  * Las galerías vienen por script; desde el CRM se suben, ordenan, ocultan y eliminan sus imágenes.
- * Llama a las funciones ecommerce.fn_galeria_*. La tienda las lee por su clave (con caché).
+ * Cada imagen puede tener vigencia (desde / hasta); las de galerías tipo 'tarjetas' llevan además
+ * título, subtítulo, color y botón. Llama a las funciones ecommerce.fn_galeria_*.
+ * La tienda las lee por su clave (con caché que respeta la vigencia: CachePaginaWeb).
  */
 class GaleriaService
 {
     private const CACHE_PREFIJO       = 'pagina_web.galerias.publica.';
     private const CACHE_INICIO_BANNER = 'pagina_web.inicio_banner.publica';
-    private const CACHE_MINUTOS       = 10;
 
     // Mensaje amigable para cada código que lanzan las funciones ecommerce.fn_galeria_*
     public const MENSAJES_ERROR = [
@@ -31,6 +32,11 @@ class GaleriaService
         'IMAGEN_MOVIL_INVALIDA'   => 'La dirección de la imagen para celular no es válida.',
         'IMAGEN_MOVIL_LARGA'      => 'La dirección de la imagen para celular no puede superar 500 caracteres.',
         'IMAGEN_MOSTRAR_INVALIDO' => '"Mostrar en" debe ser computadora y celular, solo computadora o solo celular.',
+        'IMAGEN_TITULO_REQUERIDO' => 'La tarjeta necesita un título.',
+        'IMAGEN_TITULO_LARGO'     => 'El título de la tarjeta no puede superar 40 caracteres.',
+        'IMAGEN_SUBTITULO_LARGO'  => 'El subtítulo de la tarjeta no puede superar 80 caracteres.',
+        'IMAGEN_BOTON_LARGO'      => 'El texto del botón no puede superar 20 caracteres.',
+        'IMAGEN_COLOR_INVALIDO'   => 'Elige un color de la paleta.',
         // En galerías estos tres solo los lanza el enlace de la imagen (las mismas reglas del header)
         'CAMPO_ENLACE'            => 'El enlace no es válido: usa una ruta de la tienda (/...) o una dirección https://.',
         'CAMPO_LARGO'             => 'El enlace no puede superar 250 caracteres.',
@@ -49,7 +55,7 @@ class GaleriaService
         return DB::select('SELECT * FROM ecommerce.fn_galeria_listar()');
     }
 
-    /** Las imágenes de una galería, en orden (también las ocultas). */
+    /** Las imágenes de una galería, en orden (también las ocultas y vencidas), con su vigencia. */
     public function listarImagenes(int $galId): array
     {
         return DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_listar(?)', [$galId]);
@@ -57,8 +63,8 @@ class GaleriaService
 
     /**
      * Agrega una imagen al final de su galería (si no llegó a su máximo). Devuelve su id.
-     * $datos: {gal_id, gim_imagen, gim_nombre, usu_id} y, en banners, gim_imagen_movil, gim_enlace,
-     * gim_nueva_pestana, gim_mostrar_en.
+     * $datos: {gal_id, gim_imagen, gim_nombre, gim_desde, gim_hasta, usu_id}; en banners, gim_imagen_movil,
+     * gim_enlace, gim_nueva_pestana, gim_mostrar_en; en tarjetas, gim_titulo, gim_subtitulo, gim_color, gim_boton.
      */
     public function crearImagen(array $datos): int
     {
@@ -95,12 +101,13 @@ class GaleriaService
     // -----------------------------------------------------------------
 
     /**
-     * Las imágenes visibles de una galería, en orden y solo las que se muestran:
-     * [{gim_imagen, gim_imagen_movil, gim_nombre, gim_enlace, gim_nueva_pestana, gim_mostrar_en}]
+     * Las imágenes visibles y vigentes de una galería, en orden:
+     * [{gim_imagen, gim_imagen_movil, gim_nombre, gim_enlace, gim_nueva_pestana, gim_mostrar_en,
+     *   gim_titulo, gim_subtitulo, gim_color, gim_boton}]
      */
     public function listarPublicas(string $galClave): array
     {
-        return Cache::remember(self::CACHE_PREFIJO . $galClave, now()->addMinutes(self::CACHE_MINUTOS), function () use ($galClave) {
+        return Cache::remember(self::CACHE_PREFIJO . $galClave, fn () => CachePaginaWeb::vencimiento(), function () use ($galClave) {
             return DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_listar_publicas(?)', [$galClave]);
         });
     }
@@ -108,7 +115,7 @@ class GaleriaService
     /** El banner del inicio; lista vacía si su sección está apagada. Mismo formato que listarPublicas. */
     public function listarInicioBanner(): array
     {
-        return Cache::remember(self::CACHE_INICIO_BANNER, now()->addMinutes(self::CACHE_MINUTOS), function () {
+        return Cache::remember(self::CACHE_INICIO_BANNER, fn () => CachePaginaWeb::vencimiento(), function () {
             return DB::select('SELECT * FROM ecommerce.fn_galeria_inicio_banner_publicas()');
         });
     }
