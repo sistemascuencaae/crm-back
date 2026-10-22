@@ -14,8 +14,7 @@ use Illuminate\Support\Facades\DB;
  */
 class GaleriaService
 {
-    private const CACHE_PREFIJO       = 'pagina_web.galerias.publica.';
-    private const CACHE_INICIO_BANNER = 'pagina_web.inicio_banner.publica';
+    private const CACHE_PREFIJO = 'pagina_web.galerias.publica.';
 
     // Mensaje amigable para cada código que lanzan las funciones ecommerce.fn_galeria_*
     public const MENSAJES_ERROR = [
@@ -112,20 +111,6 @@ class GaleriaService
         });
     }
 
-    /** El banner del inicio; lista vacía si su sección está apagada. Mismo formato que listarPublicas. */
-    public function listarInicioBanner(): array
-    {
-        return Cache::remember(self::CACHE_INICIO_BANNER, fn () => CachePaginaWeb::vencimiento(), function () {
-            return DB::select('SELECT * FROM ecommerce.fn_galeria_inicio_banner_publicas()');
-        });
-    }
-
-    /** Lo llama InicioSeccionService al prender o apagar una sección del inicio. */
-    public static function limpiarCacheInicioBanner(): void
-    {
-        Cache::forget(self::CACHE_INICIO_BANNER);
-    }
-
     // -----------------------------------------------------------------
     // Internos
     // -----------------------------------------------------------------
@@ -140,10 +125,6 @@ class GaleriaService
         $fila = DB::selectOne('SELECT gal_clave FROM ecommerce.galeria WHERE gal_id = ?', [$galId]);
         if ($fila) {
             Cache::forget(self::CACHE_PREFIJO . $fila->gal_clave);
-
-            if ($fila->gal_clave === 'inicio_banner') {
-                self::limpiarCacheInicioBanner();
-            }
 
             // El inicio y las páginas de marca traen imágenes dentro de su JSON
             PaginaMarcaService::limpiarCache();

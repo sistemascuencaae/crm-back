@@ -8,21 +8,11 @@ use App\Servicios\PaginaWeb\CategoriaWebService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Endpoints públicos (sin autenticación) de categorías para la tienda.
- * Una lista vacía es válida: la tienda simplemente no muestra esa parte.
+ * Endpoint público (sin autenticación) con el menú de categorías del header de la tienda.
+ * Las destacadas del inicio van en GET public/pagina-web/inicio.
  */
 class CategoriaWebPublicaController extends Controller
 {
-    // GET public/pagina-web/categorias-destacadas → [{tpr_id, nombre, imagen}]
-    public function listar(CategoriaWebService $servicio)
-    {
-        try {
-            return $this->ok('Categorías destacadas', $servicio->listarPublicas());
-        } catch (\Throwable $th) {
-            return $this->error('No se pudieron cargar las categorías destacadas', $th);
-        }
-    }
-
     // GET public/pagina-web/categorias-menu → [{id, nombre, hijos: [...]}]
     public function menu(CategoriaWebService $servicio)
     {

@@ -27,7 +27,7 @@ class InicioSeccionService
     {
     }
 
-    /** Lo llaman los bloques, las galerías y las categorías después de cada cambio. */
+    /** Tras un cambio de una sección, la tienda lo ve al momento. También lo llaman los bloques, las galerías y las categorías. */
     public static function limpiarCache(): void
     {
         Cache::forget(self::CACHE_PUBLICA);
@@ -50,14 +50,14 @@ class InicioSeccionService
     public function modificar(string $clave, array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_inicio_seccion_modificar(?, ?::jsonb)', [$clave, $this->json($datos)]);
-        $this->limpiarCachesTienda();
+        self::limpiarCache();
     }
 
     /** $datos: {claves: [ise_clave…] (todas las secciones, en el nuevo orden), usu_id} */
     public function ordenar(array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_inicio_seccion_ordenar(?::jsonb)', [$this->json($datos)]);
-        $this->limpiarCachesTienda();
+        self::limpiarCache();
     }
 
     // -----------------------------------------------------------------
@@ -91,6 +91,12 @@ class InicioSeccionService
 
             return ['secciones' => $secciones];
         });
+    }
+
+    /** La hora de la base, en el mismo formato que las fechas ("YYYY-MM-DDTHH:MM:SS-05:00"). Sin caché: va en cada petición. */
+    public function ahora(): string
+    {
+        return DB::selectOne('SELECT ecommerce.fn_pagina_web_fecha_texto(now()) AS ahora')->ahora;
     }
 
     // -----------------------------------------------------------------
@@ -137,14 +143,6 @@ class InicioSeccionService
     private function imagenes(string $galClave): array
     {
         return DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_listar_publicas(?)', [$galClave]);
-    }
-
-    /** Lo que ve la tienda depende de estas secciones: debe ver el cambio al momento. */
-    private function limpiarCachesTienda(): void
-    {
-        CategoriaWebService::limpiarCache();
-        GaleriaService::limpiarCacheInicioBanner();
-        self::limpiarCache();
     }
 
     private function json(array $datos): string

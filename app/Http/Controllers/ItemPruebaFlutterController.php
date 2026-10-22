@@ -14,7 +14,9 @@ class ItemPruebaFlutterController extends Controller
     // GET prueba-flutter/items
     public function listar()
     {
-        return response()->json(ItemPruebaFlutter::orderBy('id')->get());
+        return response()->json(
+            ItemPruebaFlutter::whereNull('secuencia')->orderBy('id')->get()
+        );
     }
 
     // POST prueba-flutter/items/sincronizar   {uuid, nombre}
@@ -67,5 +69,35 @@ class ItemPruebaFlutterController extends Controller
         }
 
         return response()->json(['mensaje' => 'Item eliminado.']);
+    }
+
+
+    // POST prueba-flutter/puntos   {puntos: [{uuid, secuencia, latitud, longitud, fecha_captura}, ...]}
+    // Guarda varios puntos de una vez; si un uuid ya existe, no lo duplica
+    public function guardarPuntos(Request $request)
+    {
+        $datos = $request->validate([
+            'puntos'                 => 'required|array',
+            'puntos.*.uuid'          => 'required|string|max:255',
+            'puntos.*.secuencia'     => 'required|integer',
+            'puntos.*.latitud'       => 'required|numeric|between:-90,90',
+            'puntos.*.longitud'      => 'required|numeric|between:-180,180',
+            'puntos.*.fecha_captura' => 'required|date',
+        ]);
+
+        foreach ($datos['puntos'] as $p) {
+            ItemPruebaFlutter::updateOrCreate(
+                ['uuid' => $p['uuid']],
+                [
+                    'nombre'        => 'punto ' . $p['secuencia'],
+                    'secuencia'     => $p['secuencia'],
+                    'latitud'       => (string) $p['latitud'],
+                    'longitud'      => (string) $p['longitud'],
+                    'fecha_captura' => $p['fecha_captura'],
+                ]
+            );
+        }
+
+        return response()->json(['guardados' => count($datos['puntos'])]);
     }
 }

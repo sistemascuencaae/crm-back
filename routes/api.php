@@ -253,9 +253,7 @@ Route::get('public/pagina-web/secciones', [EncabezadoPiePublicoController::class
 Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
 Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
 Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
-Route::get('public/pagina-web/categorias-destacadas', [CategoriaWebPublicaController::class, 'listar']);
 Route::get('public/pagina-web/categorias-menu', [CategoriaWebPublicaController::class, 'menu']);
-Route::get('public/pagina-web/inicio-banner', [GaleriaPublicaController::class, 'inicioBanner']);
 Route::get('public/pagina-web/marcas/{direccion}', [PaginaMarcaPublicaController::class, 'buscar']);
 Route::get('public/pagina-web/inicio', [InicioPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
@@ -270,6 +268,7 @@ Route::get('prueba-flutter/items', [ItemPruebaFlutterController::class, 'listar'
 Route::post('prueba-flutter/items/sincronizar', [ItemPruebaFlutterController::class, 'sincronizar']);
 Route::put('prueba-flutter/items/{uuid}/ubicacion', [ItemPruebaFlutterController::class, 'registrarUbicacion']);
 Route::delete('prueba-flutter/items/{uuid}', [ItemPruebaFlutterController::class, 'eliminar']);
+Route::post('prueba-flutter/puntos', [ItemPruebaFlutterController::class, 'guardarPuntos']);
 // ================== FIN PRUEBA FLUTTER (temporal) ==================
 
 // ----------------- END RUTAS SIN TOKEN -------------

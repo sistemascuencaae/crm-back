@@ -10,14 +10,13 @@ use Illuminate\Support\Facades\DB;
  * aquí se maneja lo que decide marketing: qué departamentos salen en la tienda, qué categorías
  * se ocultan, cuáles son destacadas, su imagen redonda, un nombre visible y su orden.
  * La regla de "qué está en la tienda" está en la base (fn_categoria_web_en_tienda).
- * Llama a las funciones ecommerce.fn_categoria_web_*. La tienda lee con caché
- * (las destacadas, con la que respeta la vigencia: CachePaginaWeb).
+ * Llama a las funciones ecommerce.fn_categoria_web_*. La tienda lee el menú con caché;
+ * las destacadas van dentro del inicio (InicioSeccionService::publica).
  */
 class CategoriaWebService
 {
-    private const CACHE_DESTACADAS = 'pagina_web.categorias_destacadas.publica';
-    private const CACHE_MENU       = 'pagina_web.categorias_menu.publica';
-    private const CACHE_MINUTOS    = 10;
+    private const CACHE_MENU    = 'pagina_web.categorias_menu.publica';
+    private const CACHE_MINUTOS = 10;
 
     // Mensaje amigable para cada código que lanzan las funciones ecommerce.fn_categoria_web_*
     public const MENSAJES_ERROR = [
@@ -36,13 +35,13 @@ class CategoriaWebService
         'ORDEN_DESACTUALIZADO'         => 'La lista cambió mientras la ordenabas. Recarga la página e inténtalo de nuevo.',
     ];
 
-    /** Tras un cambio, la tienda debe ver lo nuevo. También lo usa InicioSeccionService. */
+    /** Tras un cambio, la tienda debe ver lo nuevo. */
     public static function limpiarCache(): void
     {
-        Cache::forget(self::CACHE_DESTACADAS);
         Cache::forget(self::CACHE_MENU);
 
-        // Un bloque cuya categoría se oculta deja de verse en el inicio y en las páginas de marca
+        // Las destacadas van dentro del inicio, y un bloque cuya categoría se oculta deja de verse
+        // en el inicio y en las páginas de marca
         InicioSeccionService::limpiarCache();
         PaginaMarcaService::limpiarCache();
     }
@@ -80,14 +79,6 @@ class CategoriaWebService
     // -----------------------------------------------------------------
     // Tienda
     // -----------------------------------------------------------------
-
-    /** Las destacadas del home, en orden: [{tpr_id, nombre, imagen}] */
-    public function listarPublicas(): array
-    {
-        return Cache::remember(self::CACHE_DESTACADAS, fn () => CachePaginaWeb::vencimiento(), function () {
-            return DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_publicas()');
-        });
-    }
 
     /**
      * El menú de categorías del header, como árbol:

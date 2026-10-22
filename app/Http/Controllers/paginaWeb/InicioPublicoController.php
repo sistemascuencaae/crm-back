@@ -8,8 +8,9 @@ use App\Servicios\PaginaWeb\InicioSeccionService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Endpoint público (sin autenticación) con todo el inicio de la tienda: {secciones: [...]},
- * solo las visibles y en su orden (ver InicioSeccionService::publica).
+ * Endpoint público (sin autenticación) con todo el inicio de la tienda: {secciones: [...], ahora},
+ * solo las secciones visibles y en su orden (ver InicioSeccionService::publica).
+ * "ahora" es la hora de la base, calculada en cada petición (fuera de la caché).
  */
 class InicioPublicoController extends Controller
 {
@@ -18,7 +19,7 @@ class InicioPublicoController extends Controller
     {
         try {
             return response()
-                ->json(RespuestaApi::returnResultado('success', 'Inicio', $servicio->publica()))
+                ->json(RespuestaApi::returnResultado('success', 'Inicio', $servicio->publica() + ['ahora' => $servicio->ahora()]))
                 ->header('Cache-Control', 'no-cache');
         } catch (\Throwable $th) {
             Log::error('No se pudo cargar el inicio', ['error' => $th->getMessage()]);
