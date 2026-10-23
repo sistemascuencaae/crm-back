@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 // Cotizar (modal de Ventas > Cotizaciones, sin menu propio): una cotizacion de contado o de credito con N productos.
+// 23-oct: la vista previa tambien acepta TARJETA (con parametros_tarjeta_id) y, en contado, la forma de pago
+// (parametros_contado_id); guardar no: la proforma todavia no guarda la tarjeta ni el descuento de contado.
 // El negocio vive en ventas.fn_cotizar_* y fn_cproforma_registrar (PLANES/COTIZADOR): este
 // controller solo valida la forma, arma el jsonb y traduce la respuesta. Calcular es la vista
 // previa (no guarda); Guardar recalcula en el servidor y guarda la foto completa.
@@ -98,13 +100,13 @@ class CotizarController extends Controller
     public function calcularCotizacion(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), $this->reglasCalculo(), $this->mensajesCalculo());
+            $validator = Validator::make($request->all(), $this->reglasCalculo(false), $this->mensajesCalculo(false));
 
             if ($validator->fails()) {
                 return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
             }
 
-            $fila = DB::selectOne('SELECT ventas.fn_cotizar_calcular(?::jsonb) AS resultado', [json_encode($this->payloadCalculo($request))]);
+            $fila = DB::selectOne('SELECT ventas.fn_cotizar_calcular(?::jsonb) AS resultado', [json_encode($this->payloadCalculo($request, false))]);
             $respuesta = json_decode($fila->resultado, true);
 
             if ($respuesta['success']) {
@@ -122,7 +124,7 @@ class CotizarController extends Controller
     public function guardarCotizacion(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), $this->reglasCalculo(), $this->mensajesCalculo());
+            $validator = Validator::make($request->all(), $this->reglasCalculo(true), $this->mensajesCalculo(true));
 
             if ($validator->fails()) {
                 return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
@@ -135,7 +137,7 @@ class CotizarController extends Controller
                 return $this->guardarProforma($request, $casoId, $reqCasoId);
             }
 
-            $fila = DB::selectOne('SELECT ventas.fn_cproforma_registrar(?::jsonb) AS resultado', [json_encode($this->payloadCalculo($request))]);
+            $fila = DB::selectOne('SELECT ventas.fn_cproforma_registrar(?::jsonb) AS resultado', [json_encode($this->payloadCalculo($request, true))]);
             $respuesta = json_decode($fila->resultado, true);
 
             if (!$respuesta['success']) {
@@ -165,7 +167,7 @@ class CotizarController extends Controller
         }
 
         return DB::transaction(function () use ($request, $reqCaso, $casoId) {
-            $fila = DB::selectOne('SELECT ventas.fn_cproforma_registrar(?::jsonb) AS resultado', [json_encode($this->payloadCalculo($request))]);
+            $fila = DB::selectOne('SELECT ventas.fn_cproforma_registrar(?::jsonb) AS resultado', [json_encode($this->payloadCalculo($request, true))]);
             $respuesta = json_decode($fila->resultado, true);
 
             if (!$respuesta['success']) {
@@ -209,10 +211,11 @@ class CotizarController extends Controller
     // ------------------------------------------------------------------------
 
     // Solo la forma; el negocio (politica, vigencias...) lo valida ventas.fn_cotizar_calcular.
-    private function reglasCalculo(): array
+    // Calcular acepta TARJETA; guardar no (la proforma todavia no guarda la tarjeta).
+    private function reglasCalculo(bool $guardar): array
     {
         return [
-            'tipo'             => 'required|in:CONTADO,CREDITO',
+            'tipo'             => $guardar ? 'required|in:CONTADO,CREDITO' : 'required|in:CONTADO,CREDITO,TARJETA',
             'items'            => 'required|array|min:1',
             'items.*'          => 'array',
             'items.*.pro_id'   => 'required|integer',
@@ -223,15 +226,21 @@ class CotizarController extends Controller
             'identificacion'   => ['nullable', 'regex:/^(\d{10}|\d{13})$/'],
             'caso_id'          => 'nullable|integer',
             'req_caso_id'      => 'nullable|integer',
+            'parametros_tarjeta_id' => 'nullable|integer',
+            'parametros_contado_id' => 'nullable|integer',
         ];
     }
 
     // Mismos textos que la funcion, para que el front muestre un solo estilo de mensaje.
-    private function mensajesCalculo(): array
+    private function mensajesCalculo(bool $guardar): array
     {
+        $modalidad = $guardar ? 'Elija la modalidad: CONTADO o CREDITO.' : 'Elija la modalidad: CONTADO, CREDITO o TARJETA.';
+
         return [
-            'tipo.required'             => 'Elija la modalidad: CONTADO o CREDITO.',
-            'tipo.in'                   => 'Elija la modalidad: CONTADO o CREDITO.',
+            'tipo.required'             => $modalidad,
+            'tipo.in'                   => $guardar
+                ? 'La proforma todavía no se guarda con tarjeta de crédito: solo CONTADO o CREDITO.'
+                : $modalidad,
             'items.required'            => 'Agregue al menos un producto.',
             'items.array'               => 'Agregue al menos un producto.',
             'items.min'                 => 'Agregue al menos un producto.',
@@ -249,15 +258,18 @@ class CotizarController extends Controller
             'identificacion.regex'      => 'La cédula o RUC del cliente debe tener 10 o 13 dígitos.',
             'caso_id.integer'           => 'El caso no existe.',
             'req_caso_id.integer'       => 'El requerimiento Proformar no es de este caso.',
+            'parametros_tarjeta_id.integer' => 'El plan de la tarjeta no existe.',
+            'parametros_contado_id.integer' => 'La forma de pago no existe.',
         ];
     }
 
     // Ids como enteros; montos tal cual (la funcion los toma como numeric). Lo vacio va null.
     // Fecha, region, calificacion, plazo, tasa e IVA no se reciben: la funcion usa la hora del servidor, el punto de venta
     // del usuario de la SESION (token), la calificacion predeterminada, los pagos de la politica y los valores por defecto.
-    private function payloadCalculo(Request $request): array
+    // El plan de la tarjeta y la forma de pago de contado van solo en la vista previa (no en guardar).
+    private function payloadCalculo(Request $request, bool $guardar): array
     {
-        return [
+        $payload = [
             'tipo'            => $request->input('tipo'),
             'usuario_id'      => (int) auth('api')->id(),
             // precio: el negociado (unitario con IVA); sin el, el de lista. El rango lo valida la funcion.
@@ -272,6 +284,13 @@ class CotizarController extends Controller
             // Proforma: con el caso, la funcion toma su cliente y la calificacion de su Tipo Cliente.
             'caso_id'         => $this->enteroONulo($request->input('caso_id')),
         ];
+
+        if (!$guardar) {
+            $payload['parametros_tarjeta_id'] = $this->enteroONulo($request->input('parametros_tarjeta_id'));
+            $payload['parametros_contado_id'] = $this->enteroONulo($request->input('parametros_contado_id'));
+        }
+
+        return $payload;
     }
 
     private function enteroONulo($valor): ?int

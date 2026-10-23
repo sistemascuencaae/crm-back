@@ -165,6 +165,7 @@ use App\Http\Controllers\ventas\MarkupCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
 use App\Http\Controllers\ventas\CotizarController;
 use App\Http\Controllers\ventas\CotizacionesController;
+use App\Http\Controllers\ventas\TarjetasContadoController;
 use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
@@ -1826,6 +1827,12 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     // Proformas: el historial paginado y una proforma completa (solo lectura).
     Route::get('/listProformas', [CotizacionesController::class, 'listProformas']);
     Route::get('/getCotizacion/{id}', [CotizacionesController::class, 'getCotizacion']);
+    // Tarjetas y contado: planes de tarjeta por banco (alma.banco) y formas de pago de contado, con sus reglas.
+    Route::get('/listarBancosTarjeta', [TarjetasContadoController::class, 'listarBancosTarjeta']);
+    Route::get('/getPlanesTarjeta/{ban_id}', [TarjetasContadoController::class, 'getPlanesTarjeta']);
+    Route::post('/guardarPlanesTarjeta/{ban_id}', [TarjetasContadoController::class, 'guardarPlanesTarjeta']);
+    Route::get('/getFormasPagoContado', [TarjetasContadoController::class, 'getFormasPagoContado']);
+    Route::post('/guardarFormasPagoContado', [TarjetasContadoController::class, 'guardarFormasPagoContado']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).
