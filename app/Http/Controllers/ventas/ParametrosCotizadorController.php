@@ -32,7 +32,7 @@ class ParametrosCotizadorController extends Controller
         }
     }
 
-    // Combo Tipo del formulario (ventas.tipos_parametros_cotizador: MARGEN COMERCIAL, APORTE).
+    // Combo Tipo del formulario (ventas.tipos_parametros_cotizador: MARKUP, APORTE).
     public function listTiposParametrosCotizador()
     {
         try {
