@@ -44,6 +44,9 @@ class CategoriaWebService
         // en el inicio y en las páginas de marca
         InicioSeccionService::limpiarCache();
         PaginaMarcaService::limpiarCache();
+
+        // Las pestañas de España Motos solo muestran categorías visibles en la tienda
+        EspanaMotosService::limpiarCache();
     }
 
     // -----------------------------------------------------------------

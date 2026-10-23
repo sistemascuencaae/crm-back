@@ -181,6 +181,8 @@ use App\Http\Controllers\paginaWeb\PaginaMarcaController;
 use App\Http\Controllers\paginaWeb\PaginaMarcaPublicaController;
 use App\Http\Controllers\paginaWeb\BloqueProductoController;
 use App\Http\Controllers\paginaWeb\InicioPublicoController;
+use App\Http\Controllers\paginaWeb\EspanaMotosController;
+use App\Http\Controllers\paginaWeb\EspanaMotosPublicoController;
 use App\Http\Controllers\ItemPruebaFlutterController;
 use Illuminate\Support\Facades\Route;
 
@@ -255,6 +257,7 @@ Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaControl
 Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
 Route::get('public/pagina-web/categorias-menu', [CategoriaWebPublicaController::class, 'menu']);
 Route::get('public/pagina-web/marcas/{direccion}', [PaginaMarcaPublicaController::class, 'buscar']);
+Route::get('public/pagina-web/espana-motos', [EspanaMotosPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/inicio', [InicioPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
 Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
@@ -269,6 +272,11 @@ Route::post('prueba-flutter/items/sincronizar', [ItemPruebaFlutterController::cl
 Route::put('prueba-flutter/items/{uuid}/ubicacion', [ItemPruebaFlutterController::class, 'registrarUbicacion']);
 Route::delete('prueba-flutter/items/{uuid}', [ItemPruebaFlutterController::class, 'eliminar']);
 Route::post('prueba-flutter/puntos', [ItemPruebaFlutterController::class, 'guardarPuntos']);
+Route::get('prueba-flutter/paradas', [ItemPruebaFlutterController::class, 'paradas']);
+Route::get('prueba-flutter/puntos', [ItemPruebaFlutterController::class, 'listarPuntos']);
+Route::post('prueba-flutter/mensajes', [ItemPruebaFlutterController::class, 'enviarMensaje']);
+Route::get('prueba-flutter/ruta', [ItemPruebaFlutterController::class, 'ruta']);
+Route::get('prueba-flutter/visitas', [ItemPruebaFlutterController::class, 'visitas']);
 // ================== FIN PRUEBA FLUTTER (temporal) ==================
 
 // ----------------- END RUTAS SIN TOKEN -------------
@@ -1890,6 +1898,19 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'buscar']);
     Route::put('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'modificar']);
     Route::delete('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'eliminar']);
+
+    // España Motos
+    Route::get('espana-motos', [EspanaMotosController::class, 'buscar']);
+    Route::put('espana-motos', [EspanaMotosController::class, 'modificar']);
+    Route::get('espana-motos-marcas-erp', [EspanaMotosController::class, 'marcasErp']);
+    Route::post('espana-motos-pestanas', [EspanaMotosController::class, 'crearPestana']);
+    Route::put('espana-motos-pestanas-orden', [EspanaMotosController::class, 'ordenarPestanas']);
+    Route::put('espana-motos-pestanas/{empId}', [EspanaMotosController::class, 'modificarPestana'])->whereNumber('empId');
+    Route::delete('espana-motos-pestanas/{empId}', [EspanaMotosController::class, 'eliminarPestana'])->whereNumber('empId');
+    Route::post('espana-motos-marcas', [EspanaMotosController::class, 'crearMarca']);
+    Route::put('espana-motos-marcas-orden', [EspanaMotosController::class, 'ordenarMarcas']);
+    Route::put('espana-motos-marcas/{emmId}', [EspanaMotosController::class, 'modificarMarca'])->whereNumber('emmId');
+    Route::delete('espana-motos-marcas/{emmId}', [EspanaMotosController::class, 'eliminarMarca'])->whereNumber('emmId');
 
     // Bloques de productos (inicio y páginas de marca). ?pma_id=3 → de esa página; sin él → inicio
     Route::get('bloques-productos', [BloqueProductoController::class, 'listar']);

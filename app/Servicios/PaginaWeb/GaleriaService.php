@@ -126,9 +126,10 @@ class GaleriaService
         if ($fila) {
             Cache::forget(self::CACHE_PREFIJO . $fila->gal_clave);
 
-            // El inicio y las páginas de marca traen imágenes dentro de su JSON
+            // El inicio, las páginas de marca y España Motos traen imágenes dentro de su JSON
             PaginaMarcaService::limpiarCache();
             InicioSeccionService::limpiarCache();
+            EspanaMotosService::limpiarCache();
         }
     }
 
