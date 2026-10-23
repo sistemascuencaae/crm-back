@@ -36,7 +36,7 @@ class MarkupCotizadorController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $registros));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar las cabeceras de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar las cabeceras de margen comercial', $e->getMessage()));
         }
     }
 
@@ -59,12 +59,12 @@ class MarkupCotizadorController extends Controller
             $fila = DB::selectOne('SELECT ventas.fn_cmarkup_buscar(?) AS resultado', [(int) $id]);
 
             if (!$fila || !$fila->resultado) {
-                return response()->json(RespuestaApi::returnResultado('error', 'La cabecera de markup no existe.', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'La cabecera de margen comercial no existe.', null));
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se obtuvo con éxito', json_decode($fila->resultado, true)));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo obtener la cabecera de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo obtener la cabecera de margen comercial', $e->getMessage()));
         }
     }
 
@@ -91,7 +91,7 @@ class MarkupCotizadorController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo crear la cabecera de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo crear la cabecera de margen comercial', $e->getMessage()));
         }
     }
 
@@ -119,7 +119,7 @@ class MarkupCotizadorController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo actualizar la cabecera de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo actualizar la cabecera de margen comercial', $e->getMessage()));
         }
     }
 
@@ -161,7 +161,7 @@ class MarkupCotizadorController extends Controller
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             if ($id <= 0) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Cabecera de markup no válida', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'Cabecera de margen comercial no válida', null));
             }
 
             $resumen = DB::selectOne('SELECT * FROM ventas.fn_cmarkup_auditoria_resumen(?)', [$id]);
@@ -176,7 +176,7 @@ class MarkupCotizadorController extends Controller
                 'tamanio' => $tamanio,
             ]));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de la cabecera de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de la cabecera de margen comercial', $e->getMessage()));
         }
     }
 

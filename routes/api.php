@@ -270,6 +270,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
     Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);
     Route::post('/guardarParametrosPolitica/{id}', [PoliticaController::class, 'guardarParametrosPolitica']);
+    // Combos de la grilla de Parametros de calificacion: tipo de cliente, actividad y comportamiento.
+    Route::get('/catalogosParametrosCalificacion', [PoliticaController::class, 'catalogosParametrosCalificacion']);
     // Clonar parametros: vista previa (solo lectura) y clonado a varias politicas.
     Route::post('/vistaPreviaClonarParametrosPolitica/{id}', [PoliticaController::class, 'vistaPreviaClonarParametrosPolitica']);
     Route::post('/clonarParametrosPolitica/{id}', [PoliticaController::class, 'clonarParametrosPolitica']);
