@@ -171,6 +171,29 @@ use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
 use App\Http\Controllers\formulario\EmpresaController;
 use App\Http\Controllers\formulario\SolicitudesCreditosWebController;
+use App\Http\Controllers\paginaWeb\EncabezadoController;
+use App\Http\Controllers\paginaWeb\PiePaginaController;
+use App\Http\Controllers\paginaWeb\EncabezadoPiePublicoController;
+use App\Http\Controllers\paginaWeb\SucursalCiudadController;
+use App\Http\Controllers\paginaWeb\SucursalController;
+use App\Http\Controllers\paginaWeb\SucursalPublicaController;
+use App\Http\Controllers\paginaWeb\PaginaInformativaController;
+use App\Http\Controllers\paginaWeb\PaginaInformativaPublicaController;
+use App\Http\Controllers\paginaWeb\PaginaInformativaGrupoController;
+// Alias: ya existe crm\credito\GaleriaController
+use App\Http\Controllers\paginaWeb\GaleriaController as GaleriaPaginaWebController;
+use App\Http\Controllers\paginaWeb\GaleriaPublicaController;
+use App\Http\Controllers\paginaWeb\ArchivoPaginaWebController;
+use App\Http\Controllers\paginaWeb\CategoriaWebController;
+use App\Http\Controllers\paginaWeb\CategoriaWebPublicaController;
+use App\Http\Controllers\paginaWeb\InicioSeccionController;
+use App\Http\Controllers\paginaWeb\PaginaMarcaController;
+use App\Http\Controllers\paginaWeb\PaginaMarcaPublicaController;
+use App\Http\Controllers\paginaWeb\BloqueProductoController;
+use App\Http\Controllers\paginaWeb\InicioPublicoController;
+use App\Http\Controllers\paginaWeb\EspanaMotosController;
+use App\Http\Controllers\paginaWeb\EspanaMotosPublicoController;
+use App\Http\Controllers\ItemPruebaFlutterController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -248,6 +271,35 @@ Route::group(["prefix" => "formulario"], function ($router) {
     Route::get('/listCliente_byIdentificacion/{identificacion}', [Formulario2Controller::class, 'listCliente_byIdentificacion']); // lista del cliente por cedula
 
 });
+
+// PÁGINA WEB (tienda): encabezado, pie de página y contenido visible, sin login
+Route::get('public/pagina-web/secciones', [EncabezadoPiePublicoController::class, 'listar']);
+Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
+Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
+Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
+Route::get('public/pagina-web/categorias-menu', [CategoriaWebPublicaController::class, 'menu']);
+Route::get('public/pagina-web/marcas/{direccion}', [PaginaMarcaPublicaController::class, 'buscar']);
+Route::get('public/pagina-web/espana-motos', [EspanaMotosPublicoController::class, 'buscar']);
+Route::get('public/pagina-web/inicio', [InicioPublicoController::class, 'buscar']);
+Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
+Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
+    ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
+Route::get('public/pagina-web/documentos/{nombre}', [ArchivoPaginaWebController::class, 'verPdf'])
+    ->where('nombre', '[A-Za-z0-9]+\.pdf');
+
+// ==================== PRUEBA FLUTTER (temporal) ====================
+// Rutas de prueba para la app Flutter, sin token. Tabla: crm.pruebas_flutter
+Route::get('prueba-flutter/items', [ItemPruebaFlutterController::class, 'listar']);
+Route::post('prueba-flutter/items/sincronizar', [ItemPruebaFlutterController::class, 'sincronizar']);
+Route::put('prueba-flutter/items/{uuid}/ubicacion', [ItemPruebaFlutterController::class, 'registrarUbicacion']);
+Route::delete('prueba-flutter/items/{uuid}', [ItemPruebaFlutterController::class, 'eliminar']);
+Route::post('prueba-flutter/puntos', [ItemPruebaFlutterController::class, 'guardarPuntos']);
+Route::get('prueba-flutter/paradas', [ItemPruebaFlutterController::class, 'paradas']);
+Route::get('prueba-flutter/puntos', [ItemPruebaFlutterController::class, 'listarPuntos']);
+Route::post('prueba-flutter/mensajes', [ItemPruebaFlutterController::class, 'enviarMensaje']);
+Route::get('prueba-flutter/ruta', [ItemPruebaFlutterController::class, 'ruta']);
+Route::get('prueba-flutter/visitas', [ItemPruebaFlutterController::class, 'visitas']);
+// ================== FIN PRUEBA FLUTTER (temporal) ==================
 
 // ----------------- END RUTAS SIN TOKEN -------------
 // ----------------- END RUTAS SIN TOKEN -------------
@@ -1845,4 +1897,106 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::post('/crearProducto', [ProductoController::class, 'crearProducto']);
     Route::post('/editarProducto/{id}', [ProductoController::class, 'editarProducto']);
     Route::get('/productoAuditoria', [ProductoController::class, 'productoAuditoria']);
+});
+
+// PÁGINA WEB: administración del encabezado, pie de página y contenido de la tienda desde el CRM
+Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
+    // Encabezado (header)
+    Route::get('encabezado', [EncabezadoController::class, 'buscar']);
+    Route::put('encabezado', [EncabezadoController::class, 'modificar']);
+    Route::post('encabezado/enlaces', [EncabezadoController::class, 'crearEnlace']);
+    Route::put('encabezado/enlaces-orden', [EncabezadoController::class, 'ordenarEnlaces']);
+    Route::put('encabezado/enlaces/{eenId}', [EncabezadoController::class, 'modificarEnlace'])->whereNumber('eenId');
+    Route::delete('encabezado/enlaces/{eenId}', [EncabezadoController::class, 'eliminarEnlace'])->whereNumber('eenId');
+
+    // Pie de página (footer)
+    Route::get('pie-pagina', [PiePaginaController::class, 'buscar']);
+    Route::put('pie-pagina', [PiePaginaController::class, 'modificar']);
+    Route::post('pie-pagina/columnas', [PiePaginaController::class, 'crearColumna']);
+    Route::put('pie-pagina/columnas-orden', [PiePaginaController::class, 'ordenarColumnas']);
+    Route::put('pie-pagina/columnas/{pcoId}', [PiePaginaController::class, 'modificarColumna'])->whereNumber('pcoId');
+    Route::delete('pie-pagina/columnas/{pcoId}', [PiePaginaController::class, 'eliminarColumna'])->whereNumber('pcoId');
+    Route::post('pie-pagina/columnas/{pcoId}/enlaces', [PiePaginaController::class, 'crearEnlace'])->whereNumber('pcoId');
+    Route::put('pie-pagina/columnas/{pcoId}/enlaces-orden', [PiePaginaController::class, 'ordenarEnlaces'])->whereNumber('pcoId');
+    Route::put('pie-pagina/enlaces/{penId}', [PiePaginaController::class, 'modificarEnlace'])->whereNumber('penId');
+    Route::delete('pie-pagina/enlaces/{penId}', [PiePaginaController::class, 'eliminarEnlace'])->whereNumber('penId');
+
+    // Nuestras tiendas: ciudades
+    Route::post('sucursales/ciudades', [SucursalCiudadController::class, 'crear']);
+    Route::put('sucursales/ciudades/orden', [SucursalCiudadController::class, 'ordenar']);
+    Route::put('sucursales/ciudades/{sciId}', [SucursalCiudadController::class, 'modificar'])->whereNumber('sciId');
+    Route::delete('sucursales/ciudades/{sciId}', [SucursalCiudadController::class, 'eliminar'])->whereNumber('sciId');
+
+    // Nuestras tiendas: sucursales
+    Route::get('sucursales', [SucursalController::class, 'listar']);
+    Route::post('sucursales', [SucursalController::class, 'crear']);
+    Route::put('sucursales/orden', [SucursalController::class, 'ordenar']);
+    Route::put('sucursales/{sucId}', [SucursalController::class, 'modificar'])->whereNumber('sucId');
+    Route::delete('sucursales/{sucId}', [SucursalController::class, 'eliminar'])->whereNumber('sucId');
+
+    // Páginas informativas (Términos, Garantías, Conócenos…)
+    Route::get('paginas', [PaginaInformativaController::class, 'listar']);
+    Route::get('paginas/{clave}', [PaginaInformativaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
+    Route::put('paginas/{clave}', [PaginaInformativaController::class, 'modificar'])->where('clave', '[a-z0-9_-]+');
+    Route::post('paginas', [PaginaInformativaController::class, 'crear']);
+    Route::put('paginas-orden', [PaginaInformativaController::class, 'ordenar']);
+    Route::delete('paginas/{clave}', [PaginaInformativaController::class, 'eliminar'])->where('clave', '[a-z0-9_-]+');
+
+    // Grupos de páginas informativas
+    Route::get('paginas-grupos', [PaginaInformativaGrupoController::class, 'listar']);
+    Route::post('paginas-grupos', [PaginaInformativaGrupoController::class, 'crear']);
+    Route::put('paginas-grupos/orden', [PaginaInformativaGrupoController::class, 'ordenar']);
+    Route::put('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'modificar'])->whereNumber('pigId');
+    Route::delete('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'eliminar'])->whereNumber('pigId');
+
+    // Galerías de imágenes
+    Route::get('galerias', [GaleriaPaginaWebController::class, 'listar']);
+    Route::get('galerias/{galId}/imagenes', [GaleriaPaginaWebController::class, 'listarImagenes'])->whereNumber('galId');
+    Route::post('galerias/{galId}/imagenes', [GaleriaPaginaWebController::class, 'crearImagen'])->whereNumber('galId');
+    Route::put('galerias/{galId}/imagenes-orden', [GaleriaPaginaWebController::class, 'ordenarImagenes'])->whereNumber('galId');
+    Route::put('galerias-imagenes/{gimId}', [GaleriaPaginaWebController::class, 'modificarImagen'])->whereNumber('gimId');
+    Route::delete('galerias-imagenes/{gimId}', [GaleriaPaginaWebController::class, 'eliminarImagen'])->whereNumber('gimId');
+
+    // Imágenes y PDF de las páginas informativas
+    Route::post('imagenes',   [ArchivoPaginaWebController::class, 'subirImagen']);
+    Route::post('documentos', [ArchivoPaginaWebController::class, 'subirPdf']);
+
+    // Categorías destacadas en la página web
+    Route::get('categorias-web', [CategoriaWebController::class, 'listar']);
+    Route::put('categorias-web-orden', [CategoriaWebController::class, 'ordenar']);
+    Route::put('categorias-web/{tprId}', [CategoriaWebController::class, 'modificar'])->whereNumber('tprId');
+    Route::get('categorias-web/{tprId}/impacto', [CategoriaWebController::class, 'impacto'])->whereNumber('tprId');
+
+    // Secciones de la página de inicio
+    Route::get('inicio-secciones', [InicioSeccionController::class, 'listar']);
+    Route::put('inicio-secciones/{clave}', [InicioSeccionController::class, 'modificar'])->where('clave', '[a-z_]+');
+    Route::put('inicio-secciones-orden', [InicioSeccionController::class, 'ordenar']);
+
+    // Páginas de marca
+    Route::get('paginas-marca-marcas-erp', [PaginaMarcaController::class, 'marcasErp']);
+    Route::get('paginas-marca', [PaginaMarcaController::class, 'listar']);
+    Route::post('paginas-marca', [PaginaMarcaController::class, 'crear']);
+    Route::get('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'buscar']);
+    Route::put('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'modificar']);
+    Route::delete('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'eliminar']);
+
+    // España Motos
+    Route::get('espana-motos', [EspanaMotosController::class, 'buscar']);
+    Route::put('espana-motos', [EspanaMotosController::class, 'modificar']);
+    Route::get('espana-motos-marcas-erp', [EspanaMotosController::class, 'marcasErp']);
+    Route::post('espana-motos-pestanas', [EspanaMotosController::class, 'crearPestana']);
+    Route::put('espana-motos-pestanas-orden', [EspanaMotosController::class, 'ordenarPestanas']);
+    Route::put('espana-motos-pestanas/{empId}', [EspanaMotosController::class, 'modificarPestana'])->whereNumber('empId');
+    Route::delete('espana-motos-pestanas/{empId}', [EspanaMotosController::class, 'eliminarPestana'])->whereNumber('empId');
+    Route::post('espana-motos-marcas', [EspanaMotosController::class, 'crearMarca']);
+    Route::put('espana-motos-marcas-orden', [EspanaMotosController::class, 'ordenarMarcas']);
+    Route::put('espana-motos-marcas/{emmId}', [EspanaMotosController::class, 'modificarMarca'])->whereNumber('emmId');
+    Route::delete('espana-motos-marcas/{emmId}', [EspanaMotosController::class, 'eliminarMarca'])->whereNumber('emmId');
+
+    // Bloques de productos (inicio y páginas de marca). ?pma_id=3 → de esa página; sin él → inicio
+    Route::get('bloques-productos', [BloqueProductoController::class, 'listar']);
+    Route::post('bloques-productos', [BloqueProductoController::class, 'crear']);
+    Route::put('bloques-productos-orden', [BloqueProductoController::class, 'ordenar']);
+    Route::put('bloques-productos/{bprId}', [BloqueProductoController::class, 'modificar']);
+    Route::delete('bloques-productos/{bprId}', [BloqueProductoController::class, 'eliminar']);
 });
