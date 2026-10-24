@@ -28,6 +28,7 @@ class Access extends Model
         'revertir',
         'rutaje',
         'canal_cliente',
+        'ver_costos',
     ];
 
     // protected $hidden = [

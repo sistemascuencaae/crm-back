@@ -160,7 +160,17 @@ use App\Http\Controllers\gestionClientes\CSemaforoController;
 use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
+use App\Http\Controllers\ventas\ParametrosCotizadorController;
+use App\Http\Controllers\ventas\MarkupCotizadorController;
+use App\Http\Controllers\ventas\AporteCotizadorController;
+use App\Http\Controllers\ventas\CotizarController;
+use App\Http\Controllers\ventas\CotizacionesController;
+use App\Http\Controllers\ventas\TarjetasContadoController;
+use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\ServidorController;
+use App\Http\Controllers\paginaWeb\CreditoController;
+use App\Http\Controllers\formulario\EmpresaController;
+use App\Http\Controllers\formulario\SolicitudesCreditosWebController;
 use App\Http\Controllers\paginaWeb\EncabezadoController;
 use App\Http\Controllers\paginaWeb\PiePaginaController;
 use App\Http\Controllers\paginaWeb\EncabezadoPiePublicoController;
@@ -239,6 +249,18 @@ Route::group(["prefix" => "crm"], function ($router) {
     // API GEX (JAIRO) - Esto se conecta con el PRECIADOR para cuando cotizan un producto con GEX (Check "PRODUCTO GEX:")
     Route::post('/facturaGex', [GEXController::class, 'facturaGex']);
     Route::post('/devuelveGex', [GEXController::class, 'devuelveGex']);
+
+    // FORMULARIO INSTITUCIONAL (/formulario): combo de empresas
+    Route::get('/listAllEmpresas', [EmpresaController::class, 'listAllEmpresas'])->middleware('throttle:60,1,formulario');
+});
+
+// FORMULARIO INSTITUCIONAL (/formulario), migrado de ecommerce-back con las mismas rutas.
+// Mismo límite que tenía allá (60/min por IP); el prefijo evita compartir el contador con el STS.
+Route::group(["prefix" => "ecommerce", "middleware" => "throttle:60,1,formulario"], function ($router) {
+    // La lupa consulta Ecuador Legal / SRI: 10 por minuto por IP
+    Route::post('/buscarCliente', [CreditoController::class, 'buscarCliente'])->middleware('throttle:10,1,formulario-lupa');
+    Route::post('/enviarCliente', [CreditoController::class, 'enviarCliente']); // antes crearCaso: ya no crea caso
+    Route::get('/autorizarTratamientoDatos/{empresa}/{id}', [SolicitudesCreditosWebController::class, 'autorizarTratamientoDatos']); // link del correo
 });
 
 Route::group(["prefix" => "formulario"], function ($router) {
@@ -296,9 +318,16 @@ Route::get('prueba-flutter/visitas', [ItemPruebaFlutterController::class, 'visit
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     // ? START POLITICAS
     Route::get('/listPoliticasPaginado', [PoliticaController::class, 'listPoliticasPaginado']);
+    Route::get('/listPoliticasActivasClientes', [PoliticaController::class, 'listPoliticasActivasClientes']);
     Route::get('/getPolitica/{id}', [PoliticaController::class, 'getPolitica']);
     Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
     Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);
+    Route::post('/guardarParametrosPolitica/{id}', [PoliticaController::class, 'guardarParametrosPolitica']);
+    // Combos de la grilla de Parametros de calificacion: tipo de cliente, actividad y comportamiento.
+    Route::get('/catalogosParametrosCalificacion', [PoliticaController::class, 'catalogosParametrosCalificacion']);
+    // Clonar parametros: vista previa (solo lectura) y clonado a varias politicas.
+    Route::post('/vistaPreviaClonarParametrosPolitica/{id}', [PoliticaController::class, 'vistaPreviaClonarParametrosPolitica']);
+    Route::post('/clonarParametrosPolitica/{id}', [PoliticaController::class, 'clonarParametrosPolitica']);
     Route::post('/cambiarEstadoPolitica/{id}', [PoliticaController::class, 'cambiarEstadoPolitica']);
     Route::get('/politicaAuditoria', [PoliticaController::class, 'politicaAuditoria']);
     // ? END POLITICAS
@@ -1816,6 +1845,58 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::get('/config', [AnunciosUsuarioController::class, 'config']);
     Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
+});
+
+// VENTAS > COTIZADOR: configuracion (pestanas 1 Parametros, 2 Markup y 3 Aportes) y Cotizar.
+Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+    Route::get('/listParametrosCotizador', [ParametrosCotizadorController::class, 'listParametrosCotizador']);
+    Route::get('/listTiposParametrosCotizador', [ParametrosCotizadorController::class, 'listTiposParametrosCotizador']);
+    Route::post('/addParametroCotizador', [ParametrosCotizadorController::class, 'addParametroCotizador']);
+    Route::post('/editParametroCotizador/{id}', [ParametrosCotizadorController::class, 'editParametroCotizador']);
+    Route::get('/parametroCotizadorAuditoria', [ParametrosCotizadorController::class, 'parametroCotizadorAuditoria']);
+    // Pestana 2: markup (cabecera + detalles) y su asignacion a productos.
+    Route::get('/listMarkupCotizador', [MarkupCotizadorController::class, 'listMarkupCotizador']);
+    Route::get('/combosMarkupCotizador', [MarkupCotizadorController::class, 'combosMarkupCotizador']);
+    Route::get('/getMarkupCotizador/{id}', [MarkupCotizadorController::class, 'getMarkupCotizador']);
+    Route::post('/addMarkupCotizador', [MarkupCotizadorController::class, 'addMarkupCotizador']);
+    Route::post('/editMarkupCotizador/{id}', [MarkupCotizadorController::class, 'editMarkupCotizador']);
+    Route::get('/catalogoProductosMarkupCotizador', [MarkupCotizadorController::class, 'catalogoProductosMarkupCotizador']);
+    Route::get('/markupCotizadorAuditoria', [MarkupCotizadorController::class, 'markupCotizadorAuditoria']);
+    // Pestana 3: aportes (cabecera + detalles, en dolares) y su asignacion a productos.
+    Route::get('/listAporteCotizador', [AporteCotizadorController::class, 'listAporteCotizador']);
+    Route::get('/combosAporteCotizador', [AporteCotizadorController::class, 'combosAporteCotizador']);
+    Route::get('/getAporteCotizador/{id}', [AporteCotizadorController::class, 'getAporteCotizador']);
+    Route::post('/addAporteCotizador', [AporteCotizadorController::class, 'addAporteCotizador']);
+    Route::post('/editAporteCotizador/{id}', [AporteCotizadorController::class, 'editAporteCotizador']);
+    Route::get('/catalogoProductosAporteCotizador', [AporteCotizadorController::class, 'catalogoProductosAporteCotizador']);
+    Route::get('/aporteCotizadorAuditoria', [AporteCotizadorController::class, 'aporteCotizadorAuditoria']);
+    // Cotizar: contado o credito con N productos (calcular = vista previa; guardar = la proforma del caso).
+    Route::get('/combosCotizar', [CotizarController::class, 'combosCotizar']);
+    Route::get('/listarProductosCotizar', [CotizarController::class, 'listarProductosCotizar']);
+    Route::get('/calificacionesPoliticaCotizar/{pol_id}', [CotizarController::class, 'calificacionesPoliticaCotizar']);
+    Route::post('/calcularCotizacion', [CotizarController::class, 'calcularCotizacion']);
+    Route::post('/guardarCotizacion', [CotizarController::class, 'guardarCotizacion']);
+    // Proformas: el historial paginado y una proforma completa (solo lectura).
+    Route::get('/listProformas', [CotizacionesController::class, 'listProformas']);
+    Route::get('/getCotizacion/{id}', [CotizacionesController::class, 'getCotizacion']);
+    // Tarjetas y contado: planes de tarjeta por banco (alma.banco) y formas de pago de contado, con sus reglas.
+    Route::get('/listarBancosTarjeta', [TarjetasContadoController::class, 'listarBancosTarjeta']);
+    Route::get('/getPlanesTarjeta/{ban_id}', [TarjetasContadoController::class, 'getPlanesTarjeta']);
+    Route::post('/guardarPlanesTarjeta/{ban_id}', [TarjetasContadoController::class, 'guardarPlanesTarjeta']);
+    Route::get('/getFormasPagoContado', [TarjetasContadoController::class, 'getFormasPagoContado']);
+    Route::post('/guardarFormasPagoContado', [TarjetasContadoController::class, 'guardarFormasPagoContado']);
+});
+
+// INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).
+Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+    Route::get('/arbolTiposProducto', [ProductoController::class, 'arbolTiposProducto']);
+    Route::get('/listProductos', [ProductoController::class, 'listProductos']);
+    Route::get('/catalogosProducto', [ProductoController::class, 'catalogosProducto']);
+    Route::get('/getProducto/{id}', [ProductoController::class, 'getProducto']);
+    Route::get('/stockBodegasProducto/{id}', [ProductoController::class, 'stockBodegasProducto']);
+    Route::post('/crearProducto', [ProductoController::class, 'crearProducto']);
+    Route::post('/editarProducto/{id}', [ProductoController::class, 'editarProducto']);
+    Route::get('/productoAuditoria', [ProductoController::class, 'productoAuditoria']);
 });
 
 // PÁGINA WEB: administración del encabezado, pie de página y contenido de la tienda desde el CRM

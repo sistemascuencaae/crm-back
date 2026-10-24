@@ -53,6 +53,34 @@ class PoliticaController extends Controller
         }
     }
 
+    // Pantalla Parametros de calificacion: solo politicas ACTIVAS de clientes, con su
+    // modalidad (credito true = CREDITO). Misma respuesta que listPoliticasPaginado.
+    public function listPoliticasActivasClientes(Request $request)
+    {
+        try {
+            // Topes: tamanio 1..100 y pagina sin desbordar el OFFSET (integer) de la funcion.
+            $pagina   = min(max((int) $request->query('pagina', 1), 1), 1000000);
+            $tamanio  = min(max((int) $request->query('tamanio', 20), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            $registros = DB::select(
+                'SELECT * FROM crm.fn_politica_activas_clientes_listar_paginado(?, ?, ?)',
+                [$pagina, $tamanio, $busqueda]
+            );
+
+            $total = $registros[0]->total_registros ?? 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', [
+                'registros' => $registros,
+                'total'     => (int) $total,
+                'pagina'    => $pagina,
+                'tamanio'   => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar las políticas', $e->getMessage()));
+        }
+    }
+
     // Ficha completa de una politica, para precargar el modal de editar.
     public function getPolitica($id)
     {
@@ -121,6 +149,131 @@ class PoliticaController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo actualizar la política', $e->getMessage()));
+        }
+    }
+
+    // Pantalla Parametros de calificacion: guarda todos los parametros de UNA politica
+    // de clientes. Quitar uno guardado = activo false (la funcion nunca borra).
+    public function guardarParametrosPolitica(Request $request, $id)
+    {
+        try {
+            // Los id con tope de integer de PostgreSQL: uno mayor revienta el cast en SQL.
+            $validator = Validator::make(['pol_id' => $id] + $request->all(), [
+                'pol_id'                                 => 'required|integer|min:1|max:2147483647',
+                'parametros'                             => 'present|array',
+                'parametros.*'                           => 'array',
+                'parametros.*.id'                        => 'nullable|integer|max:2147483647',
+                'parametros.*.tipo_cliente_id'           => 'required|integer|min:1|max:2147483647',
+                'parametros.*.actividad_cliente_id'      => 'required|integer|min:1|max:2147483647',
+                'parametros.*.comportamiento_cliente_id' => 'required|integer|min:1|max:2147483647',
+                'parametros.*.margen_financiero_general' => 'required|numeric',
+                'parametros.*.incremento'                => 'required|numeric',
+                'parametros.*.predeterminado'            => 'required|boolean',
+                'parametros.*.activo'                    => 'required|boolean',
+            ], $this->mensajesParametros());
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
+            }
+
+            $payload = [
+                'pol_id'     => (int) $id,
+                'parametros' => $this->payloadParametros($request),
+                'auditoria'  => $this->contextoAuditoriaForense($request),
+            ];
+
+            $resultado = DB::selectOne('SELECT crm.fn_politica_parametros_modificar(?::jsonb) AS resultado', [json_encode($payload)]);
+            $respuesta = json_decode($resultado->resultado, true);
+
+            if ($respuesta['success']) {
+                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], [
+                    'parametros' => $respuesta['parametros'] ?? [],
+                ]));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron guardar los parámetros de calificación', $e->getMessage()));
+        }
+    }
+
+    // Pantalla Parametros de calificacion: los combos de la grilla (tipo de cliente, actividad y
+    // comportamiento), en su orden y con su activo; la pantalla solo ofrece los activos.
+    public function catalogosParametrosCalificacion()
+    {
+        try {
+            $fila = DB::selectOne('SELECT ventas.fn_parametros_calificacion_clientes_catalogos() AS resultado');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', json_decode($fila->resultado, true)));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los tipos de cliente, actividades y comportamientos', $e->getMessage()));
+        }
+    }
+
+    // Pantalla Parametros de calificacion > Clonar parametros: que pasaria en cada
+    // politica destino (solo lectura). Mismas validaciones que el clonado.
+    public function vistaPreviaClonarParametrosPolitica(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make(['pol_id' => $id] + $request->only('pol_ids_destino'),
+                $this->reglasClonarParametros(), $this->mensajesClonarParametros());
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
+            }
+
+            // Los id ya se validaron como enteros: el arreglo de PostgreSQL se arma sin riesgo.
+            $destinos = '{' . implode(',', $this->idsDestinoClonar($request)) . '}';
+
+            $resultado = DB::selectOne(
+                'SELECT crm.fn_politica_parametros_clonar_vista_previa(?, ?::integer[]) AS resultado',
+                [(int) $id, $destinos]
+            );
+            $respuesta = json_decode($resultado->resultado, true);
+
+            if ($respuesta['success']) {
+                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], [
+                    'origen'   => $respuesta['origen'] ?? null,
+                    'destinos' => $respuesta['destinos'] ?? [],
+                ]));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo preparar el clonado de los parámetros de calificación', $e->getMessage()));
+        }
+    }
+
+    // Pantalla Parametros de calificacion > Clonar parametros: cada destino queda con
+    // exactamente los parametros activos guardados de la politica {id}. Todo o nada.
+    public function clonarParametrosPolitica(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make(['pol_id' => $id] + $request->only('pol_ids_destino'),
+                $this->reglasClonarParametros(), $this->mensajesClonarParametros());
+
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
+            }
+
+            $payload = [
+                'pol_id_origen'   => (int) $id,
+                'pol_ids_destino' => $this->idsDestinoClonar($request),
+                'auditoria'       => $this->contextoAuditoriaForense($request),
+            ];
+
+            $resultado = DB::selectOne('SELECT crm.fn_politica_parametros_clonar(?::jsonb) AS resultado', [json_encode($payload)]);
+            $respuesta = json_decode($resultado->resultado, true);
+
+            if ($respuesta['success']) {
+                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], [
+                    'destinos' => $respuesta['destinos'] ?? [],
+                ]));
+            }
+
+            return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron clonar los parámetros de calificación', $e->getMessage()));
         }
     }
 
@@ -222,6 +375,7 @@ class PoliticaController extends Controller
 
     // Arma el jsonb que consumen las funciones. Los nulos se dejan pasar tal cual:
     // la funcion aplica su COALESCE y la regla de modalidad (contado/credito).
+    // Sin 'parametros': solo los guarda guardarParametrosPolitica (politicas de clientes).
     private function payloadPolitica(Request $request): array
     {
         return [
@@ -244,6 +398,95 @@ class PoliticaController extends Controller
             'pol_pordefecto'          => $request->boolean('pol_pordefecto'),
             'pol_activo'              => $request->boolean('pol_activo'),
         ];
+    }
+
+    // Parametros de calificacion del request (pantalla Parametros de calificacion).
+    // Sin id = nuevo; con id = existente (la funcion verifica que sea de esta politica).
+    private function payloadParametros(Request $request): array
+    {
+        return array_map(function ($p) {
+            return [
+                'id'                        => isset($p['id']) && $p['id'] !== '' ? (int) $p['id'] : null,
+                'tipo_cliente_id'           => (int) $p['tipo_cliente_id'],
+                'actividad_cliente_id'      => (int) $p['actividad_cliente_id'],
+                'comportamiento_cliente_id' => (int) $p['comportamiento_cliente_id'],
+                'predeterminado'            => filter_var($p['predeterminado'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'margen_financiero_general' => $p['margen_financiero_general'] ?? null,
+                'incremento'                => $p['incremento'] ?? null,
+                'activo'                    => filter_var($p['activo'] ?? true, FILTER_VALIDATE_BOOLEAN),
+            ];
+        }, array_values((array) $request->input('parametros', [])));
+    }
+
+    // Mensajes de la forma de guardarParametrosPolitica; el negocio lo valida
+    // crm.fn_politica_validar_parametros con sus propios textos.
+    private function mensajesParametros(): array
+    {
+        return [
+            'pol_id.required'                                 => 'No se recibió la política.',
+            'pol_id.integer'                                  => 'La política no es válida.',
+            'pol_id.min'                                      => 'La política no es válida.',
+            'pol_id.max'                                      => 'La política no es válida.',
+            'parametros.present'                              => 'No se recibieron los parámetros de calificación.',
+            'parametros.array'                                => 'Los parámetros de calificación no tienen un formato válido.',
+            'parametros.*.array'                              => 'Los parámetros de calificación no tienen un formato válido.',
+            'parametros.*.id.integer'                         => 'Uno de los parámetros de calificación no es válido.',
+            'parametros.*.id.max'                             => 'Uno de los parámetros de calificación no es válido.',
+            'parametros.*.tipo_cliente_id.required'           => 'El tipo de cliente del parámetro de calificación es obligatorio.',
+            'parametros.*.tipo_cliente_id.integer'            => 'El tipo de cliente del parámetro de calificación no es válido.',
+            'parametros.*.tipo_cliente_id.min'                => 'El tipo de cliente del parámetro de calificación no es válido.',
+            'parametros.*.tipo_cliente_id.max'                => 'El tipo de cliente del parámetro de calificación no es válido.',
+            'parametros.*.actividad_cliente_id.required'      => 'La actividad del parámetro de calificación es obligatoria.',
+            'parametros.*.actividad_cliente_id.integer'       => 'La actividad del parámetro de calificación no es válida.',
+            'parametros.*.actividad_cliente_id.min'           => 'La actividad del parámetro de calificación no es válida.',
+            'parametros.*.actividad_cliente_id.max'           => 'La actividad del parámetro de calificación no es válida.',
+            'parametros.*.comportamiento_cliente_id.required' => 'El comportamiento del parámetro de calificación es obligatorio.',
+            'parametros.*.comportamiento_cliente_id.integer'  => 'El comportamiento del parámetro de calificación no es válido.',
+            'parametros.*.comportamiento_cliente_id.min'      => 'El comportamiento del parámetro de calificación no es válido.',
+            'parametros.*.comportamiento_cliente_id.max'      => 'El comportamiento del parámetro de calificación no es válido.',
+            'parametros.*.margen_financiero_general.required' => 'El margen financiero general del parámetro de calificación es obligatorio.',
+            'parametros.*.margen_financiero_general.numeric'  => 'El margen financiero general del parámetro de calificación debe ser numérico.',
+            'parametros.*.incremento.required'                => 'El incremento del parámetro de calificación es obligatorio.',
+            'parametros.*.incremento.numeric'                 => 'El incremento del parámetro de calificación debe ser numérico.',
+            'parametros.*.predeterminado.required'            => 'Falta indicar si el parámetro de calificación es predeterminado.',
+            'parametros.*.predeterminado.boolean'             => 'El valor de predeterminado del parámetro de calificación no es válido.',
+            'parametros.*.activo.required'                    => 'Falta indicar si el parámetro de calificación está activo.',
+            'parametros.*.activo.boolean'                     => 'El valor de activo del parámetro de calificación no es válido.',
+        ];
+    }
+
+    // Forma del pedido de Clonar parametros (vista previa y clonado); el negocio lo valida
+    // crm.fn_politica_parametros_clonar_validar.
+    private function reglasClonarParametros(): array
+    {
+        return [
+            'pol_id'            => 'required|integer|min:1|max:2147483647',
+            'pol_ids_destino'   => 'required|array|max:200',
+            'pol_ids_destino.*' => 'required|integer|min:1|max:2147483647',
+        ];
+    }
+
+    private function mensajesClonarParametros(): array
+    {
+        return [
+            'pol_id.required'            => 'No se recibió la política origen.',
+            'pol_id.integer'             => 'La política origen no es válida.',
+            'pol_id.min'                 => 'La política origen no es válida.',
+            'pol_id.max'                 => 'La política origen no es válida.',
+            'pol_ids_destino.required'   => 'Elija al menos una política destino.',
+            'pol_ids_destino.array'      => 'Las políticas destino no tienen un formato válido.',
+            'pol_ids_destino.max'        => 'Puede clonar a 200 políticas como máximo a la vez.',
+            'pol_ids_destino.*.required' => 'Una de las políticas destino no es válida.',
+            'pol_ids_destino.*.integer'  => 'Una de las políticas destino no es válida.',
+            'pol_ids_destino.*.min'      => 'Una de las políticas destino no es válida.',
+            'pol_ids_destino.*.max'      => 'Una de las políticas destino no es válida.',
+        ];
+    }
+
+    // Los pol_id destino del pedido como enteros (ya validados).
+    private function idsDestinoClonar(Request $request): array
+    {
+        return array_values(array_map('intval', (array) $request->input('pol_ids_destino', [])));
     }
 
     // Contexto forense que las funciones guardan en auditoria.logs_cambios.
