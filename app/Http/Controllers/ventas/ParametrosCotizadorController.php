@@ -32,7 +32,7 @@ class ParametrosCotizadorController extends Controller
         }
     }
 
-    // Combo Tipo del formulario (ventas.tipos_parametros_cotizador: MARKUP, APORTE).
+    // Combo Tipo del formulario (ventas.tipos_parametros_cotizador: MARGEN, APORTE).
     public function listTiposParametrosCotizador()
     {
         try {
@@ -41,6 +41,18 @@ class ParametrosCotizadorController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $tipos));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los tipos', $e->getMessage()));
+        }
+    }
+
+    // Combo Tipo de tarjeta del formulario (25-oct: los conceptos TARJETA son los defaults de los plazos).
+    public function listTiposTarjetaCotizador()
+    {
+        try {
+            $tipos = DB::select('SELECT * FROM ventas.fn_tipo_tarjeta_listar()');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $tipos));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los tipos de tarjeta', $e->getMessage()));
         }
     }
 
@@ -136,22 +148,29 @@ class ParametrosCotizadorController extends Controller
     private function reglasRequest(): array
     {
         return [
-            'nombre'       => 'required|string|max:255',
-            'tipo_id'      => 'required|integer',
-            'minimo'       => 'required|numeric',
-            'maximo'       => 'required|numeric',
-            'valor_markup' => 'required|numeric',
+            'nombre'          => 'required|string|max:255',
+            'tipo_id'         => 'required|integer',
+            'minimo'          => 'required|numeric',
+            'maximo'          => 'required|numeric',
+            'valor_margen'    => 'required|numeric',
+            // Solo los conceptos TARJETA (la funcion los pide ahi y los ignora en los demas).
+            'tipo_tarjeta_id' => 'nullable|integer',
+            'plazo'           => 'nullable|integer',
+            'meses_gracia'    => 'nullable|integer',
         ];
     }
 
     private function payloadParametro(Request $request): array
     {
         return [
-            'nombre'       => $request->input('nombre'),
-            'tipo_id'      => $request->input('tipo_id'),
-            'minimo'       => $request->input('minimo'),
-            'maximo'       => $request->input('maximo'),
-            'valor_markup' => $request->input('valor_markup'),
+            'nombre'          => $request->input('nombre'),
+            'tipo_id'         => $request->input('tipo_id'),
+            'minimo'          => $request->input('minimo'),
+            'maximo'          => $request->input('maximo'),
+            'valor_margen'    => $request->input('valor_margen'),
+            'tipo_tarjeta_id' => $request->input('tipo_tarjeta_id'),
+            'plazo'           => $request->input('plazo'),
+            'meses_gracia'    => $request->input('meses_gracia'),
         ];
     }
 

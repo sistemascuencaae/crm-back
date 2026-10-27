@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-// Aportes del cotizador (clon de MarkupCotizadorController; valor en dolares y cabecera sin rango
+// Aportes del cotizador (clon de MargenCotizadorController; valor en dolares y cabecera sin rango
 // de negociacion): ventas.caporte, ventas.daporte y ventas.asignacion_aporte_productos. El negocio
 // vive en ventas.fn_caporte_* y ventas.fn_asignacion_aporte_productos_* (produccion_aporte_cotizador.sql):
 // este controller solo valida la forma, arma el jsonb con 'auditoria' y traduce la respuesta.

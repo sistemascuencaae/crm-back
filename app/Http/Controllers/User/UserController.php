@@ -259,16 +259,17 @@ class UserController extends Controller
 
                 // Los datos de Dynamo van en el bloque 'dynamo' para que User::create no los tome.
                 $dynamo = json_decode(DB::selectOne('SELECT crm.fn_usuario_dynamo_crear_o_actualizar(?::jsonb) AS data', [json_encode([
-                    'profile_id'     => $request->input('profile_id'),
-                    'usu_alias'      => $request->input('usu_alias'),
-                    'usu_nombre'     => $request->input('name'),
-                    'usu_apellido'   => $request->input('surname'),
-                    'usu_contrasena' => $request->input('password'), // tal cual, Dynamo no la cifra
-                    'usu_tlf'        => $request->input('phone'),
-                    'cedula'         => $cedula,
-                    'pve_id'         => $request->input('dynamo.pve_id'),
-                    'usu_ip'         => $request->input('dynamo.usu_ip'),
-                    'cti_ids'        => $request->input('dynamo.cti_ids', []),
+                    'profile_id'        => $request->input('profile_id'),
+                    'usu_alias'         => $request->input('usu_alias'),
+                    'usu_nombre'        => $request->input('name'),
+                    'usu_apellido'      => $request->input('surname'),
+                    'usu_contrasena'    => $request->input('password'), // tal cual, Dynamo no la cifra
+                    'usu_tlf'           => $request->input('phone'),
+                    'cedula'            => $cedula,
+                    'pve_id'            => $request->input('dynamo.pve_id'),
+                    'usu_ip'            => $request->input('dynamo.usu_ip'),
+                    'usu_habilitar_iva' => $request->input('dynamo.usu_habilitar_iva'), // sin el dato: false al crear, se conserva si ya existe
+                    'cti_ids'           => $request->input('dynamo.cti_ids', []),
                 ])])->data);
 
                 if ($alias->existe_crm) {
@@ -720,6 +721,7 @@ class UserController extends Controller
                     'usu_activo'         => $activo,
                     'pve_id'             => $pveId,
                     'usu_ip'             => $request->input('dynamo.usu_ip'),
+                    'usu_habilitar_iva'  => $request->input('dynamo.usu_habilitar_iva'), // sin el dato se conserva el de Dynamo
                     'cti_ids'            => $conBloque ? $request->input('dynamo.cti_ids', []) : ($dynamoActual->cti_ids ?? []),
                 ])])->data);
 

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\ventas;
 use App\Models\Access;
 
 // Permisos del cotizador que aplica el servidor: el superusuario (usu_tipo 3) ve todas las cotizaciones
-// y el resto solo las suyas; costos, aportes, CAME, markup y margenes solo con "Ver costos" (ver_costos) en
+// y el resto solo las suyas; costos, aportes, CAME y margenes solo con "Ver costos" (ver_costos) en
 // PROFORMAS (21-oct: antes era report, que en Perfiles se llama Imprimir y ahora queda solo para el Excel).
 trait PermisosCotizacionTrait
 {
@@ -29,15 +29,17 @@ trait PermisosCotizacionTrait
     }
 
     // Claves que se quitan en cualquier nivel: items, unitario, credito y calificacion de calcular/guardar;
-    // cabecera, detalles y aportes de una cotizacion guardada (alli el markup va en columnas sueltas).
+    // cabecera, detalles y aportes de una cotizacion guardada (alli el margen va en columnas sueltas).
     private function clavesCostoCotizacion(): array
     {
         return [
-            'costo', 'origen_costo', 'aportes', 'total_aportes', 'came', 'markup',
+            'costo', 'origen_costo', 'aportes', 'total_aportes', 'came', 'margen',
             'margen_financiero', 'margen_financiero_general', 'incremento',
-            'pcotizador_id', 'concepto_markup', 'origen_markup', 'cmarkup_id', 'cabecera_markup',
-            'dmarkup_id', 'orden_markup', 'vigencia_inicio_markup', 'vigencia_fin_markup',
-            'valor_markup', 'valor_markup_lista', 'minimo_negociacion', 'maximo_negociacion',
+            'pcotizador_id', 'concepto_margen', 'origen_margen', 'cmargen_id', 'cabecera_margen',
+            'dmargen_id', 'orden_margen', 'vigencia_inicio_margen', 'vigencia_fin_margen',
+            'valor_margen', 'valor_margen_lista', 'minimo_negociacion', 'maximo_negociacion',
+            // 25-oct: la comision del banco (tarjeta) es un costo de la tienda.
+            'comision_banco', 'origen_comision', 'valor_comision',
         ];
     }
 
@@ -59,7 +61,7 @@ trait PermisosCotizacionTrait
             } elseif (is_array($valor)) {
                 $datos[$clave] = $this->quitarClavesCosto($valor, $claves);
             } elseif ($clave === 'error' && is_string($valor)) {
-                // El error de fn_calcular_precio_json trae "(tipo=..., costo=..., markup=...)": va sin eso.
+                // El error de fn_calcular_precio_json trae "(tipo=..., costo=..., margen=...)": va sin eso.
                 $datos[$clave] = preg_replace('/\s*\(tipo=[^)]*\)/', '', $valor);
             }
         }

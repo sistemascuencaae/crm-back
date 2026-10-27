@@ -19,7 +19,15 @@ class TipoCaso extends Model
 
     protected $table = 'crm.tipo_caso';
 
-    protected $fillable = ["nombre", "estado", "form_id", "tab", "categoria_caso", "tiempo_vencimiento"];
+    // 27-oct: cotiza_contado, cotiza_credito y cotiza_tarjeta = las formas de cotizar del tipo de caso (checks de Tipos de caso)
+    protected $fillable = ["nombre", "estado", "form_id", "tab", "categoria_caso", "tiempo_vencimiento",
+        "cotiza_contado", "cotiza_credito", "cotiza_tarjeta"];
+
+    protected $casts = [
+        "cotiza_contado" => "boolean",
+        "cotiza_credito" => "boolean",
+        "cotiza_tarjeta" => "boolean",
+    ];
 
     public function setCreatedAtAttribute($value)
     {

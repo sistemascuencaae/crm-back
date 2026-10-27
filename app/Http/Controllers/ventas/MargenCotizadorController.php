@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-// Markup del cotizador (pestana 2): cabeceras ventas.cmarkup, sus detalles ventas.dmarkup
-// y los productos de ventas.asignacion_markup_productos, todo con un solo Guardar (add/edit).
-// El negocio vive en ventas.fn_cmarkup_* y ventas.fn_asignacion_markup_productos_* (PLANES/COTIZADOR):
+// Margen del cotizador (pestana 2): cabeceras ventas.cmargen, sus detalles ventas.dmargen
+// y los productos de ventas.asignacion_margen_productos, todo con un solo Guardar (add/edit).
+// El negocio vive en ventas.fn_cmargen_* y ventas.fn_asignacion_margen_productos_* (PLANES/COTIZADOR):
 // este controller solo valida la forma, arma el jsonb con 'auditoria' y traduce la respuesta.
-class MarkupCotizadorController extends Controller
+class MargenCotizadorController extends Controller
 {
     public function __construct()
     {
@@ -22,29 +22,29 @@ class MarkupCotizadorController extends Controller
     }
 
     // Todas las cabeceras (activas e inactivas), sin paginar.
-    public function listMarkupCotizador()
+    public function listMargenCotizador()
     {
         try {
-            $registros = DB::select('SELECT * FROM ventas.fn_cmarkup_listar()');
+            $registros = DB::select('SELECT * FROM ventas.fn_cmargen_listar()');
 
             // PDO entrega los numeric como texto: al JSON van como numeros.
             foreach ($registros as $r) {
-                $r->valor_markup       = (float) $r->valor_markup;
+                $r->valor_margen       = (float) $r->valor_margen;
                 $r->minimo_negociacion = (float) $r->minimo_negociacion;
                 $r->maximo_negociacion = (float) $r->maximo_negociacion;
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', $registros));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar las cabeceras de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar las cabeceras de margen', $e->getMessage()));
         }
     }
 
-    // Conceptos de markup (con sus topes) y regiones activas para los combos del modal.
-    public function combosMarkupCotizador()
+    // Conceptos de margen (con sus topes) y regiones activas para los combos del modal.
+    public function combosMargenCotizador()
     {
         try {
-            $fila = DB::selectOne('SELECT ventas.fn_cmarkup_combos() AS resultado');
+            $fila = DB::selectOne('SELECT ventas.fn_cmargen_combos() AS resultado');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', json_decode($fila->resultado, true)));
         } catch (Exception $e) {
@@ -53,34 +53,34 @@ class MarkupCotizadorController extends Controller
     }
 
     // Cabecera con sus detalles, para precargar el modal de editar.
-    public function getMarkupCotizador($id)
+    public function getMargenCotizador($id)
     {
         try {
-            $fila = DB::selectOne('SELECT ventas.fn_cmarkup_buscar(?) AS resultado', [(int) $id]);
+            $fila = DB::selectOne('SELECT ventas.fn_cmargen_buscar(?) AS resultado', [(int) $id]);
 
             if (!$fila || !$fila->resultado) {
-                return response()->json(RespuestaApi::returnResultado('error', 'La cabecera de markup no existe.', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'La cabecera de margen no existe.', null));
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se obtuvo con éxito', json_decode($fila->resultado, true)));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo obtener la cabecera de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo obtener la cabecera de margen', $e->getMessage()));
         }
     }
 
-    public function addMarkupCotizador(Request $request)
+    public function addMargenCotizador(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), $this->reglasMarkup());
+            $validator = Validator::make($request->all(), $this->reglasMargen());
 
             if ($validator->fails()) {
                 return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
             }
 
-            $payload = $this->payloadMarkup($request);
+            $payload = $this->payloadMargen($request);
             $payload['auditoria'] = $this->contextoAuditoriaForense($request);
 
-            $resultado = DB::selectOne('SELECT ventas.fn_cmarkup_crear(?::jsonb) AS resultado', [json_encode($payload)]);
+            $resultado = DB::selectOne('SELECT ventas.fn_cmargen_crear(?::jsonb) AS resultado', [json_encode($payload)]);
             $respuesta = json_decode($resultado->resultado, true);
 
             if ($respuesta['success']) {
@@ -91,24 +91,24 @@ class MarkupCotizadorController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo crear la cabecera de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo crear la cabecera de margen', $e->getMessage()));
         }
     }
 
-    public function editMarkupCotizador(Request $request, $id)
+    public function editMargenCotizador(Request $request, $id)
     {
         try {
-            $validator = Validator::make($request->all(), $this->reglasMarkup());
+            $validator = Validator::make($request->all(), $this->reglasMargen());
 
             if ($validator->fails()) {
                 return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
             }
 
-            $payload = $this->payloadMarkup($request);
+            $payload = $this->payloadMargen($request);
             $payload['id'] = (int) $id;
             $payload['auditoria'] = $this->contextoAuditoriaForense($request);
 
-            $resultado = DB::selectOne('SELECT ventas.fn_cmarkup_modificar(?::jsonb) AS resultado', [json_encode($payload)]);
+            $resultado = DB::selectOne('SELECT ventas.fn_cmargen_modificar(?::jsonb) AS resultado', [json_encode($payload)]);
             $respuesta = json_decode($resultado->resultado, true);
 
             if ($respuesta['success']) {
@@ -119,18 +119,18 @@ class MarkupCotizadorController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo actualizar la cabecera de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo actualizar la cabecera de margen', $e->getMessage()));
         }
     }
 
     // Catalogo de la tabla de productos del modal: activos + inactivos ya asignados, con
     // asignado (en esta cabecera) y conflicto (otra cabecera de esa region y concepto).
-    // ?cmarkup_id=&reg_id=&pcotizador_id= : el que falte va NULL (al crear no hay cabecera).
-    public function catalogoProductosMarkupCotizador(Request $request)
+    // ?cmargen_id=&reg_id=&pcotizador_id= : el que falte va NULL (al crear no hay cabecera).
+    public function catalogoProductosMargenCotizador(Request $request)
     {
         try {
             $validator = Validator::make($request->query(), [
-                'cmarkup_id'    => 'nullable|integer',
+                'cmargen_id'    => 'nullable|integer',
                 'reg_id'        => 'nullable|integer',
                 'pcotizador_id' => 'nullable|integer',
             ]);
@@ -139,8 +139,8 @@ class MarkupCotizadorController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
             }
 
-            $registros = DB::select('SELECT * FROM ventas.fn_asignacion_markup_productos_catalogo_productos(?::integer, ?::integer, ?::integer)', [
-                $this->enteroONulo($request->query('cmarkup_id')),
+            $registros = DB::select('SELECT * FROM ventas.fn_asignacion_margen_productos_catalogo_productos(?::integer, ?::integer, ?::integer)', [
+                $this->enteroONulo($request->query('cmargen_id')),
                 $this->enteroONulo($request->query('reg_id')),
                 $this->enteroONulo($request->query('pcotizador_id')),
             ]);
@@ -152,7 +152,7 @@ class MarkupCotizadorController extends Controller
     }
 
     // Auditoria de UNA cabecera: sus guardados y sus asignaciones (auditoria.logs_cambios).
-    public function markupCotizadorAuditoria(Request $request)
+    public function margenCotizadorAuditoria(Request $request)
     {
         try {
             $id       = (int) $request->query('id', 0);
@@ -161,11 +161,11 @@ class MarkupCotizadorController extends Controller
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             if ($id <= 0) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Cabecera de markup no válida', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'Cabecera de margen no válida', null));
             }
 
-            $resumen = DB::selectOne('SELECT * FROM ventas.fn_cmarkup_auditoria_resumen(?)', [$id]);
-            $eventos = DB::select('SELECT * FROM ventas.fn_cmarkup_auditoria_listar_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_cmargen_auditoria_resumen(?)', [$id]);
+            $eventos = DB::select('SELECT * FROM ventas.fn_cmargen_auditoria_listar_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
             $total   = $eventos[0]->total_registros ?? 0;
 
             return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
@@ -176,7 +176,7 @@ class MarkupCotizadorController extends Controller
                 'tamanio' => $tamanio,
             ]));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de la cabecera de markup', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de la cabecera de margen', $e->getMessage()));
         }
     }
 
@@ -185,14 +185,14 @@ class MarkupCotizadorController extends Controller
     // ------------------------------------------------------------------------
 
     // Solo los tipos. Lo obligatorio y el negocio (con mensajes en espanol) lo valida
-    // ventas.fn_cmarkup_validaciones.
-    private function reglasMarkup(): array
+    // ventas.fn_cmargen_validaciones.
+    private function reglasMargen(): array
     {
         return [
             'pcotizador_id'                 => 'nullable|integer',
             'reg_id'                        => 'nullable|integer',
             'nombre'                        => 'nullable|string|max:255',
-            'valor_markup'                  => 'nullable|numeric',
+            'valor_margen'                  => 'nullable|numeric',
             'minimo_negociacion'            => 'nullable|numeric',
             'maximo_negociacion'            => 'nullable|numeric',
             'activo'                        => 'nullable|boolean',
@@ -211,20 +211,20 @@ class MarkupCotizadorController extends Controller
             'detalles.*.domingo'            => 'nullable|boolean',
             'detalles.*.minimo_negociacion' => 'nullable|numeric',
             'detalles.*.maximo_negociacion' => 'nullable|numeric',
-            'detalles.*.valor_markup'       => 'nullable|numeric',
+            'detalles.*.valor_margen'       => 'nullable|numeric',
             'detalles.*.activo'             => 'nullable|boolean',
             'productos'                     => 'nullable|array',
             'productos.*'                   => 'integer',
         ];
     }
 
-    private function payloadMarkup(Request $request): array
+    private function payloadMargen(Request $request): array
     {
         $payload = [
             'pcotizador_id'      => $request->input('pcotizador_id'),
             'reg_id'             => $request->input('reg_id'),
             'nombre'             => $request->input('nombre'),
-            'valor_markup'       => $request->input('valor_markup'),
+            'valor_margen'       => $request->input('valor_margen'),
             'minimo_negociacion' => $request->input('minimo_negociacion'),
             'maximo_negociacion' => $request->input('maximo_negociacion'),
             'activo'             => $this->booleanoONulo($request->input('activo')),
@@ -251,7 +251,7 @@ class MarkupCotizadorController extends Controller
                 'fecha_fin'          => $d['fecha_fin'] ?? null,
                 'minimo_negociacion' => $d['minimo_negociacion'] ?? null,
                 'maximo_negociacion' => $d['maximo_negociacion'] ?? null,
-                'valor_markup'       => $d['valor_markup'] ?? null,
+                'valor_margen'       => $d['valor_margen'] ?? null,
                 'activo'             => $this->booleanoONulo($d['activo'] ?? null),
             ];
             foreach (['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'] as $dia) {

@@ -15,16 +15,43 @@ use App\Models\Formulario\Parametro;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use App\Http\Resources\RespuestaApi;
 
 class TipoCasoController extends Controller
 {
+
+    // 27-oct: las formas de cotizar del tipo de caso (checks Contado, Crédito y Tarjeta de crédito). Si vienen tienen que
+    // ser sí o no; si no vienen, al agregar quedan las de la base (solo crédito) y al editar no se tocan.
+    // Devuelve el mensaje del primer error o null.
+    private function validarFormasCotizar(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'cotiza_contado' => 'sometimes|boolean',
+            'cotiza_credito' => 'sometimes|boolean',
+            'cotiza_tarjeta' => 'sometimes|boolean',
+        ], [
+            'boolean' => 'La forma de cotizar :attribute debe ser sí o no.',
+        ], [
+            'cotiza_contado' => 'Contado',
+            'cotiza_credito' => 'Crédito',
+            'cotiza_tarjeta' => 'Tarjeta de crédito',
+        ]);
+
+        return $validator->fails() ? $validator->errors()->first() : null;
+    }
 
     public function addTipoCaso(Request $request)
     {
         try {
             $error = null;
             $exitoso = null;
+
+            // 27-oct: formas de cotizar
+            $errorFormasCotizar = $this->validarFormasCotizar($request);
+            if ($errorFormasCotizar) {
+                return response()->json(RespuestaApi::returnResultado('error', $errorFormasCotizar, ''));
+            }
 
             // Validar si ya existe un registro con el mismo ctt_id
             DB::transaction(function () use ($request, &$error, &$exitoso) {
@@ -155,6 +182,12 @@ class TipoCasoController extends Controller
     public function editTipoCaso(Request $request, $id)
     {
         try {
+            // 27-oct: formas de cotizar
+            $errorFormasCotizar = $this->validarFormasCotizar($request);
+            if ($errorFormasCotizar) {
+                return response()->json(RespuestaApi::returnResultado('error', $errorFormasCotizar, ''));
+            }
+
             $respuesta = DB::transaction(function () use ($request, $id) {
             $tipoCaso = TipoCaso::findOrFail($id);
 

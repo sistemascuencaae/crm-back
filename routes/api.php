@@ -161,11 +161,13 @@ use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\ParametrosCotizadorController;
-use App\Http\Controllers\ventas\MarkupCotizadorController;
+use App\Http\Controllers\ventas\MargenCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
 use App\Http\Controllers\ventas\CotizarController;
 use App\Http\Controllers\ventas\CotizacionesController;
 use App\Http\Controllers\ventas\TarjetasContadoController;
+use App\Http\Controllers\ventas\TarjetasController;
+use App\Http\Controllers\ventas\BancosEmisoresController;
 use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
@@ -1847,21 +1849,22 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
 });
 
-// VENTAS > COTIZADOR: configuracion (pestanas 1 Parametros, 2 Markup y 3 Aportes) y Cotizar.
+// VENTAS > COTIZADOR: configuracion (pestanas 1 Parametros, 2 Margen y 3 Aportes) y Cotizar.
 Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     Route::get('/listParametrosCotizador', [ParametrosCotizadorController::class, 'listParametrosCotizador']);
     Route::get('/listTiposParametrosCotizador', [ParametrosCotizadorController::class, 'listTiposParametrosCotizador']);
+    Route::get('/listTiposTarjetaCotizador', [ParametrosCotizadorController::class, 'listTiposTarjetaCotizador']);
     Route::post('/addParametroCotizador', [ParametrosCotizadorController::class, 'addParametroCotizador']);
     Route::post('/editParametroCotizador/{id}', [ParametrosCotizadorController::class, 'editParametroCotizador']);
     Route::get('/parametroCotizadorAuditoria', [ParametrosCotizadorController::class, 'parametroCotizadorAuditoria']);
-    // Pestana 2: markup (cabecera + detalles) y su asignacion a productos.
-    Route::get('/listMarkupCotizador', [MarkupCotizadorController::class, 'listMarkupCotizador']);
-    Route::get('/combosMarkupCotizador', [MarkupCotizadorController::class, 'combosMarkupCotizador']);
-    Route::get('/getMarkupCotizador/{id}', [MarkupCotizadorController::class, 'getMarkupCotizador']);
-    Route::post('/addMarkupCotizador', [MarkupCotizadorController::class, 'addMarkupCotizador']);
-    Route::post('/editMarkupCotizador/{id}', [MarkupCotizadorController::class, 'editMarkupCotizador']);
-    Route::get('/catalogoProductosMarkupCotizador', [MarkupCotizadorController::class, 'catalogoProductosMarkupCotizador']);
-    Route::get('/markupCotizadorAuditoria', [MarkupCotizadorController::class, 'markupCotizadorAuditoria']);
+    // Pestana 2: margen (cabecera + detalles) y su asignacion a productos.
+    Route::get('/listMargenCotizador', [MargenCotizadorController::class, 'listMargenCotizador']);
+    Route::get('/combosMargenCotizador', [MargenCotizadorController::class, 'combosMargenCotizador']);
+    Route::get('/getMargenCotizador/{id}', [MargenCotizadorController::class, 'getMargenCotizador']);
+    Route::post('/addMargenCotizador', [MargenCotizadorController::class, 'addMargenCotizador']);
+    Route::post('/editMargenCotizador/{id}', [MargenCotizadorController::class, 'editMargenCotizador']);
+    Route::get('/catalogoProductosMargenCotizador', [MargenCotizadorController::class, 'catalogoProductosMargenCotizador']);
+    Route::get('/margenCotizadorAuditoria', [MargenCotizadorController::class, 'margenCotizadorAuditoria']);
     // Pestana 3: aportes (cabecera + detalles, en dolares) y su asignacion a productos.
     Route::get('/listAporteCotizador', [AporteCotizadorController::class, 'listAporteCotizador']);
     Route::get('/combosAporteCotizador', [AporteCotizadorController::class, 'combosAporteCotizador']);
@@ -1879,12 +1882,25 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     // Proformas: el historial paginado y una proforma completa (solo lectura).
     Route::get('/listProformas', [CotizacionesController::class, 'listProformas']);
     Route::get('/getCotizacion/{id}', [CotizacionesController::class, 'getCotizacion']);
-    // Tarjetas y contado: planes de tarjeta por banco (alma.banco) y formas de pago de contado, con sus reglas.
-    Route::get('/listarBancosTarjeta', [TarjetasContadoController::class, 'listarBancosTarjeta']);
-    Route::get('/getPlanesTarjeta/{ban_id}', [TarjetasContadoController::class, 'getPlanesTarjeta']);
-    Route::post('/guardarPlanesTarjeta/{ban_id}', [TarjetasContadoController::class, 'guardarPlanesTarjeta']);
+    // Contado: las formas de pago de contado con sus reglas (25-oct: las tarjetas pasaron a TarjetasController).
     Route::get('/getFormasPagoContado', [TarjetasContadoController::class, 'getFormasPagoContado']);
     Route::post('/guardarFormasPagoContado', [TarjetasContadoController::class, 'guardarFormasPagoContado']);
+    // Tarjetas y comisiones y Descuentos de plazos (25-oct): bancos y cuentas de public.banco (26-oct), tarjetas,
+    // plazos y descuentos.
+    Route::get('/listarBancosTarjetas', [TarjetasController::class, 'listarBancosTarjetas']);
+    Route::get('/catalogosTarjetas', [TarjetasController::class, 'catalogosTarjetas']);
+    Route::get('/getBancoTarjetas/{ban_id}', [TarjetasController::class, 'getBancoTarjetas']);
+    Route::post('/guardarBancoTarjetas/{ban_id}', [TarjetasController::class, 'guardarBancoTarjetas']);
+    Route::get('/getDescuentosPlazos/{ban_id}', [TarjetasController::class, 'getDescuentosPlazos']);
+    Route::post('/guardarDescuentosPlazos/{ban_id}', [TarjetasController::class, 'guardarDescuentosPlazos']);
+    Route::get('/tarjetasAuditoria', [TarjetasController::class, 'tarjetasAuditoria']);
+    // 27-oct: bancos y emisores de Dynamo y sistemas de liquidacion (el emisor de las tarjetas; antes, adquirentes).
+    Route::get('/listarSistemasLiquidacion', [BancosEmisoresController::class, 'listarSistemasLiquidacion']);
+    Route::post('/guardarSistemaLiquidacion', [BancosEmisoresController::class, 'guardarSistemaLiquidacion']);
+    Route::get('/listarEmisores', [BancosEmisoresController::class, 'listarEmisores']);
+    Route::post('/guardarEmisor', [BancosEmisoresController::class, 'guardarEmisor']);
+    Route::get('/listarBancosDynamo', [BancosEmisoresController::class, 'listarBancosDynamo']);
+    Route::post('/guardarBancoDynamo', [BancosEmisoresController::class, 'guardarBancoDynamo']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).

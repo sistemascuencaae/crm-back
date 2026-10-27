@@ -13,12 +13,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 // Cotizar (modal de Ventas > Cotizaciones, sin menu propio): una cotizacion de contado o de credito con N productos.
-// 23-oct: la vista previa tambien acepta TARJETA (con parametros_tarjeta_id) y, en contado, la forma de pago
-// (parametros_contado_id); guardar no: la proforma todavia no guarda la tarjeta ni el descuento de contado.
+// 23-oct: la vista previa tambien acepta TARJETA y, en contado, la forma de pago (parametros_contado_id); guardar
+// no: la proforma todavia no guarda la tarjeta ni el descuento de contado. 25-oct: la tarjeta es el banco
+// (ban_id, public.banco desde el 26-oct) y el plazo de una de sus tarjetas (tarjeta_plazo_id) o, en un banco sin
+// tarjetas, un plazo de la PREDETERMINADA (plazo_default_id = el concepto TARJETA de parametros_cotizador).
 // El negocio vive en ventas.fn_cotizar_* y fn_cproforma_registrar (PLANES/COTIZADOR): este
 // controller solo valida la forma, arma el jsonb y traduce la respuesta. Calcular es la vista
 // previa (no guarda); Guardar recalcula en el servidor y guarda la foto completa.
-// Sin "Ver costos" (ver_costos) en PROFORMAS las respuestas van sin costos, aportes, CAME, markup ni margenes.
+// Sin "Ver costos" (ver_costos) en PROFORMAS las respuestas van sin costos, aportes, CAME ni margenes.
 class CotizarController extends Controller
 {
     use PermisosCotizacionTrait;
@@ -226,7 +228,9 @@ class CotizarController extends Controller
             'identificacion'   => ['nullable', 'regex:/^(\d{10}|\d{13})$/'],
             'caso_id'          => 'nullable|integer',
             'req_caso_id'      => 'nullable|integer',
-            'parametros_tarjeta_id' => 'nullable|integer',
+            'ban_id'           => 'nullable|integer',
+            'tarjeta_plazo_id' => 'nullable|integer',
+            'plazo_default_id' => 'nullable|integer',
             'parametros_contado_id' => 'nullable|integer',
         ];
     }
@@ -258,7 +262,9 @@ class CotizarController extends Controller
             'identificacion.regex'      => 'La cédula o RUC del cliente debe tener 10 o 13 dígitos.',
             'caso_id.integer'           => 'El caso no existe.',
             'req_caso_id.integer'       => 'El requerimiento Proformar no es de este caso.',
-            'parametros_tarjeta_id.integer' => 'El plan de la tarjeta no existe.',
+            'ban_id.integer'           => 'El banco no existe.',
+            'tarjeta_plazo_id.integer' => 'El plazo de la tarjeta no existe.',
+            'plazo_default_id.integer' => 'El plazo de la tarjeta no existe.',
             'parametros_contado_id.integer' => 'La forma de pago no existe.',
         ];
     }
@@ -266,7 +272,7 @@ class CotizarController extends Controller
     // Ids como enteros; montos tal cual (la funcion los toma como numeric). Lo vacio va null.
     // Fecha, region, calificacion, plazo, tasa e IVA no se reciben: la funcion usa la hora del servidor, el punto de venta
     // del usuario de la SESION (token), la calificacion predeterminada, los pagos de la politica y los valores por defecto.
-    // El plan de la tarjeta y la forma de pago de contado van solo en la vista previa (no en guardar).
+    // La tarjeta (banco y plazo) y la forma de pago de contado van solo en la vista previa (no en guardar).
     private function payloadCalculo(Request $request, bool $guardar): array
     {
         $payload = [
@@ -286,7 +292,9 @@ class CotizarController extends Controller
         ];
 
         if (!$guardar) {
-            $payload['parametros_tarjeta_id'] = $this->enteroONulo($request->input('parametros_tarjeta_id'));
+            $payload['ban_id']           = $this->enteroONulo($request->input('ban_id'));
+            $payload['tarjeta_plazo_id'] = $this->enteroONulo($request->input('tarjeta_plazo_id'));
+            $payload['plazo_default_id'] = $this->enteroONulo($request->input('plazo_default_id'));
             $payload['parametros_contado_id'] = $this->enteroONulo($request->input('parametros_contado_id'));
         }
 
