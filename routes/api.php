@@ -27,6 +27,7 @@ use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadClienteController;
 use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Controllers\crm\CasoConsultaGarancheckController;
 use App\Http\Controllers\crm\CFormularioController;
 use App\Http\Controllers\crm\ClienteCrmController;
 use App\Http\Controllers\crm\ClienteOpenceoController;
@@ -808,6 +809,7 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
     Route::get('/listEstadosFormulasByTablero/{tab_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTablero']); // listar
     Route::get('/listEstadosFormulasByTabIdByTipoCasoId/{tab_id}/{tipo_caso_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTabIdByTipoCasoId']); // listar
+    Route::get('/listEstadosFormulasFlujoByTipoCasoId/{tipo_caso_id}', [EstadosFormulasController::class, 'listEstadosFormulasFlujoByTipoCasoId']); // 27-oct: flujo del tipo de caso (demo)
     Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
     Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
     Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
@@ -958,6 +960,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::put('/editCasoFase', [CasoController::class, 'editFase']);
     Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
+    // 27-oct: la consulta GaranCheck casada con el caso (cabecera y pestaña Calificación)
+    Route::get('/casoConsultaGarancheck/{caso_id}', [CasoConsultaGarancheckController::class, 'mostrar'])->where('caso_id', '[0-9]+');
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::post('/respuestaCasoMasivo', [CasoController::class, 'respuestaCasoMasivo']);
@@ -1284,7 +1288,10 @@ Route::group(["prefix" => "consultas/identidad", 'middleware' => ['jwt.auth', 'u
 
 // CONSULTA DE CLIENTES A PROVEEDORES EXTERNOS (GaranCheck): usuario del CRM
 Route::group(["prefix" => "consultas", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
-    Route::post('/cliente', [ConsultasController::class, 'consultarCliente']);
+    // 27-oct: cada consulta a GaranCheck cobra: máximo 20 por minuto por usuario (Nuevo Caso).
+    Route::post('/cliente', [ConsultasController::class, 'consultarCliente'])->middleware('throttle:20,1,consultas-cliente');
+    // 28-oct: si la lupa saldrá de la caché (solo lee, no cobra): decide el texto del spinner de Nuevo Caso.
+    Route::get('/cliente/cache/{identificacion}', [ConsultasController::class, 'cacheCliente'])->middleware('throttle:60,1,consultas-cliente-cache');
 });
 
 // FORMULARIOS FELIPE
@@ -1882,6 +1889,8 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     // Proformas: el historial paginado y una proforma completa (solo lectura).
     Route::get('/listProformas', [CotizacionesController::class, 'listProformas']);
     Route::get('/getCotizacion/{id}', [CotizacionesController::class, 'getCotizacion']);
+    // 27-oct: las versiones de la proforma de un caso (el ojito del requerimiento Proformar), con la vigente marcada.
+    Route::get('/listProformasCaso/{casoId}', [CotizacionesController::class, 'listProformasCaso']);
     // Contado: las formas de pago de contado con sus reglas (25-oct: las tarjetas pasaron a TarjetasController).
     Route::get('/getFormasPagoContado', [TarjetasContadoController::class, 'getFormasPagoContado']);
     Route::post('/guardarFormasPagoContado', [TarjetasContadoController::class, 'guardarFormasPagoContado']);

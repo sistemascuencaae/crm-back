@@ -283,6 +283,8 @@ class GarancheckService
 
         // Sin identidad no hay cliente: 'civil' (natural) o 'sri' (jurídica) vienen null o sin
         // nombres cuando la fuente está caída. Se lanza para que el que llama NO guarde nada.
+        // 27-oct: salvo con un cliente que ya existe: ConsultasController guarda la consulta (ya está pagada) y
+        // solo se salta los nombres.
         if ($datos['nombres'] === null && $datos['apellidos'] === null) {
             $rama = $tipoSujeto === 'J' ? 'sri' : 'civil';
             throw new RuntimeException("El proveedor no devolvió los datos de identidad ({$rama} sin datos); no se pudo registrar al cliente.");
@@ -291,9 +293,122 @@ class GarancheckService
         return $datos;
     }
 
+    // 27-oct: datos para PRECARGAR el modal del cliente en el CRM (campo cliente de Nuevo Caso): los de
+    // extraerDatosCliente más los personales del Registro Civil. Los textos van como los manda el
+    // proveedor, en mayúsculas, y el front los casa con SUS catálogos (sexo, estado civil, nivel de
+    // estudios, país); las fechas salen ya como 'Y-m-d'. Aquí no se guarda nada: lo guarda el vendedor
+    // al dar Guardar en el modal. En una sociedad (J) 'civil' es el representante legal, así que lo
+    // personal va en null. Lanza si no hay identidad, igual que extraerDatosCliente.
+    public function extraerDatosPrecarga(array $json, string $tipoSujeto): array
+    {
+        $datos = $this->extraerDatosCliente($json, $tipoSujeto);
+
+        if ($tipoSujeto === 'J') {
+            return $datos + [
+                'fecha_nacimiento' => null,
+                'sexo' => null,
+                'estado_civil' => null,
+                'nivel_estudios' => null,
+                'nacionalidad' => null,
+                'conyuge' => null,
+            ];
+        }
+
+        $general = $json['civil']['general'] ?? [];
+        $personal = $json['civil']['personal'] ?? [];
+
+        // personal.* es la ficha del Registro Civil; general.* trae lo mismo con otros nombres (genero
+        // "MASCULINO" frente a sexo "HOMBRE") y a veces vacío, por eso va de respaldo.
+        return $datos + [
+            'fecha_nacimiento' => $this->fechaIso($general['fechaNacimiento'] ?? null),
+            'sexo' => $this->textoMayusculas($personal['sexo'] ?? null, $general['genero'] ?? null),
+            'estado_civil' => $this->textoMayusculas($personal['estadoCivil'] ?? null, $general['estadoCivil'] ?? null),
+            'nivel_estudios' => $this->textoMayusculas($personal['nivelEstudio'] ?? null, $personal['desEstudio'] ?? null, $general['instruccion'] ?? null),
+            'nacionalidad' => $this->textoMayusculas($personal['nacionalidad'] ?? null, $general['nacionalidad'] ?? null),
+            'conyuge' => $this->datosConyuge($json['civil']['familiares']['conyuge'] ?? null, is_array($personal) ? $personal : []),
+        ];
+    }
+
     // =====================================================================================
     // PRIVADOS
     // =====================================================================================
+
+    // 27-oct: cónyuge VIVO con cédula (10 dígitos) o nombre, para la precarga; null si no hay. Sin
+    // cónyuge el Registro Civil manda relleno ("0" en la cédula y " " en el nombre) y uno fallecido trae
+    // familiares.conyuge.fechaDefuncion (sin dato viene 0001-01-01, que fechaIso descarta).
+    private function datosConyuge($familiar, array $personal): ?array
+    {
+        $familiar = is_array($familiar) ? $familiar : [];
+
+        if ($this->fechaIso($familiar['fechaDefuncion'] ?? null) !== null) {
+            return null;
+        }
+
+        $cedula = null;
+        foreach ([$familiar['cedula'] ?? null, $personal['cedulaConyuge'] ?? null] as $valor) {
+            // Si llegara como número se perdería el 0 de la provincia: se repone.
+            $valor = is_int($valor) ? str_pad((string) $valor, 10, '0', STR_PAD_LEFT) : trim((string) (is_scalar($valor) ? $valor : ''));
+            if (preg_match('/^\d{10}$/', $valor)) {
+                $cedula = $valor;
+                break;
+            }
+        }
+
+        $nombre = $this->textoMayusculas($familiar['nombre'] ?? null, $personal['nombreConyuge'] ?? null);
+
+        if ($cedula === null && $nombre === null) {
+            return null;
+        }
+
+        return [
+            'identificacion' => $cedula,
+            'nombre' => $nombre,
+            'fecha_nacimiento' => $this->fechaIso($familiar['fechaNacimiento'] ?? null),
+        ];
+    }
+
+    // 27-oct: primer texto con alguna letra, en mayúsculas y sin espacios de más; null si no hay. Así el
+    // relleno del proveedor ("0", " ", "-") cuenta como vacío.
+    private function textoMayusculas(...$fuentes): ?string
+    {
+        foreach ($fuentes as $valor) {
+            if (!is_scalar($valor)) {
+                continue;
+            }
+            $texto = trim(preg_replace('/\s+/u', ' ', (string) $valor));
+            if (preg_match('/\p{L}/u', $texto)) {
+                return mb_strtoupper($texto, 'UTF-8');
+            }
+        }
+
+        return null;
+    }
+
+    // 27-oct: '1979-10-20T00:00:00' o '20/2/2004' → 'Y-m-d'. null si no es una fecha real (el proveedor
+    // manda 0001-01-01 cuando no hay dato) o si es futura.
+    private function fechaIso($valor): ?string
+    {
+        if (!is_scalar($valor)) {
+            return null;
+        }
+        $texto = trim((string) $valor);
+
+        if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})/', $texto, $m)) {
+            [$anio, $mes, $dia] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+        } elseif (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})#', $texto, $m)) {
+            [$dia, $mes, $anio] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+        } else {
+            return null;
+        }
+
+        if ($anio < 1900 || !checkdate($mes, $dia, $anio)) {
+            return null;
+        }
+
+        $fecha = sprintf('%04d-%02d-%02d', $anio, $mes, $dia);
+
+        return $fecha <= date('Y-m-d') ? $fecha : null;
+    }
 
     private function bodyConsulta(string $identificacion): array
     {
@@ -367,7 +482,8 @@ class GarancheckService
             'tipo_sujeto' => 'J',
             'nombres' => $partes['nombres'],
             'apellidos' => $partes['apellidos'],
-            'nombre_comercial' => $razonSocial !== '' ? mb_strtoupper($razonSocial, 'UTF-8') : null,
+            // 27-oct: igual que el modal del CRM y el ERP, apellidos + ' ' + nombres: "RAZON SOCIAL ." (antes iba sin el punto).
+            'nombre_comercial' => $razonSocial !== '' ? $partes['apellidos'] . ' ' . $partes['nombres'] : null,
             'email' => $this->primerValor($contactos['correos'] ?? null) ?: null,
             'telefono' => $this->telefono($contactos['telefonos'] ?? null),
             'direccion' => $calle !== '' ? mb_strtoupper($calle, 'UTF-8') : 'SN',

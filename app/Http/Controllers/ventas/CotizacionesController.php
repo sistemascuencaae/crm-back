@@ -8,11 +8,13 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-// Proformas (ae/ventas/PROFORMAS): el historial de las proformas de los casos y una proforma completa.
+// Proformas (ae/ventas/PROFORMAS): el historial de las proformas de los casos y una proforma completa (27-oct: y las
+// versiones de la proforma de un caso, para el ojito del requerimiento Proformar).
 // El negocio vive en ventas.fn_cproforma_* (PLANES/COTIZADOR/produccion_cotizaciones.sql): este
 // controller solo valida la forma y traduce la respuesta. Solo lectura.
 // Como Todos los casos: el superusuario ve todas; el resto, las de los tipos de caso de su perfil.
-// Costos, solo con Ver costos (ver_costos) en PROFORMAS; el Excel sigue con report (Imprimir).
+// Costos, solo con Ver costos (ver_costos) en PROFORMAS; el Excel sigue con report (Imprimir). 27-oct: la comision del
+// banco de la proforma con tarjeta (comision_banco y valor_comision) tambien es un costo: Ver, Proformas y el historial.
 class CotizacionesController extends Controller
 {
     use PermisosCotizacionTrait;
@@ -51,7 +53,8 @@ class CotizacionesController extends Controller
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', [
-                'registros' => $registros,
+                // 27-oct: las filas pasan por el filtro de costos (la comision del banco, si algun dia viniera).
+                'registros' => $this->datosSegunPermisoCostos(json_decode(json_encode($registros), true)),
                 'total' => (int) ($registros[0]->total_registros ?? 0),
                 'pagina' => $pagina,
                 'tamanio' => $tamanio,
@@ -87,6 +90,27 @@ class CotizacionesController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], $this->datosSegunPermisoCostos($respuesta['data'])));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la cotización', $e->getMessage()));
+        }
+    }
+
+    // 27-oct: el historial de la proforma de un caso (el ojito Ver del requerimiento Proformar): todas sus versiones,
+    // la mas nueva primero y con la vigente marcada (ventas.fn_cproforma_caso_listar). Como Ver (getCotizacion), la
+    // proforma de un caso la ve quien trabaja el caso: sin filtro de perfil. Sin costos en las filas.
+    public function listProformasCaso($casoId)
+    {
+        try {
+            if (!preg_match('/^[0-9]{1,9}$/', (string) $casoId) || (int) $casoId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Caso no válido', null));
+            }
+
+            $registros = DB::select('SELECT * FROM ventas.fn_cproforma_caso_listar(?)', [(int) $casoId]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', [
+                // 27-oct: como en Proformas, las filas pasan por el filtro de costos.
+                'registros' => $this->datosSegunPermisoCostos(json_decode(json_encode($registros), true)),
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar las proformas del caso', $e->getMessage()));
         }
     }
 }

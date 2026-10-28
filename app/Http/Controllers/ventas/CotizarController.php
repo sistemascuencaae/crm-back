@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 // Cotizar (modal de Ventas > Cotizaciones, sin menu propio): una cotizacion de contado o de credito con N productos.
-// 23-oct: la vista previa tambien acepta TARJETA y, en contado, la forma de pago (parametros_contado_id); guardar
-// no: la proforma todavia no guarda la tarjeta ni el descuento de contado. 25-oct: la tarjeta es el banco
-// (ban_id, public.banco desde el 26-oct) y el plazo de una de sus tarjetas (tarjeta_plazo_id) o, en un banco sin
-// tarjetas, un plazo de la PREDETERMINADA (plazo_default_id = el concepto TARJETA de parametros_cotizador).
+// 23-oct: la vista previa tambien acepta TARJETA y, en contado, la forma de pago (parametros_contado_id). 25-oct: la
+// tarjeta es el banco (ban_id, public.banco desde el 26-oct) y el plazo de una de sus tarjetas (tarjeta_plazo_id) o, en
+// un banco sin tarjetas, un plazo de la PREDETERMINADA (plazo_default_id = el concepto TARJETA de parametros_cotizador).
+// 27-oct: guardar tambien (las 3 proformas: la de TARJETA y la de CONTADO con su forma de pago guardan la foto del pago).
 // El negocio vive en ventas.fn_cotizar_* y fn_cproforma_registrar (PLANES/COTIZADOR): este
 // controller solo valida la forma, arma el jsonb y traduce la respuesta. Calcular es la vista
 // previa (no guarda); Guardar recalcula en el servidor y guarda la foto completa.
@@ -213,11 +213,11 @@ class CotizarController extends Controller
     // ------------------------------------------------------------------------
 
     // Solo la forma; el negocio (politica, vigencias...) lo valida ventas.fn_cotizar_calcular.
-    // Calcular acepta TARJETA; guardar no (la proforma todavia no guarda la tarjeta).
+    // 27-oct: calcular y guardar aceptan TARJETA (la proforma ya la guarda).
     private function reglasCalculo(bool $guardar): array
     {
         return [
-            'tipo'             => $guardar ? 'required|in:CONTADO,CREDITO' : 'required|in:CONTADO,CREDITO,TARJETA',
+            'tipo'             => 'required|in:CONTADO,CREDITO,TARJETA',
             'items'            => 'required|array|min:1',
             'items.*'          => 'array',
             'items.*.pro_id'   => 'required|integer',
@@ -238,13 +238,11 @@ class CotizarController extends Controller
     // Mismos textos que la funcion, para que el front muestre un solo estilo de mensaje.
     private function mensajesCalculo(bool $guardar): array
     {
-        $modalidad = $guardar ? 'Elija la modalidad: CONTADO o CREDITO.' : 'Elija la modalidad: CONTADO, CREDITO o TARJETA.';
+        $modalidad = 'Elija la modalidad: CONTADO, CREDITO o TARJETA.';
 
         return [
             'tipo.required'             => $modalidad,
-            'tipo.in'                   => $guardar
-                ? 'La proforma todavía no se guarda con tarjeta de crédito: solo CONTADO o CREDITO.'
-                : $modalidad,
+            'tipo.in'                   => $modalidad,
             'items.required'            => 'Agregue al menos un producto.',
             'items.array'               => 'Agregue al menos un producto.',
             'items.min'                 => 'Agregue al menos un producto.',
@@ -272,7 +270,7 @@ class CotizarController extends Controller
     // Ids como enteros; montos tal cual (la funcion los toma como numeric). Lo vacio va null.
     // Fecha, region, calificacion, plazo, tasa e IVA no se reciben: la funcion usa la hora del servidor, el punto de venta
     // del usuario de la SESION (token), la calificacion predeterminada, los pagos de la politica y los valores por defecto.
-    // La tarjeta (banco y plazo) y la forma de pago de contado van solo en la vista previa (no en guardar).
+    // La tarjeta (banco y plazo) y la forma de pago de contado van en la vista previa y (27-oct) tambien al guardar.
     private function payloadCalculo(Request $request, bool $guardar): array
     {
         $payload = [
@@ -289,14 +287,12 @@ class CotizarController extends Controller
             'identificacion'  => trim((string) $request->input('identificacion')) === '' ? null : trim((string) $request->input('identificacion')),
             // Proforma: con el caso, la funcion toma su cliente y la calificacion de su Tipo Cliente.
             'caso_id'         => $this->enteroONulo($request->input('caso_id')),
+            // 27-oct: tambien al guardar (la proforma guarda la tarjeta y la forma de pago).
+            'ban_id'           => $this->enteroONulo($request->input('ban_id')),
+            'tarjeta_plazo_id' => $this->enteroONulo($request->input('tarjeta_plazo_id')),
+            'plazo_default_id' => $this->enteroONulo($request->input('plazo_default_id')),
+            'parametros_contado_id' => $this->enteroONulo($request->input('parametros_contado_id')),
         ];
-
-        if (!$guardar) {
-            $payload['ban_id']           = $this->enteroONulo($request->input('ban_id'));
-            $payload['tarjeta_plazo_id'] = $this->enteroONulo($request->input('tarjeta_plazo_id'));
-            $payload['plazo_default_id'] = $this->enteroONulo($request->input('plazo_default_id'));
-            $payload['parametros_contado_id'] = $this->enteroONulo($request->input('parametros_contado_id'));
-        }
 
         return $payload;
     }

@@ -64,6 +64,24 @@ class EstadosFormulasController extends Controller
         }
     }
 
+    // 27-oct: flujo de un tipo de caso para Demos > Flujos por tipo de caso.
+    // 27-oct (rediseño): todo el diagrama en un JSON (crm.fn_tipo_caso_flujo): tipo_caso, tableros, fases (con la de
+    // creación y su estado inicial), formulas y requerimientos.
+    public function listEstadosFormulasFlujoByTipoCasoId($tipo_caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $fila = DB::selectOne('SELECT crm.fn_tipo_caso_flujo(?) AS flujo', [(int) $tipo_caso_id]);
+            $flujo = $fila && $fila->flujo ? json_decode($fila->flujo) : null;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $flujo));
+        } catch (Exception $e) {
+            $log->logError(EstadosFormulasController::class, 'Error al listar el flujo del tipo de caso con el ID: ' . $tipo_caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar el flujo del tipo de caso', $e->getMessage()));
+        }
+    }
+
     public function listarTiposCasoTablero($tabId)
     {
         try {

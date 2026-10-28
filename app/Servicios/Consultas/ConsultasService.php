@@ -127,7 +127,10 @@ class ConsultasService
     // Alta a CONTADO con el mismo payload mínimo del corredor. Si la entidad ya existía
     // (proveedor, garante) fn_clientes_registrar la reusa; por eso se arrastran tit_id y
     // fecha de nacimiento de la foto. Devuelve el cli_id.
-    public static function registrarCliente(array $datos, ?array $foto, array $contexto): int
+    // 27-oct: $desdeCrm (canal del CRM, Nuevo Caso): la entidad que ya existía conserva su dirección, su teléfono y sus
+    // nombres (crm.fn_clientes_registrar_desde_consulta, PLANES/GARANCHECK/produccion_garancheck_entidad.sql), y la
+    // identidad que trajo el proveedor sella la consulta de identidad (el modal no vuelve a ir a Ecuador Legal).
+    public static function registrarCliente(array $datos, ?array $foto, array $contexto, bool $desdeCrm = false): int
     {
         $defaults = self::defaultsCanal();
 
@@ -171,6 +174,13 @@ class ConsultasService
             'usuario_auditoria' => $contexto['usuario_auditoria'],
             'auditoria' => $contexto['auditoria'],
         ];
+
+        if ($desdeCrm) {
+            $payload['consulto_identidad'] = true;
+            $fila = DB::selectOne('SELECT crm.fn_clientes_registrar_desde_consulta(?::jsonb) AS cli_id', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
+
+            return (int) $fila->cli_id;
+        }
 
         $fila = DB::selectOne('SELECT crm.fn_clientes_registrar(?::jsonb) AS cli_id', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
 
@@ -243,22 +253,62 @@ class ConsultasService
         ];
     }
 
-    // Cliente existente: ficha COMPLETA de la foto (fn_clientes_modificar reescribe todo) pisando
-    // SOLO nombres, apellidos y nombre comercial. Lanza si la función rechaza (p.ej. CRÉDITO con
-    // ficha incompleta); el que llama decide si eso es fatal.
-    public static function actualizarNombresCliente(array $foto, array $datos, array $contexto): int
+    // DESACTIVADO 27-oct: mandaba la ficha COMPLETA a fn_clientes_modificar, que reescribe todo (creaba el
+    // anexo con valores por defecto, cambiaba el estado civil, perdía el cantón del anexo...). Lo reemplaza
+    // la versión de abajo, que solo toca nombres, apellidos y nombre comercial.
+    // // Cliente existente: ficha COMPLETA de la foto (fn_clientes_modificar reescribe todo) pisando
+    // // SOLO nombres, apellidos y nombre comercial. Lanza si la función rechaza (p.ej. CRÉDITO con
+    // // ficha incompleta); el que llama decide si eso es fatal.
+    // public static function actualizarNombresCliente(array $foto, array $datos, array $contexto): int
+    // {
+    //     $payload = self::asegurarPrincipales($foto, $datos);
+    //
+    //     $payload['ent_nombres'] = $datos['nombres'];
+    //     $payload['ent_apellidos'] = $datos['apellidos'];
+    //     $payload['ent_nombre_comercial'] = $datos['nombre_comercial'];
+    //     $payload['usuario_auditoria'] = $contexto['usuario_auditoria'];
+    //     $payload['auditoria'] = $contexto['auditoria'];
+    //
+    //     $fila = DB::selectOne('SELECT crm.fn_clientes_modificar(?::jsonb) AS cli_id', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
+    //
+    //     return (int) $fila->cli_id;
+    // }
+
+    // 27-oct: cliente existente: SOLO nombres, apellidos y nombre comercial, y solo si cambian
+    // (crm.fn_cliente_nombres_modificar, PLANES/GARANCHECK/produccion_garancheck_nombres.sql). La función recibe
+    // el nombre completo tal cual lo da el proveedor y decide ella si cambia y dónde terminan los apellidos; si no
+    // es seguro, no toca nada y devuelve el motivo. Devuelve {cli_id, cliente_actualizado, motivo, ent_apellidos,
+    // ent_nombres, ent_nombre_comercial} con lo que quedó en la base.
+    // 27-oct: $desdeCrm (canal del CRM, Nuevo Caso): además sella la consulta de identidad, cambien o no los nombres.
+    public static function actualizarNombresCliente(int $cliId, array $datos, array $contexto, bool $desdeCrm = false): array
     {
-        $payload = self::asegurarPrincipales($foto, $datos);
+        $tipoSujeto = ($datos['tipo_sujeto'] ?? 'N') === 'J' ? 'J' : 'N';
 
-        $payload['ent_nombres'] = $datos['nombres'];
-        $payload['ent_apellidos'] = $datos['apellidos'];
-        $payload['ent_nombre_comercial'] = $datos['nombre_comercial'];
-        $payload['usuario_auditoria'] = $contexto['usuario_auditoria'];
-        $payload['auditoria'] = $contexto['auditoria'];
+        $payload = [
+            'cli_id' => $cliId,
+            'tipo_sujeto' => $tipoSujeto,
+            // Natural: "APELLIDOS NOMBRES" (lo que partió separarNombreCompleto, vuelto a unir). Empresa: la razón social.
+            'nombre_completo' => $tipoSujeto === 'J'
+                ? (string) ($datos['apellidos'] ?? '')
+                : trim(($datos['apellidos'] ?? '') . ' ' . ($datos['nombres'] ?? '')),
+            'usuario_auditoria' => $contexto['usuario_auditoria'],
+            'auditoria' => $contexto['auditoria'],
+        ];
+        if ($desdeCrm) {
+            $payload['consulto_identidad'] = true;
+        }
 
-        $fila = DB::selectOne('SELECT crm.fn_clientes_modificar(?::jsonb) AS cli_id', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
+        $fila = DB::selectOne('SELECT crm.fn_cliente_nombres_modificar(?::jsonb) AS resultado', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
 
-        return (int) $fila->cli_id;
+        return json_decode($fila->resultado, true) ?: [];
+    }
+
+    // 27-oct: true si al cliente lo creó una consulta a este proveedor y nadie lo guardó después (updated_at
+    // sigue en NULL). Su anexo solo tiene los valores por defecto del alta (CASADO, MEDIOS/SECUNDARIOS...), así
+    // que la precarga del modal le pone todo lo del proveedor, como a un cliente recién creado.
+    public static function clienteSinGuardar(int $cliId, string $proveedor): bool
+    {
+        return DB::selectOne('SELECT 1 AS si FROM public.cliente WHERE cli_id = ? AND proveedor = ? AND updated_at IS NULL', [$cliId, $proveedor]) !== null;
     }
 
     // usuario_auditoria alimenta cliente.created_by/updated_by; el bloque auditoria va a la
