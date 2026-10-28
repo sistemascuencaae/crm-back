@@ -810,6 +810,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listEstadosFormulasByTablero/{tab_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTablero']); // listar
     Route::get('/listEstadosFormulasByTabIdByTipoCasoId/{tab_id}/{tipo_caso_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTabIdByTipoCasoId']); // listar
     Route::get('/listEstadosFormulasFlujoByTipoCasoId/{tipo_caso_id}', [EstadosFormulasController::class, 'listEstadosFormulasFlujoByTipoCasoId']); // 27-oct: flujo del tipo de caso (demo)
+    Route::get('/listFlujoCatalogosByTipoCasoId/{tipo_caso_id}', [EstadosFormulasController::class, 'listFlujoCatalogosByTipoCasoId']); // 28-oct: combos del editor del flujo (demo)
+    Route::post('/guardarFlujoTipoCaso/{tipo_caso_id}', [EstadosFormulasController::class, 'guardarFlujoTipoCaso']); // 28-oct: Guardar del editor del flujo (demo)
+    Route::post('/clonarTipoCaso/{tipo_caso_id}', [EstadosFormulasController::class, 'clonarTipoCaso']); // 28-oct: clonar el tipo de caso con su flujo (demo)
     Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
     Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
     Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar

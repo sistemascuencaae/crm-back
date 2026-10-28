@@ -82,6 +82,96 @@ class EstadosFormulasController extends Controller
         }
     }
 
+    // 28-oct: editor del flujo (Demos > Flujos por tipo de caso). Los combos de una fórmula: por tablero del tipo, sus
+    // fases, estados y respuestas activas (crm.fn_tipo_caso_flujo_catalogos).
+    public function listFlujoCatalogosByTipoCasoId($tipo_caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $fila = DB::selectOne('SELECT crm.fn_tipo_caso_flujo_catalogos(?) AS catalogos', [(int) $tipo_caso_id]);
+            $catalogos = $fila && $fila->catalogos ? json_decode($fila->catalogos) : null;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $catalogos));
+        } catch (Exception $e) {
+            $log->logError(EstadosFormulasController::class, 'Error al listar los catálogos del flujo del tipo de caso con el ID: ' . $tipo_caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al listar los catálogos del flujo', $e->getMessage()));
+        }
+    }
+
+    // 28-oct: botón Guardar del editor del flujo: todos los cambios juntos. Las reglas y los mensajes están en
+    // crm.fn_tipo_caso_flujo_guardar. data = {estado: success | confirmar | error, errores, avisos, version, recargar}.
+    // "confirmar" llega con status success: no se guardó nada y la pantalla pregunta antes de mandar confirmar = true.
+    public function guardarFlujoTipoCaso(Request $request, $tipo_caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $cambios = $request->input('cambios');
+            $fila = DB::selectOne(
+                'SELECT crm.fn_tipo_caso_flujo_guardar(?, ?, ?::json, ?::boolean, ?) AS resultado',
+                [
+                    (int) $tipo_caso_id,
+                    (string) $request->input('version', ''),
+                    json_encode(is_array($cambios) ? $cambios : new \stdClass(), JSON_UNESCAPED_UNICODE),
+                    $request->boolean('confirmar') ? 'true' : 'false',
+                    auth('api')->user()->id ?? null,
+                ]
+            );
+            $resultado = $fila && $fila->resultado ? json_decode($fila->resultado) : null;
+            $estado = $resultado->status ?? 'error';
+            $mensaje = $resultado->mensaje ?? 'No se pudo guardar el flujo.';
+            $data = [
+                'estado' => $estado,
+                'errores' => $resultado->errores ?? [],
+                'avisos' => $resultado->avisos ?? [],
+                'version' => $resultado->version ?? null,
+                'recargar' => $resultado->recargar ?? false,
+            ];
+
+            if ($estado === 'error') {
+                $log->logError(EstadosFormulasController::class, 'No se guardó el flujo del tipo de caso con el ID: ' . $tipo_caso_id . ': ' . $mensaje);
+
+                return response()->json(RespuestaApi::returnResultado('error', $mensaje, $data));
+            }
+
+            if ($estado === 'success') {
+                $log->logInfo(EstadosFormulasController::class, 'Se guardó el flujo del tipo de caso con el ID: ' . $tipo_caso_id . ': ' . $mensaje);
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', $mensaje, $data));
+        } catch (Exception $e) {
+            $log->logError(EstadosFormulasController::class, 'Error al guardar el flujo del tipo de caso con el ID: ' . $tipo_caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo guardar el flujo.', $e->getMessage()));
+        }
+    }
+
+    // 28-oct: clona el tipo de caso con todo su flujo (crm.fn_tipo_caso_clonar): sale activo y con el nombre + "_clon".
+    // data = {id, nombre} del tipo nuevo.
+    public function clonarTipoCaso($tipo_caso_id)
+    {
+        $log = new Funciones();
+        try {
+            $fila = DB::selectOne('SELECT crm.fn_tipo_caso_clonar(?) AS resultado', [(int) $tipo_caso_id]);
+            $resultado = $fila && $fila->resultado ? json_decode($fila->resultado) : null;
+
+            if (($resultado->status ?? 'error') !== 'success') {
+                $mensaje = $resultado->mensaje ?? 'No se pudo clonar el tipo de caso.';
+                $log->logError(EstadosFormulasController::class, 'No se clonó el tipo de caso con el ID: ' . $tipo_caso_id . ': ' . $mensaje);
+
+                return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+            }
+
+            $log->logInfo(EstadosFormulasController::class, 'Se clonó el tipo de caso con el ID: ' . $tipo_caso_id . ' en el ID: ' . $resultado->id);
+
+            return response()->json(RespuestaApi::returnResultado('success', $resultado->mensaje, ['id' => $resultado->id, 'nombre' => $resultado->nombre]));
+        } catch (Exception $e) {
+            $log->logError(EstadosFormulasController::class, 'Error al clonar el tipo de caso con el ID: ' . $tipo_caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo clonar el tipo de caso.', $e->getMessage()));
+        }
+    }
+
     public function listarTiposCasoTablero($tabId)
     {
         try {
