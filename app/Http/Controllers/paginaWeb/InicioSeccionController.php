@@ -11,12 +11,12 @@ use Illuminate\Http\Request;
 
 /**
  * Secciones del inicio (CRM): el interruptor, la vigencia y el orden de cada sección y, en las que los usan,
- * su título, subtítulo y cantidad. Los errores de un campo llegan como data {campo: mensaje}.
+ * su título y subtítulo. Los errores de un campo llegan como data {campo: mensaje}.
  */
 class InicioSeccionController extends Controller
 {
     // Lo único que se acepta (subtítulo solo ofertas_flash; fechas: "YYYY-MM-DDTHH:MM", hora de Ecuador, o null)
-    private const CAMPOS = ['ise_activo', 'ise_titulo', 'ise_subtitulo', 'ise_cantidad', 'ise_desde', 'ise_hasta'];
+    private const CAMPOS = ['ise_activo', 'ise_titulo', 'ise_subtitulo', 'ise_desde', 'ise_hasta'];
 
     public function __construct(private InicioSeccionService $servicio)
     {

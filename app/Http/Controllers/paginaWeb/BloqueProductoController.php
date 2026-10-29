@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 /**
  * Bloques destacados (CRM), los mismos para el inicio y para las páginas de marca.
- * Sin pma_id son los del inicio; con pma_id, los de esa página.
+ * Sin pma_id son los del inicio (categoría principal, sin galería); con pma_id, los de esa página.
  * Validación ligera aquí; las reglas están en la base. Los errores de un campo llegan como data {campo: mensaje}.
  */
 class BloqueProductoController extends Controller
@@ -60,7 +60,7 @@ class BloqueProductoController extends Controller
         }
     }
 
-    // DELETE pagina-web/bloques-productos/{bprId}   (con su galería e imágenes)
+    // DELETE pagina-web/bloques-productos/{bprId}   (en páginas de marca, con su galería e imágenes)
     public function eliminar(int $bprId)
     {
         try {

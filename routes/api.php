@@ -193,6 +193,7 @@ use App\Http\Controllers\paginaWeb\BloqueProductoController;
 use App\Http\Controllers\paginaWeb\InicioPublicoController;
 use App\Http\Controllers\paginaWeb\EspanaMotosController;
 use App\Http\Controllers\paginaWeb\EspanaMotosPublicoController;
+use App\Http\Controllers\paginaWeb\ProductoTiendaController;
 use App\Http\Controllers\ItemPruebaFlutterController;
 use Illuminate\Support\Facades\Route;
 
@@ -284,6 +285,8 @@ Route::get('public/pagina-web/inicio', [InicioPublicoController::class, 'buscar'
 Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
 Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
+Route::get('public/pagina-web/imagenes/productos/{proId}/{nombre}', [ArchivoPaginaWebController::class, 'verImagenProducto'])
+    ->whereNumber('proId')->where('nombre', '[A-Za-z0-9]+\.webp');
 Route::get('public/pagina-web/documentos/{nombre}', [ArchivoPaginaWebController::class, 'verPdf'])
     ->where('nombre', '[A-Za-z0-9]+\.pdf');
 
@@ -1964,6 +1967,7 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     // Categorías destacadas en la página web
     Route::get('categorias-web', [CategoriaWebController::class, 'listar']);
     Route::put('categorias-web-orden', [CategoriaWebController::class, 'ordenar']);
+    Route::put('categorias-web-mosaico-orden', [CategoriaWebController::class, 'ordenarMosaico']);
     Route::put('categorias-web/{tprId}', [CategoriaWebController::class, 'modificar'])->whereNumber('tprId');
     Route::get('categorias-web/{tprId}/impacto', [CategoriaWebController::class, 'impacto'])->whereNumber('tprId');
 
@@ -1999,4 +2003,25 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::put('bloques-productos-orden', [BloqueProductoController::class, 'ordenar']);
     Route::put('bloques-productos/{bprId}', [BloqueProductoController::class, 'modificar']);
     Route::delete('bloques-productos/{bprId}', [BloqueProductoController::class, 'eliminar']);
+
+    // Productos de la tienda: ficha técnica e imágenes
+    Route::get('productos-tienda-arbol', [ProductoTiendaController::class, 'arbol']);
+    Route::get('productos-tienda', [ProductoTiendaController::class, 'listar']);
+    Route::get('productos-tienda/{proId}', [ProductoTiendaController::class, 'buscar'])->whereNumber('proId');
+    Route::put('productos-tienda/{proId}/ficha', [ProductoTiendaController::class, 'guardarFicha'])->whereNumber('proId');
+    Route::put('productos-tienda/{proId}', [ProductoTiendaController::class, 'modificar'])->whereNumber('proId');
+    Route::post('productos-tienda-imagenes-archivo', [ProductoTiendaController::class, 'subirImagen']);
+    Route::post('productos-tienda-imagenes', [ProductoTiendaController::class, 'crearImagen']);
+    Route::put('productos-tienda-imagenes-orden', [ProductoTiendaController::class, 'ordenarImagenes']);
+    Route::put('productos-tienda-imagenes/{pimId}/restaurar', [ProductoTiendaController::class, 'restaurarImagen'])->whereNumber('pimId');
+    Route::put('productos-tienda-imagenes/{pimId}', [ProductoTiendaController::class, 'modificarImagen'])->whereNumber('pimId');
+    Route::delete('productos-tienda-imagenes/{pimId}', [ProductoTiendaController::class, 'eliminarImagen'])->whereNumber('pimId');
+
+    // Características: plantilla de la ficha técnica por categoría
+    Route::get('caracteristicas', [ProductoTiendaController::class, 'caracteristicas']);
+    Route::post('caracteristicas', [ProductoTiendaController::class, 'crearCaracteristica']);
+    Route::put('caracteristicas-orden', [ProductoTiendaController::class, 'ordenarCaracteristicas']);
+    Route::put('caracteristicas/{carId}/restaurar', [ProductoTiendaController::class, 'restaurarCaracteristica'])->whereNumber('carId');
+    Route::put('caracteristicas/{carId}', [ProductoTiendaController::class, 'modificarCaracteristica'])->whereNumber('carId');
+    Route::delete('caracteristicas/{carId}', [ProductoTiendaController::class, 'eliminarCaracteristica'])->whereNumber('carId');
 });

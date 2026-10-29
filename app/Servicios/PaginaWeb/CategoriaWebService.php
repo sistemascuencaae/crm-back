@@ -26,7 +26,8 @@ class CategoriaWebService
         'CATEGORIA_IMAGEN_INVALIDA'    => 'La dirección de la imagen no es válida.',
         'CATEGORIA_IMAGEN_LARGA'       => 'La dirección de la imagen no puede superar 500 caracteres.',
         'CATEGORIA_DESTACADA_INVALIDA' => 'El valor de "destacada" debe ser verdadero o falso.',
-        'CATEGORIA_SIN_IMAGEN'         => 'Sube una imagen antes de marcarla como destacada.',
+        'CATEGORIA_MOSAICO_INVALIDO'   => 'El valor del mosaico no es válido.',
+        'CATEGORIA_SIN_IMAGEN'         => 'Esta categoría no tiene imagen. Súbela en "Categorías de la tienda" para destacarla o ponerla en el mosaico.',
         'CATEGORIA_VISIBLE_INVALIDO'   => 'El valor de "mostrar en la tienda" debe ser verdadero o falso.',
         'CATEGORIA_SOLO_DEPARTAMENTO'  => 'Solo los departamentos se pueden mostrar u ocultar en la tienda.',
         'CATEGORIA_OCULTA_INVALIDO'    => 'El valor de "oculta" debe ser verdadero o falso.',
@@ -53,7 +54,7 @@ class CategoriaWebService
     // CRM
     // -----------------------------------------------------------------
 
-    /** Todas las categorías activas del ERP, con su ruta y lo configurado. */
+    /** Todas las categorías activas del ERP, con su ruta y lo configurado (también cwe_mosaico y cwe_mosaico_orden). */
     public function listar(): array
     {
         return DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar()');
@@ -65,7 +66,7 @@ class CategoriaWebService
         return DB::selectOne('SELECT * FROM ecommerce.fn_categoria_web_impacto(?)', [$tprId]);
     }
 
-    /** $datos: solo lo que cambia (cwe_destacada, cwe_imagen, cwe_nombre, cwe_visible, cwe_oculta) + usu_id. */
+    /** $datos: solo lo que cambia (cwe_destacada, cwe_mosaico, cwe_imagen, cwe_nombre, cwe_visible, cwe_oculta) + usu_id. */
     public function modificar(int $tprId, array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_categoria_web_modificar(?, ?::jsonb)', [$tprId, $this->json($datos)]);
@@ -76,6 +77,13 @@ class CategoriaWebService
     public function ordenar(array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_categoria_web_ordenar(?::jsonb)', [$this->json($datos)]);
+        self::limpiarCache();
+    }
+
+    /** $datos: {ids: [tpr_id…] (todas las del mosaico, en el nuevo orden), usu_id} */
+    public function ordenarMosaico(array $datos): void
+    {
+        DB::statement('SELECT ecommerce.fn_categoria_web_ordenar_mosaico(?::jsonb)', [$this->json($datos)]);
         self::limpiarCache();
     }
 

@@ -113,7 +113,7 @@ class PaginaMarcaService
      *   {direccion, titulo, logo, mar_id,
      *    marcas: [mar_id…]               la marca y sus sub-marcas (de ahí salen los productos),
      *    banner: [imágenes],
-     *    bloques: [{titulo, tpr_id, cantidad, imagen_lado ('izquierda' | 'derecha'), imagenes: [...]}],
+     *    bloques: [{titulo, tpr_id, cantidad, imagen_lado ('izquierda' | 'derecha'), productos: [tarjetas], imagenes: [...]}],
      *    grilla: {titulo, cantidad} | null,
      *    fotos: [imágenes],
      *    contacto: {titulo, texto, boton_texto, boton_enlace, boton_nueva_pestana} | null}
@@ -135,7 +135,7 @@ class PaginaMarcaService
                 'marcas'    => array_map(fn ($m) => (int) $m->mar_id,
                                          DB::select('SELECT * FROM ecommerce.fn_pagina_marca_marcas_incluidas(?)', [$p->mar_id])),
                 'banner'    => $p->pma_banner_visible ? $this->imagenes($p->banner_clave) : [],
-                'bloques'   => $p->pma_bloques_visible ? $this->bloques->listarPublicos($p->pma_id) : [],
+                'bloques'   => $p->pma_bloques_visible ? $this->bloques->listarPublicos($p->pma_id, (int) $p->mar_id) : [],
                 'grilla'    => $p->pma_grilla_visible
                     ? ['titulo' => $p->pma_grilla_titulo, 'cantidad' => $p->pma_grilla_cantidad]
                     : null,
