@@ -781,6 +781,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/addRequerimientos', [RequerimientoController::class, 'addRequerimientos']); // guardar
     Route::post('/editRequerimientos/{id}', [RequerimientoController::class, 'editRequerimientos']); // Editar
     Route::delete('/deleteRequerimientos/{id}', [RequerimientoController::class, 'deleteRequerimientos']); // Eliminar
+    // 28-oct: las fases para "Habilitado en las fases" y la auditoría de los requerimientos de una fase.
+    Route::get('/listFasesAgrupadasPorTablero', [RequerimientoController::class, 'listFasesAgrupadasPorTablero']);
+    Route::get('/requerimientosAuditoria/{fase_id}', [RequerimientoController::class, 'requerimientosAuditoria']);
 
 
     // CActividadCliente

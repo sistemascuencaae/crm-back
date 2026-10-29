@@ -1208,6 +1208,8 @@ class CasoController extends Controller
                 $reqCaso->minimo = $reqFase[$i]->minimo;
                 $reqCaso->maximo = $reqFase[$i]->maximo;
                 $reqCaso->editable = $reqFase[$i]->editable;
+                // 28-oct: las fases donde se habilita (texto integer[] de PostgreSQL); sin config, solo su fase.
+                $reqCaso->fases_habilitadas = $reqFase[$i]->fases_habilitadas ?? ('{' . (int) $reqFase[$i]->fase_id . '}');
 
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(';', $reqCaso->valor_lista);
