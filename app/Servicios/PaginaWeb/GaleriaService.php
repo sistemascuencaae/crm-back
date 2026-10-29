@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Galerías de imágenes (logos de pago, marcas aliadas, fotos de Beneficios, tarjetas del mosaico…).
+ * Galerías de imágenes (logos de pago, fotos de Beneficios, banners…). Los logos de las marcas no son galería:
+ * salen de cada marca (MarcaWebService).
  * Las galerías vienen por script; desde el CRM se suben, ordenan, ocultan y eliminan sus imágenes.
  * Cada imagen puede tener vigencia (desde / hasta); las de galerías tipo 'tarjetas' llevan además
  * título, subtítulo, color y botón. Llama a las funciones ecommerce.fn_galeria_*.
@@ -81,11 +82,38 @@ class GaleriaService
         $this->limpiarCache($galId);
     }
 
-    public function eliminarImagen(int $gimId): void
+    /** La manda a la papelera (el archivo se borra al vaciar) */
+    public function eliminarImagen(int $gimId, int $usuId): void
     {
         $galId = $this->galeriaDeImagen($gimId);
-        DB::statement('SELECT ecommerce.fn_galeria_imagen_eliminar(?)', [$gimId]);
+        DB::statement('SELECT ecommerce.fn_galeria_imagen_eliminar(?, ?)', [$gimId, $usuId]);
         $this->limpiarCache($galId);
+    }
+
+    /** La saca de la papelera, al final de su galería */
+    public function restaurarImagen(int $gimId, int $usuId): void
+    {
+        $galId = $this->galeriaDeImagen($gimId);
+        DB::statement('SELECT ecommerce.fn_galeria_imagen_restaurar(?, ?)', [$gimId, $usuId]);
+        $this->limpiarCache($galId);
+    }
+
+    /** [{gim_id, gim_imagen, gim_imagen_movil, gim_nombre, gim_eliminado_en, gim_eliminado_usu_id, eliminado_por}] */
+    public function papeleraImagenes(int $galId): array
+    {
+        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_papelera(?)', [$galId]), 'gim_eliminado_usu_id');
+    }
+
+    /** Borra para siempre las imágenes de la papelera de la galería, con sus archivos. Devuelve cuántas borró. */
+    public function vaciarImagenes(int $galId, int $usuId): int
+    {
+        // La base devuelve una fila por archivo (imagen y, si tiene, la de celular): se cuentan las imágenes antes
+        $cantidad = count(DB::select('SELECT gim_id FROM ecommerce.fn_galeria_imagen_papelera(?)', [$galId]));
+
+        ArchivosPaginaWeb::borrar(array_column(DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_vaciar(?, ?)', [$galId, $usuId]), 'imagen'));
+        $this->limpiarCache($galId);
+
+        return $cantidad;
     }
 
     /** Nuevo orden de TODAS las imágenes de una galería. $datos: {gal_id, ids: [gim_id…], usu_id} */

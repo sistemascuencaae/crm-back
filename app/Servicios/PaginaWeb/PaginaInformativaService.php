@@ -16,8 +16,19 @@ class PaginaInformativaService
     private const CACHE_PREFIJO = 'pagina_web.paginas.publica.';
     private const CACHE_MINUTOS = 10;
 
-    public function __construct(private LimpiadorHtml $limpiador)
+    // Páginas que muestran "Nuestras marcas" (MarcaWebService::publicas)
+    private const CLAVES_CON_MARCAS = ['garantia_extendida', 'beneficios_empresa'];
+
+    public function __construct(private LimpiadorHtml $limpiador, private MarcaWebService $marcas)
     {
+    }
+
+    /** Tras un cambio en las marcas de la tienda, las páginas que las muestran deben verlo. */
+    public static function limpiarCacheMarcas(): void
+    {
+        foreach (self::CLAVES_CON_MARCAS as $clave) {
+            Cache::forget(self::CACHE_PREFIJO . $clave);
+        }
     }
 
     // Mensaje amigable para cada código que lanzan las funciones ecommerce.fn_pagina_informativa_*
@@ -117,13 +128,25 @@ class PaginaInformativaService
     // Tienda
     // -----------------------------------------------------------------
 
-    /** La página si está visible; null si no existe o está oculta. Solo se guarda en caché si existe. */
+    /**
+     * La página si está visible; null si no existe o está oculta. Solo se guarda en caché si existe.
+     * Garantía extendida y Beneficios para empresa traen además marcas: [{mar_id, nombre, imagen, enlace}].
+     */
     public function buscarPublica(string $clave): ?array
     {
         return Cache::remember(self::CACHE_PREFIJO . $clave, now()->addMinutes(self::CACHE_MINUTOS), function () use ($clave) {
             $fila = DB::selectOne('SELECT * FROM ecommerce.fn_pagina_informativa_buscar_publica(?)', [$clave]);
 
-            return $fila ? $this->decodificarContenido($fila) : null;   // null no se guarda en caché
+            if (!$fila) {
+                return null;   // null no se guarda en caché
+            }
+
+            $pagina = $this->decodificarContenido($fila);
+            if (in_array($clave, self::CLAVES_CON_MARCAS, true)) {
+                $pagina['marcas'] = $this->marcas->publicas();
+            }
+
+            return $pagina;
         });
     }
 

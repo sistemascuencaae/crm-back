@@ -11,17 +11,15 @@ use Illuminate\Http\Request;
 
 /**
  * Páginas de marca (CRM): crear una página para una marca del ERP y editar sus datos y secciones.
- * Sus bloques destacados se editan con BloqueProductoController (pma_id) y las imágenes con las rutas de galerías.
+ * La plantilla es fija: los productos salen solos de sus marcas y las imágenes se editan con las rutas de galerías.
  * Validación ligera aquí; las reglas están en la base. Los errores de un campo llegan como data {campo: mensaje}.
  */
 class PaginaMarcaController extends Controller
 {
-    // Lo único que se acepta de una página
+    // Lo único que se acepta de una página (el logo es el de la marca: se cambia en Marcas de la tienda)
     private const CAMPOS = [
-        'pma_direccion', 'pma_titulo', 'pma_logo', 'pma_publicada',
-        'pma_banner_visible', 'pma_bloques_visible',
-        'pma_grilla_visible', 'pma_grilla_titulo', 'pma_grilla_cantidad',
-        'pma_fotos_visible',
+        'pma_direccion', 'pma_titulo', 'pma_publicada',
+        'pma_banner_visible', 'pma_fotos_visible',
         'pma_contacto_visible', 'pma_contacto_titulo', 'pma_contacto_texto',
         'pma_contacto_boton_texto', 'pma_contacto_boton_enlace', 'pma_contacto_nueva_pestana',
     ];
@@ -52,7 +50,7 @@ class PaginaMarcaController extends Controller
         }
     }
 
-    // GET pagina-web/paginas-marca/{pmaId}   → página + galerias {banner, fotos} (los bloques: GET bloques-productos?pma_id=)
+    // GET pagina-web/paginas-marca/{pmaId}   → página + galerias {banner, fotos}
     public function buscar(int $pmaId)
     {
         try {
@@ -92,15 +90,49 @@ class PaginaMarcaController extends Controller
         }
     }
 
-    // DELETE pagina-web/paginas-marca/{pmaId}   (con sus bloques, galerías e imágenes)
+    // DELETE pagina-web/paginas-marca/{pmaId}   (a la papelera)
     public function eliminar(int $pmaId)
     {
         try {
-            $this->servicio->eliminar($pmaId);
+            $this->servicio->eliminar($pmaId, auth()->id());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Página eliminada con éxito', ['pma_id' => $pmaId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Página enviada a la papelera', ['pma_id' => $pmaId]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al eliminar la página');
+        }
+    }
+
+    // GET pagina-web/paginas-marca-papelera
+    public function papelera()
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
+        }
+    }
+
+    // PUT pagina-web/paginas-marca/{pmaId}/restaurar   (vuelve oculta)
+    public function restaurar(int $pmaId)
+    {
+        try {
+            $this->servicio->restaurar($pmaId, auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Página restaurada con éxito', ['pma_id' => $pmaId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al restaurar la página');
+        }
+    }
+
+    // DELETE pagina-web/paginas-marca-papelera   → {cantidad}
+    public function vaciar()
+    {
+        try {
+            $cantidad = $this->servicio->vaciar(auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al vaciar la papelera');
         }
     }
 

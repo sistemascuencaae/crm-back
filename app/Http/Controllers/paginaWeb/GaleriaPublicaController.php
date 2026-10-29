@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Endpoint público (sin autenticación) que usa la tienda para mostrar una galería por su clave
- * (pagos_depositos, pagos_tarjetas, marcas_aliadas, beneficios_fotos…).
+ * (pagos_depositos, pagos_tarjetas, beneficios_fotos…).
  * Una galería sin imágenes visibles responde una lista vacía: la tienda simplemente no la muestra.
  */
 class GaleriaPublicaController extends Controller

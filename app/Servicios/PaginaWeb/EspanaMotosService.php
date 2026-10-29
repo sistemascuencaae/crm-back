@@ -95,10 +95,33 @@ class EspanaMotosService
         self::limpiarCache();
     }
 
-    public function eliminarPestana(int $empId): void
+    /** La manda a la papelera */
+    public function eliminarPestana(int $empId, int $usuId): void
     {
-        DB::statement('SELECT ecommerce.fn_espana_motos_pestana_eliminar(?)', [$empId]);
+        DB::statement('SELECT ecommerce.fn_espana_motos_pestana_eliminar(?, ?)', [$empId, $usuId]);
         self::limpiarCache();
+    }
+
+    /** La saca de la papelera, al final de la lista */
+    public function restaurarPestana(int $empId, int $usuId): void
+    {
+        DB::statement('SELECT ecommerce.fn_espana_motos_pestana_restaurar(?, ?)', [$empId, $usuId]);
+        self::limpiarCache();
+    }
+
+    /** [{emp_id, emp_nombre, categorias, emp_eliminado_en, emp_eliminado_usu_id, eliminado_por}] */
+    public function papeleraPestanas(): array
+    {
+        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_espana_motos_pestana_papelera()'), 'emp_eliminado_usu_id');
+    }
+
+    /** Borra para siempre las pestañas de la papelera. Devuelve cuántas borró. */
+    public function vaciarPestanas(int $usuId): int
+    {
+        $cantidad = (int) DB::selectOne('SELECT ecommerce.fn_espana_motos_pestana_vaciar(?) AS cantidad', [$usuId])->cantidad;
+        self::limpiarCache();
+
+        return $cantidad;
     }
 
     /** $datos: {ids: [emp_id…] (todas las pestañas, en el nuevo orden), usu_id} */
@@ -112,7 +135,7 @@ class EspanaMotosService
     // CRM: marcas
     // -----------------------------------------------------------------
 
-    /** $datos: {mar_id, emm_logo, emm_activo, usu_id}. Devuelve su id. */
+    /** $datos: {mar_id, emm_activo, usu_id}. Devuelve su id. (El logo es el de la marca.) */
     public function crearMarca(array $datos): int
     {
         $emmId = DB::selectOne('SELECT ecommerce.fn_espana_motos_marca_crear(?::jsonb) AS id', [$this->json($datos)])->id;
@@ -121,17 +144,40 @@ class EspanaMotosService
         return $emmId;
     }
 
-    /** $datos: solo lo que cambia (emm_logo, emm_activo) + usu_id; la marca no se cambia */
+    /** $datos: {emm_activo, usu_id}; la marca no se cambia */
     public function modificarMarca(int $emmId, array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_espana_motos_marca_modificar(?, ?::jsonb)', [$emmId, $this->json($datos)]);
         self::limpiarCache();
     }
 
-    public function eliminarMarca(int $emmId): void
+    /** La quita de la pantalla (a la papelera) */
+    public function eliminarMarca(int $emmId, int $usuId): void
     {
-        DB::statement('SELECT ecommerce.fn_espana_motos_marca_eliminar(?)', [$emmId]);
+        DB::statement('SELECT ecommerce.fn_espana_motos_marca_eliminar(?, ?)', [$emmId, $usuId]);
         self::limpiarCache();
+    }
+
+    /** La saca de la papelera, al final de la lista */
+    public function restaurarMarca(int $emmId, int $usuId): void
+    {
+        DB::statement('SELECT ecommerce.fn_espana_motos_marca_restaurar(?, ?)', [$emmId, $usuId]);
+        self::limpiarCache();
+    }
+
+    /** [{emm_id, mar_id, mar_nombre, emm_eliminado_en, emm_eliminado_usu_id, eliminado_por}] */
+    public function papeleraMarcas(): array
+    {
+        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_espana_motos_marca_papelera()'), 'emm_eliminado_usu_id');
+    }
+
+    /** Borra para siempre las marcas de la papelera. Devuelve cuántas borró. */
+    public function vaciarMarcas(int $usuId): int
+    {
+        $cantidad = (int) DB::selectOne('SELECT ecommerce.fn_espana_motos_marca_vaciar(?) AS cantidad', [$usuId])->cantidad;
+        self::limpiarCache();
+
+        return $cantidad;
     }
 
     /** $datos: {ids: [emm_id…] (todas las marcas, en el nuevo orden), usu_id} */

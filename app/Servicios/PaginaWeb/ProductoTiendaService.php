@@ -129,14 +129,14 @@ class ProductoTiendaService
         $this->agregarPublicado($producto, $this->publicados()['productos']);
         $this->marcasInicio($producto);
 
-        $papelera = DB::select('SELECT * FROM inventarios.fn_producto_imagen_papelera(?)', [$proId]);
-        $this->agregarEliminadoPor($papelera, 'pim_eliminado_usu_id');
-
         return [
             'producto'          => $producto,
             'ficha'             => DB::select('SELECT * FROM inventarios.fn_producto_ficha(?)', [$proId]),
             'imagenes'          => DB::select('SELECT * FROM inventarios.fn_producto_imagen_listar(?)', [$proId]),
-            'papelera_imagenes' => $papelera,
+            'papelera_imagenes' => PapeleraPaginaWeb::agregarEliminadoPor(
+                DB::select('SELECT * FROM inventarios.fn_producto_imagen_papelera(?)', [$proId]),
+                'pim_eliminado_usu_id'
+            ),
         ];
     }
 
@@ -199,27 +199,37 @@ class ProductoTiendaService
         self::limpiarCacheTienda();
     }
 
+    /** Borra para siempre las imágenes de la papelera del producto, con sus archivos. Devuelve cuántas borró. */
+    public function vaciarImagenes(int $proId, int $usuId): int
+    {
+        $imagenes = array_column(DB::select('SELECT * FROM inventarios.fn_producto_imagen_vaciar(?, ?)', [$proId, $usuId]), 'imagen');
+        ArchivosPaginaWeb::borrar($imagenes);
+        self::limpiarCacheTienda();
+
+        return count($imagenes);
+    }
+
     // -----------------------------------------------------------------
-    // Tienda (lo usan InicioSeccionService y BloqueProductoService, que ya tienen su caché)
+    // Tienda (lo usan InicioSeccionService, BloqueProductoService y PaginaMarcaService, que ya tienen su caché)
     // -----------------------------------------------------------------
 
     /**
      * Tarjetas de productos publicados, con la misma forma en todo el sitio (nombre = el de la tienda):
      *   [{pro_id, codigo, nombre, marca, tpr_id, categoria, imagenes: [url…], destacado, precio, stock}]
      * imagenes: todas las carátulas en orden; sin carátulas, la primera del detalle; sin fotos, [].
-     * Filtros opcionales: solo ofertas de la semana, solo destacados, una categoría (con su rama) o una marca.
-     * $cantidad null = todas.
+     * Filtros opcionales: solo ofertas de la semana, solo destacados, una categoría (con su rama) o unas marcas
+     * ($marcas: [mar_id…]; null = cualquier marca). $cantidad null = todas.
      */
-    public function tarjetas(bool $ofertaSemana, bool $destacado, ?int $tprId, ?int $marId, ?int $cantidad): array
+    public function tarjetas(bool $ofertaSemana, bool $destacado, ?int $tprId, ?array $marcas, ?int $cantidad): array
     {
         $publicados = $this->publicados()['productos'];
 
-        $filas = DB::select('SELECT * FROM inventarios.fn_producto_tarjeta_listar_publicas(?::integer[], ?::boolean, ?::boolean, ?, ?, ?)', [
+        $filas = DB::select('SELECT * FROM inventarios.fn_producto_tarjeta_listar_publicas(?::integer[], ?::boolean, ?::boolean, ?, ?::integer[], ?)', [
             $this->arreglo(array_keys($publicados)),
             $ofertaSemana ? 'true' : 'false',
             $destacado ? 'true' : 'false',
             $tprId,
-            $marId,
+            $marcas === null ? null : $this->arreglo($marcas),
             $cantidad,
         ]);
 
@@ -238,16 +248,18 @@ class ProductoTiendaService
     }
 
     /**
-     * Tarjetas de promoción de los productos publicados de una categoría (con su rama), una por producto:
+     * Tarjetas de promoción de los productos publicados, una por producto:
      *   [{pro_id, marca, nombre, imagen, tpr_id, precio}]
+     * Filtros opcionales (null = no filtra): una categoría (con su rama) o unas marcas ([mar_id…]).
      */
-    public function promociones(?int $tprId): array
+    public function promociones(?int $tprId, ?array $marcas): array
     {
         $publicados = $this->publicados()['productos'];
 
-        $filas = DB::select('SELECT * FROM inventarios.fn_producto_promocion_listar_publicas(?::integer[], ?)', [
+        $filas = DB::select('SELECT * FROM inventarios.fn_producto_promocion_listar_publicas(?::integer[], ?, ?::integer[])', [
             $this->arreglo(array_keys($publicados)),
             $tprId,
+            $marcas === null ? null : $this->arreglo($marcas),
         ]);
 
         return array_map(fn ($f) => [
@@ -274,12 +286,12 @@ class ProductoTiendaService
     /** {plantilla: las de la categoría y las heredadas de arriba, papelera: las eliminadas de esta categoría} */
     public function caracteristicas(int $tprId): array
     {
-        $papelera = DB::select('SELECT * FROM inventarios.fn_caracteristica_papelera(?)', [$tprId]);
-        $this->agregarEliminadoPor($papelera, 'car_eliminado_usu_id');
-
         return [
             'plantilla' => DB::select('SELECT * FROM inventarios.fn_caracteristica_listar(?)', [$tprId]),
-            'papelera'  => $papelera,
+            'papelera'  => PapeleraPaginaWeb::agregarEliminadoPor(
+                DB::select('SELECT * FROM inventarios.fn_caracteristica_papelera(?)', [$tprId]),
+                'car_eliminado_usu_id'
+            ),
         ];
     }
 
@@ -312,6 +324,12 @@ class ProductoTiendaService
         DB::statement('SELECT inventarios.fn_caracteristica_ordenar(?::jsonb)', [$this->json($datos)]);
     }
 
+    /** Borra para siempre las características de la papelera de la categoría (y sus valores en los productos). Devuelve cuántas. */
+    public function vaciarCaracteristicas(int $tprId, int $usuId): int
+    {
+        return (int) DB::selectOne('SELECT inventarios.fn_caracteristica_vaciar(?, ?) AS cantidad', [$tprId, $usuId])->cantidad;
+    }
+
     // -----------------------------------------------------------------
     // Internos
     // -----------------------------------------------------------------
@@ -340,27 +358,6 @@ class ProductoTiendaService
     {
         $fila->pro_oferta_semana = (bool) $fila->pro_oferta_semana;
         $fila->pro_destacado     = (bool) $fila->pro_destacado;
-    }
-
-    /**
-     * A cada fila de una papelera le agrega eliminado_por con el nombre de quien la eliminó ("Usuario #<id>" si no se encuentra).
-     * Los nombres salen de crm.users (la tabla del login del CRM), en una sola consulta para toda la lista.
-     */
-    private function agregarEliminadoPor(array $filas, string $columna): void
-    {
-        $ids = array_values(array_unique(array_filter(array_map(fn ($f) => (int) $f->$columna, $filas))));
-
-        $nombres = [];
-        if ($ids) {
-            foreach (DB::select('SELECT id, name, surname FROM crm.users WHERE id = ANY (?::integer[])', [$this->arreglo($ids)]) as $u) {
-                $nombres[(int) $u->id] = trim(trim((string) $u->name) . ' ' . trim((string) $u->surname));
-            }
-        }
-
-        foreach ($filas as $fila) {
-            $id                  = (int) $fila->$columna;
-            $fila->eliminado_por = ($nombres[$id] ?? '') !== '' ? $nombres[$id] : 'Usuario #' . $id;
-        }
     }
 
     /** Lista de números como arreglo de Postgres: [1, 2, 3] → "{1,2,3}" */

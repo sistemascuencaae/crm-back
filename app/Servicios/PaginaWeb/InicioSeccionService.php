@@ -23,8 +23,11 @@ class InicioSeccionService
         'SECCIONES_ORDEN_DESACTUALIZADO' => 'La lista cambió mientras la ordenabas. Recarga la página e inténtalo de nuevo.',
     ];
 
-    public function __construct(private BloqueProductoService $bloques, private ProductoTiendaService $productos)
-    {
+    public function __construct(
+        private BloqueProductoService $bloques,
+        private ProductoTiendaService $productos,
+        private MarcaWebService $marcas
+    ) {
     }
 
     /** Tras un cambio de una sección, la tienda lo ve al momento. También lo llaman los bloques, las galerías y las categorías. */
@@ -70,7 +73,7 @@ class InicioSeccionService
      *     {clave: 'banner_principal', imagenes}, {clave: 'categorias_destacadas', categorias},
      *     {clave: 'ofertas_flash', titulo, subtitulo, hasta, productos}, {clave: 'banner_simple', imagenes},
      *     {clave: 'mosaico', categorias: [{tpr_id, nombre, imagen}]}, {clave: 'grilla', titulo, productos},
-     *     {clave: 'bloques', bloques: [{…, productos, promociones}]}, {clave: 'marcas', imagenes}]}
+     *     {clave: 'bloques', bloques: [{…, productos, promociones}]}, {clave: 'marcas', marcas: [{mar_id, nombre, imagen, enlace}]}]}
      * productos = tarjetas (ProductoTiendaService::tarjetas). ofertas_flash trae todas las ofertas de la semana y grilla
      * todos los destacados (sin cantidad); las dos salen aunque lleguen con productos: [].
      * Una sección de imágenes o categorías cuya lista llega vacía no se incluye; una clave desconocida se ignora.
@@ -131,9 +134,9 @@ class InicioSeccionService
                     'productos' => $this->productos->tarjetas(false, true, null, null, null),
                 ];
             case 'bloques':
-                return $this->siHay('bloques', $this->bloques->listarPublicos(null));
+                return $this->siHay('bloques', $this->bloques->listarPublicos());
             case 'marcas':
-                return $this->siHay('imagenes', $this->imagenes('marcas_aliadas'));
+                return $this->siHay('marcas', $this->marcas->publicas());
             default:
                 return null;
         }

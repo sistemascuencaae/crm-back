@@ -96,14 +96,49 @@ class GaleriaController extends Controller
         }
     }
 
+    // DELETE pagina-web/galerias-imagenes/{gimId}   (a la papelera)
     public function eliminarImagen(int $gimId)
     {
         try {
-            $this->servicio->eliminarImagen($gimId);
+            $this->servicio->eliminarImagen($gimId, auth()->id());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Imagen eliminada con éxito', ['gim_id' => $gimId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Imagen enviada a la papelera', ['gim_id' => $gimId]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al eliminar la imagen');
+        }
+    }
+
+    // GET pagina-web/galerias-imagenes-papelera?gal_id=3
+    public function papeleraImagenes(Request $request)
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papeleraImagenes((int) $request->input('gal_id'))));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
+        }
+    }
+
+    // PUT pagina-web/galerias-imagenes/{gimId}/restaurar
+    public function restaurarImagen(int $gimId)
+    {
+        try {
+            $this->servicio->restaurarImagen($gimId, auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Imagen restaurada con éxito', ['gim_id' => $gimId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al restaurar la imagen');
+        }
+    }
+
+    // DELETE pagina-web/galerias-imagenes-papelera?gal_id=3   → {cantidad}
+    public function vaciarImagenes(Request $request)
+    {
+        try {
+            $cantidad = $this->servicio->vaciarImagenes((int) $request->input('gal_id'), auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al vaciar la papelera');
         }
     }
 

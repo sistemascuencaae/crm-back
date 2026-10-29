@@ -4,6 +4,7 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Validator;
 
 class ArchivoPaginaWebController extends Controller
 {
-    private const CARPETA = 'pagina-web';
+    private const CARPETA = ArchivosPaginaWeb::CARPETA;
 
     // Nombre que genera Laravel (aleatorio) + extensión permitida. Evita pedir otros archivos (../.env)
     private const IMAGEN_VALIDA = '/^[A-Za-z0-9]+\.(jpg|jpeg|png|webp)$/';
@@ -69,6 +70,12 @@ class ArchivoPaginaWebController extends Controller
     public function verImagenProducto(int $proId, string $nombre)
     {
         return $this->entregar($nombre, self::WEBP_VALIDO, 'productos/' . $proId);
+    }
+
+    // Logos de las marcas (los sube MarcaWebController en marcas)
+    public function verImagenMarca(string $nombre)
+    {
+        return $this->entregar($nombre, self::IMAGEN_VALIDA, 'marcas');
     }
 
     // -----------------------------------------------------------------

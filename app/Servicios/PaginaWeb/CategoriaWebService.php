@@ -41,8 +41,8 @@ class CategoriaWebService
     {
         Cache::forget(self::CACHE_MENU);
 
-        // Las destacadas van dentro del inicio, y un bloque cuya categoría se oculta deja de verse
-        // en el inicio y en las páginas de marca
+        // Las destacadas y los bloques van dentro del inicio, y las tarjetas de producto (inicio y páginas de marca)
+        // solo muestran productos de categorías visibles en la tienda
         InicioSeccionService::limpiarCache();
         PaginaMarcaService::limpiarCache();
 

@@ -196,6 +196,18 @@ class ProductoTiendaController extends Controller
         }
     }
 
+    // DELETE pagina-web/productos-tienda-imagenes-papelera?pro_id=8004906   → {cantidad} (borra también los archivos)
+    public function vaciarImagenes(Request $request)
+    {
+        try {
+            $cantidad = $this->servicio->vaciarImagenes((int) $request->input('pro_id'), auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al vaciar la papelera');
+        }
+    }
+
     // PUT pagina-web/productos-tienda-imagenes-orden   {pro_id, pim_seccion, ids: [7, 5, 6]} (todas las de la sección, en el nuevo orden)
     public function ordenarImagenes(Request $request)
     {
@@ -269,6 +281,18 @@ class ProductoTiendaController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Característica restaurada con éxito', ['car_id' => $carId]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al restaurar la característica');
+        }
+    }
+
+    // DELETE pagina-web/caracteristicas-papelera?tpr_id=416   → {cantidad} (borra también los valores de los productos)
+    public function vaciarCaracteristicas(Request $request)
+    {
+        try {
+            $cantidad = $this->servicio->vaciarCaracteristicas((int) $request->input('tpr_id'), auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al vaciar la papelera');
         }
     }
 
