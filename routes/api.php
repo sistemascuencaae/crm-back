@@ -1912,6 +1912,9 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::put('encabezado', [EncabezadoController::class, 'modificar']);
     Route::post('encabezado/enlaces', [EncabezadoController::class, 'crearEnlace']);
     Route::put('encabezado/enlaces-orden', [EncabezadoController::class, 'ordenarEnlaces']);
+    Route::get('encabezado-enlaces-papelera', [EncabezadoController::class, 'papelera']);
+    Route::delete('encabezado-enlaces-papelera', [EncabezadoController::class, 'vaciar']);
+    Route::put('encabezado/enlaces/{eenId}/restaurar', [EncabezadoController::class, 'restaurarEnlace'])->whereNumber('eenId');
     Route::put('encabezado/enlaces/{eenId}', [EncabezadoController::class, 'modificarEnlace'])->whereNumber('eenId');
     Route::delete('encabezado/enlaces/{eenId}', [EncabezadoController::class, 'eliminarEnlace'])->whereNumber('eenId');
 
@@ -1920,6 +1923,10 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::put('pie-pagina', [PiePaginaController::class, 'modificar']);
     Route::post('pie-pagina/columnas', [PiePaginaController::class, 'crearColumna']);
     Route::put('pie-pagina/columnas-orden', [PiePaginaController::class, 'ordenarColumnas']);
+    Route::get('pie-papelera', [PiePaginaController::class, 'papelera']);
+    Route::delete('pie-papelera', [PiePaginaController::class, 'vaciar']);
+    Route::put('pie-pagina/columnas/{pcoId}/restaurar', [PiePaginaController::class, 'restaurarColumna'])->whereNumber('pcoId');
+    Route::put('pie-pagina/enlaces/{penId}/restaurar', [PiePaginaController::class, 'restaurarEnlace'])->whereNumber('penId');
     Route::put('pie-pagina/columnas/{pcoId}', [PiePaginaController::class, 'modificarColumna'])->whereNumber('pcoId');
     Route::delete('pie-pagina/columnas/{pcoId}', [PiePaginaController::class, 'eliminarColumna'])->whereNumber('pcoId');
     Route::post('pie-pagina/columnas/{pcoId}/enlaces', [PiePaginaController::class, 'crearEnlace'])->whereNumber('pcoId');
@@ -1930,6 +1937,7 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     // Nuestras tiendas: ciudades
     Route::post('sucursales/ciudades', [SucursalCiudadController::class, 'crear']);
     Route::put('sucursales/ciudades/orden', [SucursalCiudadController::class, 'ordenar']);
+    Route::put('sucursales/ciudades/{sciId}/restaurar', [SucursalCiudadController::class, 'restaurar'])->whereNumber('sciId');
     Route::put('sucursales/ciudades/{sciId}', [SucursalCiudadController::class, 'modificar'])->whereNumber('sciId');
     Route::delete('sucursales/ciudades/{sciId}', [SucursalCiudadController::class, 'eliminar'])->whereNumber('sciId');
 
@@ -1937,6 +1945,9 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('sucursales', [SucursalController::class, 'listar']);
     Route::post('sucursales', [SucursalController::class, 'crear']);
     Route::put('sucursales/orden', [SucursalController::class, 'ordenar']);
+    Route::get('sucursales-papelera', [SucursalController::class, 'papelera']);
+    Route::delete('sucursales-papelera', [SucursalController::class, 'vaciar']);
+    Route::put('sucursales/{sucId}/restaurar', [SucursalController::class, 'restaurar'])->whereNumber('sucId');
     Route::put('sucursales/{sucId}', [SucursalController::class, 'modificar'])->whereNumber('sucId');
     Route::delete('sucursales/{sucId}', [SucursalController::class, 'eliminar'])->whereNumber('sucId');
 
@@ -1946,12 +1957,16 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::put('paginas/{clave}', [PaginaInformativaController::class, 'modificar'])->where('clave', '[a-z0-9_-]+');
     Route::post('paginas', [PaginaInformativaController::class, 'crear']);
     Route::put('paginas-orden', [PaginaInformativaController::class, 'ordenar']);
+    Route::get('paginas-informativas-papelera', [PaginaInformativaController::class, 'papelera']);
+    Route::delete('paginas-informativas-papelera', [PaginaInformativaController::class, 'vaciar']);
+    Route::put('paginas/{clave}/restaurar', [PaginaInformativaController::class, 'restaurar'])->where('clave', '[a-z0-9_-]+');
     Route::delete('paginas/{clave}', [PaginaInformativaController::class, 'eliminar'])->where('clave', '[a-z0-9_-]+');
 
     // Grupos de páginas informativas
     Route::get('paginas-grupos', [PaginaInformativaGrupoController::class, 'listar']);
     Route::post('paginas-grupos', [PaginaInformativaGrupoController::class, 'crear']);
     Route::put('paginas-grupos/orden', [PaginaInformativaGrupoController::class, 'ordenar']);
+    Route::put('paginas-grupos/{pigId}/restaurar', [PaginaInformativaGrupoController::class, 'restaurar'])->whereNumber('pigId');
     Route::put('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'modificar'])->whereNumber('pigId');
     Route::delete('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'eliminar'])->whereNumber('pigId');
 

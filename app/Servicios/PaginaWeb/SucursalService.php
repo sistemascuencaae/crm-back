@@ -65,9 +65,17 @@ class SucursalService
         $this->limpiarCache();
     }
 
-    public function eliminarCiudad(int $sciId): void
+    /** La manda a la papelera */
+    public function eliminarCiudad(int $sciId, int $usuId): void
     {
-        DB::statement('SELECT ecommerce.fn_sucursal_ciudad_eliminar(?::integer)', [$sciId]);
+        DB::statement('SELECT ecommerce.fn_sucursal_ciudad_eliminar(?::integer, ?::integer)', [$sciId, $usuId]);
+        $this->limpiarCache();
+    }
+
+    /** La saca de la papelera, al final */
+    public function restaurarCiudad(int $sciId, int $usuId): void
+    {
+        DB::statement('SELECT ecommerce.fn_sucursal_ciudad_restaurar(?::integer, ?::integer)', [$sciId, $usuId]);
         $this->limpiarCache();
     }
 
@@ -95,10 +103,37 @@ class SucursalService
         $this->limpiarCache();
     }
 
-    public function eliminar(int $sucId): void
+    /** La manda a la papelera */
+    public function eliminar(int $sucId, int $usuId): void
     {
-        DB::statement('SELECT ecommerce.fn_sucursal_eliminar(?::integer)', [$sucId]);
+        DB::statement('SELECT ecommerce.fn_sucursal_eliminar(?::integer, ?::integer)', [$sucId, $usuId]);
         $this->limpiarCache();
+    }
+
+    /** La saca de la papelera, al final de su ciudad */
+    public function restaurar(int $sucId, int $usuId): void
+    {
+        DB::statement('SELECT ecommerce.fn_sucursal_restaurar(?::integer, ?::integer)', [$sucId, $usuId]);
+        $this->limpiarCache();
+    }
+
+    // -----------------------------------------------------------------
+    // Papelera (ciudades y sucursales)
+    // -----------------------------------------------------------------
+
+    /** [{tipo ('ciudad' | 'sucursal'), id, texto, detalle, eliminado_en, eliminado_usu_id, eliminado_por}] */
+    public function papelera(): array
+    {
+        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_sucursal_papelera()'), 'eliminado_usu_id');
+    }
+
+    /** Borra para siempre lo que está en la papelera. Devuelve cuántos borró (los que se veían en la papelera). */
+    public function vaciar(int $usuId): int
+    {
+        $cantidad = (int) DB::selectOne('SELECT ecommerce.fn_sucursal_vaciar(?::integer) AS cantidad', [$usuId])->cantidad;
+        $this->limpiarCache();
+
+        return $cantidad;
     }
 
     public function ordenar(array $datos): void

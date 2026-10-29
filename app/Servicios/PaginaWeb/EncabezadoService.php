@@ -73,11 +73,33 @@ class EncabezadoService
         EncabezadoPiePublicoService::limpiarCache();
     }
 
-    /** Si es un principal, se eliminan también sus sub-enlaces. */
-    public function eliminarEnlace(int $eenId): void
+    /** Lo manda a la papelera; si es un principal, se lleva sus sub-enlaces. */
+    public function eliminarEnlace(int $eenId, int $usuId): void
     {
-        DB::statement('SELECT ecommerce.fn_encabezado_enlace_eliminar(?)', [$eenId]);
+        DB::statement('SELECT ecommerce.fn_encabezado_enlace_eliminar(?, ?)', [$eenId, $usuId]);
         EncabezadoPiePublicoService::limpiarCache();
+    }
+
+    /** Lo saca de la papelera, al final de su grupo (un principal vuelve con sus sub-enlaces). */
+    public function restaurarEnlace(int $eenId, int $usuId): void
+    {
+        DB::statement('SELECT ecommerce.fn_encabezado_enlace_restaurar(?, ?)', [$eenId, $usuId]);
+        EncabezadoPiePublicoService::limpiarCache();
+    }
+
+    /** [{een_id, een_padre_id, een_texto, padre_texto, subenlaces, een_eliminado_en, een_eliminado_usu_id, eliminado_por}] */
+    public function papelera(): array
+    {
+        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_encabezado_enlace_papelera()'), 'een_eliminado_usu_id');
+    }
+
+    /** Borra para siempre lo que está en la papelera. Devuelve cuántos enlaces borró (los que se veían en la papelera). */
+    public function vaciar(int $usuId): int
+    {
+        $cantidad = (int) DB::selectOne('SELECT ecommerce.fn_encabezado_enlace_vaciar(?) AS cantidad', [$usuId])->cantidad;
+        EncabezadoPiePublicoService::limpiarCache();
+
+        return $cantidad;
     }
 
     /**

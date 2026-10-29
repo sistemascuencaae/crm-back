@@ -91,14 +91,49 @@ class PaginaInformativaController extends Controller
         }
     }
 
+    // DELETE pagina-web/paginas/{clave}   (a la papelera)
     public function eliminar(string $clave)
     {
         try {
-            $this->servicio->eliminar($clave);
+            $this->servicio->eliminar($clave, $this->usuarioId());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Página eliminada con éxito', ['pin_clave' => $clave]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Página enviada a la papelera', ['pin_clave' => $clave]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al eliminar la página');
+        }
+    }
+
+    // PUT pagina-web/paginas/{clave}/restaurar
+    public function restaurar(string $clave)
+    {
+        try {
+            $this->servicio->restaurar($clave, $this->usuarioId());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Página restaurada con éxito', ['pin_clave' => $clave]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al restaurar la página');
+        }
+    }
+
+    // GET pagina-web/paginas-informativas-papelera   (páginas y carpetas)
+    public function papelera()
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
+        }
+    }
+
+    // DELETE pagina-web/paginas-informativas-papelera   → {cantidad}
+    public function vaciar()
+    {
+        try {
+            $cantidad = $this->servicio->vaciar($this->usuarioId());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al vaciar la papelera');
         }
     }
 

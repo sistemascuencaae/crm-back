@@ -63,14 +63,27 @@ class SucursalCiudadController extends Controller
         }
     }
 
+    // DELETE pagina-web/sucursales/ciudades/{sciId}   (a la papelera)
     public function eliminar(int $sciId)
     {
         try {
-            $this->servicio->eliminarCiudad($sciId);
+            $this->servicio->eliminarCiudad($sciId, $this->usuarioId());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Ciudad eliminada con éxito', ['sci_id' => $sciId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Ciudad enviada a la papelera', ['sci_id' => $sciId]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al eliminar la ciudad');
+        }
+    }
+
+    // PUT pagina-web/sucursales/ciudades/{sciId}/restaurar
+    public function restaurar(int $sciId)
+    {
+        try {
+            $this->servicio->restaurarCiudad($sciId, $this->usuarioId());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Ciudad restaurada con éxito', ['sci_id' => $sciId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al restaurar la ciudad');
         }
     }
 

@@ -73,15 +73,49 @@ class EncabezadoController extends Controller
         }
     }
 
-    // DELETE pagina-web/encabezado/enlaces/{eenId}   (un principal se lleva sus sub-enlaces)
+    // DELETE pagina-web/encabezado/enlaces/{eenId}   (a la papelera; un principal se lleva sus sub-enlaces)
     public function eliminarEnlace(int $eenId)
     {
         try {
-            $this->servicio->eliminarEnlace($eenId);
+            $this->servicio->eliminarEnlace($eenId, auth()->id());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Enlace eliminado con éxito', ['een_id' => $eenId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Enlace enviado a la papelera', ['een_id' => $eenId]));
         } catch (QueryException $e) {
             return ErroresPaginaWeb::respuesta($e, 'Error al eliminar el enlace');
+        }
+    }
+
+    // PUT pagina-web/encabezado/enlaces/{eenId}/restaurar   (un principal vuelve con sus sub-enlaces)
+    public function restaurarEnlace(int $eenId)
+    {
+        try {
+            $this->servicio->restaurarEnlace($eenId, auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Enlace restaurado con éxito', ['een_id' => $eenId]));
+        } catch (QueryException $e) {
+            return ErroresPaginaWeb::respuesta($e, 'Error al restaurar el enlace');
+        }
+    }
+
+    // GET pagina-web/encabezado-enlaces-papelera
+    public function papelera()
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+        } catch (QueryException $e) {
+            return ErroresPaginaWeb::respuesta($e, 'No se pudo cargar la papelera');
+        }
+    }
+
+    // DELETE pagina-web/encabezado-enlaces-papelera   → {cantidad}
+    public function vaciar()
+    {
+        try {
+            $cantidad = $this->servicio->vaciar(auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return ErroresPaginaWeb::respuesta($e, 'Error al vaciar la papelera');
         }
     }
 

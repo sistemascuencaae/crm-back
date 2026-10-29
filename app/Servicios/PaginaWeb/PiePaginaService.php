@@ -59,10 +59,17 @@ class PiePaginaService
         EncabezadoPiePublicoService::limpiarCache();
     }
 
-    /** También elimina los enlaces de la columna. */
-    public function eliminarColumna(int $pcoId): void
+    /** La manda a la papelera con sus enlaces. */
+    public function eliminarColumna(int $pcoId, int $usuId): void
     {
-        DB::statement('SELECT ecommerce.fn_pie_columna_eliminar(?)', [$pcoId]);
+        DB::statement('SELECT ecommerce.fn_pie_columna_eliminar(?, ?)', [$pcoId, $usuId]);
+        EncabezadoPiePublicoService::limpiarCache();
+    }
+
+    /** La saca de la papelera, al final, con sus enlaces. */
+    public function restaurarColumna(int $pcoId, int $usuId): void
+    {
+        DB::statement('SELECT ecommerce.fn_pie_columna_restaurar(?, ?)', [$pcoId, $usuId]);
         EncabezadoPiePublicoService::limpiarCache();
     }
 
@@ -91,10 +98,35 @@ class PiePaginaService
         EncabezadoPiePublicoService::limpiarCache();
     }
 
-    public function eliminarEnlace(int $penId): void
+    /** Lo manda a la papelera */
+    public function eliminarEnlace(int $penId, int $usuId): void
     {
-        DB::statement('SELECT ecommerce.fn_pie_enlace_eliminar(?)', [$penId]);
+        DB::statement('SELECT ecommerce.fn_pie_enlace_eliminar(?, ?)', [$penId, $usuId]);
         EncabezadoPiePublicoService::limpiarCache();
+    }
+
+    /** Lo saca de la papelera, al final de su columna */
+    public function restaurarEnlace(int $penId, int $usuId): void
+    {
+        DB::statement('SELECT ecommerce.fn_pie_enlace_restaurar(?, ?)', [$penId, $usuId]);
+        EncabezadoPiePublicoService::limpiarCache();
+    }
+
+    // ---------- Papelera (columnas y enlaces) ----------
+
+    /** [{tipo ('columna' | 'enlace'), id, texto, detalle, eliminado_en, eliminado_usu_id, eliminado_por}] */
+    public function papelera(): array
+    {
+        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_pie_papelera()'), 'eliminado_usu_id');
+    }
+
+    /** Borra para siempre lo que está en la papelera. Devuelve cuántos borró (los que se veían en la papelera). */
+    public function vaciar(int $usuId): int
+    {
+        $cantidad = (int) DB::selectOne('SELECT ecommerce.fn_pie_vaciar(?) AS cantidad', [$usuId])->cantidad;
+        EncabezadoPiePublicoService::limpiarCache();
+
+        return $cantidad;
     }
 
     /** $datos: {pco_id, ids: [pen_id…] (todos los de esa columna, en el nuevo orden), usu_id} */
