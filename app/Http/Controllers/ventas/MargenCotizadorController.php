@@ -52,6 +52,18 @@ class MargenCotizadorController extends Controller
         }
     }
 
+    // Almacenes con sus puntos de venta activos de una región (el ojito de Región en Margen y Aporte).
+    public function listPuntosVentaByRegionId($reg_id)
+    {
+        try {
+            $fila = DB::selectOne('SELECT ventas.fn_region_listar_puntos_venta(?) AS resultado', [(int)$reg_id]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', json_decode($fila->resultado, true)));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los puntos de venta de la región', $e->getMessage()));
+        }
+    }
+
     // Cabecera con sus detalles, para precargar el modal de editar.
     public function getMargenCotizador($id)
     {

@@ -1870,6 +1870,7 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     // Pestana 2: margen (cabecera + detalles) y su asignacion a productos.
     Route::get('/listMargenCotizador', [MargenCotizadorController::class, 'listMargenCotizador']);
     Route::get('/combosMargenCotizador', [MargenCotizadorController::class, 'combosMargenCotizador']);
+    Route::get('/listPuntosVentaByRegionId/{reg_id}', [MargenCotizadorController::class, 'listPuntosVentaByRegionId']); // 28-oct: el ojito de Región (Margen y Aporte)
     Route::get('/getMargenCotizador/{id}', [MargenCotizadorController::class, 'getMargenCotizador']);
     Route::post('/addMargenCotizador', [MargenCotizadorController::class, 'addMargenCotizador']);
     Route::post('/editMargenCotizador/{id}', [MargenCotizadorController::class, 'editMargenCotizador']);
