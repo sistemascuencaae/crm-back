@@ -249,10 +249,8 @@ class ProductoTiendaService
      */
     public function buscarTienda(array $filtros): array
     {
-        // Los publicados de la caché como [{pro_id, precio, precio_anterior, stock}, …]
-        $productos  = $this->publicados()['productos'];
-        $publicados = json_encode(array_map(fn ($id, $p) => ['pro_id' => $id] + $p, array_keys($productos), $productos));
-        $json = $this->json($filtros);
+        $publicados = $this->publicadosJson();
+        $json       = $this->json($filtros);
 
         $filas = DB::select('SELECT * FROM inventarios.fn_producto_tienda_buscar(?::jsonb, ?::jsonb)', [$publicados, $json]);
 
@@ -271,17 +269,72 @@ class ProductoTiendaService
         $porPagina = in_array((string) ($filtros['per_page'] ?? ''), ['24', '48'], true) ? (int) $filtros['per_page'] : 12;
 
         return [
-            'productos'     => array_map(fn ($f) => $this->tarjeta($f, [
-                'precio'          => (float) $f->precio,
-                'precio_anterior' => $f->precio_anterior === null ? null : (float) $f->precio_anterior,
-                'stock'           => (float) $f->stock,
-            ]), $filas),
+            'productos'     => array_map(fn ($f) => $this->tarjetaTienda($f), $filas),
             'total'         => $total,
             'pagina'        => (int) ($filas[0]->pagina ?? 1),
             'por_pagina'    => $porPagina,
             'ultima_pagina' => max(1, (int) ceil($total / $porPagina)),
             'opciones'      => $opciones,
         ];
+    }
+
+    /**
+     * Detalle de un producto para la tienda, o null si no está publicado o su categoría no se ve en la tienda:
+     *   {producto: {pro_id, codigo, nombre, descripcion, tpr_id, categoria, destacado, imagenes, ficha: [{nombre, valor, unidad}],
+     *               precio, precio_anterior, marca: {mar_id, nombre, logo, enlace} | null},
+     *    relacionados: [hasta 8 tarjetas de su categoría, sin él]}
+     * Sin caché: el precio sale de la caché de publicados, como en el shop. Las franjas las agrega el controlador.
+     */
+    public function detalle(int $proId): ?array
+    {
+        $precios = $this->publicados()['productos'][$proId] ?? null;
+        $p       = $precios === null ? null : DB::selectOne('SELECT * FROM inventarios.fn_producto_detalle_publico(?)', [$proId]);
+
+        if ($p === null) {
+            return null;
+        }
+
+        $relacionados = array_filter(
+            DB::select('SELECT * FROM inventarios.fn_producto_tienda_buscar(?::jsonb, ?::jsonb)', [
+                $this->publicadosJson(),
+                $this->json(['categoria' => (int) $p->tpr_id, 'per_page' => 12]),
+            ]),
+            fn ($f) => (int) $f->pro_id !== $proId
+        );
+
+        return [
+            'producto'     => [
+                'pro_id'          => (int) $p->pro_id,
+                'codigo'          => $p->codigo,
+                'nombre'          => $p->nombre,
+                'descripcion'     => $p->descripcion,
+                'tpr_id'          => (int) $p->tpr_id,
+                'categoria'       => $p->categoria,
+                'destacado'       => (bool) $p->destacado,
+                'imagenes'        => json_decode($p->imagenes ?? '[]', true) ?? [],
+                'ficha'           => json_decode($p->ficha ?? '[]', true) ?? [],
+                'precio'          => $precios['precio'],
+                'precio_anterior' => $precios['precio_anterior'],
+                'marca'           => $p->mar_id === null ? null : [
+                    'mar_id' => (int) $p->mar_id,
+                    'nombre' => $p->marca,
+                    'logo'   => $p->marca_logo,
+                    'enlace' => $p->marca_enlace,
+                ],
+            ],
+            'relacionados' => array_map(fn ($f) => $this->tarjetaTienda($f), array_slice(array_values($relacionados), 0, 8)),
+        ];
+    }
+
+    /**
+     * Las categorías visibles en la tienda que tienen productos publicados en su rama: [tpr_id…].
+     * La tienda solo muestra esas (menú, destacadas y mosaico): nadie entra a una categoría vacía.
+     */
+    public function categoriasConProductos(): array
+    {
+        $filas = DB::select("SELECT id FROM inventarios.fn_producto_tienda_opciones(?::jsonb, '{}'::jsonb) WHERE tipo = 'categoria'", [$this->publicadosJson()]);
+
+        return array_map(fn ($f) => (int) $f->id, $filas);
     }
 
     /**
@@ -404,6 +457,16 @@ class ProductoTiendaService
         ];
     }
 
+    /** Tarjeta de una fila de fn_producto_tienda_buscar, que ya trae precio, precio_anterior y stock */
+    private function tarjetaTienda(object $f): array
+    {
+        return $this->tarjeta($f, [
+            'precio'          => (float) $f->precio,
+            'precio_anterior' => $f->precio_anterior === null ? null : (float) $f->precio_anterior,
+            'stock'           => (float) $f->stock,
+        ]);
+    }
+
     /** publicado (bool), precio, precio_anterior y stock (null si no está publicado) */
     private function agregarPublicado(object $fila, array $productos): void
     {
@@ -419,6 +482,14 @@ class ProductoTiendaService
     {
         $fila->pro_oferta_semana = (bool) $fila->pro_oferta_semana;
         $fila->pro_destacado     = (bool) $fila->pro_destacado;
+    }
+
+    /** Los publicados de la caché como jsonb para la base: [{pro_id, precio, precio_anterior, stock}, …] */
+    private function publicadosJson(): string
+    {
+        $productos = $this->publicados()['productos'];
+
+        return json_encode(array_map(fn ($id, $p) => ['pro_id' => $id] + $p, array_keys($productos), $productos));
     }
 
     /** Lista de números como arreglo de Postgres: [1, 2, 3] → "{1,2,3}" */

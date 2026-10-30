@@ -196,6 +196,7 @@ use App\Http\Controllers\paginaWeb\EspanaMotosPublicoController;
 use App\Http\Controllers\paginaWeb\ProductoTiendaController;
 use App\Http\Controllers\paginaWeb\MarcaWebController;
 use App\Http\Controllers\paginaWeb\ProductoTiendaPublicoController;
+use App\Http\Controllers\paginaWeb\FranjaDetalleController;
 use App\Http\Controllers\ItemPruebaFlutterController;
 use Illuminate\Support\Facades\Route;
 
@@ -285,6 +286,7 @@ Route::get('public/pagina-web/marcas/{direccion}', [PaginaMarcaPublicaController
 Route::get('public/pagina-web/espana-motos', [EspanaMotosPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/inicio', [InicioPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/productos', [ProductoTiendaPublicoController::class, 'buscar']);
+Route::get('public/pagina-web/productos/{proId}', [ProductoTiendaPublicoController::class, 'detalle'])->whereNumber('proId');
 Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
 Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
@@ -2052,6 +2054,16 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::put('productos-tienda-imagenes/{pimId}/restaurar', [ProductoTiendaController::class, 'restaurarImagen'])->whereNumber('pimId');
     Route::put('productos-tienda-imagenes/{pimId}', [ProductoTiendaController::class, 'modificarImagen'])->whereNumber('pimId');
     Route::delete('productos-tienda-imagenes/{pimId}', [ProductoTiendaController::class, 'eliminarImagen'])->whereNumber('pimId');
+
+    // Franjas del detalle del producto
+    Route::get('franjas-detalle', [FranjaDetalleController::class, 'listar']);
+    Route::post('franjas-detalle', [FranjaDetalleController::class, 'crear']);
+    Route::put('franjas-detalle-orden', [FranjaDetalleController::class, 'ordenar']);
+    Route::get('franjas-detalle-papelera', [FranjaDetalleController::class, 'papelera']);
+    Route::delete('franjas-detalle-papelera', [FranjaDetalleController::class, 'vaciar']);
+    Route::put('franjas-detalle/{fdeId}/restaurar', [FranjaDetalleController::class, 'restaurar'])->whereNumber('fdeId');
+    Route::put('franjas-detalle/{fdeId}', [FranjaDetalleController::class, 'modificar'])->whereNumber('fdeId');
+    Route::delete('franjas-detalle/{fdeId}', [FranjaDetalleController::class, 'eliminar'])->whereNumber('fdeId');
 
     // Marcas de la tienda: logo de cada marca y "Nuestras marcas"
     Route::get('marcas-tienda', [MarcaWebController::class, 'listar']);

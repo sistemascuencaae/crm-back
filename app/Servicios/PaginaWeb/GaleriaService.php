@@ -158,6 +158,11 @@ class GaleriaService
             PaginaMarcaService::limpiarCache();
             InicioSeccionService::limpiarCache();
             EspanaMotosService::limpiarCache();
+
+            // Los logos de las franjas del detalle salen de esa galería
+            if ($fila->gal_clave === FranjaDetalleService::GALERIA_LOGOS) {
+                FranjaDetalleService::limpiarCache();
+            }
         }
     }
 

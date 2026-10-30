@@ -16,7 +16,11 @@ use Illuminate\Support\Facades\DB;
 class CategoriaWebService
 {
     private const CACHE_MENU    = 'pagina_web.categorias_menu.publica';
-    private const CACHE_MINUTOS = 10;
+    private const CACHE_MINUTOS = 10;   // no más que la caché de productos publicados (de ahí sale qué categorías tienen productos)
+
+    public function __construct(private ProductoTiendaService $productos)
+    {
+    }
 
     // Mensaje amigable para cada código que lanzan las funciones ecommerce.fn_categoria_web_*
     public const MENSAJES_ERROR = [
@@ -94,13 +98,18 @@ class CategoriaWebService
     /**
      * El menú de categorías del header, como árbol:
      *   [{id, nombre, hijos: [{id, nombre, hijos: [...]}]}]
-     * La base devuelve filas planas con su padre, ordenadas por nivel: así el padre siempre
-     * aparece antes que sus hijos.
+     * Solo las categorías con productos publicados en su rama: una vacía no sale, y un departamento sin ninguna
+     * categoría con productos tampoco. La base devuelve filas planas con su padre, ordenadas por nivel: así el padre
+     * siempre aparece antes que sus hijos.
      */
     public function listarMenu(): array
     {
         return Cache::remember(self::CACHE_MENU, now()->addMinutes(self::CACHE_MINUTOS), function () {
-            $filas = DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_menu()');
+            $conProductos = array_flip($this->productos->categoriasConProductos());
+            $filas = array_filter(
+                DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_menu()'),
+                fn ($fila) => isset($conProductos[$fila->tpr_id])
+            );
 
             // Un nodo por categoría (los objetos se comparten: agregar un hijo a $nodos lo agrega al árbol)
             $nodos = [];

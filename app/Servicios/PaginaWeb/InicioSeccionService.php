@@ -116,7 +116,7 @@ class InicioSeccionService
             case 'banner_principal':
                 return $this->siHay('imagenes', $this->imagenes('inicio_banner'));
             case 'categorias_destacadas':
-                return $this->siHay('categorias', DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_publicas()'));
+                return $this->siHay('categorias', $this->conProductos(DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_publicas()')));
             case 'ofertas_flash':
                 return [
                     'titulo'    => $s->ise_titulo,
@@ -127,7 +127,7 @@ class InicioSeccionService
             case 'banner_simple':
                 return $this->siHay('imagenes', $this->imagenes('inicio_banner_simple'));
             case 'mosaico':
-                return $this->siHay('categorias', DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_mosaico_publicas()'));
+                return $this->siHay('categorias', $this->conProductos(DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_mosaico_publicas()')));
             case 'grilla':
                 return [
                     'titulo'    => $s->ise_titulo,
@@ -140,6 +140,14 @@ class InicioSeccionService
             default:
                 return null;
         }
+    }
+
+    /** Solo las categorías con productos publicados en su rama (destacadas y mosaico), en el mismo orden. */
+    private function conProductos(array $categorias): array
+    {
+        $conProductos = array_flip($this->productos->categoriasConProductos());
+
+        return array_values(array_filter($categorias, fn ($c) => isset($conProductos[$c->tpr_id])));
     }
 
     /** [$nombre => $lista], o null si la lista está vacía (la sección no se incluye). */

@@ -48,6 +48,10 @@ class ErroresPaginaWeb
         'COLUMNA_EN_PAPELERA'      => 'Primero restaura la columna de este enlace.',
         'GRUPO_EN_PAPELERA'        => 'Primero restaura la carpeta de esta página.',
         'CIUDAD_EN_PAPELERA'       => 'Primero restaura la ciudad de esta sucursal.',
+        // Franjas del detalle del producto
+        'FRANJA_NO_EXISTE'         => 'La franja no existe o está en la papelera.',
+        'FRANJAS_MAXIMO'           => 'Puedes tener hasta 5 franjas. Elimina una para agregar otra.',
+        'FRANJA_TEXTO_REQUERIDO'   => 'Escribe el texto o el texto resaltado de la franja.',
     ];
 
     /** Respuesta de error para el CRM. Código desconocido → mensaje genérico (el detalle queda en el log). */
