@@ -195,6 +195,7 @@ use App\Http\Controllers\paginaWeb\EspanaMotosController;
 use App\Http\Controllers\paginaWeb\EspanaMotosPublicoController;
 use App\Http\Controllers\paginaWeb\ProductoTiendaController;
 use App\Http\Controllers\paginaWeb\MarcaWebController;
+use App\Http\Controllers\paginaWeb\ProductoTiendaPublicoController;
 use App\Http\Controllers\ItemPruebaFlutterController;
 use Illuminate\Support\Facades\Route;
 
@@ -283,6 +284,7 @@ Route::get('public/pagina-web/categorias-menu', [CategoriaWebPublicaController::
 Route::get('public/pagina-web/marcas/{direccion}', [PaginaMarcaPublicaController::class, 'buscar']);
 Route::get('public/pagina-web/espana-motos', [EspanaMotosPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/inicio', [InicioPublicoController::class, 'buscar']);
+Route::get('public/pagina-web/productos', [ProductoTiendaPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
 Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');

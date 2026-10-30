@@ -10,13 +10,17 @@ use Illuminate\Support\Facades\DB;
  * Productos de la tienda: ficha técnica (plantilla de características por categoría + datos sueltos)
  * e imágenes por sección (detalle, carátula, promoción). Llama a las funciones inventarios.fn_*.
  * Del ERP solo se leen código, nombre, categoría, marca, descripción, precio de venta y stock: nunca costos ni márgenes.
- * Qué productos están publicados (con su precio y stock) sale de una consulta lenta (~12 s): se guarda 10 minutos en caché.
+ * Qué productos están publicados (con su precio, precio anterior y stock) sale de una consulta lenta (~12 s): se guarda
+ * 10 minutos en caché. La búsqueda pública del shop (buscarTienda) usa esa caché.
  */
 class ProductoTiendaService
 {
     private const CACHE_PUBLICADOS   = 'pagina_web.productos.publicados';
     private const MINUTOS_PUBLICADOS = 10;
     private const TAMANIOS           = [10, 20, 30, 50, 100];   // los mismos que acepta fn_producto_web_listar
+
+    // Lo único que se pasa a la búsqueda del shop: los mismos nombres que la dirección de /shop
+    public const FILTROS_SHOP = ['search', 'categoria', 'marca', 'price_min', 'price_max', 'in_stock', 'motos', 'sort', 'page', 'per_page'];
 
     // Códigos propios (los CAMPO_*, CAMPO_FECHA, FECHAS_RANGO y ORDEN_* comunes están en ErroresPaginaWeb)
     public const MENSAJES_ERROR = [
@@ -43,8 +47,9 @@ class ProductoTiendaService
     // -----------------------------------------------------------------
 
     /**
-     * Los productos publicados en la tienda con su precio de venta y stock:
-     *   ['actualizado' => '2026-10-28T10:15:00-05:00', 'productos' => [pro_id => ['precio' => float, 'stock' => float]]]
+     * Los productos publicados en la tienda con su precio de venta, su precio anterior (con tarjeta, va tachado) y stock:
+     *   ['actualizado' => '2026-10-28T10:15:00-05:00',
+     *    'productos' => [pro_id => ['precio' => float, 'precio_anterior' => float | null, 'stock' => float]]]
      * No hay botón ni tarea programada: la caché se renueva sola al vencer.
      */
     public function publicados(): array
@@ -81,7 +86,7 @@ class ProductoTiendaService
      * con $ofertaSemana / $destacado, solo los marcados así para el inicio.
      * Cada fila lleva cuántas imágenes tiene por sección, cuánto de su ficha está lleno, imagen (primera carátula o
      * del detalle, o null), completo, pro_nombre_web (o null), pro_oferta_semana, pro_destacado (bool) y, de la caché,
-     * publicado / precio / stock. La búsqueda también mira el nombre web.
+     * publicado / precio / precio_anterior / stock. La búsqueda también mira el nombre web.
      *   {registros, total, pagina, tamanio, publicados_actualizado}
      */
     public function listar(int $pagina, int $tamanio, string $busqueda, ?int $tprId, bool $soloPublicados,
@@ -116,7 +121,7 @@ class ProductoTiendaService
 
     /**
      * Todo lo que necesita el editor de un producto, o null si no existe o está inactivo:
-     *   {producto: {…, pro_nombre_web, pro_oferta_semana, pro_destacado, publicado, precio, stock}, ficha: [...], imagenes: [...], papelera_imagenes: [...]}
+     *   {producto: {…, pro_nombre_web, pro_oferta_semana, pro_destacado, publicado, precio, precio_anterior, stock}, ficha: [...], imagenes: [...], papelera_imagenes: [...]}
      */
     public function buscar(int $proId): ?array
     {
@@ -215,7 +220,7 @@ class ProductoTiendaService
 
     /**
      * Tarjetas de productos publicados, con la misma forma en todo el sitio (nombre = el de la tienda):
-     *   [{pro_id, codigo, nombre, marca, tpr_id, categoria, imagenes: [url…], destacado, precio, stock}]
+     *   [{pro_id, codigo, nombre, marca, tpr_id, categoria, imagenes: [url…], destacado, precio, precio_anterior, stock}]
      * imagenes: todas las carátulas en orden; sin carátulas, la primera del detalle; sin fotos, [].
      * Filtros opcionales: solo ofertas de la semana, solo destacados, una categoría (con su rama) o unas marcas
      * ($marcas: [mar_id…]; null = cualquier marca). $cantidad null = todas.
@@ -233,23 +238,55 @@ class ProductoTiendaService
             $cantidad,
         ]);
 
-        return array_map(fn ($f) => [
-            'pro_id'    => (int) $f->pro_id,
-            'codigo'    => $f->pro_codigo,
-            'nombre'    => $f->pro_nombre,
-            'marca'     => $f->marca,
-            'tpr_id'    => (int) $f->tpr_id,
-            'categoria' => $f->categoria,
-            'imagenes'  => json_decode($f->imagenes ?? '[]', true) ?? [],
-            'destacado' => (bool) $f->destacado,
-            'precio'    => $publicados[(int) $f->pro_id]['precio'] ?? null,
-            'stock'     => $publicados[(int) $f->pro_id]['stock'] ?? null,
-        ], $filas);
+        return array_map(fn ($f) => $this->tarjeta($f, $publicados[(int) $f->pro_id] ?? []), $filas);
+    }
+
+    /**
+     * Búsqueda del shop (GET public/pagina-web/productos). $filtros: solo las claves de FILTROS_SHOP que llegaron;
+     * lo que no es válido, la base lo ignora. Sin caché de la respuesta: solo la de publicados.
+     *   {productos: [tarjetas], total, pagina, por_pagina, ultima_pagina,
+     *    opciones: {categorias: [{tpr_id, nombre, cantidad}], marcas: [{mar_id, nombre, cantidad}], precio: {min, max} | null}}
+     */
+    public function buscarTienda(array $filtros): array
+    {
+        // Los publicados de la caché como [{pro_id, precio, precio_anterior, stock}, …]
+        $productos  = $this->publicados()['productos'];
+        $publicados = json_encode(array_map(fn ($id, $p) => ['pro_id' => $id] + $p, array_keys($productos), $productos));
+        $json = $this->json($filtros);
+
+        $filas = DB::select('SELECT * FROM inventarios.fn_producto_tienda_buscar(?::jsonb, ?::jsonb)', [$publicados, $json]);
+
+        $opciones = ['categorias' => [], 'marcas' => [], 'precio' => null];
+        foreach (DB::select('SELECT * FROM inventarios.fn_producto_tienda_opciones(?::jsonb, ?::jsonb)', [$publicados, $json]) as $o) {
+            if ($o->tipo === 'categoria') {
+                $opciones['categorias'][] = ['tpr_id' => (int) $o->id, 'nombre' => $o->nombre, 'cantidad' => (int) $o->cantidad];
+            } elseif ($o->tipo === 'marca') {
+                $opciones['marcas'][] = ['mar_id' => (int) $o->id, 'nombre' => $o->nombre, 'cantidad' => (int) $o->cantidad];
+            } elseif ($o->tipo === 'precio' && $o->minimo !== null) {
+                $opciones['precio'] = ['min' => (float) $o->minimo, 'max' => (float) $o->maximo];
+            }
+        }
+
+        $total     = (int) ($filas[0]->total ?? 0);
+        $porPagina = in_array((string) ($filtros['per_page'] ?? ''), ['24', '48'], true) ? (int) $filtros['per_page'] : 12;
+
+        return [
+            'productos'     => array_map(fn ($f) => $this->tarjeta($f, [
+                'precio'          => (float) $f->precio,
+                'precio_anterior' => $f->precio_anterior === null ? null : (float) $f->precio_anterior,
+                'stock'           => (float) $f->stock,
+            ]), $filas),
+            'total'         => $total,
+            'pagina'        => (int) ($filas[0]->pagina ?? 1),
+            'por_pagina'    => $porPagina,
+            'ultima_pagina' => max(1, (int) ceil($total / $porPagina)),
+            'opciones'      => $opciones,
+        ];
     }
 
     /**
      * Tarjetas de promoción de los productos publicados, una por producto:
-     *   [{pro_id, marca, nombre, imagen, tpr_id, precio}]
+     *   [{pro_id, marca, nombre, imagen, tpr_id, precio, precio_anterior}]
      * Filtros opcionales (null = no filtra): una categoría (con su rama) o unas marcas ([mar_id…]).
      */
     public function promociones(?int $tprId, ?array $marcas): array
@@ -268,7 +305,8 @@ class ProductoTiendaService
             'nombre' => $f->nombre,
             'imagen' => $f->imagen,
             'tpr_id' => (int) $f->tpr_id,
-            'precio' => $publicados[(int) $f->pro_id]['precio'] ?? null,
+            'precio'          => $publicados[(int) $f->pro_id]['precio'] ?? null,
+            'precio_anterior' => $publicados[(int) $f->pro_id]['precio_anterior'] ?? null,
         ], $filas);
     }
 
@@ -338,19 +376,42 @@ class ProductoTiendaService
     {
         $productos = [];
         foreach (DB::select('SELECT * FROM inventarios.fn_producto_publicado_listar()') as $fila) {
-            $productos[(int) $fila->pro_id] = ['precio' => (float) $fila->precio, 'stock' => (float) $fila->stock];
+            $productos[(int) $fila->pro_id] = [
+                'precio'          => (float) $fila->precio,
+                'precio_anterior' => $fila->precio_anterior === null ? null : (float) $fila->precio_anterior,
+                'stock'           => (float) $fila->stock,
+            ];
         }
 
         return ['actualizado' => now()->format('Y-m-d\TH:i:sP'), 'productos' => $productos];
     }
 
-    /** publicado (bool), precio y stock (null si no está publicado) */
+    /** La tarjeta de producto de todo el sitio; $precios: {precio, precio_anterior, stock} (vacío = no está publicado) */
+    private function tarjeta(object $f, array $precios): array
+    {
+        return [
+            'pro_id'          => (int) $f->pro_id,
+            'codigo'          => $f->pro_codigo,
+            'nombre'          => $f->pro_nombre,
+            'marca'           => $f->marca,
+            'tpr_id'          => (int) $f->tpr_id,
+            'categoria'       => $f->categoria,
+            'imagenes'        => json_decode($f->imagenes ?? '[]', true) ?? [],
+            'destacado'       => (bool) $f->destacado,
+            'precio'          => $precios['precio'] ?? null,
+            'precio_anterior' => $precios['precio_anterior'] ?? null,
+            'stock'           => $precios['stock'] ?? null,
+        ];
+    }
+
+    /** publicado (bool), precio, precio_anterior y stock (null si no está publicado) */
     private function agregarPublicado(object $fila, array $productos): void
     {
-        $publicado       = $productos[(int) $fila->pro_id] ?? null;
-        $fila->publicado = $publicado !== null;
-        $fila->precio    = $publicado['precio'] ?? null;
-        $fila->stock     = $publicado['stock'] ?? null;
+        $publicado             = $productos[(int) $fila->pro_id] ?? null;
+        $fila->publicado       = $publicado !== null;
+        $fila->precio          = $publicado['precio'] ?? null;
+        $fila->precio_anterior = $publicado['precio_anterior'] ?? null;
+        $fila->stock           = $publicado['stock'] ?? null;
     }
 
     /** pro_oferta_semana y pro_destacado siempre como bool */
