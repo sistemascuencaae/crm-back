@@ -11,6 +11,7 @@ use App\Models\openceo\Telefono;
 use App\Models\sts\ClientesMultinivel;
 use App\Models\sts\ClientesMultinivelConsulta;
 use App\Servicios\Consultas\ConsultasService;
+use App\Servicios\Consultas\ProveedorRespuestasService;
 use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -200,7 +201,9 @@ class DynamoClienteController extends Controller
                 $identificacion,
                 $corredor,
                 isset($tokenData['usu_id']) ? (int) $tokenData['usu_id'] : null,
-                true
+                true,
+                // 29-oct: canal para crm.proveedor_respuestas.
+                ProveedorRespuestasService::CANAL_FORMULARIO_STS
             );
 
             $datos = $respuesta->getData(true);
@@ -314,7 +317,7 @@ class DynamoClienteController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'La cédula ingresada no es válida', null));
             }
 
-            return $consultas->consultarCedulaEcuadorLegal($identificacion, $usuId);
+            return $consultas->consultarCedulaEcuadorLegal($identificacion, $usuId, ProveedorRespuestasService::CANAL_FORMULARIO_STS);
         }
 
         if ($tipoIdentificacion === 2) {
@@ -322,7 +325,7 @@ class DynamoClienteController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'El RUC ingresado no es válido', null));
             }
 
-            return $consultas->consultarRucSri($identificacion, $usuId);
+            return $consultas->consultarRucSri($identificacion, $usuId, ProveedorRespuestasService::CANAL_FORMULARIO_STS);
         }
 
         // Pasaporte: no hay fuente que consultar. Se responde el tipo de persona deducido
@@ -521,8 +524,8 @@ class DynamoClienteController extends Controller
         if (!$fila) {
             $consultas = app(ConsultaIdentidadExternoController::class);
             $respuesta = $campos['tipoidentificacion'] === 2
-                ? $consultas->consultarRucSri($campos['identificacion'], $this->usuIdEnlace)
-                : $consultas->consultarCedulaEcuadorLegal($campos['identificacion'], $this->usuIdEnlace);
+                ? $consultas->consultarRucSri($campos['identificacion'], $this->usuIdEnlace, ProveedorRespuestasService::CANAL_FORMULARIO_STS)
+                : $consultas->consultarCedulaEcuadorLegal($campos['identificacion'], $this->usuIdEnlace, ProveedorRespuestasService::CANAL_FORMULARIO_STS);
             $data = $respuesta->getData(true);
 
             if (($data['status'] ?? '') !== 'success' || empty($data['data'])) {

@@ -134,6 +134,7 @@ use App\Http\Controllers\openceo\RenegociacionesController;
 use App\Http\Controllers\corredores\CorredorClienteController;
 use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
 use App\Http\Controllers\consultas\ConsultasController;
+use App\Http\Controllers\consultas\ProveedorRespuestasController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
@@ -1298,6 +1299,10 @@ Route::group(["prefix" => "consultas", 'middleware' => ['jwt.auth', 'usuario.act
     Route::post('/cliente', [ConsultasController::class, 'consultarCliente'])->middleware('throttle:20,1,consultas-cliente');
     // 28-oct: si la lupa saldrá de la caché (solo lee, no cobra): decide el texto del spinner de Nuevo Caso.
     Route::get('/cliente/cache/{identificacion}', [ConsultasController::class, 'cacheCliente'])->middleware('throttle:60,1,consultas-cliente-cache');
+    // 29-oct: pantalla de respuestas de proveedores (demo): solo lee crm.proveedor_respuestas.
+    Route::post('/respuestas-proveedor/resumen', [ProveedorRespuestasController::class, 'resumen']);
+    Route::post('/respuestas-proveedor/listar', [ProveedorRespuestasController::class, 'listar']);
+    Route::get('/respuestas-proveedor/{id}', [ProveedorRespuestasController::class, 'ver']);
 });
 
 // FORMULARIOS FELIPE

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\varios;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\Consultas\ConsultasService;
+use App\Servicios\Consultas\ProveedorRespuestasService;
 use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -22,11 +23,15 @@ class ConsultaIdentidadExternoController extends Controller
     // $usuId permite que un canal SIN sesión JWT (el formulario público de corredores, que se
     // autentica con el token cifrado del enlace) diga de parte de quién consulta. Si no se
     // pasa, se usa el usuario autenticado, que es el caso del CRM.
-    public function consultarRucSri($ruc, ?int $usuId = null)
+    // 29-oct: $canal va a crm.proveedor_respuestas (cada llamada deja su fila); sin él es el modal del cliente del CRM.
+    public function consultarRucSri($ruc, ?int $usuId = null, ?string $canal = null)
     {
-        try {
-            $identificacion = trim($ruc);
+        $identificacion = trim((string) $ruc);
+        $fila = $this->filaRespuesta(ConsultasService::PROVEEDOR_SRI, $identificacion, $usuId, $canal);
+        $inicio = microtime(true);
+        $response = null;
 
+        try {
             $response = Http::withHeaders([
                 'User-Agent' => self::USER_AGENT, // OBLIGATORIO: sin este header el SRI no responde
                 'Accept' => 'application/json',
@@ -39,12 +44,14 @@ class ConsultaIdentidadExternoController extends Controller
             $tipoSujetoLocal = ['tipo_sujeto' => ValidacionCedulaRucService::tipoSujetoPorIdentificacion($identificacion, 2)];
 
             if (!$response->successful()) {
+                $this->registrarRespuesta($fila, ProveedorRespuestasService::ERROR_HTTP, $inicio, 'HTTP ' . $response->status(), $response->status(), $response->body());
                 return response()->json(RespuestaApi::returnResultado('error', 'El SRI no respondio correctamente', $tipoSujetoLocal));
             }
 
             $data = $response->json();
 
             if (empty($data) || !isset($data[0])) {
+                $this->registrarRespuesta($fila, ProveedorRespuestasService::SIN_IDENTIDAD, $inicio, 'No se encontraron datos en el SRI', $response->status(), $response->body());
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron datos en el SRI', $tipoSujetoLocal));
             }
 
@@ -76,20 +83,28 @@ class ConsultaIdentidadExternoController extends Controller
             // Sella la fecha de última consulta en la entidad (si existe) YA, no al guardar: así el throttle
             // es exacto aunque el usuario consulte y cancele, y el caché no se llena de re-consultas.
             $this->marcarUltimaConsultaEntidad($identificacion);
+            $this->registrarRespuesta($fila, ProveedorRespuestasService::OK, $inicio, null, $response->status());
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
         } catch (\Throwable $th) {
+            // Sin respuesta = timeout o red; con respuesta, lo que vino no se pudo leer.
+            $this->registrarRespuesta($fila, $response === null ? ProveedorRespuestasService::SIN_RESPUESTA : ProveedorRespuestasService::RESPUESTA_INVALIDA,
+                $inicio, $th->getMessage(), $response ? $response->status() : null, $response ? $response->body() : null);
             return response()->json(RespuestaApi::returnResultado('exception', 'Al consultar SRI', $th->getMessage()));
         }
     }
 
     // Esta página de Ecuador Legal solo acepta cédulas
     // $usuId: mismo criterio que consultarRucSri (canal sin sesión JWT).
-    public function consultarCedulaEcuadorLegal($cedula, ?int $usuId = null)
+    // 29-oct: $canal, igual que en consultarRucSri.
+    public function consultarCedulaEcuadorLegal($cedula, ?int $usuId = null, ?string $canal = null)
     {
-        try {
-            $identificacion = trim($cedula);
+        $identificacion = trim((string) $cedula);
+        $fila = $this->filaRespuesta(ConsultasService::PROVEEDOR_ECUADOR_LEGAL, $identificacion, $usuId, $canal);
+        $inicio = microtime(true);
+        $response = null;
 
+        try {
             $response = Http::asForm()->withHeaders([
                 'User-Agent' => self::USER_AGENT,
                 'Referer' => 'https://www.ecuadorlegalonline.com/consultas/registro-civil/consultar-cedulas/',
@@ -103,12 +118,14 @@ class ConsultaIdentidadExternoController extends Controller
             $tipoSujetoLocal = ['tipo_sujeto' => 'N'];
 
             if (!$response->successful()) {
+                $this->registrarRespuesta($fila, ProveedorRespuestasService::ERROR_HTTP, $inicio, 'HTTP ' . $response->status(), $response->status(), $response->body());
                 return response()->json(RespuestaApi::returnResultado('error', 'Ecuador Legal no respondio correctamente', $tipoSujetoLocal));
             }
 
             $nombre = $this->extraerNombreHtml($response->body());
 
             if (empty($nombre)) {
+                $this->registrarRespuesta($fila, ProveedorRespuestasService::SIN_IDENTIDAD, $inicio, 'No se encontraron datos en Ecuador Legal', $response->status(), $response->body());
                 return response()->json(RespuestaApi::returnResultado('error', 'No se encontraron datos en Ecuador Legal', $tipoSujetoLocal));
             }
 
@@ -131,11 +148,37 @@ class ConsultaIdentidadExternoController extends Controller
             // Sella la fecha de última consulta en la entidad (si existe) YA, no al guardar: así el throttle
             // es exacto aunque el usuario consulte y cancele, y el caché no se llena de re-consultas.
             $this->marcarUltimaConsultaEntidad($identificacion);
+            $this->registrarRespuesta($fila, ProveedorRespuestasService::OK, $inicio, null, $response->status());
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con exito', $resultado));
         } catch (\Throwable $th) {
+            $this->registrarRespuesta($fila, $response === null ? ProveedorRespuestasService::SIN_RESPUESTA : ProveedorRespuestasService::RESPUESTA_INVALIDA,
+                $inicio, $th->getMessage(), $response ? $response->status() : null, $response ? $response->body() : null);
             return response()->json(RespuestaApi::returnResultado('exception', 'Al consultar Ecuador Legal', $th->getMessage()));
         }
+    }
+
+    // 29-oct: lo común de la fila de crm.proveedor_respuestas. Sin canal = el modal del cliente del CRM (la ruta directa).
+    private function filaRespuesta(string $proveedor, string $identificacion, ?int $usuId, ?string $canal): array
+    {
+        return [
+            'proveedor' => $proveedor,
+            'canal' => $canal ?: ProveedorRespuestasService::CANAL_CRM,
+            'identificacion' => $identificacion,
+            'usu_id' => $usuId ?? auth('api')->id(),
+        ];
+    }
+
+    // 29-oct: una fila por llamada; nunca rompe la consulta.
+    private function registrarRespuesta(array $fila, string $resultado, float $inicio, ?string $mensaje, ?int $httpStatus = null, $respuesta = null): void
+    {
+        ProveedorRespuestasService::registrar($fila + [
+            'resultado' => $resultado,
+            'mensaje' => $mensaje,
+            'http_status' => $httpStatus,
+            'duracion_ms' => ProveedorRespuestasService::milisegundos($inicio),
+            'respuesta' => $respuesta,
+        ]);
     }
 
     // Extrae el nombre del HTML que devuelve Ecuador Legal dentro de las etiquetas <strong>

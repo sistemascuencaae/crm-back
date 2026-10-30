@@ -7,6 +7,7 @@ use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\Consultas\ConsultasService;
 use App\Servicios\Consultas\GarancheckService;
+use App\Servicios\Consultas\ProveedorRespuestasService;
 use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -90,7 +91,19 @@ class ConsultasController extends Controller
         'id', 'score', 'resultado_buro', 'calificacion_buro', 'resultado_general', 'calificacion_general', 'calificacion_cliente',
         'datos_cliente', 'es_cache', 'cliente_actualizado', 'motivo',
         'evaluacion', 'fecha_consulta', 'nombre_cliente',
+        // 29-oct: qué proveedor se consultó, para los textos del modal del cliente (mañana puede ser Yupana).
+        'proveedor', 'proveedor_nombre',
+        // 29-oct: el código (id de crm.proveedor_respuestas) que ve el usuario cuando no llega la calificación.
+        'codigo_respuesta',
     ];
+
+    // 29-oct (pedido del usuario): lo que ve el usuario cuando falla el proveedor, sin el detalle técnico. El error real se
+    // busca con el código (codigoRespuesta) en la pantalla de respuestas de proveedores.
+    private const MSG_PROVEEDOR_EXTERNO = 'No se pudo obtener datos del proveedor externo.';
+
+    // 29-oct: id de la fila de crm.proveedor_respuestas del último fallo del proveedor en procesarConsulta (el código que
+    // ve el usuario). null si el fallo no fue del proveedor o la fila no se pudo guardar.
+    private ?int $codigoRespuesta = null;
 
     // 27-oct: en un error del canal del CRM el navegador solo recibe un mensaje CONOCIDO: los de esta clase, los de
     // MENSAJES_ERROR y los de GarancheckService que no traen texto interno. Cualquier otro (el cURL con la URL del
@@ -130,7 +143,10 @@ class ConsultasController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        return $this->respuestaNuevoCaso($this->procesarConsulta($request, trim($request->input('identificacion')), null));
+        return $this->respuestaNuevoCaso(
+            $this->procesarConsulta($request, trim($request->input('identificacion')), null, null, false, ProveedorRespuestasService::CANAL_NUEVO_CASO),
+            $this->proveedorConsulta()
+        );
     }
 
     // Version 1.0
@@ -148,9 +164,15 @@ class ConsultasController extends Controller
 
             $foto = $this->fotoCliente($identificacion, $tipoIdentificacion);
             $cliId = !empty($foto['cli_id']) ? (int) $foto['cli_id'] : null;
-            $idCache = $this->idCacheConsulta($cliId, new GarancheckService(), $this->modoCache(), $identificacion, $tipoIdentificacion);
+            $proveedor = $this->proveedorConsulta();
+            $idCache = $this->idCacheConsulta($cliId, $proveedor, $this->modoCache(), $identificacion, $tipoIdentificacion);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Caché revisada.', ['cache' => $idCache !== null]));
+            // 29-oct: también el proveedor, para el texto del spinner ("Consultando GaranCheck...").
+            return response()->json(RespuestaApi::returnResultado('success', 'Caché revisada.', [
+                'cache' => $idCache !== null,
+                'proveedor' => $proveedor->nombre(),
+                'proveedor_nombre' => $proveedor->nombreVisible(),
+            ]));
         } catch (Throwable $e) {
             return response()->json(RespuestaApi::returnResultado('error', self::MSG_ERROR_CONSULTA, null));
         }
@@ -175,7 +197,7 @@ class ConsultasController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        return $this->procesarConsulta($request, trim($request->input('identificacion')), trim($request->input('corredor')));
+        return $this->procesarConsulta($request, trim($request->input('identificacion')), trim($request->input('corredor')), null, false, ProveedorRespuestasService::CANAL_API_STS);
     }
 
     // Mismo flujo para los tres canales; $corredor decide si hay vinculación multinivel.
@@ -184,10 +206,17 @@ class ConsultasController extends Controller
     // $conRespaldo: si GaranCheck no atiende, se crea igual al cliente con la fuente de identidad
     // oficial (Ecuador Legal / SRI), sin evaluación. Solo lo usa el formulario del corredor, para
     // que una caída del buró no le impida casar clientes; el canal del CRM sigue fallando duro.
-    public function procesarConsulta(Request $request, string $identificacion, ?string $corredor, ?int $usuId = null, bool $conRespaldo = false)
+    // 29-oct: $canal va a crm.proveedor_respuestas (NUEVO_CASO, FORMULARIO_STS, API_STS); sin él se deduce del corredor.
+    public function procesarConsulta(Request $request, string $identificacion, ?string $corredor, ?int $usuId = null, bool $conRespaldo = false, ?string $canal = null)
     {
         // 27-oct: candado por identificación; se suelta en el finally.
         $conCandado = false;
+        $canal = $canal ?? ($corredor === null ? ProveedorRespuestasService::CANAL_NUEVO_CASO : ProveedorRespuestasService::CANAL_API_STS);
+        // 29-oct: la fila de crm.proveedor_respuestas de la llamada al proveedor, y su JSON mientras la consulta no esté
+        // guardada: si el alta falla después de pagar, el JSON se deja en la fila (ver el catch).
+        $idRespuesta = null;
+        $jsonSinGuardar = null;
+        $this->codigoRespuesta = null;
 
         try {
             // 1. Identificación: 10 dígitos = cédula, 13 = RUC; cualquier otra cosa se rechaza.
@@ -229,7 +258,7 @@ class ConsultasController extends Controller
                 }
             }
 
-            $proveedor = new GarancheckService();
+            $proveedor = $this->proveedorConsulta();
             $contexto = ConsultasService::contextoAuditoria($request, $corredor, $usuId);
             $base = [
                 'usu_id' => $usuarioId,
@@ -266,6 +295,10 @@ class ConsultasController extends Controller
                         'cliente_actualizado' => false,
                         'motivo' => null,
                         'cache' => $cache,
+                        'proveedor' => $proveedor->nombre(),
+                        'proveedor_nombre' => $proveedor->nombreVisible(),
+                        // 29-oct: no se llamó al proveedor: no hay fila en crm.proveedor_respuestas.
+                        'codigo_respuesta' => null,
                     ];
 
                     // 27-oct: con la caché no hay JSON nuevo; la precarga sale de la consulta guardada que se reusa.
@@ -307,11 +340,20 @@ class ConsultasController extends Controller
                 if ($cliId === null) {
                     $sinIdentidadReciente = Cache::get($this->claveSinIdentidad($proveedor->nombre(), $identificacion));
                     if ($sinIdentidadReciente !== null) {
+                        // 29-oct: sin llamar de nuevo; el código es el de la consulta que respondió sin identidad.
+                        $this->codigoRespuesta = is_numeric($sinIdentidadReciente) && (int) $sinIdentidadReciente > 0 ? (int) $sinIdentidadReciente : null;
                         throw new RuntimeException(self::MSG_SIN_IDENTIDAD_RECIENTE);
                     }
                 }
 
-                $json = $proveedor->consultar($identificacion);
+                $json = $proveedor->consultar($identificacion, [
+                    'canal' => $canal,
+                    'usu_id' => $usuarioId,
+                    'cli_id' => $cliId,
+                    'corredor' => $corredor,
+                ]);
+                $idRespuesta = $proveedor->idUltimaRespuesta();
+                $jsonSinGuardar = $json;
 
                 $tipoSujeto = ValidacionCedulaRucService::tipoSujetoPorIdentificacion($identificacion, $tipoIdentificacion) ?: 'N';
                 try {
@@ -321,13 +363,23 @@ class ConsultasController extends Controller
                         'proveedor' => $proveedor->nombre(),
                     ];
                 } catch (Throwable $e) {
+                    // 29-oct: respondió (y cobró) sin identidad: la fila pasa a SIN_IDENTIDAD con la respuesta cruda.
+                    ProveedorRespuestasService::modificar($idRespuesta, [
+                        'resultado' => ProveedorRespuestasService::SIN_IDENTIDAD,
+                        'mensaje' => $e->getMessage(),
+                        'respuesta' => $json,
+                    ]);
+                    $jsonSinGuardar = null;
                     if ($cliId === null) {
-                        Cache::put($this->claveSinIdentidad($proveedor->nombre(), $identificacion), $e->getMessage(), now()->addMinutes(self::MINUTOS_SIN_IDENTIDAD));
+                        // 29-oct: se recuerda el id de su fila (el código para el usuario); 0 si no se pudo guardar.
+                        Cache::put($this->claveSinIdentidad($proveedor->nombre(), $identificacion), $idRespuesta ?? 0, now()->addMinutes(self::MINUTOS_SIN_IDENTIDAD));
                         throw $e;
                     }
                     $motivoSinIdentidad = self::MSG_SIN_IDENTIDAD_EXISTENTE;
                 }
             } catch (Throwable $e) {
+                // 29-oct: la fila que dejó el proveedor al fallar (consultar() la registra antes de lanzar).
+                $this->codigoRespuesta = $proveedor->idUltimaRespuesta() ?? $this->codigoRespuesta;
                 if (!$conRespaldo) {
                     throw $e;
                 }
@@ -344,7 +396,8 @@ class ConsultasController extends Controller
                     $diasCorredor,
                     $contexto,
                     $usuarioId,
-                    $falloProveedor
+                    $falloProveedor,
+                    $canal
                 );
             }
 
@@ -399,6 +452,7 @@ class ConsultasController extends Controller
                     // fuente salió (aquí siempre el buró; con plan B lo responde altaPorIdentidadOficial).
                     'cli_id' => $cliId,
                     'proveedor' => $datos['proveedor'] ?? $proveedor->nombre(),
+                    'proveedor_nombre' => $proveedor->nombreVisible(),
                     'nombres' => $datos['nombres'] ?? null,
                     'apellidos' => $datos['apellidos'] ?? null,
                     'nombre_comercial' => $datos['nombre_comercial'] ?? null,
@@ -411,6 +465,15 @@ class ConsultasController extends Controller
             });
 
             $resultado['cache'] = $cache;
+
+            // 29-oct: la consulta quedó guardada: la fila de la respuesta se enlaza con ella y con el cliente.
+            ProveedorRespuestasService::modificar($idRespuesta, [
+                'consulta_id' => $resultado['id'] ?? null,
+                'cli_id' => $resultado['cli_id'] ?? null,
+            ]);
+            $jsonSinGuardar = null;
+            // 29-oct: si llega sin calificación, el modal del cliente muestra este código.
+            $resultado['codigo_respuesta'] = $idRespuesta;
 
             // 27-oct: datos para precargar el modal del cliente (canal del CRM). Va fuera de la transacción:
             // si no salen, la consulta ya guardada no se pierde y el front abre el modal sin precarga.
@@ -432,8 +495,22 @@ class ConsultasController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Consulta realizada con éxito', $resultado));
         } catch (Throwable $e) {
+            // 29-oct: el proveedor respondió bien (y cobró) pero el alta o el guardado fallaron: la respuesta completa se
+            // queda en crm.proveedor_respuestas para no perderla.
+            if ($jsonSinGuardar !== null) {
+                ProveedorRespuestasService::modificar($idRespuesta, [
+                    'mensaje' => 'Respondió pero la consulta no se guardó: ' . $e->getMessage(),
+                    'respuesta' => $jsonSinGuardar,
+                ]);
+                $this->codigoRespuesta = $idRespuesta;
+            }
             // Nada guardado (las transacciones ya revirtieron). El mensaje crudo va en data, como en el corredor.
-            return response()->json(RespuestaApi::returnResultado('error', $this->mensajeError($e, 'Error al consultar el cliente.'), $e->getMessage()));
+            // 29-oct (pedido del usuario): en el formulario STS, con código, el texto genérico (la API del corredor sigue igual).
+            $mensaje = $canal === ProveedorRespuestasService::CANAL_FORMULARIO_STS && $this->codigoRespuesta !== null
+                ? $this->mensajeProveedorExterno()
+                : $this->mensajeError($e, 'Error al consultar el cliente.');
+
+            return response()->json(RespuestaApi::returnResultado('error', $mensaje, $e->getMessage()));
         } finally {
             if ($conCandado) {
                 $this->soltarCandadoConsulta($identificacion);
@@ -444,7 +521,9 @@ class ConsultasController extends Controller
     // 27-oct: lo que ve el navegador en el canal del CRM: CAMPOS_NUEVO_CASO (la evaluación del buró, nombres y cli_id
     // se quedan en el servidor). 28-oct: la evaluación ya sale, para el modal de calificación; cli_id y el JSON no. En un error tampoco va el mensaje crudo de la excepción (puede traer el SQL con el
     // JSON de la consulta), y el mensaje solo si es uno conocido (mensajeParaNavegador).
-    private function respuestaNuevoCaso(JsonResponse $respuesta): JsonResponse
+    // 29-oct: en un error, data trae el proveedor y el motivo corto para el aviso del modal del cliente ("No se pudo
+    // obtener la calificación del cliente." + Reintentar).
+    private function respuestaNuevoCaso(JsonResponse $respuesta, GarancheckService $proveedor): JsonResponse
     {
         $cuerpo = $respuesta->getData(true);
         $data = $cuerpo['data'] ?? null;
@@ -455,10 +534,50 @@ class ConsultasController extends Controller
             : null;
 
         if (!$exito) {
-            $cuerpo['message'] = $this->mensajeParaNavegador((string) ($cuerpo['message'] ?? ''));
+            $crudo = (string) ($cuerpo['message'] ?? '');
+            // 29-oct (pedido del usuario): message y motivo con el mismo texto, sin el detalle técnico del proveedor.
+            $cuerpo['message'] = $this->motivoFalla($crudo, $this->mensajeParaNavegador($crudo));
+            $cuerpo['data'] = [
+                'proveedor' => $proveedor->nombre(),
+                'proveedor_nombre' => $proveedor->nombreVisible(),
+                'motivo' => $cuerpo['message'],
+                'codigo_respuesta' => $this->codigoRespuesta,
+            ];
         }
 
         return response()->json($cuerpo, $respuesta->getStatusCode());
+    }
+
+    // 29-oct: el motivo corto del aviso. Pedido del usuario: el detalle técnico ("GaranCheck respondió con error HTTP 504.")
+    // no le sirve al usuario: cualquier falla del proveedor (o con fila en crm.proveedor_respuestas) sale como
+    // MSG_PROVEEDOR_EXTERNO y el código va aparte (codigo_respuesta). Lo que no es del proveedor (consulta en curso, cliente
+    // duplicado...) va con el mensaje ya limpio de mensajeParaNavegador: nunca el texto interno de la excepción.
+    private function motivoFalla(string $crudo, string $limpio): string
+    {
+        $delProveedor = $this->codigoRespuesta !== null
+            || strpos($crudo, 'El proveedor no respondió') === 0
+            || preg_match('/^El proveedor respondió con error HTTP \d{3}$/u', $crudo) === 1
+            || $crudo === 'Proveedor no configurado, comuníquese con el administrador.'
+            || strpos($crudo, 'No está configurado el parámetro CONSULTA-') === 0
+            || $crudo === 'El proveedor devolvió una respuesta vacía o inválida.'
+            || strpos($crudo, 'El proveedor no devolvió los datos de identidad (') === 0
+            || $limpio === self::MSG_SIN_IDENTIDAD_RECIENTE
+            || preg_match('/^Proveedor: /u', $limpio) === 1;
+
+        return $delProveedor ? self::MSG_PROVEEDOR_EXTERNO : $limpio;
+    }
+
+    // 29-oct (pedido del usuario): el texto genérico con el código, para el formulario STS (allí sale en un aviso).
+    private function mensajeProveedorExterno(): string
+    {
+        return self::MSG_PROVEEDOR_EXTERNO . ($this->codigoRespuesta !== null ? ' Cód. ' . $this->codigoRespuesta : '');
+    }
+
+    // 29-oct: el proveedor que se consulta. Hoy siempre GaranCheck; cuando entre Yupana, aquí va la regla (cliente del
+    // multinivel -> Yupana; si no, lo que diga su agencia).
+    private function proveedorConsulta(): GarancheckService
+    {
+        return new GarancheckService();
     }
 
     // 27-oct: el mensaje tal cual si es conocido (MENSAJES_CONOCIDOS, MENSAJES_ERROR, los MSG_* o PATRONES_MENSAJES_CONOCIDOS);
@@ -559,16 +678,18 @@ class ConsultasController extends Controller
         ?int $diasCorredor,
         array $contexto,
         int $usuarioId,
-        Throwable $falloProveedor
+        Throwable $falloProveedor,
+        string $canal
     ) {
         $esCedula = $tipoIdentificacion === 1;
         $nombreProveedor = $esCedula ? ConsultasService::PROVEEDOR_ECUADOR_LEGAL : ConsultasService::PROVEEDOR_SRI;
         $consultas = app(ConsultaIdentidadExternoController::class);
 
         try {
+            // 29-oct: con el canal, para su fila en crm.proveedor_respuestas.
             $respuesta = $esCedula
-                ? $consultas->consultarCedulaEcuadorLegal($identificacion, $usuarioId)
-                : $consultas->consultarRucSri($identificacion, $usuarioId);
+                ? $consultas->consultarCedulaEcuadorLegal($identificacion, $usuarioId, $canal)
+                : $consultas->consultarRucSri($identificacion, $usuarioId, $canal);
 
             $cuerpo = $respuesta->getData(true);
 
@@ -596,9 +717,12 @@ class ConsultasController extends Controller
         } catch (Throwable $e) {
             // Se cayeron las dos fuentes: no se crea nada. Se reporta el fallo de GaranCheck, que
             // es el principal, y el de la fuente de respaldo queda en data.
+            // 29-oct (pedido del usuario): solo lo usa el formulario STS: el texto genérico con el código de la fila de
+            // GaranCheck; el detalle de las dos fuentes está en crm.proveedor_respuestas.
             return response()->json(RespuestaApi::returnResultado(
                 'error',
-                $this->mensajeError($falloProveedor, 'Error al consultar el cliente.'),
+                // $this->mensajeError($falloProveedor, 'Error al consultar el cliente.'),
+                $this->mensajeProveedorExterno(),
                 $e->getMessage()
             ));
         }
@@ -648,8 +772,15 @@ class ConsultasController extends Controller
     //   CONSULTA-CACHE          -> N días
     //   CONSULTA-CACHE-MENSUAL  -> N días CON tope de mes calendario (al cambiar de mes ya no vale)
     // Devuelve ['modo' => 'MENSUAL'|'DIAS'|'SIN_CACHE', 'dias' => int, 'por_mes' => bool].
+    // 29-oct (pedido del usuario): antes que los dos manda CONSULTA-UNA-POR-MES: activo = una sola consulta por mes
+    // calendario, sin días (modo 'UNA_POR_MES'). Los otros dos se quedan como estaban, apagados.
     private function modoCache(): array
     {
+        $unaPorMes = DB::table('crm.parametro')->where('abreviacion', 'CONSULTA-UNA-POR-MES')->first();
+        if ($unaPorMes && $unaPorMes->activar) {
+            return ['modo' => 'UNA_POR_MES', 'dias' => 0, 'por_mes' => true];
+        }
+
         $mensual = DB::table('crm.parametro')->where('abreviacion', 'CONSULTA-CACHE-MENSUAL')->first();
         $porMes = $mensual && $mensual->activar;
 
@@ -686,6 +817,13 @@ class ConsultasController extends Controller
     {
         if ($cache['modo'] === 'SIN_CACHE') {
             return null;
+        }
+
+        // 29-oct: la consulta del mes calendario.
+        if ($cache['modo'] === 'UNA_POR_MES') {
+            $fila = DB::selectOne('SELECT crm.fn_cliente_consultas_buscar_cache_mes(?, ?) AS id', [$cliId, $proveedor]);
+
+            return !empty($fila->id) ? (int) $fila->id : null;
         }
 
         $fila = DB::selectOne('SELECT crm.fn_cliente_consultas_buscar_cache_existente(?, ?, ?, ?) AS id', [$cliId, $proveedor, $cache['dias'], $cache['por_mes']]);

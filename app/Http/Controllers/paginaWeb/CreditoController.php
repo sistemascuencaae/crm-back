@@ -8,6 +8,7 @@ use App\Http\Controllers\formulario\SolicitudesCreditosWebController;
 use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\Consultas\ConsultasService;
+use App\Servicios\Consultas\ProveedorRespuestasService;
 use App\Servicios\ValidacionCedulaRucService;
 use Exception;
 use Illuminate\Database\QueryException;
@@ -81,8 +82,8 @@ class CreditoController extends Controller
             // No existe: cédula -> Ecuador Legal, RUC -> SRI (Ecuador Legal no acepta RUC)
             $consultas = app(ConsultaIdentidadExternoController::class);
             $respuesta = $tipo === 2
-                ? $consultas->consultarRucSri($identificacion, self::USU_ID_FORMULARIO)
-                : $consultas->consultarCedulaEcuadorLegal($identificacion, self::USU_ID_FORMULARIO);
+                ? $consultas->consultarRucSri($identificacion, self::USU_ID_FORMULARIO, ProveedorRespuestasService::CANAL_PAGINA_WEB)
+                : $consultas->consultarCedulaEcuadorLegal($identificacion, self::USU_ID_FORMULARIO, ProveedorRespuestasService::CANAL_PAGINA_WEB);
             $data = $respuesta->getData(true);
 
             $oficial = ($data['status'] ?? '') === 'success'

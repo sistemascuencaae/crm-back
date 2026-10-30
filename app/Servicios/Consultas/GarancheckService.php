@@ -53,10 +53,25 @@ class GarancheckService
         'carteraCastigada' => 'Cartera Castigada',
     ];
 
+    // 29-oct: el id de crm.proveedor_respuestas de la última llamada de consultar(), para completarla después (consulta
+    // guardada, sin identidad o alta fallida). null si no se pudo registrar.
+    private ?int $idRespuesta = null;
+
     // Va a la columna proveedor, a la búsqueda de caché y arma el nombre del parámetro.
     public function nombre(): string
     {
         return self::NOMBRE;
+    }
+
+    // 29-oct: el nombre que ve el usuario en los mensajes y el spinner ("Consultando GaranCheck...").
+    public function nombreVisible(): string
+    {
+        return 'GaranCheck';
+    }
+
+    public function idUltimaRespuesta(): ?int
+    {
+        return $this->idRespuesta;
     }
 
     // Las dos evaluaciones listas para la pantalla de resultado. Al detalle del buró se le
@@ -234,18 +249,30 @@ class GarancheckService
     // POST Basic Auth con el body del parámetro CONSULTA-GARANCHECK. Cualquier fallo lanza
     // RuntimeException con un mensaje para el usuario: red/timeout, HTTP no-2xx, o un error del
     // catálogo del proveedor ({codigo, mensaje}). El que llama no guarda nada si esto lanza.
-    public function consultar(string $identificacion): array
+    // 29-oct: cada salida deja su fila en crm.proveedor_respuestas (la cruda solo en los errores). $registro = lo que sabe
+    // el que llama: canal, usu_id, cli_id, corredor. El id queda en idUltimaRespuesta().
+    public function consultar(string $identificacion, array $registro = []): array
     {
+        $this->idRespuesta = null;
+        $fila = ['proveedor' => self::NOMBRE, 'identificacion' => $identificacion] + $registro;
+        $inicio = microtime(true);
+
         $config = config('services.garancheck');
         $url = trim((string) ($config['url'] ?? ''));
         $user = (string) ($config['user'] ?? '');
         $pass = (string) ($config['pass'] ?? '');
 
         if ($url === '' || $user === '' || $pass === '') {
+            $this->registrarRespuesta($fila, ProveedorRespuestasService::SIN_CONFIGURACION, $inicio, 'Proveedor no configurado (services.garancheck).');
             throw new RuntimeException('Proveedor no configurado, comuníquese con el administrador.');
         }
 
-        $body = $this->bodyConsulta($identificacion);
+        try {
+            $body = $this->bodyConsulta($identificacion);
+        } catch (RuntimeException $e) {
+            $this->registrarRespuesta($fila, ProveedorRespuestasService::SIN_CONFIGURACION, $inicio, $e->getMessage());
+            throw $e;
+        }
 
         try {
             $response = Http::withBasicAuth($user, $pass)
@@ -253,25 +280,43 @@ class GarancheckService
                 ->timeout(self::TIMEOUT_SEGUNDOS)
                 ->post($url, $body);
         } catch (Throwable $e) {
+            $this->registrarRespuesta($fila, ProveedorRespuestasService::SIN_RESPUESTA, $inicio, $e->getMessage());
             throw new RuntimeException('El proveedor no respondió: ' . $e->getMessage());
         }
 
         if (!$response->successful()) {
+            $this->registrarRespuesta($fila, ProveedorRespuestasService::ERROR_HTTP, $inicio, 'HTTP ' . $response->status(), $response->status(), $response->body());
             throw new RuntimeException('El proveedor respondió con error HTTP ' . $response->status());
         }
 
         $json = $response->json();
         if (!is_array($json) || empty($json)) {
+            $this->registrarRespuesta($fila, ProveedorRespuestasService::RESPUESTA_INVALIDA, $inicio, 'Respuesta vacía o que no es JSON.', $response->status(), $response->body());
             throw new RuntimeException('El proveedor devolvió una respuesta vacía o inválida.');
         }
 
         // Error del catálogo (códigos 1-8): viene {codigo, mensaje} en vez del reporte.
         if (isset($json['codigo']) && array_key_exists('mensaje', $json) && !isset($json['civil']) && !isset($json['sri'])) {
             $mensaje = trim((string) $json['mensaje']);
+            $this->registrarRespuesta($fila, ProveedorRespuestasService::ERROR_PROVEEDOR, $inicio, $mensaje !== '' ? $mensaje : 'error código ' . $json['codigo'], $response->status(), $json);
             throw new RuntimeException('Proveedor: ' . ($mensaje !== '' ? $mensaje : 'error código ' . $json['codigo']));
         }
 
+        $this->registrarRespuesta($fila, ProveedorRespuestasService::OK, $inicio, null, $response->status());
+
         return $json;
+    }
+
+    // 29-oct: la fila de crm.proveedor_respuestas de esta llamada. Nunca lanza.
+    private function registrarRespuesta(array $fila, string $resultado, float $inicio, ?string $mensaje, ?int $httpStatus = null, $respuesta = null): void
+    {
+        $this->idRespuesta = ProveedorRespuestasService::registrar($fila + [
+            'resultado' => $resultado,
+            'mensaje' => $mensaje,
+            'http_status' => $httpStatus,
+            'duracion_ms' => ProveedorRespuestasService::milisegundos($inicio),
+            'respuesta' => $respuesta,
+        ]);
     }
 
     // Datos mínimos para el alta/actualización del cliente en el CRM. $tipoSujeto ('N'/'J') lo
