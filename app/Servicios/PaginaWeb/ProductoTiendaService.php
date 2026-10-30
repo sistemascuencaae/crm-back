@@ -156,7 +156,10 @@ class ProductoTiendaService
         DB::statement('SELECT inventarios.fn_producto_ficha_guardar(?, ?::jsonb)', [$proId, $this->json($datos)]);
     }
 
-    /** $datos: solo lo que cambia (pro_nombre_web, pro_oferta_semana, pro_destacado) + usu_id. pro_nombre_web vacío = vuelve al nombre del ERP. */
+    /**
+     * $datos: solo lo que cambia (pro_nombre_web, pro_observacion, pro_oferta_semana, pro_destacado) + usu_id.
+     * pro_nombre_web vacío = vuelve al nombre del ERP; pro_observacion es la descripción (la del ERP; vacía = sin descripción).
+     */
     public function modificar(int $proId, array $datos): void
     {
         DB::statement('SELECT inventarios.fn_producto_web_modificar(?, ?::jsonb)', [$proId, $this->json($datos)]);

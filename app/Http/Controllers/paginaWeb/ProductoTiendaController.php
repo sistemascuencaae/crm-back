@@ -25,7 +25,7 @@ class ProductoTiendaController extends Controller
     private const CAMPOS_FICHA                    = ['valores', 'sueltas'];
     private const CAMPOS_IMAGEN_CREAR             = ['pro_id', 'pim_seccion', 'pim_imagen', 'pim_texto', 'pim_visible', 'pim_desde', 'pim_hasta'];
     private const CAMPOS_IMAGEN_MODIFICAR         = ['pim_imagen', 'pim_texto', 'pim_visible', 'pim_desde', 'pim_hasta'];
-    private const CAMPOS_PRODUCTO                 = ['pro_nombre_web', 'pro_oferta_semana', 'pro_destacado'];
+    private const CAMPOS_PRODUCTO                 = ['pro_nombre_web', 'pro_observacion', 'pro_oferta_semana', 'pro_destacado'];
 
     public function __construct(private ProductoTiendaService $servicio)
     {
@@ -101,8 +101,8 @@ class ProductoTiendaController extends Controller
         }
     }
 
-    // PUT pagina-web/productos-tienda/{proId}   {pro_nombre_web, pro_oferta_semana, pro_destacado} (solo lo que cambia)
-    // pro_nombre_web vacío = la tienda vuelve a usar el nombre del ERP
+    // PUT pagina-web/productos-tienda/{proId}   {pro_nombre_web, pro_observacion, pro_oferta_semana, pro_destacado} (solo lo que cambia)
+    // pro_nombre_web vacío = la tienda vuelve a usar el nombre del ERP; pro_observacion (la descripción) vacía = sin descripción
     public function modificar(Request $request, int $proId)
     {
         try {
