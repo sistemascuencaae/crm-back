@@ -16,7 +16,11 @@ use Illuminate\Support\Facades\DB;
 class CategoriaWebService
 {
     private const CACHE_MENU    = 'pagina_web.categorias_menu.publica';
-    private const CACHE_MINUTOS = 10;
+    private const CACHE_MINUTOS = 10;   // no más que la caché de productos publicados (de ahí sale qué categorías tienen productos)
+
+    public function __construct(private ProductoTiendaService $productos)
+    {
+    }
 
     // Mensaje amigable para cada código que lanzan las funciones ecommerce.fn_categoria_web_*
     public const MENSAJES_ERROR = [
@@ -26,7 +30,8 @@ class CategoriaWebService
         'CATEGORIA_IMAGEN_INVALIDA'    => 'La dirección de la imagen no es válida.',
         'CATEGORIA_IMAGEN_LARGA'       => 'La dirección de la imagen no puede superar 500 caracteres.',
         'CATEGORIA_DESTACADA_INVALIDA' => 'El valor de "destacada" debe ser verdadero o falso.',
-        'CATEGORIA_SIN_IMAGEN'         => 'Sube una imagen antes de marcarla como destacada.',
+        'CATEGORIA_MOSAICO_INVALIDO'   => 'El valor del mosaico no es válido.',
+        'CATEGORIA_SIN_IMAGEN'         => 'Esta categoría no tiene imagen. Súbela en "Categorías de la tienda" para destacarla o ponerla en el mosaico.',
         'CATEGORIA_VISIBLE_INVALIDO'   => 'El valor de "mostrar en la tienda" debe ser verdadero o falso.',
         'CATEGORIA_SOLO_DEPARTAMENTO'  => 'Solo los departamentos se pueden mostrar u ocultar en la tienda.',
         'CATEGORIA_OCULTA_INVALIDO'    => 'El valor de "oculta" debe ser verdadero o falso.',
@@ -40,8 +45,8 @@ class CategoriaWebService
     {
         Cache::forget(self::CACHE_MENU);
 
-        // Las destacadas van dentro del inicio, y un bloque cuya categoría se oculta deja de verse
-        // en el inicio y en las páginas de marca
+        // Las destacadas y los bloques van dentro del inicio, y las tarjetas de producto (inicio y páginas de marca)
+        // solo muestran productos de categorías visibles en la tienda
         InicioSeccionService::limpiarCache();
         PaginaMarcaService::limpiarCache();
 
@@ -53,7 +58,7 @@ class CategoriaWebService
     // CRM
     // -----------------------------------------------------------------
 
-    /** Todas las categorías activas del ERP, con su ruta y lo configurado. */
+    /** Todas las categorías activas del ERP, con su ruta y lo configurado (también cwe_mosaico y cwe_mosaico_orden). */
     public function listar(): array
     {
         return DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar()');
@@ -65,7 +70,7 @@ class CategoriaWebService
         return DB::selectOne('SELECT * FROM ecommerce.fn_categoria_web_impacto(?)', [$tprId]);
     }
 
-    /** $datos: solo lo que cambia (cwe_destacada, cwe_imagen, cwe_nombre, cwe_visible, cwe_oculta) + usu_id. */
+    /** $datos: solo lo que cambia (cwe_destacada, cwe_mosaico, cwe_imagen, cwe_nombre, cwe_visible, cwe_oculta) + usu_id. */
     public function modificar(int $tprId, array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_categoria_web_modificar(?, ?::jsonb)', [$tprId, $this->json($datos)]);
@@ -79,6 +84,13 @@ class CategoriaWebService
         self::limpiarCache();
     }
 
+    /** $datos: {ids: [tpr_id…] (todas las del mosaico, en el nuevo orden), usu_id} */
+    public function ordenarMosaico(array $datos): void
+    {
+        DB::statement('SELECT ecommerce.fn_categoria_web_ordenar_mosaico(?::jsonb)', [$this->json($datos)]);
+        self::limpiarCache();
+    }
+
     // -----------------------------------------------------------------
     // Tienda
     // -----------------------------------------------------------------
@@ -86,13 +98,18 @@ class CategoriaWebService
     /**
      * El menú de categorías del header, como árbol:
      *   [{id, nombre, hijos: [{id, nombre, hijos: [...]}]}]
-     * La base devuelve filas planas con su padre, ordenadas por nivel: así el padre siempre
-     * aparece antes que sus hijos.
+     * Solo las categorías con productos publicados en su rama: una vacía no sale, y un departamento sin ninguna
+     * categoría con productos tampoco. La base devuelve filas planas con su padre, ordenadas por nivel: así el padre
+     * siempre aparece antes que sus hijos.
      */
     public function listarMenu(): array
     {
         return Cache::remember(self::CACHE_MENU, now()->addMinutes(self::CACHE_MINUTOS), function () {
-            $filas = DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_menu()');
+            $conProductos = array_flip($this->productos->categoriasConProductos());
+            $filas = array_filter(
+                DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_menu()'),
+                fn ($fila) => isset($conProductos[$fila->tpr_id])
+            );
 
             // Un nodo por categoría (los objetos se comparten: agregar un hijo a $nodos lo agrega al árbol)
             $nodos = [];

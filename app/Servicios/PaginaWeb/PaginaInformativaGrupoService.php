@@ -41,10 +41,16 @@ class PaginaInformativaGrupoService
         DB::statement('SELECT ecommerce.fn_pagina_informativa_grupo_modificar(?, ?::jsonb)', [$pigId, $this->json($datos)]);
     }
 
-    /** Solo se elimina si está vacía. */
-    public function eliminar(int $pigId): void
+    /** La manda a la papelera (la papelera y el vaciar son los de PaginaInformativaService). */
+    public function eliminar(int $pigId, int $usuId): void
     {
-        DB::statement('SELECT ecommerce.fn_pagina_informativa_grupo_eliminar(?)', [$pigId]);
+        DB::statement('SELECT ecommerce.fn_pagina_informativa_grupo_eliminar(?, ?)', [$pigId, $usuId]);
+    }
+
+    /** La saca de la papelera, al final. */
+    public function restaurar(int $pigId, int $usuId): void
+    {
+        DB::statement('SELECT ecommerce.fn_pagina_informativa_grupo_restaurar(?, ?)', [$pigId, $usuId]);
     }
 
     /** Nuevo orden de TODAS las carpetas. $datos: {ids: [pig_id…], usu_id} */

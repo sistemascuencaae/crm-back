@@ -86,14 +86,49 @@ class SucursalController extends Controller
         }
     }
 
+    // DELETE pagina-web/sucursales/{sucId}   (a la papelera)
     public function eliminar(int $sucId)
     {
         try {
-            $this->servicio->eliminar($sucId);
+            $this->servicio->eliminar($sucId, $this->usuarioId());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Sucursal eliminada con éxito', ['suc_id' => $sucId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Sucursal enviada a la papelera', ['suc_id' => $sucId]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al eliminar la sucursal');
+        }
+    }
+
+    // PUT pagina-web/sucursales/{sucId}/restaurar
+    public function restaurar(int $sucId)
+    {
+        try {
+            $this->servicio->restaurar($sucId, $this->usuarioId());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Sucursal restaurada con éxito', ['suc_id' => $sucId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al restaurar la sucursal');
+        }
+    }
+
+    // GET pagina-web/sucursales-papelera   (ciudades y sucursales)
+    public function papelera()
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
+        }
+    }
+
+    // DELETE pagina-web/sucursales-papelera   → {cantidad}
+    public function vaciar()
+    {
+        try {
+            $cantidad = $this->servicio->vaciar($this->usuarioId());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al vaciar la papelera');
         }
     }
 

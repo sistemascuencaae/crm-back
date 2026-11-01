@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
 class CategoriaWebController extends Controller
 {
     // Lo único que se acepta al modificar
-    private const CAMPOS = ['cwe_destacada', 'cwe_imagen', 'cwe_nombre', 'cwe_visible', 'cwe_oculta'];
+    private const CAMPOS = ['cwe_destacada', 'cwe_mosaico', 'cwe_imagen', 'cwe_nombre', 'cwe_visible', 'cwe_oculta'];
 
     public function __construct(private CategoriaWebService $servicio)
     {
@@ -61,6 +61,18 @@ class CategoriaWebController extends Controller
     {
         try {
             $this->servicio->ordenar(['ids' => $request->input('ids'), 'usu_id' => auth()->id()]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al guardar el orden');
+        }
+    }
+
+    // PUT pagina-web/categorias-web-mosaico-orden   {ids: [212, 228, 301]} (todas las del mosaico, en el nuevo orden)
+    public function ordenarMosaico(Request $request)
+    {
+        try {
+            $this->servicio->ordenarMosaico(['ids' => $request->input('ids'), 'usu_id' => auth()->id()]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
         } catch (QueryException $e) {

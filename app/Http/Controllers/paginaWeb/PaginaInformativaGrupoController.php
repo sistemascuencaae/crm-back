@@ -63,14 +63,27 @@ class PaginaInformativaGrupoController extends Controller
         }
     }
 
+    // DELETE pagina-web/paginas-grupos/{pigId}   (a la papelera)
     public function eliminar(int $pigId)
     {
         try {
-            $this->servicio->eliminar($pigId);
+            $this->servicio->eliminar($pigId, auth()->id());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Carpeta eliminada con éxito', ['pig_id' => $pigId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Carpeta enviada a la papelera', ['pig_id' => $pigId]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al eliminar la carpeta');
+        }
+    }
+
+    // PUT pagina-web/paginas-grupos/{pigId}/restaurar
+    public function restaurar(int $pigId)
+    {
+        try {
+            $this->servicio->restaurar($pigId, auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Carpeta restaurada con éxito', ['pig_id' => $pigId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al restaurar la carpeta');
         }
     }
 

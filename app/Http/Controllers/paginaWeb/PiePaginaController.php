@@ -75,15 +75,27 @@ class PiePaginaController extends Controller
         }
     }
 
-    // DELETE pagina-web/pie-pagina/columnas/{pcoId}   (también elimina sus enlaces)
+    // DELETE pagina-web/pie-pagina/columnas/{pcoId}   (a la papelera, con sus enlaces)
     public function eliminarColumna(int $pcoId)
     {
         try {
-            $this->servicio->eliminarColumna($pcoId);
+            $this->servicio->eliminarColumna($pcoId, auth()->id());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Columna eliminada con éxito', ['pco_id' => $pcoId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Columna enviada a la papelera', ['pco_id' => $pcoId]));
         } catch (QueryException $e) {
             return ErroresPaginaWeb::respuesta($e, 'Error al eliminar la columna');
+        }
+    }
+
+    // PUT pagina-web/pie-pagina/columnas/{pcoId}/restaurar   (vuelve con sus enlaces)
+    public function restaurarColumna(int $pcoId)
+    {
+        try {
+            $this->servicio->restaurarColumna($pcoId, auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Columna restaurada con éxito', ['pco_id' => $pcoId]));
+        } catch (QueryException $e) {
+            return ErroresPaginaWeb::respuesta($e, 'Error al restaurar la columna');
         }
     }
 
@@ -127,15 +139,27 @@ class PiePaginaController extends Controller
         }
     }
 
-    // DELETE pagina-web/pie-pagina/enlaces/{penId}
+    // DELETE pagina-web/pie-pagina/enlaces/{penId}   (a la papelera)
     public function eliminarEnlace(int $penId)
     {
         try {
-            $this->servicio->eliminarEnlace($penId);
+            $this->servicio->eliminarEnlace($penId, auth()->id());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Enlace eliminado con éxito', ['pen_id' => $penId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Enlace enviado a la papelera', ['pen_id' => $penId]));
         } catch (QueryException $e) {
             return ErroresPaginaWeb::respuesta($e, 'Error al eliminar el enlace');
+        }
+    }
+
+    // PUT pagina-web/pie-pagina/enlaces/{penId}/restaurar
+    public function restaurarEnlace(int $penId)
+    {
+        try {
+            $this->servicio->restaurarEnlace($penId, auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Enlace restaurado con éxito', ['pen_id' => $penId]));
+        } catch (QueryException $e) {
+            return ErroresPaginaWeb::respuesta($e, 'Error al restaurar el enlace');
         }
     }
 
@@ -148,6 +172,30 @@ class PiePaginaController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
         } catch (QueryException $e) {
             return ErroresPaginaWeb::respuesta($e, 'Error al guardar el orden');
+        }
+    }
+
+    // ---------- Papelera (columnas y enlaces) ----------
+
+    // GET pagina-web/pie-papelera
+    public function papelera()
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+        } catch (QueryException $e) {
+            return ErroresPaginaWeb::respuesta($e, 'No se pudo cargar la papelera');
+        }
+    }
+
+    // DELETE pagina-web/pie-papelera   → {cantidad}
+    public function vaciar()
+    {
+        try {
+            $cantidad = $this->servicio->vaciar(auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return ErroresPaginaWeb::respuesta($e, 'Error al vaciar la papelera');
         }
     }
 }

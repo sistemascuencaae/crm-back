@@ -23,8 +23,9 @@ class EspanaMotosController extends Controller
         'emo_tarjetas_visible',
     ];
     private const CAMPOS_PESTANA         = ['emp_nombre', 'emp_categorias', 'emp_activo'];
-    private const CAMPOS_MARCA_CREAR     = ['mar_id', 'emm_logo', 'emm_activo'];
-    private const CAMPOS_MARCA_MODIFICAR = ['emm_logo', 'emm_activo'];   // la marca no se cambia
+    // El logo es el de la marca: se cambia en Marcas de la tienda
+    private const CAMPOS_MARCA_CREAR     = ['mar_id', 'emm_activo'];
+    private const CAMPOS_MARCA_MODIFICAR = ['emm_activo'];   // la marca no se cambia
 
     public function __construct(private EspanaMotosService $servicio)
     {
@@ -92,15 +93,49 @@ class EspanaMotosController extends Controller
         }
     }
 
-    // DELETE pagina-web/espana-motos-pestanas/{empId}
+    // DELETE pagina-web/espana-motos-pestanas/{empId}   (a la papelera)
     public function eliminarPestana(int $empId)
     {
         try {
-            $this->servicio->eliminarPestana($empId);
+            $this->servicio->eliminarPestana($empId, auth()->id());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Pestaña eliminada con éxito', ['emp_id' => $empId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Pestaña enviada a la papelera', ['emp_id' => $empId]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al eliminar la pestaña');
+        }
+    }
+
+    // GET pagina-web/espana-motos-pestanas-papelera
+    public function papeleraPestanas()
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papeleraPestanas()));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
+        }
+    }
+
+    // PUT pagina-web/espana-motos-pestanas/{empId}/restaurar
+    public function restaurarPestana(int $empId)
+    {
+        try {
+            $this->servicio->restaurarPestana($empId, auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Pestaña restaurada con éxito', ['emp_id' => $empId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al restaurar la pestaña');
+        }
+    }
+
+    // DELETE pagina-web/espana-motos-pestanas-papelera   → {cantidad}
+    public function vaciarPestanas()
+    {
+        try {
+            $cantidad = $this->servicio->vaciarPestanas(auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al vaciar la papelera');
         }
     }
 
@@ -120,7 +155,7 @@ class EspanaMotosController extends Controller
     // Marcas
     // -----------------------------------------------------------------
 
-    // POST pagina-web/espana-motos-marcas   {mar_id, emm_logo, emm_activo}
+    // POST pagina-web/espana-motos-marcas   {mar_id, emm_activo}
     public function crearMarca(Request $request)
     {
         try {
@@ -132,7 +167,7 @@ class EspanaMotosController extends Controller
         }
     }
 
-    // PUT pagina-web/espana-motos-marcas/{emmId}   (solo lo que cambia: emm_logo, emm_activo; la marca no se cambia)
+    // PUT pagina-web/espana-motos-marcas/{emmId}   {emm_activo} (la marca no se cambia)
     public function modificarMarca(Request $request, int $emmId)
     {
         try {
@@ -144,15 +179,49 @@ class EspanaMotosController extends Controller
         }
     }
 
-    // DELETE pagina-web/espana-motos-marcas/{emmId}
+    // DELETE pagina-web/espana-motos-marcas/{emmId}   (a la papelera)
     public function eliminarMarca(int $emmId)
     {
         try {
-            $this->servicio->eliminarMarca($emmId);
+            $this->servicio->eliminarMarca($emmId, auth()->id());
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Marca quitada con éxito', ['emm_id' => $emmId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Marca enviada a la papelera', ['emm_id' => $emmId]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al quitar la marca');
+        }
+    }
+
+    // GET pagina-web/espana-motos-marcas-papelera
+    public function papeleraMarcas()
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papeleraMarcas()));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
+        }
+    }
+
+    // PUT pagina-web/espana-motos-marcas/{emmId}/restaurar
+    public function restaurarMarca(int $emmId)
+    {
+        try {
+            $this->servicio->restaurarMarca($emmId, auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Marca restaurada con éxito', ['emm_id' => $emmId]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al restaurar la marca');
+        }
+    }
+
+    // DELETE pagina-web/espana-motos-marcas-papelera   → {cantidad}
+    public function vaciarMarcas()
+    {
+        try {
+            $cantidad = $this->servicio->vaciarMarcas(auth()->id());
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'Error al vaciar la papelera');
         }
     }
 

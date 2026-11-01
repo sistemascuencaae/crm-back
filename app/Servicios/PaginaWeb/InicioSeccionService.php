@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Secciones del inicio de la tienda: banner_principal, categorias_destacadas, ofertas_flash, banner_simple,
  * mosaico, grilla, bloques y marcas. Cada una tiene su interruptor, su orden y su vigencia (desde / hasta);
- * algunas además título, subtítulo o cantidad. Llama a las funciones ecommerce.fn_inicio_seccion_*.
+ * algunas además título o subtítulo. Llama a las funciones ecommerce.fn_inicio_seccion_*.
  * La tienda lee todo el inicio en GET public/pagina-web/inicio (con caché que respeta la vigencia: CachePaginaWeb).
  */
 class InicioSeccionService
@@ -23,8 +23,11 @@ class InicioSeccionService
         'SECCIONES_ORDEN_DESACTUALIZADO' => 'La lista cambió mientras la ordenabas. Recarga la página e inténtalo de nuevo.',
     ];
 
-    public function __construct(private BloqueProductoService $bloques)
-    {
+    public function __construct(
+        private BloqueProductoService $bloques,
+        private ProductoTiendaService $productos,
+        private MarcaWebService $marcas
+    ) {
     }
 
     /** Tras un cambio de una sección, la tienda lo ve al momento. También lo llaman los bloques, las galerías y las categorías. */
@@ -38,7 +41,7 @@ class InicioSeccionService
     // -----------------------------------------------------------------
 
     /**
-     * [{ise_clave, ise_nombre, ise_orden, ise_activo, ise_titulo, ise_subtitulo, ise_cantidad,
+     * [{ise_clave, ise_nombre, ise_orden, ise_activo, ise_titulo, ise_subtitulo,
      *   ise_desde, ise_hasta, vigencia, visible}] en el orden del inicio
      */
     public function listar(): array
@@ -46,7 +49,7 @@ class InicioSeccionService
         return DB::select('SELECT * FROM ecommerce.fn_inicio_seccion_listar()');
     }
 
-    /** $datos: solo lo que cambia (ise_activo, ise_titulo, ise_subtitulo, ise_cantidad, ise_desde, ise_hasta) + usu_id */
+    /** $datos: solo lo que cambia (ise_activo, ise_titulo, ise_subtitulo, ise_desde, ise_hasta) + usu_id */
     public function modificar(string $clave, array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_inicio_seccion_modificar(?, ?::jsonb)', [$clave, $this->json($datos)]);
@@ -68,10 +71,13 @@ class InicioSeccionService
      * Las secciones visibles (encendidas y vigentes), en su orden, cada una con su clave y sus datos:
      *   {secciones: [
      *     {clave: 'banner_principal', imagenes}, {clave: 'categorias_destacadas', categorias},
-     *     {clave: 'ofertas_flash', titulo, subtitulo, cantidad, hasta}, {clave: 'banner_simple', imagenes},
-     *     {clave: 'mosaico', tarjetas}, {clave: 'grilla', titulo, cantidad}, {clave: 'bloques', bloques},
-     *     {clave: 'marcas', imagenes}]}
-     * Una sección cuya lista llega vacía no se incluye; una clave desconocida se ignora.
+     *     {clave: 'ofertas_flash', titulo, subtitulo, hasta, productos}, {clave: 'banner_simple', imagenes},
+     *     {clave: 'mosaico', categorias: [{tpr_id, nombre, imagen}]}, {clave: 'grilla', titulo, productos},
+     *     {clave: 'bloques', bloques: [{…, productos, promociones}]}, {clave: 'marcas', marcas: [{mar_id, nombre, imagen, enlace}]}]}
+     * productos = tarjetas (ProductoTiendaService::tarjetas). ofertas_flash trae todas las ofertas de la semana y grilla
+     * todos los destacados (sin cantidad); las dos salen aunque lleguen con productos: [].
+     * Una sección de imágenes o categorías cuya lista llega vacía no se incluye; una clave desconocida se ignora.
+     * La caché dura como máximo 10 minutos (CachePaginaWeb::vencimiento): así no dura más que la de productos publicados.
      */
     public function publica(): array
     {
@@ -110,27 +116,38 @@ class InicioSeccionService
             case 'banner_principal':
                 return $this->siHay('imagenes', $this->imagenes('inicio_banner'));
             case 'categorias_destacadas':
-                return $this->siHay('categorias', DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_publicas()'));
+                return $this->siHay('categorias', $this->conProductos(DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_publicas()')));
             case 'ofertas_flash':
                 return [
                     'titulo'    => $s->ise_titulo,
                     'subtitulo' => $s->ise_subtitulo,
-                    'cantidad'  => $s->ise_cantidad,
                     'hasta'     => $s->ise_hasta,
+                    'productos' => $this->productos->tarjetas(true, false, null, null, null),
                 ];
             case 'banner_simple':
                 return $this->siHay('imagenes', $this->imagenes('inicio_banner_simple'));
             case 'mosaico':
-                return $this->siHay('tarjetas', $this->imagenes('inicio_mosaico'));
+                return $this->siHay('categorias', $this->conProductos(DB::select('SELECT * FROM ecommerce.fn_categoria_web_listar_mosaico_publicas()')));
             case 'grilla':
-                return ['titulo' => $s->ise_titulo, 'cantidad' => $s->ise_cantidad];
+                return [
+                    'titulo'    => $s->ise_titulo,
+                    'productos' => $this->productos->tarjetas(false, true, null, null, null),
+                ];
             case 'bloques':
-                return $this->siHay('bloques', $this->bloques->listarPublicos(null));
+                return $this->siHay('bloques', $this->bloques->listarPublicos());
             case 'marcas':
-                return $this->siHay('imagenes', $this->imagenes('marcas_aliadas'));
+                return $this->siHay('marcas', $this->marcas->publicas());
             default:
                 return null;
         }
+    }
+
+    /** Solo las categorías con productos publicados en su rama (destacadas y mosaico), en el mismo orden. */
+    private function conProductos(array $categorias): array
+    {
+        $conProductos = array_flip($this->productos->categoriasConProductos());
+
+        return array_values(array_filter($categorias, fn ($c) => isset($conProductos[$c->tpr_id])));
     }
 
     /** [$nombre => $lista], o null si la lista está vacía (la sección no se incluye). */

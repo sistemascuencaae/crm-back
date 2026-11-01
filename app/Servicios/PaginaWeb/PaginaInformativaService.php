@@ -16,8 +16,19 @@ class PaginaInformativaService
     private const CACHE_PREFIJO = 'pagina_web.paginas.publica.';
     private const CACHE_MINUTOS = 10;
 
-    public function __construct(private LimpiadorHtml $limpiador)
+    // Páginas que muestran "Nuestras marcas" (MarcaWebService::publicas)
+    private const CLAVES_CON_MARCAS = ['garantia_extendida', 'beneficios_empresa'];
+
+    public function __construct(private LimpiadorHtml $limpiador, private MarcaWebService $marcas)
     {
+    }
+
+    /** Tras un cambio en las marcas de la tienda, las páginas que las muestran deben verlo. */
+    public static function limpiarCacheMarcas(): void
+    {
+        foreach (self::CLAVES_CON_MARCAS as $clave) {
+            Cache::forget(self::CACHE_PREFIJO . $clave);
+        }
     }
 
     // Mensaje amigable para cada código que lanzan las funciones ecommerce.fn_pagina_informativa_*
@@ -100,11 +111,37 @@ class PaginaInformativaService
         return DB::selectOne('SELECT pin_clave FROM ecommerce.pagina_informativa WHERE pin_id = ?', [$pinId])->pin_clave;
     }
 
-    /** Elimina una página que no sea fija. */
-    public function eliminar(string $clave): void
+    /** Manda a la papelera una página que no sea fija. */
+    public function eliminar(string $clave, int $usuId): void
     {
-        DB::statement('SELECT ecommerce.fn_pagina_informativa_eliminar(?)', [$clave]);
+        DB::statement('SELECT ecommerce.fn_pagina_informativa_eliminar(?, ?)', [$clave, $usuId]);
         Cache::forget(self::CACHE_PREFIJO . $clave);
+    }
+
+    /** La saca de la papelera, al final de su carpeta. */
+    public function restaurar(string $clave, int $usuId): void
+    {
+        DB::statement('SELECT ecommerce.fn_pagina_informativa_restaurar(?, ?)', [$clave, $usuId]);
+        Cache::forget(self::CACHE_PREFIJO . $clave);
+    }
+
+    /** Papelera de páginas y carpetas: [{tipo ('carpeta' | 'pagina'), id, pin_clave, texto, detalle, eliminado_en, eliminado_usu_id, eliminado_por}] */
+    public function papelera(): array
+    {
+        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_pagina_informativa_papelera()'), 'eliminado_usu_id');
+    }
+
+    /** Borra para siempre las páginas y carpetas de la papelera. Devuelve cuántas borró (las que se veían en la papelera). */
+    public function vaciar(int $usuId): int
+    {
+        $claves = array_filter(array_column(DB::select('SELECT * FROM ecommerce.fn_pagina_informativa_papelera()'), 'pin_clave'));
+
+        $cantidad = (int) DB::selectOne('SELECT ecommerce.fn_pagina_informativa_vaciar(?) AS cantidad', [$usuId])->cantidad;
+        foreach ($claves as $clave) {
+            Cache::forget(self::CACHE_PREFIJO . $clave);
+        }
+
+        return $cantidad;
     }
 
     /** Nuevo orden de los documentos de una carpeta. $datos: {pig_id (o null), ids: [pin_id…], usu_id} */
@@ -117,13 +154,25 @@ class PaginaInformativaService
     // Tienda
     // -----------------------------------------------------------------
 
-    /** La página si está visible; null si no existe o está oculta. Solo se guarda en caché si existe. */
+    /**
+     * La página si está visible; null si no existe o está oculta. Solo se guarda en caché si existe.
+     * Garantía extendida y Beneficios para empresa traen además marcas: [{mar_id, nombre, imagen, enlace}].
+     */
     public function buscarPublica(string $clave): ?array
     {
         return Cache::remember(self::CACHE_PREFIJO . $clave, now()->addMinutes(self::CACHE_MINUTOS), function () use ($clave) {
             $fila = DB::selectOne('SELECT * FROM ecommerce.fn_pagina_informativa_buscar_publica(?)', [$clave]);
 
-            return $fila ? $this->decodificarContenido($fila) : null;   // null no se guarda en caché
+            if (!$fila) {
+                return null;   // null no se guarda en caché
+            }
+
+            $pagina = $this->decodificarContenido($fila);
+            if (in_array($clave, self::CLAVES_CON_MARCAS, true)) {
+                $pagina['marcas'] = $this->marcas->publicas();
+            }
+
+            return $pagina;
         });
     }
 
