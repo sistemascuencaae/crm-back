@@ -26,6 +26,8 @@ class ProveedorRespuestasService
     public const CANAL_NUEVO_CASO = 'NUEVO_CASO';
     public const CANAL_FORMULARIO_STS = 'FORMULARIO_STS';
     public const CANAL_API_STS = 'API_STS';
+    // 30-oct (fase 3b): el botón Calificar / Reintentar de la cabecera del caso.
+    public const CANAL_CASO = 'CASO';
     public const CANAL_CRM = 'CRM';
     public const CANAL_PAGINA_WEB = 'PAGINA_WEB';
 

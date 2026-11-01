@@ -213,11 +213,15 @@ class CasoController extends Controller
     // identificación). La regla vive en crm.fn_caso_vincular_consulta (PLANES/GARANCHECK/produccion_garancheck_caso.sql).
     // La llaman add y addCaso2, por donde pasan todas las altas de casos. Nunca tumba el alta: va en un SAVEPOINT y, si
     // falla (por ejemplo, si la función aún no está en la base), el caso queda sin consulta y se anota en el log.
+    // 30-oct: ahora crm.fn_caso_calificacion_iniciar: copia el switch "Pide calificación" del tipo de caso en el caso, casa la
+    // consulta del mes de cualquier calificador (fn_caso_vincular_consulta) y guarda la calificación en crm.caso.calificacion_proveedor
+    // (PLANES/YUPANA/produccion_yupana.sql, sección 3).
     private function vincularConsultaGarancheck($casoId): void
     {
         try {
             DB::transaction(function () use ($casoId) {
-                DB::selectOne('SELECT crm.fn_caso_vincular_consulta(?) AS consulta_id', [(int) $casoId]);
+                // ANTES (27-oct): DB::selectOne('SELECT crm.fn_caso_vincular_consulta(?) AS consulta_id', [(int) $casoId]);
+                DB::selectOne('SELECT crm.fn_caso_calificacion_iniciar(?) AS resultado', [(int) $casoId]);
             });
         } catch (\Throwable $e) {
             (new Funciones())->logError(CasoController::class, 'No se pudo casar la consulta GaranCheck con el caso #' . $casoId, $e);

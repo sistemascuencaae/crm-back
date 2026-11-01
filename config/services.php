@@ -64,6 +64,24 @@ return [
         'pass' => env('GARANCHECK_PASS'),
     ],
 
+    // 30-oct: Yupana (calificador por agencia, App\Servicios\Consultas\YupanaService). Lo que se repite en todas las
+    // llamadas vive en el .env; el eventType y la ruta de cada llamada van en el servicio.
+    'yupana' => [
+        'token_url' => env('YUPANA_TOKEN_URL'),
+        'token_basic' => env('YUPANA_TOKEN_BASIC'),
+        'user' => env('YUPANA_USER'),
+        'pass' => env('YUPANA_PASS'),
+        'url' => env('YUPANA_URL'),
+        'empresa' => env('YUPANA_EMPRESA', 'YUPANA'),
+        'origen' => env('YUPANA_ORIGEN'),
+        'canal' => env('YUPANA_CANAL', 'api'),
+        'trace_id' => env('YUPANA_TRACE_ID'),
+        'cod_b2b' => env('YUPANA_COD_B2B', 'B2B001'),
+        'modelo_id' => env('YUPANA_MODELO_ID', 1),
+        'nombre_usuario' => env('YUPANA_NOMBRE_USUARIO', 'AACHINA'),
+        'timeout' => env('YUPANA_TIMEOUT', 60),
+    ],
+
     'firebase' => [
     'project_id'  => env('FIREBASE_PROJECT_ID'),
     'credentials' => env('FIREBASE_CREDENTIALS'),

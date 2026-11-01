@@ -25,11 +25,16 @@ class ConsultasService
     // Fuente que originó el alta. Van a public.cliente.proveedor y a
     // clientes_multinivel_consultas.proveedor, con los mismos textos de crm.consulta_identidad.
     const PROVEEDOR_GARANCHECK = 'GARANCHECK';
+    // 30-oct: el otro calificador. El de cada agencia está en crm.agencia.consulta_proveedor (crm.fn_agencia_proveedores_listar).
+    const PROVEEDOR_YUPANA = 'YUPANA';
     const PROVEEDOR_ECUADOR_LEGAL = 'ECUADOR LEGAL';
     const PROVEEDOR_SRI = 'SRI';
 
     // Dirección de los clientes creados por una fuente de identidad, que no devuelve domicilio.
+    // 01-nov: es la del formulario STS (corredor) cuando no viene dirección; desde el caso es DIRECCION_SIN_DATOS
+    // (direccionDelCanal).
     const DIRECCION_MULTINIVEL = 'SN - MULTINIVEL';
+    const DIRECCION_SIN_DATOS = 'SN';
 
     private const EMP_ID_DEFAULT = 1;
     private const SFP_ID_EFECTIVO = 1;
@@ -130,7 +135,12 @@ class ConsultasService
     // 27-oct: $desdeCrm (canal del CRM, Nuevo Caso): la entidad que ya existía conserva su dirección, su teléfono y sus
     // nombres (crm.fn_clientes_registrar_desde_consulta, PLANES/GARANCHECK/produccion_garancheck_entidad.sql), y la
     // identidad que trajo el proveedor sella la consulta de identidad (el modal no vuelve a ir a Ecuador Legal).
-    public static function registrarCliente(array $datos, ?array $foto, array $contexto, bool $desdeCrm = false): int
+    // 31-oct (regla del usuario: "la creación de mi cliente es una cosa y las consultas de los proveedores son otras"):
+    // el 4º parámetro ahora solo dice si se SELLA la consulta de identidad ($sellarIdentidad, lo decide quien llama) y el
+    // 5º ($conservarEntidad) hace que la entidad que ya existía conserve lo suyo en CUALQUIER canal (antes solo en el del
+    // CRM; el del corredor le ponía la dirección y el teléfono del proveedor). Los nombres de la entidad los pone quien
+    // llama en $datos (conNombresDeLaEntidad): la función solo los conserva si dicen lo mismo que los del payload.
+    public static function registrarCliente(array $datos, ?array $foto, array $contexto, bool $sellarIdentidad = false, bool $conservarEntidad = false): int
     {
         $defaults = self::defaultsCanal();
 
@@ -153,7 +163,9 @@ class ConsultasService
             'tipos_pago' => [['sfp_id' => self::SFP_ID_EFECTIVO, 'ctip_default' => true]],
             'direccion' => [
                 'dir_calle_principal' => $datos['direccion'],
-                'dir_calle_secundaria' => null,
+                // 'dir_calle_secundaria' => null, // DESACTIVADO 01-nov
+                // 01-nov: sin dirección del proveedor lleva el mismo texto que la principal (direccionDelCanal).
+                'dir_calle_secundaria' => $datos['direccion_secundaria'] ?? null,
                 'dir_principal' => true,
                 'dir_activo' => true,
                 'dir_tipo' => self::DIR_TIPO_DEFAULT,
@@ -175,8 +187,11 @@ class ConsultasService
             'auditoria' => $contexto['auditoria'],
         ];
 
-        if ($desdeCrm) {
-            $payload['consulto_identidad'] = true;
+        // 31-oct: antes `if ($desdeCrm)`: conservar lo de la entidad y sellar iban juntos y solo en el canal del CRM.
+        if ($sellarIdentidad || $conservarEntidad) {
+            if ($sellarIdentidad) {
+                $payload['consulto_identidad'] = true;
+            }
             $fila = DB::selectOne('SELECT crm.fn_clientes_registrar_desde_consulta(?::jsonb) AS cli_id', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
 
             return (int) $fila->cli_id;
@@ -253,6 +268,26 @@ class ConsultasService
         ];
     }
 
+    // 01-nov (pedido del usuario): sin dirección del proveedor (no respondió y entró el respaldo, o respondió sin domicilio) el
+    // texto lo pone el CANAL, no la fuente: el formulario STS (corredor) "SN - MULTINIVEL" y el caso "SN", en la calle principal
+    // y en la secundaria, con la ubicación por defecto del alta (defaultsCanal). Antes: "SN" si respondía GaranCheck o Yupana sin
+    // domicilio y "SN - MULTINIVEL" si respondía Ecuador Legal / SRI (también desde el caso), la secundaria vacía y, con Ecuador
+    // Legal / SRI, sin ubicación. Una dirección de verdad pasa igual.
+    public static function direccionDelCanal(array $datos, bool $multinivel): array
+    {
+        $calle = mb_strtoupper(trim(preg_replace('/\s+/', ' ', (string) ($datos['direccion'] ?? ''))), 'UTF-8');
+        if (!in_array($calle, ['', 'SN', 'S/N', self::DIRECCION_MULTINIVEL], true)) {
+            return $datos;
+        }
+
+        $texto = $multinivel ? self::DIRECCION_MULTINIVEL : self::DIRECCION_SIN_DATOS;
+        $datos['direccion'] = $texto;
+        $datos['direccion_secundaria'] = $texto;
+        $datos['geo_por_defecto'] = true;
+
+        return $datos;
+    }
+
     // DESACTIVADO 27-oct: mandaba la ficha COMPLETA a fn_clientes_modificar, que reescribe todo (creaba el
     // anexo con valores por defecto, cambiaba el estado civil, perdía el cantón del anexo...). Lo reemplaza
     // la versión de abajo, que solo toca nombres, apellidos y nombre comercial.
@@ -309,6 +344,77 @@ class ConsultasService
     public static function clienteSinGuardar(int $cliId, string $proveedor): bool
     {
         return DB::selectOne('SELECT 1 AS si FROM public.cliente WHERE cli_id = ? AND proveedor = ? AND updated_at IS NULL', [$cliId, $proveedor]) !== null;
+    }
+
+    // 31-oct (regla del usuario: el cliente y las consultas de los proveedores son cosas separadas): los nombres que hoy
+    // tiene el cliente en la base, para responder con lo nuestro y no con lo del proveedor. [] si no se encuentra.
+    public static function nombresCliente(int $cliId): array
+    {
+        $fila = DB::selectOne(
+            'SELECT e.ent_apellidos, e.ent_nombres, c.ent_nombre_comercial
+             FROM public.cliente c JOIN public.entidad e ON e.ent_id = c.ent_id
+             WHERE c.cli_id = ?',
+            [$cliId]
+        );
+
+        return $fila ? (array) $fila : [];
+    }
+
+    // 31-oct: true si el nombre que trae el proveedor es el MISMO que tenemos. Es la comparación de
+    // crm.fn_cliente_nombres_modificar y crm.fn_clientes_registrar_desde_consulta (crm.fn_cliente_nombres_normalizar sobre
+    // "APELLIDOS NOMBRES"; una empresa, su razón social). Solo entonces la consulta sella la consulta de identidad.
+    public static function nombresIguales(?string $apellidos, ?string $nombres, array $datos): bool
+    {
+        $delProveedor = ($datos['tipo_sujeto'] ?? 'N') === 'J'
+            ? (string) ($datos['apellidos'] ?? '')
+            : trim(($datos['apellidos'] ?? '') . ' ' . ($datos['nombres'] ?? ''));
+        if (trim((string) $apellidos) === '' || trim($delProveedor) === '') {
+            return false;
+        }
+
+        $fila = DB::selectOne(
+            "SELECT crm.fn_cliente_nombres_normalizar(concat_ws(' ', ?::text, NULLIF(btrim(?::text), '.')))
+                  = crm.fn_cliente_nombres_normalizar(?::text) AS iguales",
+            [(string) $apellidos, (string) $nombres, $delProveedor]
+        );
+
+        return (bool) ($fila->iguales ?? false);
+    }
+
+    // 31-oct: true si la persona que ya existía (la foto, aunque todavía no sea cliente) tiene nombres propios: apellidos
+    // y, si es natural, nombres que no sean vacío ni '.' (el criterio de crm.fn_clientes_registrar_desde_consulta).
+    public static function tieneNombresPropios(?array $foto, array $datos): bool
+    {
+        if (!$foto || empty($foto['ent_id'])) {
+            return false;
+        }
+        $apellidos = trim((string) ($foto['ent_apellidos'] ?? ''));
+        $nombres = trim((string) ($foto['ent_nombres'] ?? ''));
+
+        return $apellidos !== '' && (($datos['tipo_sujeto'] ?? 'N') === 'J' || !in_array($nombres, ['', '.'], true));
+    }
+
+    // 31-oct: la persona que ya existía conserva SUS nombres (antes quedaban los del proveedor si eran distintos). Se ponen
+    // en $datos como los tiene la entidad, en mayúsculas y con un solo espacio, para que
+    // crm.fn_clientes_registrar_desde_consulta vea que "dicen lo mismo" y los deje. Sin nombres propios: los del proveedor.
+    public static function conNombresDeLaEntidad(array $datos, ?array $foto): array
+    {
+        if (!self::tieneNombresPropios($foto, $datos)) {
+            return $datos;
+        }
+
+        $limpiar = fn($texto) => mb_strtoupper(trim(preg_replace('/\s+/', ' ', (string) $texto)), 'UTF-8');
+        $apellidos = $limpiar($foto['ent_apellidos'] ?? '');
+        $nombres = $limpiar($foto['ent_nombres'] ?? '');
+        if (($datos['tipo_sujeto'] ?? 'N') === 'J' && $nombres === '') {
+            $nombres = '.';
+        }
+
+        $datos['apellidos'] = $apellidos;
+        $datos['nombres'] = $nombres;
+        $datos['nombre_comercial'] = trim($apellidos . ' ' . $nombres);
+
+        return $datos;
     }
 
     // usuario_auditoria alimenta cliente.created_by/updated_by; el bloque auditoria va a la

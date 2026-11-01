@@ -10,7 +10,8 @@ use Throwable;
 // Proveedor GaranCheck / Plataforma 360°. TODO lo que sabe del JSON de este proveedor vive aquí;
 // el controlador solo usa nombre() / consultar() / extraerDatosCliente(). Otro proveedor mañana =
 // otra clase con estos 3 métodos y su parámetro CONSULTA-<NOMBRE>.
-class GarancheckService
+// 30-oct: implementa ProveedorConsulta, el contrato común con YupanaService; cuál se usa lo decide la agencia.
+class GarancheckService implements ProveedorConsulta
 {
     private const NOMBRE = 'GARANCHECK';
 
@@ -254,7 +255,8 @@ class GarancheckService
     public function consultar(string $identificacion, array $registro = []): array
     {
         $this->idRespuesta = null;
-        $fila = ['proveedor' => self::NOMBRE, 'identificacion' => $identificacion] + $registro;
+        // 30-oct: servicio = qué llamada fue (GaranCheck tiene una sola); la agencia y el tipo vienen en $registro.
+        $fila = ['proveedor' => self::NOMBRE, 'identificacion' => $identificacion, 'servicio' => 'CONSULTA'] + $registro;
         $inicio = microtime(true);
 
         $config = config('services.garancheck');

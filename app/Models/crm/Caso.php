@@ -85,6 +85,8 @@ class Caso extends Model
     // el caso, nunca el front. Como fecha sale en JSON igual que created_at (ISO, UTC).
     protected $casts = [
         'fecha_ingreso_fase' => 'datetime',
+        // 30-oct: copia del switch del tipo de caso; la escribe crm.fn_caso_calificacion_iniciar (no va en $fillable).
+        'requiere_calificacion' => 'boolean',
     ];
 
     public function userCreador()

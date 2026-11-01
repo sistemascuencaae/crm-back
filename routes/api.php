@@ -3,6 +3,11 @@
 use App\Http\Controllers\activos\ActasController;
 use App\Http\Controllers\activos\ActivosController;
 use App\Http\Controllers\api\ApiController;
+use App\Http\Controllers\api\ApiClientController;
+use App\Http\Controllers\api\ApiColaboracionController;
+use App\Http\Controllers\api\ApiColeccionController; // 30-oct F2
+use App\Http\Controllers\api\ApiEjemploController; // 30-oct F3
+use App\Http\Controllers\api\ApiProxyController;
 use App\Http\Controllers\pinpad\PinpadController;
 use App\Http\Controllers\pinpadjar\PinpadJarController;
 use App\Http\Controllers\appreact\ReactNativeMaps;
@@ -15,6 +20,7 @@ use App\Http\Controllers\TableauAuthController;
 use App\Http\Controllers\PowerBiRefreshDatasetController;
 use App\Http\Controllers\GoogleSheetsController;
 use App\Http\Controllers\configuracion\AgenciaController;
+use App\Http\Controllers\configuracion\CalificacionColorController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\anuncios\AnunciosController;
 use App\Http\Controllers\anuncios\AnunciosUsuarioController;
@@ -319,6 +325,11 @@ Route::get('prueba-flutter/visitas', [ItemPruebaFlutterController::class, 'visit
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
+// 30-oct F3: descarga de una respuesta grande del API Client (GET api-client/descargar/{token}). El front la abre con
+// <a download>, sin el header Authorization, por eso va fuera del grupo jwt.auth: la credencial es el token (uuid de un
+// solo uso que vence en 1 h). El grupo api ya le aplica throttle:api.
+Route::get('/crm/api-client/descargar/{token}', [ApiProxyController::class, 'descargar']);
+
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     // ? START POLITICAS
     Route::get('/listPoliticasPaginado', [PoliticaController::class, 'listPoliticasPaginado']);
@@ -341,32 +352,105 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // ? END COBRANZAS
 
     // ? START API TESTER
-    // Colecciones
-    Route::get('/colecciones', [ApiController::class, 'listColecciones']);
-    Route::post('/colecciones', [ApiController::class, 'addColeccion']);
-    Route::put('/colecciones/{id}', [ApiController::class, 'editColeccion']);
-    Route::delete('/colecciones/{id}', [ApiController::class, 'deleteColeccion']);
-
-    // Requests
-    Route::get('/requests/{coleccionId}', [ApiController::class, 'listRequests']);
-    Route::post('/requests', [ApiController::class, 'addRequest']);
-    Route::put('/requests/{id}', [ApiController::class, 'editRequest']);
-    Route::delete('/requests/{id}', [ApiController::class, 'deleteRequest']);
-
-    // Historial
-    Route::get('/historial', [ApiController::class, 'listHistorial']);
-    Route::delete('/historial/clear', [ApiController::class, 'clearHistorial']);
-    Route::delete('/historial/{id}', [ApiController::class, 'deleteHistorial']);
-
-    // Variables
-    Route::get('/variables', [ApiController::class, 'listVariables']);
-    Route::post('/variables', [ApiController::class, 'addVariable']);
-    Route::put('/variables/{id}', [ApiController::class, 'editVariable']);
-    Route::delete('/variables/{id}', [ApiController::class, 'deleteVariable']);
-
-    // Ejecutar
-    Route::post('/ejecutar', [ApiController::class, 'ejecutarRequest']);
+    // QUITADO 30-oct: el módulo API pasó a /api-client (reactivar = descomentar)
+    // // Colecciones
+    // Route::get('/colecciones', [ApiController::class, 'listColecciones']);
+    // Route::post('/colecciones', [ApiController::class, 'addColeccion']);
+    // Route::put('/colecciones/{id}', [ApiController::class, 'editColeccion']);
+    // Route::delete('/colecciones/{id}', [ApiController::class, 'deleteColeccion']);
+    //
+    // // Requests
+    // Route::get('/requests/{coleccionId}', [ApiController::class, 'listRequests']);
+    // Route::post('/requests', [ApiController::class, 'addRequest']);
+    // Route::put('/requests/{id}', [ApiController::class, 'editRequest']);
+    // Route::delete('/requests/{id}', [ApiController::class, 'deleteRequest']);
+    //
+    // // Historial
+    // Route::get('/historial', [ApiController::class, 'listHistorial']);
+    // Route::delete('/historial/clear', [ApiController::class, 'clearHistorial']);
+    // Route::delete('/historial/{id}', [ApiController::class, 'deleteHistorial']);
+    //
+    // // Variables
+    // Route::get('/variables', [ApiController::class, 'listVariables']);
+    // Route::post('/variables', [ApiController::class, 'addVariable']);
+    // Route::put('/variables/{id}', [ApiController::class, 'editVariable']);
+    // Route::delete('/variables/{id}', [ApiController::class, 'deleteVariable']);
+    //
+    // // Ejecutar
+    // Route::post('/ejecutar', [ApiController::class, 'ejecutarRequest']);
     // ? END API TESTER
+
+    // ? START API CLIENT (30-oct)
+    Route::prefix('api-client')->group(function () {
+        // Colecciones (la de /{id}/requests va antes que /{id})
+        Route::get('/colecciones', [ApiClientController::class, 'listColecciones']);
+        Route::post('/colecciones', [ApiClientController::class, 'addColeccion']);
+        Route::get('/colecciones/{id}/requests', [ApiClientController::class, 'listRequests']);
+        // 30-oct F4: usuarios de la colección (compartir) y actividad, antes que /{id}
+        Route::get('/colecciones/{id}/usuarios', [ApiColaboracionController::class, 'listUsuarios']);
+        Route::post('/colecciones/{id}/usuarios', [ApiColaboracionController::class, 'addUsuarios']);
+        Route::delete('/colecciones/{id}/usuarios/{uid}', [ApiColaboracionController::class, 'deleteUsuario']);
+        Route::get('/colecciones/{id}/auditoria', [ApiColaboracionController::class, 'getAuditoria']);
+        // 30-oct F2: importar (fija, antes que /{id}), reordenar, duplicar y exportar
+        Route::post('/colecciones/importar', [ApiColeccionController::class, 'importar']);
+        Route::put('/colecciones/{id}/reordenar', [ApiColeccionController::class, 'reordenar']);
+        Route::post('/colecciones/{id}/duplicar', [ApiColeccionController::class, 'duplicarColeccion']);
+        Route::get('/colecciones/{id}/exportar', [ApiColeccionController::class, 'exportar']);
+        Route::get('/colecciones/{id}', [ApiClientController::class, 'getColeccion']);
+        Route::put('/colecciones/{id}', [ApiClientController::class, 'editColeccion']);
+        Route::delete('/colecciones/{id}', [ApiClientController::class, 'deleteColeccion']);
+
+        // Requests
+        Route::get('/requests/{id}', [ApiClientController::class, 'getRequest']);
+        Route::post('/requests', [ApiClientController::class, 'addRequest']);
+        Route::put('/requests/{id}', [ApiClientController::class, 'editRequest']);
+        Route::delete('/requests/{id}', [ApiClientController::class, 'deleteRequest']);
+        // 30-oct F2: mover y duplicar requests
+        Route::put('/requests/{id}/mover', [ApiColeccionController::class, 'moverRequest']);
+        Route::post('/requests/{id}/duplicar', [ApiColeccionController::class, 'duplicarRequest']);
+        // 30-oct F3: ejemplos (respuestas guardadas) del request
+        Route::get('/requests/{id}/ejemplos', [ApiEjemploController::class, 'listEjemplos']);
+        Route::post('/requests/{id}/ejemplos', [ApiEjemploController::class, 'addEjemplo']);
+        Route::get('/ejemplos/{id}', [ApiEjemploController::class, 'getEjemplo']);
+        Route::put('/ejemplos/{id}', [ApiEjemploController::class, 'editEjemplo']);
+        Route::delete('/ejemplos/{id}', [ApiEjemploController::class, 'deleteEjemplo']);
+
+        // 30-oct F2: carpetas (anidadas) de la colección
+        Route::post('/carpetas', [ApiColeccionController::class, 'addCarpeta']);
+        Route::put('/carpetas/{id}', [ApiColeccionController::class, 'editCarpeta']);
+        Route::delete('/carpetas/{id}', [ApiColeccionController::class, 'deleteCarpeta']);
+
+        // Historial (DELETE sin id = limpiar, declarado antes que /historial/{id})
+        Route::get('/historial', [ApiClientController::class, 'listHistorial']);
+        Route::delete('/historial', [ApiClientController::class, 'clearHistorial']);
+        Route::get('/historial/{id}', [ApiClientController::class, 'getHistorial']);
+        Route::delete('/historial/{id}', [ApiClientController::class, 'deleteHistorial']);
+
+        // Variables globales
+        Route::get('/variables/origen-probar', [ApiClientController::class, 'probarOrigenVariable']); // 31-oct F6: vista previa del origen de una variable (antes que /variables/{id})
+        Route::get('/variables', [ApiClientController::class, 'listVariables']);
+        Route::post('/variables', [ApiClientController::class, 'addVariable']);
+        Route::put('/variables/{id}', [ApiClientController::class, 'editVariable']);
+        Route::delete('/variables/{id}', [ApiClientController::class, 'deleteVariable']);
+
+        // 30-oct F4: entornos con secretos por usuario (las fijas /importar y /variables/... antes que las de /{id})
+        Route::get('/entornos', [ApiColaboracionController::class, 'listEntornos']);
+        Route::post('/entornos', [ApiColaboracionController::class, 'addEntorno']);
+        Route::post('/entornos/importar', [ApiColaboracionController::class, 'importarEntorno']);
+        Route::delete('/entornos/variables/{vid}', [ApiColaboracionController::class, 'deleteVariable']);
+        Route::put('/entornos/variables/{vid}/mi-valor', [ApiColaboracionController::class, 'guardarMiValor']);
+        Route::get('/entornos/{id}/resolver', [ApiColaboracionController::class, 'resolverEntorno']);
+        Route::get('/entornos/{id}/exportar', [ApiColaboracionController::class, 'exportarEntorno']);
+        Route::put('/entornos/{id}/variables', [ApiColaboracionController::class, 'guardarVariables']);
+        Route::get('/entornos/{id}', [ApiColaboracionController::class, 'getEntorno']);
+        Route::put('/entornos/{id}', [ApiColaboracionController::class, 'editEntorno']);
+        Route::delete('/entornos/{id}', [ApiColaboracionController::class, 'deleteEntorno']);
+
+        // Proxy (ejecutar y cancelar)
+        Route::post('/ejecutar', [ApiProxyController::class, 'ejecutar']);
+        Route::post('/ejecutar/cancelar/{uid}', [ApiProxyController::class, 'cancelar']);
+    });
+    // ? END API CLIENT
 
 
 
@@ -969,6 +1053,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
     // 27-oct: la consulta GaranCheck casada con el caso (cabecera y pestaña Calificación)
     Route::get('/casoConsultaGarancheck/{caso_id}', [CasoConsultaGarancheckController::class, 'mostrar'])->where('caso_id', '[0-9]+');
+    // 30-oct (fase 3b de Yupana): el botón Calificar / Reintentar del caso: consulta con la agencia del caso, casa la consulta y guarda la calificación.
+    Route::post('/casoCalificar/{caso_id}', [CasoConsultaGarancheckController::class, 'calificar'])->where('caso_id', '[0-9]+')->middleware('throttle:20,1,caso-calificar');
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::post('/respuestaCasoMasivo', [CasoController::class, 'respuestaCasoMasivo']);
@@ -1299,6 +1385,8 @@ Route::group(["prefix" => "consultas", 'middleware' => ['jwt.auth', 'usuario.act
     Route::post('/cliente', [ConsultasController::class, 'consultarCliente'])->middleware('throttle:20,1,consultas-cliente');
     // 28-oct: si la lupa saldrá de la caché (solo lee, no cobra): decide el texto del spinner de Nuevo Caso.
     Route::get('/cliente/cache/{identificacion}', [ConsultasController::class, 'cacheCliente'])->middleware('throttle:60,1,consultas-cliente-cache');
+    // 30-oct: el contacto + dirección del modal del campo IDENTIFICACION CLIENTE PROVEEDOR (Nuevo Caso).
+    Route::post('/cliente/contacto', [ConsultasController::class, 'guardarContactoCliente'])->middleware('throttle:60,1,consultas-cliente-contacto');
     // 29-oct: pantalla de respuestas de proveedores (demo): solo lee crm.proveedor_respuestas.
     Route::post('/respuestas-proveedor/resumen', [ProveedorRespuestasController::class, 'resumen']);
     Route::post('/respuestas-proveedor/listar', [ProveedorRespuestasController::class, 'listar']);
@@ -1502,6 +1590,16 @@ Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario
     Route::post('/editAgencia/{id}', [AgenciaController::class, 'editAgencia']); // Editar
     Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
     Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
+    Route::get('/listAgenciasPaginacion', [AgenciaController::class, 'listAgenciasPaginacion']); // 30-oct: grid paginado de Configuración → Agencias
+    Route::get('/listProveedoresConsulta', [AgenciaController::class, 'listProveedoresConsulta']); // 30-oct: calificadores del combo (GaranCheck, Yupana)
+
+    // COLORES DE CALIFICACION (30-oct, fase 3b de Yupana: Configuración → Colores de calificación, crm.fn_calificacion_color_*)
+    Route::get('/listCalificacionColores', [CalificacionColorController::class, 'listCalificacionColores']); // las activas, para el kanban y el caso
+    Route::get('/listCalificacionColoresPaginacion', [CalificacionColorController::class, 'listCalificacionColoresPaginacion']); // grid paginado
+    Route::get('/listCalificacionTexturas', [CalificacionColorController::class, 'listCalificacionTexturas']); // texturas del combo (Oro, Plata, Bronce, Platino, Diamante)
+    Route::post('/addCalificacionColor', [CalificacionColorController::class, 'addCalificacionColor']); // guardar
+    Route::post('/editCalificacionColor/{id}', [CalificacionColorController::class, 'editCalificacionColor']); // Editar
+    Route::delete('/deleteCalificacionColor/{id}', [CalificacionColorController::class, 'deleteCalificacionColor']); // Eliminar
 
 
     // ZONAS AGENCIAS

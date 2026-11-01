@@ -30,12 +30,15 @@ class TipoCasoController extends Controller
             'cotiza_contado' => 'sometimes|boolean',
             'cotiza_credito' => 'sometimes|boolean',
             'cotiza_tarjeta' => 'sometimes|boolean',
+            // 30-oct: el switch "Pide calificación"
+            'requiere_calificacion' => 'sometimes|boolean',
         ], [
-            'boolean' => 'La forma de cotizar :attribute debe ser sí o no.',
+            'boolean' => 'El valor de :attribute debe ser sí o no.',
         ], [
             'cotiza_contado' => 'Contado',
             'cotiza_credito' => 'Crédito',
             'cotiza_tarjeta' => 'Tarjeta de crédito',
+            'requiere_calificacion' => 'Pide calificación',
         ]);
 
         return $validator->fails() ? $validator->errors()->first() : null;

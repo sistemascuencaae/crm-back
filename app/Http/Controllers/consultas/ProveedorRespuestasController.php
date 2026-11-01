@@ -130,11 +130,15 @@ class ProveedorRespuestasController extends Controller
 
     private function base()
     {
+        // 30-oct: también qué llamada fue (servicio: TOKEN / DATOS / PERFIL / CONSULTA), la agencia con cuyo calificador se
+        // consultó, el tipo de identificación y el caso.
         return DB::table('crm.proveedor_respuestas as r')
             ->leftJoin('crm.users as u', 'u.id', '=', 'r.usu_id')
+            ->leftJoin('crm.agencia as a', 'a.codigo', '=', 'r.agencia_codigo')
             ->select(
                 'r.id', 'r.proveedor', 'r.canal', 'r.identificacion', 'r.cli_id', 'r.usu_id', 'r.corredor', 'r.resultado',
                 'r.http_status', 'r.duracion_ms', 'r.consulta_id', 'r.mensaje',
+                'r.servicio', 'r.agencia_codigo', 'r.tipo_identificacion', 'r.caso_id', 'a.nombre as agencia_nombre',
                 DB::raw("to_char(r.created_at AT TIME ZONE 'America/Guayaquil', 'YYYY-MM-DD HH24:MI:SS') as fecha"),
                 DB::raw("nullif(trim(coalesce(u.name, '') || ' ' || coalesce(u.surname, '')), '') as usuario"),
                 DB::raw('r.respuesta IS NOT NULL as con_respuesta')
@@ -158,6 +162,12 @@ class ProveedorRespuestasController extends Controller
             'duracion_ms' => $f->duracion_ms !== null ? (int) $f->duracion_ms : null,
             'consulta_id' => $f->consulta_id !== null ? (int) $f->consulta_id : null,
             'con_respuesta' => (bool) $f->con_respuesta,
+            // 30-oct
+            'servicio' => $f->servicio,
+            'agencia_codigo' => $f->agencia_codigo,
+            'agencia_nombre' => $f->agencia_nombre,
+            'tipo_identificacion' => $f->tipo_identificacion,
+            'caso_id' => $f->caso_id !== null ? (int) $f->caso_id : null,
         ];
     }
 

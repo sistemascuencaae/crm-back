@@ -742,7 +742,8 @@ class FaseController extends Controller
             $casos = empty($lista['ids'])
                 ? collect()
                 : $this->ordenarComoLaFuncion(
-                    Caso::select(['id', 'nombre', 'fecha_inicio', 'fecha_vencimiento', 'estado_2', 'prioridad', 'user_id', 'fas_id', 'identificacion', 'cliente', 'comprobante'])
+                    // 30-oct (fase 3b de Yupana): también la calificación del cliente guardada en el caso.
+                    Caso::select(['id', 'nombre', 'fecha_inicio', 'fecha_vencimiento', 'estado_2', 'prioridad', 'user_id', 'fas_id', 'identificacion', 'cliente', 'comprobante', 'calificacion_proveedor', 'requiere_calificacion'])
                         ->with(['estadodos:id,nombre', 'user:id,usu_alias'])
                         ->whereIn('id', $lista['ids'])
                         ->get(),
