@@ -146,7 +146,8 @@ class PaginaMarcaService
      * y sus sub-marcas (fn_pagina_marca_marcas_incluidas), de cualquier categoría; los títulos los pone la tienda:
      *   {direccion, titulo, logo (el de la marca), mar_id,
      *    banner: [imágenes],
-     *    destacados: {productos: [tarjetas destacadas], promociones: [{pro_id, marca, nombre, imagen, tpr_id, precio}]},
+     *    destacados: {productos: [tarjetas destacadas],
+     *                 promociones: [{pro_id, marca, nombre, imagen, tpr_id, precio, precio_anterior}]},
      *    productos: [tarjetas: todos los publicados de sus marcas],
      *    fotos: [imágenes],
      *    contacto: {titulo, texto, boton_texto, boton_enlace, boton_nueva_pestana} | null}

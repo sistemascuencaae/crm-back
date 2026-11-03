@@ -4,11 +4,11 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
 use App\Servicios\PaginaWeb\MarcaWebService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 /**
  * Marcas de la tienda (CRM): el logo de cada marca y cuáles salen en "Nuestras marcas", en su orden.
@@ -58,22 +58,12 @@ class MarcaWebController extends Controller
         }
     }
 
-    // POST pagina-web/marcas-tienda-logo   multipart: archivo (PNG, WEBP o JPG, máx. 2 MB) → {url}
+    // POST pagina-web/marcas-tienda-logo   multipart: archivo (solo WebP, máx. 2 MB) → {url}
     // Solo sube el archivo; la URL se guarda después con el PUT.
     public function subirLogo(Request $request)
     {
-        // mimes revisa el contenido real del archivo, no solo su nombre. Sin SVG: puede llevar código.
-        $validator = Validator::make($request->all(), [
-            'archivo' => 'required|file|mimes:png,webp,jpg,jpeg|max:2048',
-        ], [
-            'archivo.required' => 'Elige una imagen.',
-            'archivo.file'     => 'Elige una imagen.',
-            'archivo.mimes'    => 'El logo debe ser PNG, WEBP o JPG.',
-            'archivo.max'      => 'El logo no puede pesar más de 2 MB.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+        if ($error = ArchivosPaginaWeb::errorImagen($request, 'archivo')) {
+            return response()->json(RespuestaApi::returnResultado('error', $error, null));
         }
 
         return app(ArchivoPaginaWebController::class)->guardar(

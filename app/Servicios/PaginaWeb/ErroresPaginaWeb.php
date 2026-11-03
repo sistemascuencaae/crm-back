@@ -52,6 +52,43 @@ class ErroresPaginaWeb
         'FRANJA_NO_EXISTE'         => 'La franja no existe o está en la papelera.',
         'FRANJAS_MAXIMO'           => 'Puedes tener hasta 5 franjas. Elimina una para agregar otra.',
         'FRANJA_TEXTO_REQUERIDO'   => 'Escribe el texto o el texto resaltado de la franja.',
+        // Grupos de los banners (GRUPO_EN_PAPELERA de las imágenes está en GaleriaService: el común es el de las carpetas)
+        'GALERIA_SIN_GRUPOS'       => 'Esta galería no usa grupos.',
+        'GRUPO_NO_EXISTE'          => 'El grupo ya no existe.',
+        'GRUPO_SIEMPRE'            => 'El grupo Siempre no se puede cambiar ni borrar.',
+        'GRUPOS_MAXIMO'            => 'Máximo 20 grupos por banner.',
+        // Familias de productos (variantes)
+        'FAMILIA_NO_EXISTE'        => 'La familia ya no existe.',
+        'PRODUCTO_NO_EXISTE'       => 'El producto no existe o está inactivo.',
+        'PRODUCTO_SIN_MARCA'       => 'El producto no tiene marca.',
+        'PRODUCTO_EN_OTRA_FAMILIA' => 'Ese producto ya está en otra familia.',
+        'PRODUCTO_YA_EN_FAMILIA'   => 'Ese producto ya está en la familia.',
+        'PRODUCTO_NO_EN_FAMILIA'   => 'Ese producto no está en la familia.',
+        'FAMILIA_OTRA_CATEGORIA'   => 'Es de otra categoría.',
+        'FAMILIA_OTRA_MARCA'       => 'Es de otra marca.',
+        'FAMILIA_LLENA'            => 'Máximo 30 productos por familia.',
+        'FAMILIA_SIN_PRODUCTOS'    => 'Una familia no puede quedar sin productos.',
+        'CARACTERISTICA_NO_EXISTE' => 'La característica no existe.',
+        'CARACTERISTICAS_IGUALES'  => 'Elige dos características distintas.',
+        // Clientes de la tienda (los lanzan la base o ClienteWeb*Controller)
+        'CORREO_INVALIDO'              => 'Escribe un correo válido.',
+        'TELEFONO_INVALIDO'            => 'Escribe un teléfono válido, por ejemplo 0991234567.',
+        'IDENTIFICACION_INVALIDA'      => 'La cédula o el RUC no es válido.',
+        'CORREO_REPETIDO'              => 'Ya hay una cuenta con ese correo.',
+        'IDENTIFICACION_REPETIDA'      => 'Ya hay una cuenta con esa cédula o RUC.',
+        'CORREO_IGUAL'                 => 'Ese ya es el correo de tu cuenta.',
+        'POLITICA_REQUERIDA'           => 'Para crear tu cuenta debes aceptar la política de privacidad.',
+        'CONTRASENA_INVALIDA'          => 'No pudimos guardar la contraseña. Inténtalo de nuevo.',
+        'CLIENTE_NO_EXISTE'            => 'La cuenta no existe.',
+        'ENLACE_INVALIDO'              => 'El enlace venció o ya se usó. Pide uno nuevo.',
+        'CREDENCIALES_INVALIDAS'       => 'Correo o contraseña incorrectos.',
+        'CUENTA_BLOQUEADA'             => 'Tu cuenta está bloqueada por varios intentos fallidos. Inténtalo en %s minutos.',
+        'CUENTA_INACTIVA'              => 'Tu cuenta está desactivada. Escríbenos si necesitas ayuda.',
+        'CONTRASENA_ACTUAL_INCORRECTA' => 'La contraseña actual no es correcta.',
+        'CONTRASENA_DEBIL'             => 'La contraseña debe tener entre 8 y 72 caracteres, con al menos una letra y un número.',
+        'CONTRASENA_CONFIRMACION'      => 'Las contraseñas no coinciden.',
+        'CORREOS_MAXIMO'               => 'Ya te enviamos varios correos. Espera unos minutos e inténtalo de nuevo.',
+        'SESION_VENCIDA'               => 'Tu sesión venció. Vuelve a ingresar.',
     ];
 
     /** Respuesta de error para el CRM. Código desconocido → mensaje genérico (el detalle queda en el log). */
@@ -75,5 +112,35 @@ class ErroresPaginaWeb
         Log::error($mensajeGenerico, ['error' => $e->getMessage()]);
 
         return response()->json(RespuestaApi::returnResultado('error', $mensajeGenerico, null));
+    }
+
+    // -----------------------------------------------------------------
+    // Clientes de la tienda: además del mensaje, 'codigo' y 'campo' (la tienda pinta el error debajo de ese campo)
+    // -----------------------------------------------------------------
+
+    /** Error de un código de la base. Desconocido → mensaje genérico con codigo null (el detalle queda en el log). */
+    public static function respuestaCliente(QueryException $e, string $mensajeGenerico)
+    {
+        if (preg_match('/ERROR:\s+([A-Z_]+)(?::([a-z0-9_.]+))?(?::(\d+))?/', $e->getMessage(), $m) && isset(self::MENSAJES[$m[1]])) {
+            return self::errorCliente($m[1], $m[2] ?? null, $m[3] ?? null);
+        }
+
+        Log::error($mensajeGenerico, ['error' => $e->getMessage()]);
+
+        return response()->json(RespuestaApi::returnResultado('error', $mensajeGenerico, null) + ['codigo' => null, 'campo' => null]);
+    }
+
+    /**
+     * Error con un código conocido: {code, status: 'error', message, data: null, codigo, campo}.
+     * $numero reemplaza el %s del mensaje (minutos de CUENTA_BLOQUEADA, largo de CAMPO_LARGO).
+     * $code: el código del cuerpo (401 en SESION_VENCIDA; 500 como todo error de RespuestaApi).
+     */
+    public static function errorCliente(string $codigo, ?string $campo = null, $numero = null, int $code = 500)
+    {
+        $mensaje = sprintf(self::MENSAJES[$codigo], $numero ?? '');
+
+        return response()->json(
+            ['code' => $code] + RespuestaApi::returnResultado('error', $mensaje, null) + ['codigo' => $codigo, 'campo' => $campo ?: null]
+        );
     }
 }

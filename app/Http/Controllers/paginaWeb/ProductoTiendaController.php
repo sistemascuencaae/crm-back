@@ -4,6 +4,7 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
 use App\Servicios\PaginaWeb\ProductoTiendaService;
 use Illuminate\Database\QueryException;
@@ -122,21 +123,11 @@ class ProductoTiendaController extends Controller
     // Solo sube el archivo; la URL se guarda después con crear o modificar.
     public function subirImagen(Request $request)
     {
-        // mimes y mimetypes revisan el contenido real del archivo, no solo su nombre
-        $validator = Validator::make($request->all(), [
-            'pro_id'  => 'required|integer|min:1',
-            'archivo' => 'required|file|mimes:webp|mimetypes:image/webp|max:2048',
-        ], [
-            'pro_id.*'          => 'Falta el producto.',
-            'archivo.required'  => 'Elige una imagen.',
-            'archivo.file'      => 'Elige una imagen.',
-            'archivo.mimes'     => 'La imagen debe ser WEBP.',
-            'archivo.mimetypes' => 'La imagen debe ser WEBP.',
-            'archivo.max'       => 'La imagen no puede pesar más de 2 MB.',
-        ]);
+        $validator = Validator::make($request->all(), ['pro_id' => 'required|integer|min:1'], ['pro_id.*' => 'Falta el producto.']);
+        $error     = $validator->fails() ? $validator->errors()->first() : ArchivosPaginaWeb::errorImagen($request, 'archivo');
 
-        if ($validator->fails()) {
-            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+        if ($error) {
+            return response()->json(RespuestaApi::returnResultado('error', $error, null));
         }
 
         return app(ArchivoPaginaWebController::class)->guardar(

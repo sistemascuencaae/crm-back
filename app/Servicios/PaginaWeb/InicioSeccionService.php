@@ -7,8 +7,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Secciones del inicio de la tienda: banner_principal, categorias_destacadas, ofertas_flash, banner_simple,
- * mosaico, grilla, bloques y marcas. Cada una tiene su interruptor, su orden y su vigencia (desde / hasta);
- * algunas además título o subtítulo. Llama a las funciones ecommerce.fn_inicio_seccion_*.
+ * mosaico, grilla, bloques y marcas. Cada una tiene su interruptor y su orden; algunas además título o subtítulo.
+ * Ofertas flash tiene además "La oferta termina el…" (ise_hasta, para la cuenta regresiva). Las demás no tienen fechas.
+ * Llama a las funciones ecommerce.fn_inicio_seccion_*.
  * La tienda lee todo el inicio en GET public/pagina-web/inicio (con caché que respeta la vigencia: CachePaginaWeb).
  */
 class InicioSeccionService
@@ -42,14 +43,14 @@ class InicioSeccionService
 
     /**
      * [{ise_clave, ise_nombre, ise_orden, ise_activo, ise_titulo, ise_subtitulo,
-     *   ise_desde, ise_hasta, vigencia, visible}] en el orden del inicio
+     *   ise_hasta (solo ofertas_flash), vigencia, visible}] en el orden del inicio
      */
     public function listar(): array
     {
         return DB::select('SELECT * FROM ecommerce.fn_inicio_seccion_listar()');
     }
 
-    /** $datos: solo lo que cambia (ise_activo, ise_titulo, ise_subtitulo, ise_desde, ise_hasta) + usu_id */
+    /** $datos: solo lo que cambia (ise_activo, ise_titulo, ise_subtitulo, ise_hasta: solo ofertas_flash) + usu_id */
     public function modificar(string $clave, array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_inicio_seccion_modificar(?, ?::jsonb)', [$clave, $this->json($datos)]);

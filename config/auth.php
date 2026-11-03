@@ -46,6 +46,12 @@ return [
             'provider' => 'users',
             'hash' => false,
         ],
+
+        // Clientes de la tienda web (ecommerce.clientes_web): sus tokens no sirven en el CRM ni al revés
+        'cliente' => [
+            'driver' => 'jwt',
+            'provider' => 'clientes_web',
+        ],
     ],
 
     /*
@@ -69,6 +75,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
+        ],
+
+        'clientes_web' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\paginaWeb\ClienteWeb::class,
         ],
 
         // 'users' => [

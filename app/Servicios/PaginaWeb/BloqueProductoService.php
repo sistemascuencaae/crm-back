@@ -29,7 +29,8 @@ class BloqueProductoService
     /**
      * Los bloques, en orden: [{bpr_id, bpr_titulo, tpr_id, categoria, categoria_en_tienda, categoria_principal,
      * bpr_imagen_lado, bpr_orden, bpr_activo, bpr_desde, bpr_hasta, vigencia ('siempre' | 'programada' | 'vigente' |
-     * 'vencida'), productos_promocion (cuántas tarjetas tendrá su carrusel)}]
+     * 'vencida'), productos_carrusel (cuántos destacados tendrá su carrusel), productos_con_promocion (cuántos de ellos
+     * tienen imagen de Promoción)}]
      */
     public function listar(): array
     {
@@ -95,7 +96,7 @@ class BloqueProductoService
     /**
      * Los bloques visibles y vigentes:
      *   [{titulo, tpr_id, imagen_lado, productos: [todos los destacados de su categoría],
-     *     promociones: [{pro_id, marca, nombre, imagen, tpr_id, precio}]}]
+     *     promociones: [{pro_id, marca, nombre, imagen, tpr_id, precio, precio_anterior}]}]  (el carrusel)
      * Un bloque sin productos ni promociones no sale.
      */
     public function listarPublicos(): array

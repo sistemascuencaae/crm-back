@@ -223,8 +223,11 @@ class ProductoTiendaService
 
     /**
      * Tarjetas de productos publicados, con la misma forma en todo el sitio (nombre = el de la tienda):
-     *   [{pro_id, codigo, nombre, marca, tpr_id, categoria, imagenes: [url…], destacado, precio, precio_anterior, stock}]
+     *   [{pro_id, codigo, nombre, marca, tpr_id, categoria, imagenes: [url…], destacado, precio, precio_anterior, stock,
+     *     familia, variantes}]
      * imagenes: todas las carátulas en orden; sin carátulas, la primera del detalle; sin fotos, [].
+     * Una familia sale en una sola tarjeta: familia = su nombre, variantes = cuántas están publicadas, precio = el menor
+     * de ellas ("Desde") y precio_anterior = null. Un producto suelto: familia y variantes null.
      * Filtros opcionales: solo ofertas de la semana, solo destacados, una categoría (con su rama) o unas marcas
      * ($marcas: [mar_id…]; null = cualquier marca). $cantidad null = todas.
      */
@@ -241,12 +244,25 @@ class ProductoTiendaService
             $cantidad,
         ]);
 
-        return array_map(fn ($f) => $this->tarjeta($f, $publicados[(int) $f->pro_id] ?? []), $filas);
+        return array_map(function ($f) use ($publicados) {
+            $datos = $publicados[(int) $f->pro_id] ?? [];
+
+            if ($f->familia !== null) {
+                // variantes llega como arreglo de Postgres con los pro_id publicados de la familia: "{12,15,20}"
+                $variantes = array_map('intval', array_filter(explode(',', trim((string) $f->variantes, '{}'))));
+                $precios   = array_filter(array_map(fn ($id) => $publicados[$id]['precio'] ?? null, $variantes), fn ($p) => $p !== null);
+                $datos     = ['precio' => $precios ? min($precios) : null, 'precio_anterior' => null, 'stock' => $datos['stock'] ?? null,
+                              'variantes' => count($variantes)];
+            }
+
+            return $this->tarjeta($f, $datos);
+        }, $filas);
     }
 
     /**
      * Búsqueda del shop (GET public/pagina-web/productos). $filtros: solo las claves de FILTROS_SHOP que llegaron;
      * lo que no es válido, la base lo ignora. Sin caché de la respuesta: solo la de publicados.
+     * Una familia sale en una sola tarjeta (familia, variantes y precio "Desde" ya vienen de la base).
      *   {productos: [tarjetas], total, pagina, por_pagina, ultima_pagina,
      *    opciones: {categorias: [{tpr_id, nombre, cantidad}], marcas: [{mar_id, nombre, cantidad}], precio: {min, max} | null}}
      */
@@ -285,24 +301,30 @@ class ProductoTiendaService
      * Detalle de un producto para la tienda, o null si no está publicado o su categoría no se ve en la tienda:
      *   {producto: {pro_id, codigo, nombre, descripcion, tpr_id, categoria, destacado, imagenes, ficha: [{nombre, valor, unidad}],
      *               precio, precio_anterior, marca: {mar_id, nombre, logo, enlace} | null},
-     *    relacionados: [hasta 8 tarjetas de su categoría, sin él]}
+     *    familia: null | {nombre, caracteristicas: [{nombre, unidad}], variantes: [{pro_id, nombre, valores, posiciones,
+     *                     precio, precio_anterior, actual}]},
+     *    relacionados: [hasta 8 tarjetas de su categoría, sin él ni las otras variantes de su familia]}
      * Sin caché: el precio sale de la caché de publicados, como en el shop. Las franjas las agrega el controlador.
      */
     public function detalle(int $proId): ?array
     {
-        $precios = $this->publicados()['productos'][$proId] ?? null;
-        $p       = $precios === null ? null : DB::selectOne('SELECT * FROM inventarios.fn_producto_detalle_publico(?)', [$proId]);
+        $publicados = $this->publicados()['productos'];
+        $precios    = $publicados[$proId] ?? null;
+        $p          = $precios === null ? null : DB::selectOne('SELECT * FROM inventarios.fn_producto_detalle_publico(?)', [$proId]);
 
         if ($p === null) {
             return null;
         }
+
+        $familia = $this->familiaDelDetalle($proId, $publicados);
+        $fuera   = $familia === null ? [$proId] : array_column($familia['variantes'], 'pro_id');
 
         $relacionados = array_filter(
             DB::select('SELECT * FROM inventarios.fn_producto_tienda_buscar(?::jsonb, ?::jsonb)', [
                 $this->publicadosJson(),
                 $this->json(['categoria' => (int) $p->tpr_id, 'per_page' => 12]),
             ]),
-            fn ($f) => (int) $f->pro_id !== $proId
+            fn ($f) => !in_array((int) $f->pro_id, $fuera, true)
         );
 
         return [
@@ -325,7 +347,42 @@ class ProductoTiendaService
                     'enlace' => $p->marca_enlace,
                 ],
             ],
+            'familia'      => $familia,
             'relacionados' => array_map(fn ($f) => $this->tarjetaTienda($f), array_slice(array_values($relacionados), 0, 8)),
+        ];
+    }
+
+    /**
+     * La familia del producto para el detalle (los botones de las variantes), o null si no es de ninguna o le quedan menos
+     * de 2 variantes válidas y publicadas. Cada variante con su precio de la caché de publicados.
+     */
+    private function familiaDelDetalle(int $proId, array $publicados): ?array
+    {
+        $filas = DB::select('SELECT * FROM inventarios.fn_familia_detalle_publico(?, ?::integer[])', [$proId, $this->arreglo(array_keys($publicados))]);
+
+        if (!$filas) {
+            return null;
+        }
+
+        $f               = $filas[0];
+        $caracteristicas = [['nombre' => $f->caracteristica_1, 'unidad' => $f->unidad_1]];
+        if ($f->caracteristica_2 !== null) {
+            $caracteristicas[] = ['nombre' => $f->caracteristica_2, 'unidad' => $f->unidad_2];
+        }
+        $dos = count($caracteristicas) === 2;
+
+        return [
+            'nombre'          => $f->fam_nombre,
+            'caracteristicas' => $caracteristicas,
+            'variantes'       => array_map(fn ($v) => [
+                'pro_id'          => (int) $v->pro_id,
+                'nombre'          => $v->nombre,
+                'valores'         => $dos ? [$v->valor_1, $v->valor_2] : [$v->valor_1],
+                'posiciones'      => $dos ? [(int) $v->posicion_1, (int) $v->posicion_2] : [(int) $v->posicion_1],
+                'precio'          => $publicados[(int) $v->pro_id]['precio'] ?? null,
+                'precio_anterior' => $publicados[(int) $v->pro_id]['precio_anterior'] ?? null,
+                'actual'          => (bool) $v->actual,
+            ], $filas),
         ];
     }
 
@@ -341,8 +398,9 @@ class ProductoTiendaService
     }
 
     /**
-     * Tarjetas de promoción de los productos publicados, una por producto:
+     * Tarjetas del carrusel de un bloque destacado: los productos destacados publicados, uno por producto:
      *   [{pro_id, marca, nombre, imagen, tpr_id, precio, precio_anterior}]
+     * imagen: la de Promoción o, si no tiene, la carátula o una del detalle; null sin fotos.
      * Filtros opcionales (null = no filtra): una categoría (con su rama) o unas marcas ([mar_id…]).
      */
     public function promociones(?int $tprId, ?array $marcas): array
@@ -442,8 +500,11 @@ class ProductoTiendaService
         return ['actualizado' => now()->format('Y-m-d\TH:i:sP'), 'productos' => $productos];
     }
 
-    /** La tarjeta de producto de todo el sitio; $precios: {precio, precio_anterior, stock} (vacío = no está publicado) */
-    private function tarjeta(object $f, array $precios): array
+    /**
+     * La tarjeta de producto de todo el sitio. $datos: {precio, precio_anterior, stock, variantes} (vacío = no está
+     * publicado). familia: el nombre de la familia si la tarjeta es de una (con variantes = cuántas); si no, null.
+     */
+    private function tarjeta(object $f, array $datos): array
     {
         return [
             'pro_id'          => (int) $f->pro_id,
@@ -454,19 +515,22 @@ class ProductoTiendaService
             'categoria'       => $f->categoria,
             'imagenes'        => json_decode($f->imagenes ?? '[]', true) ?? [],
             'destacado'       => (bool) $f->destacado,
-            'precio'          => $precios['precio'] ?? null,
-            'precio_anterior' => $precios['precio_anterior'] ?? null,
-            'stock'           => $precios['stock'] ?? null,
+            'precio'          => $datos['precio'] ?? null,
+            'precio_anterior' => $datos['precio_anterior'] ?? null,
+            'stock'           => $datos['stock'] ?? null,
+            'familia'         => $f->familia ?? null,
+            'variantes'       => $datos['variantes'] ?? null,
         ];
     }
 
-    /** Tarjeta de una fila de fn_producto_tienda_buscar, que ya trae precio, precio_anterior y stock */
+    /** Tarjeta de una fila de fn_producto_tienda_buscar, que ya trae precio ("Desde" en una familia), stock y variantes */
     private function tarjetaTienda(object $f): array
     {
         return $this->tarjeta($f, [
             'precio'          => (float) $f->precio,
             'precio_anterior' => $f->precio_anterior === null ? null : (float) $f->precio_anterior,
             'stock'           => (float) $f->stock,
+            'variantes'       => $f->variantes === null ? null : (int) $f->variantes,
         ]);
     }
 
