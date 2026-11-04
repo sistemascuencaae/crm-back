@@ -6,6 +6,7 @@ use App\Models\crm\Caso;
 use App\Models\crm\Tablero;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\DB; // 30-oct: canal del API Client
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +26,14 @@ use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('App.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
+});
+
+// 30-oct: API Client. Canal de una colección: lo escuchan el dueño, el admin global y los usuarios agregados
+// (crm.fn_api_coleccion_permiso devuelve NULL para los demás).
+Broadcast::channel('api.coleccion.{id}', function ($user, $id) {
+    $f = DB::selectOne('SELECT crm.fn_api_coleccion_permiso(?::bigint, ?::bigint) AS rol', [(int) $id, (int) $user->id]);
+
+    return $f && $f->rol !== null;
 });
 
 

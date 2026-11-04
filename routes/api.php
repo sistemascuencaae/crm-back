@@ -3,6 +3,11 @@
 use App\Http\Controllers\activos\ActasController;
 use App\Http\Controllers\activos\ActivosController;
 use App\Http\Controllers\api\ApiController;
+use App\Http\Controllers\api\ApiClientController;
+use App\Http\Controllers\api\ApiColaboracionController;
+use App\Http\Controllers\api\ApiColeccionController; // 30-oct F2
+use App\Http\Controllers\api\ApiEjemploController; // 30-oct F3
+use App\Http\Controllers\api\ApiProxyController;
 use App\Http\Controllers\pinpad\PinpadController;
 use App\Http\Controllers\pinpadjar\PinpadJarController;
 use App\Http\Controllers\appreact\ReactNativeMaps;
@@ -15,6 +20,7 @@ use App\Http\Controllers\TableauAuthController;
 use App\Http\Controllers\PowerBiRefreshDatasetController;
 use App\Http\Controllers\GoogleSheetsController;
 use App\Http\Controllers\configuracion\AgenciaController;
+use App\Http\Controllers\configuracion\CalificacionColorController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\anuncios\AnunciosController;
 use App\Http\Controllers\anuncios\AnunciosUsuarioController;
@@ -27,6 +33,7 @@ use App\Http\Controllers\crm\BitacoraController;
 use App\Http\Controllers\crm\CActividadClienteController;
 use App\Http\Controllers\crm\CActividadController;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Controllers\crm\CasoConsultaGarancheckController;
 use App\Http\Controllers\crm\CFormularioController;
 use App\Http\Controllers\crm\ClienteCrmController;
 use App\Http\Controllers\crm\ClienteOpenceoController;
@@ -133,6 +140,7 @@ use App\Http\Controllers\openceo\RenegociacionesController;
 use App\Http\Controllers\corredores\CorredorClienteController;
 use App\Http\Controllers\varios\ConsultaIdentidadExternoController;
 use App\Http\Controllers\consultas\ConsultasController;
+use App\Http\Controllers\consultas\ProveedorRespuestasController;
 use App\Http\Controllers\ParametrosController;
 use App\Http\Controllers\User\UsuarioAlmacenController;
 use App\Http\Controllers\configuracion\NotesController;
@@ -161,11 +169,13 @@ use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\ParametrosCotizadorController;
-use App\Http\Controllers\ventas\MarkupCotizadorController;
+use App\Http\Controllers\ventas\MargenCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
 use App\Http\Controllers\ventas\CotizarController;
 use App\Http\Controllers\ventas\CotizacionesController;
 use App\Http\Controllers\ventas\TarjetasContadoController;
+use App\Http\Controllers\ventas\TarjetasController;
+use App\Http\Controllers\ventas\BancosEmisoresController;
 use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
@@ -352,6 +362,11 @@ Route::get('prueba-flutter/visitas', [ItemPruebaFlutterController::class, 'visit
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 // ---------------------------- START VA LAS RUTAS PROTEGIDAS ----------------------------------------------------
 
+// 30-oct F3: descarga de una respuesta grande del API Client (GET api-client/descargar/{token}). El front la abre con
+// <a download>, sin el header Authorization, por eso va fuera del grupo jwt.auth: la credencial es el token (uuid de un
+// solo uso que vence en 1 h). El grupo api ya le aplica throttle:api.
+Route::get('/crm/api-client/descargar/{token}', [ApiProxyController::class, 'descargar']);
+
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     // ? START POLITICAS
     Route::get('/listPoliticasPaginado', [PoliticaController::class, 'listPoliticasPaginado']);
@@ -374,32 +389,105 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // ? END COBRANZAS
 
     // ? START API TESTER
-    // Colecciones
-    Route::get('/colecciones', [ApiController::class, 'listColecciones']);
-    Route::post('/colecciones', [ApiController::class, 'addColeccion']);
-    Route::put('/colecciones/{id}', [ApiController::class, 'editColeccion']);
-    Route::delete('/colecciones/{id}', [ApiController::class, 'deleteColeccion']);
-
-    // Requests
-    Route::get('/requests/{coleccionId}', [ApiController::class, 'listRequests']);
-    Route::post('/requests', [ApiController::class, 'addRequest']);
-    Route::put('/requests/{id}', [ApiController::class, 'editRequest']);
-    Route::delete('/requests/{id}', [ApiController::class, 'deleteRequest']);
-
-    // Historial
-    Route::get('/historial', [ApiController::class, 'listHistorial']);
-    Route::delete('/historial/clear', [ApiController::class, 'clearHistorial']);
-    Route::delete('/historial/{id}', [ApiController::class, 'deleteHistorial']);
-
-    // Variables
-    Route::get('/variables', [ApiController::class, 'listVariables']);
-    Route::post('/variables', [ApiController::class, 'addVariable']);
-    Route::put('/variables/{id}', [ApiController::class, 'editVariable']);
-    Route::delete('/variables/{id}', [ApiController::class, 'deleteVariable']);
-
-    // Ejecutar
-    Route::post('/ejecutar', [ApiController::class, 'ejecutarRequest']);
+    // QUITADO 30-oct: el módulo API pasó a /api-client (reactivar = descomentar)
+    // // Colecciones
+    // Route::get('/colecciones', [ApiController::class, 'listColecciones']);
+    // Route::post('/colecciones', [ApiController::class, 'addColeccion']);
+    // Route::put('/colecciones/{id}', [ApiController::class, 'editColeccion']);
+    // Route::delete('/colecciones/{id}', [ApiController::class, 'deleteColeccion']);
+    //
+    // // Requests
+    // Route::get('/requests/{coleccionId}', [ApiController::class, 'listRequests']);
+    // Route::post('/requests', [ApiController::class, 'addRequest']);
+    // Route::put('/requests/{id}', [ApiController::class, 'editRequest']);
+    // Route::delete('/requests/{id}', [ApiController::class, 'deleteRequest']);
+    //
+    // // Historial
+    // Route::get('/historial', [ApiController::class, 'listHistorial']);
+    // Route::delete('/historial/clear', [ApiController::class, 'clearHistorial']);
+    // Route::delete('/historial/{id}', [ApiController::class, 'deleteHistorial']);
+    //
+    // // Variables
+    // Route::get('/variables', [ApiController::class, 'listVariables']);
+    // Route::post('/variables', [ApiController::class, 'addVariable']);
+    // Route::put('/variables/{id}', [ApiController::class, 'editVariable']);
+    // Route::delete('/variables/{id}', [ApiController::class, 'deleteVariable']);
+    //
+    // // Ejecutar
+    // Route::post('/ejecutar', [ApiController::class, 'ejecutarRequest']);
     // ? END API TESTER
+
+    // ? START API CLIENT (30-oct)
+    Route::prefix('api-client')->group(function () {
+        // Colecciones (la de /{id}/requests va antes que /{id})
+        Route::get('/colecciones', [ApiClientController::class, 'listColecciones']);
+        Route::post('/colecciones', [ApiClientController::class, 'addColeccion']);
+        Route::get('/colecciones/{id}/requests', [ApiClientController::class, 'listRequests']);
+        // 30-oct F4: usuarios de la colección (compartir) y actividad, antes que /{id}
+        Route::get('/colecciones/{id}/usuarios', [ApiColaboracionController::class, 'listUsuarios']);
+        Route::post('/colecciones/{id}/usuarios', [ApiColaboracionController::class, 'addUsuarios']);
+        Route::delete('/colecciones/{id}/usuarios/{uid}', [ApiColaboracionController::class, 'deleteUsuario']);
+        Route::get('/colecciones/{id}/auditoria', [ApiColaboracionController::class, 'getAuditoria']);
+        // 30-oct F2: importar (fija, antes que /{id}), reordenar, duplicar y exportar
+        Route::post('/colecciones/importar', [ApiColeccionController::class, 'importar']);
+        Route::put('/colecciones/{id}/reordenar', [ApiColeccionController::class, 'reordenar']);
+        Route::post('/colecciones/{id}/duplicar', [ApiColeccionController::class, 'duplicarColeccion']);
+        Route::get('/colecciones/{id}/exportar', [ApiColeccionController::class, 'exportar']);
+        Route::get('/colecciones/{id}', [ApiClientController::class, 'getColeccion']);
+        Route::put('/colecciones/{id}', [ApiClientController::class, 'editColeccion']);
+        Route::delete('/colecciones/{id}', [ApiClientController::class, 'deleteColeccion']);
+
+        // Requests
+        Route::get('/requests/{id}', [ApiClientController::class, 'getRequest']);
+        Route::post('/requests', [ApiClientController::class, 'addRequest']);
+        Route::put('/requests/{id}', [ApiClientController::class, 'editRequest']);
+        Route::delete('/requests/{id}', [ApiClientController::class, 'deleteRequest']);
+        // 30-oct F2: mover y duplicar requests
+        Route::put('/requests/{id}/mover', [ApiColeccionController::class, 'moverRequest']);
+        Route::post('/requests/{id}/duplicar', [ApiColeccionController::class, 'duplicarRequest']);
+        // 30-oct F3: ejemplos (respuestas guardadas) del request
+        Route::get('/requests/{id}/ejemplos', [ApiEjemploController::class, 'listEjemplos']);
+        Route::post('/requests/{id}/ejemplos', [ApiEjemploController::class, 'addEjemplo']);
+        Route::get('/ejemplos/{id}', [ApiEjemploController::class, 'getEjemplo']);
+        Route::put('/ejemplos/{id}', [ApiEjemploController::class, 'editEjemplo']);
+        Route::delete('/ejemplos/{id}', [ApiEjemploController::class, 'deleteEjemplo']);
+
+        // 30-oct F2: carpetas (anidadas) de la colección
+        Route::post('/carpetas', [ApiColeccionController::class, 'addCarpeta']);
+        Route::put('/carpetas/{id}', [ApiColeccionController::class, 'editCarpeta']);
+        Route::delete('/carpetas/{id}', [ApiColeccionController::class, 'deleteCarpeta']);
+
+        // Historial (DELETE sin id = limpiar, declarado antes que /historial/{id})
+        Route::get('/historial', [ApiClientController::class, 'listHistorial']);
+        Route::delete('/historial', [ApiClientController::class, 'clearHistorial']);
+        Route::get('/historial/{id}', [ApiClientController::class, 'getHistorial']);
+        Route::delete('/historial/{id}', [ApiClientController::class, 'deleteHistorial']);
+
+        // Variables globales
+        Route::get('/variables/origen-probar', [ApiClientController::class, 'probarOrigenVariable']); // 31-oct F6: vista previa del origen de una variable (antes que /variables/{id})
+        Route::get('/variables', [ApiClientController::class, 'listVariables']);
+        Route::post('/variables', [ApiClientController::class, 'addVariable']);
+        Route::put('/variables/{id}', [ApiClientController::class, 'editVariable']);
+        Route::delete('/variables/{id}', [ApiClientController::class, 'deleteVariable']);
+
+        // 30-oct F4: entornos con secretos por usuario (las fijas /importar y /variables/... antes que las de /{id})
+        Route::get('/entornos', [ApiColaboracionController::class, 'listEntornos']);
+        Route::post('/entornos', [ApiColaboracionController::class, 'addEntorno']);
+        Route::post('/entornos/importar', [ApiColaboracionController::class, 'importarEntorno']);
+        Route::delete('/entornos/variables/{vid}', [ApiColaboracionController::class, 'deleteVariable']);
+        Route::put('/entornos/variables/{vid}/mi-valor', [ApiColaboracionController::class, 'guardarMiValor']);
+        Route::get('/entornos/{id}/resolver', [ApiColaboracionController::class, 'resolverEntorno']);
+        Route::get('/entornos/{id}/exportar', [ApiColaboracionController::class, 'exportarEntorno']);
+        Route::put('/entornos/{id}/variables', [ApiColaboracionController::class, 'guardarVariables']);
+        Route::get('/entornos/{id}', [ApiColaboracionController::class, 'getEntorno']);
+        Route::put('/entornos/{id}', [ApiColaboracionController::class, 'editEntorno']);
+        Route::delete('/entornos/{id}', [ApiColaboracionController::class, 'deleteEntorno']);
+
+        // Proxy (ejecutar y cancelar)
+        Route::post('/ejecutar', [ApiProxyController::class, 'ejecutar']);
+        Route::post('/ejecutar/cancelar/{uid}', [ApiProxyController::class, 'cancelar']);
+    });
+    // ? END API CLIENT
 
 
 
@@ -815,6 +903,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::post('/addRequerimientos', [RequerimientoController::class, 'addRequerimientos']); // guardar
     Route::post('/editRequerimientos/{id}', [RequerimientoController::class, 'editRequerimientos']); // Editar
     Route::delete('/deleteRequerimientos/{id}', [RequerimientoController::class, 'deleteRequerimientos']); // Eliminar
+    // 28-oct: las fases para "Habilitado en las fases" y la auditoría de los requerimientos de una fase.
+    Route::get('/listFasesAgrupadasPorTablero', [RequerimientoController::class, 'listFasesAgrupadasPorTablero']);
+    Route::get('/requerimientosAuditoria/{fase_id}', [RequerimientoController::class, 'requerimientosAuditoria']);
 
 
     // CActividadCliente
@@ -843,6 +934,10 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
 
     Route::get('/listEstadosFormulasByTablero/{tab_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTablero']); // listar
     Route::get('/listEstadosFormulasByTabIdByTipoCasoId/{tab_id}/{tipo_caso_id}', [EstadosFormulasController::class, 'listEstadosFormulasByTabIdByTipoCasoId']); // listar
+    Route::get('/listEstadosFormulasFlujoByTipoCasoId/{tipo_caso_id}', [EstadosFormulasController::class, 'listEstadosFormulasFlujoByTipoCasoId']); // 27-oct: flujo del tipo de caso (demo)
+    Route::get('/listFlujoCatalogosByTipoCasoId/{tipo_caso_id}', [EstadosFormulasController::class, 'listFlujoCatalogosByTipoCasoId']); // 28-oct: combos del editor del flujo (demo)
+    Route::post('/guardarFlujoTipoCaso/{tipo_caso_id}', [EstadosFormulasController::class, 'guardarFlujoTipoCaso']); // 28-oct: Guardar del editor del flujo (demo)
+    Route::post('/clonarTipoCaso/{tipo_caso_id}', [EstadosFormulasController::class, 'clonarTipoCaso']); // 28-oct: clonar el tipo de caso con su flujo (demo)
     Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
     Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
     Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
@@ -993,6 +1088,10 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::put('/editCasoFase', [CasoController::class, 'editFase']);
     Route::put('/bloqueoCaso', [CasoController::class, 'bloqueoCaso']);
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
+    // 27-oct: la consulta GaranCheck casada con el caso (cabecera y pestaña Calificación)
+    Route::get('/casoConsultaGarancheck/{caso_id}', [CasoConsultaGarancheckController::class, 'mostrar'])->where('caso_id', '[0-9]+');
+    // 30-oct (fase 3b de Yupana): el botón Calificar / Reintentar del caso: consulta con la agencia del caso, casa la consulta y guarda la calificación.
+    Route::post('/casoCalificar/{caso_id}', [CasoConsultaGarancheckController::class, 'calificar'])->where('caso_id', '[0-9]+')->middleware('throttle:20,1,caso-calificar');
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::post('/respuestaCasoMasivo', [CasoController::class, 'respuestaCasoMasivo']);
@@ -1319,7 +1418,16 @@ Route::group(["prefix" => "consultas/identidad", 'middleware' => ['jwt.auth', 'u
 
 // CONSULTA DE CLIENTES A PROVEEDORES EXTERNOS (GaranCheck): usuario del CRM
 Route::group(["prefix" => "consultas", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
-    Route::post('/cliente', [ConsultasController::class, 'consultarCliente']);
+    // 27-oct: cada consulta a GaranCheck cobra: máximo 20 por minuto por usuario (Nuevo Caso).
+    Route::post('/cliente', [ConsultasController::class, 'consultarCliente'])->middleware('throttle:20,1,consultas-cliente');
+    // 28-oct: si la lupa saldrá de la caché (solo lee, no cobra): decide el texto del spinner de Nuevo Caso.
+    Route::get('/cliente/cache/{identificacion}', [ConsultasController::class, 'cacheCliente'])->middleware('throttle:60,1,consultas-cliente-cache');
+    // 30-oct: el contacto + dirección del modal del campo IDENTIFICACION CLIENTE PROVEEDOR (Nuevo Caso).
+    Route::post('/cliente/contacto', [ConsultasController::class, 'guardarContactoCliente'])->middleware('throttle:60,1,consultas-cliente-contacto');
+    // 29-oct: pantalla de respuestas de proveedores (demo): solo lee crm.proveedor_respuestas.
+    Route::post('/respuestas-proveedor/resumen', [ProveedorRespuestasController::class, 'resumen']);
+    Route::post('/respuestas-proveedor/listar', [ProveedorRespuestasController::class, 'listar']);
+    Route::get('/respuestas-proveedor/{id}', [ProveedorRespuestasController::class, 'ver']);
 });
 
 // FORMULARIOS FELIPE
@@ -1519,6 +1627,16 @@ Route::group(["prefix" => "configuracion", 'middleware' => ['jwt.auth', 'usuario
     Route::post('/editAgencia/{id}', [AgenciaController::class, 'editAgencia']); // Editar
     Route::delete('/deleteAgencia/{id}', [AgenciaController::class, 'deleteAgencia']); // Eliminar
     Route::get('/listAgenciasActivas2', [AgenciaController::class, 'listAgenciasActivas2']); // listar
+    Route::get('/listAgenciasPaginacion', [AgenciaController::class, 'listAgenciasPaginacion']); // 30-oct: grid paginado de Configuración → Agencias
+    Route::get('/listProveedoresConsulta', [AgenciaController::class, 'listProveedoresConsulta']); // 30-oct: calificadores del combo (GaranCheck, Yupana)
+
+    // COLORES DE CALIFICACION (30-oct, fase 3b de Yupana: Configuración → Colores de calificación, crm.fn_calificacion_color_*)
+    Route::get('/listCalificacionColores', [CalificacionColorController::class, 'listCalificacionColores']); // las activas, para el kanban y el caso
+    Route::get('/listCalificacionColoresPaginacion', [CalificacionColorController::class, 'listCalificacionColoresPaginacion']); // grid paginado
+    Route::get('/listCalificacionTexturas', [CalificacionColorController::class, 'listCalificacionTexturas']); // texturas del combo (Oro, Plata, Bronce, Platino, Diamante)
+    Route::post('/addCalificacionColor', [CalificacionColorController::class, 'addCalificacionColor']); // guardar
+    Route::post('/editCalificacionColor/{id}', [CalificacionColorController::class, 'editCalificacionColor']); // Editar
+    Route::delete('/deleteCalificacionColor/{id}', [CalificacionColorController::class, 'deleteCalificacionColor']); // Eliminar
 
 
     // ZONAS AGENCIAS
@@ -1884,21 +2002,23 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
 });
 
-// VENTAS > COTIZADOR: configuracion (pestanas 1 Parametros, 2 Markup y 3 Aportes) y Cotizar.
+// VENTAS > COTIZADOR: configuracion (pestanas 1 Parametros, 2 Margen y 3 Aportes) y Cotizar.
 Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     Route::get('/listParametrosCotizador', [ParametrosCotizadorController::class, 'listParametrosCotizador']);
     Route::get('/listTiposParametrosCotizador', [ParametrosCotizadorController::class, 'listTiposParametrosCotizador']);
+    Route::get('/listTiposTarjetaCotizador', [ParametrosCotizadorController::class, 'listTiposTarjetaCotizador']);
     Route::post('/addParametroCotizador', [ParametrosCotizadorController::class, 'addParametroCotizador']);
     Route::post('/editParametroCotizador/{id}', [ParametrosCotizadorController::class, 'editParametroCotizador']);
     Route::get('/parametroCotizadorAuditoria', [ParametrosCotizadorController::class, 'parametroCotizadorAuditoria']);
-    // Pestana 2: markup (cabecera + detalles) y su asignacion a productos.
-    Route::get('/listMarkupCotizador', [MarkupCotizadorController::class, 'listMarkupCotizador']);
-    Route::get('/combosMarkupCotizador', [MarkupCotizadorController::class, 'combosMarkupCotizador']);
-    Route::get('/getMarkupCotizador/{id}', [MarkupCotizadorController::class, 'getMarkupCotizador']);
-    Route::post('/addMarkupCotizador', [MarkupCotizadorController::class, 'addMarkupCotizador']);
-    Route::post('/editMarkupCotizador/{id}', [MarkupCotizadorController::class, 'editMarkupCotizador']);
-    Route::get('/catalogoProductosMarkupCotizador', [MarkupCotizadorController::class, 'catalogoProductosMarkupCotizador']);
-    Route::get('/markupCotizadorAuditoria', [MarkupCotizadorController::class, 'markupCotizadorAuditoria']);
+    // Pestana 2: margen (cabecera + detalles) y su asignacion a productos.
+    Route::get('/listMargenCotizador', [MargenCotizadorController::class, 'listMargenCotizador']);
+    Route::get('/combosMargenCotizador', [MargenCotizadorController::class, 'combosMargenCotizador']);
+    Route::get('/listPuntosVentaByRegionId/{reg_id}', [MargenCotizadorController::class, 'listPuntosVentaByRegionId']); // 28-oct: el ojito de Región (Margen y Aporte)
+    Route::get('/getMargenCotizador/{id}', [MargenCotizadorController::class, 'getMargenCotizador']);
+    Route::post('/addMargenCotizador', [MargenCotizadorController::class, 'addMargenCotizador']);
+    Route::post('/editMargenCotizador/{id}', [MargenCotizadorController::class, 'editMargenCotizador']);
+    Route::get('/catalogoProductosMargenCotizador', [MargenCotizadorController::class, 'catalogoProductosMargenCotizador']);
+    Route::get('/margenCotizadorAuditoria', [MargenCotizadorController::class, 'margenCotizadorAuditoria']);
     // Pestana 3: aportes (cabecera + detalles, en dolares) y su asignacion a productos.
     Route::get('/listAporteCotizador', [AporteCotizadorController::class, 'listAporteCotizador']);
     Route::get('/combosAporteCotizador', [AporteCotizadorController::class, 'combosAporteCotizador']);
@@ -1916,12 +2036,27 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     // Proformas: el historial paginado y una proforma completa (solo lectura).
     Route::get('/listProformas', [CotizacionesController::class, 'listProformas']);
     Route::get('/getCotizacion/{id}', [CotizacionesController::class, 'getCotizacion']);
-    // Tarjetas y contado: planes de tarjeta por banco (alma.banco) y formas de pago de contado, con sus reglas.
-    Route::get('/listarBancosTarjeta', [TarjetasContadoController::class, 'listarBancosTarjeta']);
-    Route::get('/getPlanesTarjeta/{ban_id}', [TarjetasContadoController::class, 'getPlanesTarjeta']);
-    Route::post('/guardarPlanesTarjeta/{ban_id}', [TarjetasContadoController::class, 'guardarPlanesTarjeta']);
+    // 27-oct: las versiones de la proforma de un caso (el ojito del requerimiento Proformar), con la vigente marcada.
+    Route::get('/listProformasCaso/{casoId}', [CotizacionesController::class, 'listProformasCaso']);
+    // Contado: las formas de pago de contado con sus reglas (25-oct: las tarjetas pasaron a TarjetasController).
     Route::get('/getFormasPagoContado', [TarjetasContadoController::class, 'getFormasPagoContado']);
     Route::post('/guardarFormasPagoContado', [TarjetasContadoController::class, 'guardarFormasPagoContado']);
+    // Tarjetas y comisiones y Descuentos de plazos (25-oct): bancos y cuentas de public.banco (26-oct), tarjetas,
+    // plazos y descuentos.
+    Route::get('/listarBancosTarjetas', [TarjetasController::class, 'listarBancosTarjetas']);
+    Route::get('/catalogosTarjetas', [TarjetasController::class, 'catalogosTarjetas']);
+    Route::get('/getBancoTarjetas/{ban_id}', [TarjetasController::class, 'getBancoTarjetas']);
+    Route::post('/guardarBancoTarjetas/{ban_id}', [TarjetasController::class, 'guardarBancoTarjetas']);
+    Route::get('/getDescuentosPlazos/{ban_id}', [TarjetasController::class, 'getDescuentosPlazos']);
+    Route::post('/guardarDescuentosPlazos/{ban_id}', [TarjetasController::class, 'guardarDescuentosPlazos']);
+    Route::get('/tarjetasAuditoria', [TarjetasController::class, 'tarjetasAuditoria']);
+    // 27-oct: bancos y emisores de Dynamo y sistemas de liquidacion (el emisor de las tarjetas; antes, adquirentes).
+    Route::get('/listarSistemasLiquidacion', [BancosEmisoresController::class, 'listarSistemasLiquidacion']);
+    Route::post('/guardarSistemaLiquidacion', [BancosEmisoresController::class, 'guardarSistemaLiquidacion']);
+    Route::get('/listarEmisores', [BancosEmisoresController::class, 'listarEmisores']);
+    Route::post('/guardarEmisor', [BancosEmisoresController::class, 'guardarEmisor']);
+    Route::get('/listarBancosDynamo', [BancosEmisoresController::class, 'listarBancosDynamo']);
+    Route::post('/guardarBancoDynamo', [BancosEmisoresController::class, 'guardarBancoDynamo']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).

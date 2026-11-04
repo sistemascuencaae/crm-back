@@ -123,6 +123,10 @@ class CasoController extends Controller
             }
 
             $caso->save();
+
+            // 27-oct: casa la consulta GaranCheck vigente del cliente con el caso (crm.caso.cliente_consulta_id).
+            $this->vincularConsultaGarancheck($caso->id);
+
             for ($i = 0; $i < sizeof($miembros); $i++) {
                 $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
                 if (!$mieExixte) {
@@ -202,6 +206,25 @@ class CasoController extends Controller
                 "valor_id" => $valorCreado->id,
                 "campo_id" => $valor['campo_id'],
             ]);
+        }
+    }
+
+    // 27-oct: casa el caso recién creado con la consulta GaranCheck VIGENTE más reciente de su cliente (por
+    // identificación). La regla vive en crm.fn_caso_vincular_consulta (PLANES/GARANCHECK/produccion_garancheck_caso.sql).
+    // La llaman add y addCaso2, por donde pasan todas las altas de casos. Nunca tumba el alta: va en un SAVEPOINT y, si
+    // falla (por ejemplo, si la función aún no está en la base), el caso queda sin consulta y se anota en el log.
+    // 30-oct: ahora crm.fn_caso_calificacion_iniciar: copia el switch "Pide calificación" del tipo de caso en el caso, casa la
+    // consulta del mes de cualquier calificador (fn_caso_vincular_consulta) y guarda la calificación en crm.caso.calificacion_proveedor
+    // (PLANES/YUPANA/produccion_yupana.sql, sección 3).
+    private function vincularConsultaGarancheck($casoId): void
+    {
+        try {
+            DB::transaction(function () use ($casoId) {
+                // ANTES (27-oct): DB::selectOne('SELECT crm.fn_caso_vincular_consulta(?) AS consulta_id', [(int) $casoId]);
+                DB::selectOne('SELECT crm.fn_caso_calificacion_iniciar(?) AS resultado', [(int) $casoId]);
+            });
+        } catch (\Throwable $e) {
+            (new Funciones())->logError(CasoController::class, 'No se pudo casar la consulta GaranCheck con el caso #' . $casoId, $e);
         }
     }
 
@@ -1189,6 +1212,8 @@ class CasoController extends Controller
                 $reqCaso->minimo = $reqFase[$i]->minimo;
                 $reqCaso->maximo = $reqFase[$i]->maximo;
                 $reqCaso->editable = $reqFase[$i]->editable;
+                // 28-oct: las fases donde se habilita (texto integer[] de PostgreSQL); sin config, solo su fase.
+                $reqCaso->fases_habilitadas = $reqFase[$i]->fases_habilitadas ?? ('{' . (int) $reqFase[$i]->fase_id . '}');
 
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(';', $reqCaso->valor_lista);
@@ -2502,6 +2527,9 @@ class CasoController extends Controller
                 }
 
                 $caso->save();
+
+                // 27-oct: casa la consulta GaranCheck vigente del cliente con el caso (crm.caso.cliente_consulta_id).
+                $this->vincularConsultaGarancheck($caso->id);
 
                 // El caso es nuevo: no tiene miembros previos, así que no hace falta consultar
                 // duplicados (esa consulta escaneaba toda la tabla miembros). Basta deduplicar el array.

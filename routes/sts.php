@@ -35,6 +35,8 @@ Route::group(["prefix" => "sts", 'middleware' => ['throttle:10,1']], function ($
     Route::post('/addDynamoCliente', [DynamoClienteController::class, 'addDynamoCliente']);
     Route::post('/verificarClienteDynamo', [DynamoClienteController::class, 'verificarClienteDynamo']);
     Route::post('/updateDynamoCliente', [DynamoClienteController::class, 'updateDynamoCliente']);
+    // 01-nov: Reintentar del aviso "Cliente sin calificación" (vuelve a consultar al calificador del cliente que la lupa creó).
+    Route::post('/reintentarCalificacionDynamo', [DynamoClienteController::class, 'reintentarCalificacionDynamo']);
     // Consulta de identidad en fuentes oficiales (SRI / Ecuador Legal). Misma lógica que el
     // CRUD del CRM, pero autenticada con el token cifrado del enlace en vez de JWT.
     Route::post('/consultarIdentidadDynamo', [DynamoClienteController::class, 'consultarIdentidadDynamo']);

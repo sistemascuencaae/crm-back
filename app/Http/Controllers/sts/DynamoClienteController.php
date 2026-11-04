@@ -11,6 +11,7 @@ use App\Models\openceo\Telefono;
 use App\Models\sts\ClientesMultinivel;
 use App\Models\sts\ClientesMultinivelConsulta;
 use App\Servicios\Consultas\ConsultasService;
+use App\Servicios\Consultas\ProveedorRespuestasService;
 use App\Servicios\ValidacionCedulaRucService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -200,7 +201,9 @@ class DynamoClienteController extends Controller
                 $identificacion,
                 $corredor,
                 isset($tokenData['usu_id']) ? (int) $tokenData['usu_id'] : null,
-                true
+                true,
+                // 29-oct: canal para crm.proveedor_respuestas.
+                ProveedorRespuestasService::CANAL_FORMULARIO_STS
             );
 
             $datos = $respuesta->getData(true);
@@ -212,10 +215,13 @@ class DynamoClienteController extends Controller
             $cliId = $datos['data']['cli_id'] ?? null;
             $proveedorUsado = $datos['data']['proveedor'] ?? ConsultasService::PROVEEDOR_GARANCHECK;
 
-            if ($proveedorUsado === ConsultasService::PROVEEDOR_GARANCHECK) {
+            // 30-oct: el calificador lo decide la agencia del usuario del STS (GaranCheck o Yupana); cualquiera de los dos
+            // es "respondió el calificador". La fila se abrió con GARANCHECK por defecto: se corrige con el que respondió.
+            if (in_array($proveedorUsado, [ConsultasService::PROVEEDOR_GARANCHECK, ConsultasService::PROVEEDOR_YUPANA], true)) {
                 // Respondió el buró: se completa la fila que ya se había abierto.
                 if ($cliId) {
                     $consulta->cli_id = (int) $cliId;
+                    $consulta->proveedor = $proveedorUsado;
                     $consulta->save();
                 }
             } else {
@@ -231,7 +237,9 @@ class DynamoClienteController extends Controller
                 'apellidos' => $datos['data']['apellidos'] ?? null,
                 'tipo_sujeto' => $datos['data']['tipo_sujeto'] ?? 'N',
                 'proveedor' => $proveedorUsado,
-                'evaluacion' => $datos['data']['evaluacion'] ?? null,
+                // 'evaluacion' => $datos['data']['evaluacion'] ?? null, // DESACTIVADO 31-oct
+                // 31-oct (pedido del usuario): la calificación del calificador que respondió (evaluacionParaFormulario).
+                'evaluacion' => self::evaluacionParaFormulario($proveedorUsado, $datos['data']['evaluacion'] ?? null),
             ]));
 
             // Lógica anterior (libre / mismo corredor / otro corredor), desactivada:
@@ -248,6 +256,64 @@ class DynamoClienteController extends Controller
             //     : 'El cliente existe y está disponible';
             //
             // return response()->json(RespuestaApi::returnResultado('success', $mensaje, $this->datosFormulario($foto)));
+        } catch (QueryException $e) {
+            return $this->respuestaErrorFuncion($e, 'Error al consultar el cliente');
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Error', $e->getMessage()));
+        }
+    }
+
+
+    // Version 1.0
+    // 01-nov (pedido del usuario): el botón Reintentar del aviso "Cliente sin calificación". El calificador no respondió y la
+    // lupa creó al cliente con Ecuador Legal / SRI; aquí se vuelve a consultar al calificador de la agencia, SOLO para el
+    // cliente que la lupa de ESTE corredor acaba de crear (la misma regla del Guardar: consultaQueCreoElCliente). No crea ni
+    // cambia al cliente (procesarConsulta sin respaldo: la consulta se guarda y nada más) y no agrega filas a
+    // clientes_multinivel_consultas (no es una búsqueda nueva). Si en el mes ya hay una consulta buena, se reusa sin cobrar.
+    public function reintentarCalificacionDynamo(Request $request)
+    {
+        try {
+            $tokenData = $this->validarTokenEnlace($request);
+            if ($tokenData instanceof JsonResponse) {
+                return $tokenData;
+            }
+            $corredor = trim($tokenData['corredor']);
+            $this->usuIdEnlace = isset($tokenData['usu_id']) ? (int) $tokenData['usu_id'] : null;
+
+            $tipoidentificacion = (int) trim((string) $request->input('tipoidentificacion'));
+            $identificacion = trim((string) $request->input('identificacion'));
+            $foto = $identificacion !== '' && in_array($tipoidentificacion, [1, 2], true)
+                ? $this->fotoCliente($identificacion, $tipoidentificacion)
+                : null;
+
+            if (!$foto || empty($foto['cli_id']) || !$this->consultaQueCreoElCliente($corredor, $identificacion, (int) $foto['cli_id'])) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Debe consultar la identificación antes de reintentar.', null));
+            }
+
+            $respuesta = app(ConsultasController::class)->procesarConsulta(
+                $request,
+                $identificacion,
+                $corredor,
+                $this->usuIdEnlace,
+                false,
+                ProveedorRespuestasService::CANAL_FORMULARIO_STS
+            );
+            $datos = $respuesta->getData(true);
+
+            if (($datos['status'] ?? '') !== 'success') {
+                return $respuesta;
+            }
+
+            // Lo mismo que responde la lupa: el nombre que hay en la base y la calificación del calificador que respondió.
+            $proveedorUsado = $datos['data']['proveedor'] ?? null;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Consulta realizada con éxito', [
+                'nombres' => $datos['data']['nombres'] ?? $foto['ent_nombres'] ?? null,
+                'apellidos' => $datos['data']['apellidos'] ?? $foto['ent_apellidos'] ?? null,
+                'tipo_sujeto' => $datos['data']['tipo_sujeto'] ?? 'N',
+                'proveedor' => $proveedorUsado,
+                'evaluacion' => self::evaluacionParaFormulario($proveedorUsado, $datos['data']['evaluacion'] ?? null),
+            ]));
         } catch (QueryException $e) {
             return $this->respuestaErrorFuncion($e, 'Error al consultar el cliente');
         } catch (Exception $e) {
@@ -314,7 +380,7 @@ class DynamoClienteController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'La cédula ingresada no es válida', null));
             }
 
-            return $consultas->consultarCedulaEcuadorLegal($identificacion, $usuId);
+            return $consultas->consultarCedulaEcuadorLegal($identificacion, $usuId, ProveedorRespuestasService::CANAL_FORMULARIO_STS);
         }
 
         if ($tipoIdentificacion === 2) {
@@ -322,7 +388,7 @@ class DynamoClienteController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'El RUC ingresado no es válido', null));
             }
 
-            return $consultas->consultarRucSri($identificacion, $usuId);
+            return $consultas->consultarRucSri($identificacion, $usuId, ProveedorRespuestasService::CANAL_FORMULARIO_STS);
         }
 
         // Pasaporte: no hay fuente que consultar. Se responde el tipo de persona deducido
@@ -521,8 +587,8 @@ class DynamoClienteController extends Controller
         if (!$fila) {
             $consultas = app(ConsultaIdentidadExternoController::class);
             $respuesta = $campos['tipoidentificacion'] === 2
-                ? $consultas->consultarRucSri($campos['identificacion'], $this->usuIdEnlace)
-                : $consultas->consultarCedulaEcuadorLegal($campos['identificacion'], $this->usuIdEnlace);
+                ? $consultas->consultarRucSri($campos['identificacion'], $this->usuIdEnlace, ProveedorRespuestasService::CANAL_FORMULARIO_STS)
+                : $consultas->consultarCedulaEcuadorLegal($campos['identificacion'], $this->usuIdEnlace, ProveedorRespuestasService::CANAL_FORMULARIO_STS);
             $data = $respuesta->getData(true);
 
             if (($data['status'] ?? '') !== 'success' || empty($data['data'])) {
@@ -1153,6 +1219,27 @@ class DynamoClienteController extends Controller
 
 
 
+
+    // 31-oct (pedido del usuario): lo que el formulario muestra de la calificación según el calificador que respondió.
+    // Con GaranCheck, su evaluación de siempre. Con Yupana, "por ahora" SOLO el resultado de la calificadora (APROBAR AAA):
+    // el perfil, el score y el detalle no salen a este endpoint público. null si no hubo calificación.
+    public static function evaluacionParaFormulario(?string $proveedor, $evaluacion): ?array
+    {
+        if (!is_array($evaluacion)) {
+            return null;
+        }
+
+        if (strtoupper(trim((string) $proveedor)) === ConsultasService::PROVEEDOR_YUPANA) {
+            $resultado = trim((string) ($evaluacion['resultadoCalificadora'] ?? ''));
+
+            return [
+                'proveedor' => ConsultasService::PROVEEDOR_YUPANA,
+                'resultadoCalificadora' => $resultado !== '' ? $resultado : null,
+            ];
+        }
+
+        return $evaluacion;
+    }
 
     // Descifra y valida el token ?t= del enlace (caducidad + integridad).
     // Devuelve el array de las credenciales (['corredor' => ..., 'tipo_corredor' => ..., 'expires' => ...])

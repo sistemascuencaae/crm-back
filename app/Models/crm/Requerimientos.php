@@ -53,4 +53,23 @@ class Requerimientos extends Model
         return $this->belongsTo(TipoCaso::class, "tipo_caso_id");
     }
 
+    // 28-oct: las fases donde el requerimiento se habilita; se escriben con crm.fn_requerimientos_predefinidos_*.
+    public function getFasesHabilitadasAttribute($value)
+    {
+        return self::fasesDesdePostgres($value);
+    }
+
+    // integer[] de PostgreSQL ('{536,540}' o '{}') -> [536, 540] / []; null se queda null.
+    public static function fasesDesdePostgres($value)
+    {
+        if ($value === null) {
+            return null;
+        }
+        if (is_array($value)) {
+            return array_map('intval', $value);
+        }
+        $texto = trim((string) $value, "{} \t\n\r");
+        return $texto === '' ? [] : array_map('intval', explode(',', $texto));
+    }
+
 }

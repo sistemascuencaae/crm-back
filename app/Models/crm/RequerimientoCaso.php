@@ -83,4 +83,10 @@ class RequerimientoCaso extends Model
         date_default_timezone_set("America/Guayaquil");
         $this->attributes["deleted_at"] = Carbon::now();
     }
+
+    // 28-oct: integer[] de PostgreSQL ('{536,540}') -> [536, 540]; null se queda null (como hoy: solo su fase).
+    public function getFasesHabilitadasAttribute($value)
+    {
+        return Requerimientos::fasesDesdePostgres($value);
+    }
 }
