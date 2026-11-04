@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use App\Servicios\PaginaWeb\MarcaWebService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -24,11 +25,14 @@ class MarcaWebController extends Controller
     {
     }
 
-    // GET pagina-web/marcas-tienda
-    public function listar()
+    // GET pagina-web/marcas-tienda?destacadas=1&busqueda=&pagina=1&tamanio=20   → {registros, total}
+    // (sin destacadas: todas por nombre; destacadas=1: solo las de Nuestras marcas, en su orden)
+    public function listar(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Marcas', $this->servicio->listar()));
+            $marcas = $this->servicio->listar($request->boolean('destacadas'), ...ListaPaginaWeb::paginacion($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Marcas', $marcas));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudieron listar las marcas');
         }
@@ -46,7 +50,8 @@ class MarcaWebController extends Controller
         }
     }
 
-    // PUT pagina-web/marcas-tienda-orden   {ids: [12, 5, 40]} (todas las de Nuestras marcas, en el nuevo orden)
+    // PUT pagina-web/marcas-tienda-orden   {ids: [12, 5, 40]} (las de Nuestras marcas que se ven en la página, en el nuevo orden;
+    // la base las reacomoda en los puestos que ya ocupaban)
     public function ordenar(Request $request)
     {
         try {

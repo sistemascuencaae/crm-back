@@ -68,10 +68,10 @@ class PaginaInformativaService
     // CRM
     // -----------------------------------------------------------------
 
-    /** Todas las páginas, sin su contenido. */
-    public function listar(): array
+    /** {registros, total}: las páginas sin su contenido; busca en título, clave y carpeta */
+    public function listar(string $busqueda, int $pagina, int $tamanio): array
     {
-        return DB::select('SELECT * FROM ecommerce.fn_pagina_informativa_listar()');
+        return ListaPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_pagina_informativa_listar(?, ?, ?)', [$busqueda, $pagina, $tamanio]));
     }
 
     /** Una página con su contenido, para editarla. null si no existe. */
@@ -125,16 +125,20 @@ class PaginaInformativaService
         Cache::forget(self::CACHE_PREFIJO . $clave);
     }
 
-    /** Papelera de páginas y carpetas: [{tipo ('carpeta' | 'pagina'), id, pin_clave, texto, detalle, eliminado_en, eliminado_usu_id, eliminado_por}] */
-    public function papelera(): array
+    /** Papelera de páginas y carpetas: {registros, total}: [{tipo ('carpeta' | 'pagina'), id, pin_clave, texto, detalle, eliminado_en, eliminado_usu_id, eliminado_por}] */
+    public function papelera(string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_pagina_informativa_papelera()'), 'eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_pagina_informativa_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]), 'eliminado_usu_id');
     }
 
     /** Borra para siempre las páginas y carpetas de la papelera. Devuelve cuántas borró (las que se veían en la papelera). */
     public function vaciar(int $usuId): int
     {
-        $claves = array_filter(array_column(DB::select('SELECT * FROM ecommerce.fn_pagina_informativa_papelera()'), 'pin_clave'));
+        // Las claves de todas las páginas de la papelera, de 100 en 100, para limpiar su caché
+        $claves = [];
+        for ($pagina = 1; $filas = DB::select('SELECT pin_clave FROM ecommerce.fn_pagina_informativa_papelera(?, ?, 100)', ['', $pagina]); $pagina++) {
+            $claves = array_merge($claves, array_filter(array_column($filas, 'pin_clave')));
+        }
 
         $cantidad = (int) DB::selectOne('SELECT ecommerce.fn_pagina_informativa_vaciar(?) AS cantidad', [$usuId])->cantidad;
         foreach ($claves as $clave) {

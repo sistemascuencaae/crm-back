@@ -50,9 +50,10 @@ class PaginaMarcaService
         return DB::select('SELECT * FROM ecommerce.fn_pagina_marca_marcas_erp(?)', [$buscar]);
     }
 
-    public function listar(): array
+    /** {registros, total}: las páginas de marca; busca en título, marca y dirección */
+    public function listar(string $busqueda, int $pagina, int $tamanio): array
     {
-        return DB::select('SELECT * FROM ecommerce.fn_pagina_marca_listar()');
+        return ListaPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_pagina_marca_listar(?, ?, ?)', [$busqueda, $pagina, $tamanio]));
     }
 
     /**
@@ -108,17 +109,17 @@ class PaginaMarcaService
         self::limpiarCachePaginaCambiada();
     }
 
-    /** [{pma_id, mar_nombre, pma_titulo, pma_direccion, pma_eliminado_en, pma_eliminado_usu_id, eliminado_por}] */
-    public function papelera(): array
+    /** {registros, total}: [{pma_id, mar_nombre, pma_titulo, pma_direccion, pma_eliminado_en, pma_eliminado_usu_id, eliminado_por}] */
+    public function papelera(string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_pagina_marca_papelera()'), 'pma_eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_pagina_marca_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]), 'pma_eliminado_usu_id');
     }
 
     /** Borra para siempre las páginas de la papelera, con sus galerías y archivos. Devuelve cuántas páginas borró. */
     public function vaciar(int $usuId): int
     {
         // La base devuelve los archivos de sus galerías, no las páginas: se cuentan antes
-        $cantidad = count(DB::select('SELECT pma_id FROM ecommerce.fn_pagina_marca_papelera()'));
+        $cantidad = (int) (DB::selectOne("SELECT total FROM ecommerce.fn_pagina_marca_papelera('', 1, 1)")->total ?? 0);
 
         ArchivosPaginaWeb::borrar(array_column(DB::select('SELECT * FROM ecommerce.fn_pagina_marca_vaciar(?)', [$usuId]), 'imagen'));
         self::limpiarCachePaginaCambiada();
@@ -142,13 +143,13 @@ class PaginaMarcaService
 
     /**
      * La página publicada, lista para la tienda, o null si no existe o está oculta.
-     * Una sección apagada llega vacía ([] o null), así la tienda solo pinta lo que viene. Los productos salen de la marca
-     * y sus sub-marcas (fn_pagina_marca_marcas_incluidas), de cualquier categoría; los títulos los pone la tienda:
+     * Una sección apagada llega vacía ([] o null), así la tienda solo pinta lo que viene. Los destacados salen de la marca
+     * y sus sub-marcas (fn_pagina_marca_marcas_incluidas), de cualquier categoría; los títulos los pone la tienda.
+     * La cuadrícula "Productos {marca}" se pide por páginas aparte (productosPublicos):
      *   {direccion, titulo, logo (el de la marca), mar_id,
      *    banner: [imágenes],
      *    destacados: {productos: [tarjetas destacadas],
      *                 promociones: [{pro_id, marca, nombre, imagen, tpr_id, precio, precio_anterior}]},
-     *    productos: [tarjetas: todos los publicados de sus marcas],
      *    fotos: [imágenes],
      *    contacto: {titulo, texto, boton_texto, boton_enlace, boton_nueva_pestana} | null}
      */
@@ -161,9 +162,8 @@ class PaginaMarcaService
                 return null;
             }
 
-            // La marca y sus sub-marcas: de ahí salen los destacados, las promociones y los productos
-            $marcas = array_map(fn ($m) => (int) $m->mar_id,
-                                DB::select('SELECT * FROM ecommerce.fn_pagina_marca_marcas_incluidas(?)', [$p->mar_id]));
+            // La marca y sus sub-marcas: de ahí salen los destacados y las promociones
+            $marcas = $this->marcasIncluidas((int) $p->mar_id);
 
             return [
                 'direccion'  => $p->pma_direccion,
@@ -175,7 +175,6 @@ class PaginaMarcaService
                     'productos'   => $this->productos->tarjetas(false, true, null, $marcas, null),
                     'promociones' => $this->productos->promociones(null, $marcas),
                 ],
-                'productos'  => $this->productos->tarjetas(false, false, null, $marcas, null),
                 'fotos'      => $p->pma_fotos_visible ? $this->imagenes($p->fotos_clave) : [],
                 'contacto'   => $p->pma_contacto_visible
                     ? [
@@ -190,9 +189,43 @@ class PaginaMarcaService
         });
     }
 
+    /**
+     * La cuadrícula "Productos {marca}" de la página publicada, por páginas, o null si la página no existe o está oculta.
+     * Es la búsqueda del shop (misma forma de respuesta, sin opciones: no hay panel de filtros) con las marcas de la
+     * página, con foto primero y por nombre; con $destacados, solo los destacados (la pestaña "Destacados"). Ningún otro
+     * filtro viene de la dirección. $pagina y $porPagina llegan tal cual: la base corrige lo inválido.
+     */
+    public function productosPublicos(string $direccion, bool $destacados, $pagina, $porPagina): ?array
+    {
+        $p = $this->publica($direccion);
+
+        if ($p === null) {
+            return null;
+        }
+
+        $filtros = [
+            'marcas'   => implode(',', $this->marcasIncluidas($p['mar_id'])),
+            'sort'     => 'nombre',
+            'page'     => $pagina,
+            'per_page' => $porPagina,
+        ];
+
+        if ($destacados) {
+            $filtros['destacados'] = true;
+        }
+
+        return $this->productos->buscarTienda($filtros, false);
+    }
+
     // -----------------------------------------------------------------
     // Internos
     // -----------------------------------------------------------------
+
+    /** La marca de la página y sus sub-marcas */
+    private function marcasIncluidas(int $marId): array
+    {
+        return array_map(fn ($m) => (int) $m->mar_id, DB::select('SELECT * FROM ecommerce.fn_pagina_marca_marcas_incluidas(?)', [$marId]));
+    }
 
     private function galeria(int $galId): ?object
     {

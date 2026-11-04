@@ -67,10 +67,10 @@ class BloqueProductoService
         InicioSeccionService::limpiarCache();
     }
 
-    /** [{bpr_id, bpr_titulo, categoria, bpr_eliminado_en, bpr_eliminado_usu_id, eliminado_por}] */
-    public function papelera(): array
+    /** {registros, total}: [{bpr_id, bpr_titulo, categoria, bpr_eliminado_en, bpr_eliminado_usu_id, eliminado_por}] */
+    public function papelera(string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_bloque_producto_papelera()'), 'bpr_eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_bloque_producto_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]), 'bpr_eliminado_usu_id');
     }
 
     /** Borra para siempre los bloques de la papelera. Devuelve cuántos borró. */

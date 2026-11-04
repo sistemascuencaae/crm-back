@@ -5,6 +5,7 @@ namespace App\Http\Controllers\paginaWeb;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use App\Servicios\PaginaWeb\PaginaInformativaService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -23,10 +24,11 @@ class PaginaInformativaController extends Controller
     {
     }
 
-    public function listar()
+    // GET pagina-web/paginas?busqueda=&pagina=1&tamanio=20   → {registros, total}
+    public function listar(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Páginas listadas con éxito', $this->servicio->listar()));
+            return response()->json(RespuestaApi::returnResultado('success', 'Páginas listadas con éxito', $this->servicio->listar(...ListaPaginaWeb::paginacion($request))));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudieron listar las páginas');
         }
@@ -115,11 +117,11 @@ class PaginaInformativaController extends Controller
         }
     }
 
-    // GET pagina-web/paginas-informativas-papelera   (páginas y carpetas)
-    public function papelera()
+    // GET pagina-web/paginas-informativas-papelera?busqueda=&pagina=1&tamanio=20   → {registros, total}   (páginas y carpetas)
+    public function papelera(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera(...ListaPaginaWeb::paginacion($request))));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudo cargar la papelera');
         }
@@ -137,7 +139,8 @@ class PaginaInformativaController extends Controller
         }
     }
 
-    // Recibe TODOS los documentos de una carpeta en el nuevo orden: {pig_id: 1 (o null), ids: [7, 5, 6]}
+    // Recibe los documentos de una carpeta que se ven en la página, en el nuevo orden: {pig_id: 1 (o null), ids: [7, 5, 6]};
+    // la base los reacomoda en los puestos que ya ocupaban
     public function ordenar(Request $request)
     {
         $validator = Validator::make($request->all(), [

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use App\Servicios\PaginaWeb\ProductoTiendaService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -187,6 +188,19 @@ class ProductoTiendaController extends Controller
         }
     }
 
+    // GET pagina-web/productos-tienda-imagenes-papelera?pro_id=8004906&busqueda=&pagina=1&tamanio=20   → {registros, total}
+    // (el editor del producto ya trae la 1.ª página en papelera_imagenes)
+    public function papeleraImagenes(Request $request)
+    {
+        try {
+            $imagenes = $this->servicio->papeleraImagenes((int) $request->input('pro_id'), ...ListaPaginaWeb::paginacion($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $imagenes));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
+        }
+    }
+
     // DELETE pagina-web/productos-tienda-imagenes-papelera?pro_id=8004906   → {cantidad} (borra también los archivos)
     public function vaciarImagenes(Request $request)
     {
@@ -215,7 +229,7 @@ class ProductoTiendaController extends Controller
     // Características (plantilla de la ficha por categoría)
     // -----------------------------------------------------------------
 
-    // GET pagina-web/caracteristicas?tpr_id=416   → {plantilla, papelera}
+    // GET pagina-web/caracteristicas?tpr_id=416   → {plantilla, papelera: {registros, total} (la 1.ª página)}
     public function caracteristicas(Request $request)
     {
         try {
@@ -272,6 +286,18 @@ class ProductoTiendaController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Característica restaurada con éxito', ['car_id' => $carId]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al restaurar la característica');
+        }
+    }
+
+    // GET pagina-web/caracteristicas-papelera?tpr_id=416&busqueda=&pagina=1&tamanio=20   → {registros, total}
+    public function papeleraCaracteristicas(Request $request)
+    {
+        try {
+            $caracteristicas = $this->servicio->papeleraCaracteristicas((int) $request->input('tpr_id'), ...ListaPaginaWeb::paginacion($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $caracteristicas));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
         }
     }
 

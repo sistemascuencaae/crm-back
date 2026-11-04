@@ -70,6 +70,8 @@ class ErroresPaginaWeb
         'FAMILIA_SIN_PRODUCTOS'    => 'Una familia no puede quedar sin productos.',
         'CARACTERISTICA_NO_EXISTE' => 'La característica no existe.',
         'CARACTERISTICAS_IGUALES'  => 'Elige dos características distintas.',
+        'CARACTERISTICA_EN_FAMILIA'  => 'Una familia usa esta característica. Cámbiala en la familia antes de eliminarla.',
+        'CARACTERISTICA_EN_PAPELERA' => 'Una característica de esta familia está en la papelera. Restáurala primero en la ficha de su categoría.',
         // Clientes de la tienda (los lanzan la base o ClienteWeb*Controller)
         'CORREO_INVALIDO'              => 'Escribe un correo válido.',
         'TELEFONO_INVALIDO'            => 'Escribe un teléfono válido, por ejemplo 0991234567.',

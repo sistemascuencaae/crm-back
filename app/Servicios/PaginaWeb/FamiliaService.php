@@ -21,7 +21,7 @@ class FamiliaService
     /** {registros, total} de las familias vigentes; busca en nombre, marca, categoría y nombre o código de sus SKU */
     public function listar(string $busqueda, int $pagina, int $tamanio): array
     {
-        return $this->pagina(DB::select('SELECT * FROM inventarios.fn_familia_listar(?, ?, ?)', [$busqueda, $pagina, $tamanio]));
+        return ListaPaginaWeb::pagina(DB::select('SELECT * FROM inventarios.fn_familia_listar(?, ?, ?)', [$busqueda, $pagina, $tamanio]));
     }
 
     /**
@@ -46,7 +46,7 @@ class FamiliaService
     /** {registros, total}: los que se pueden agregar (misma categoría y marca, sin otra familia), con su precio */
     public function candidatos(int $famId, string $busqueda, int $pagina, int $tamanio): array
     {
-        $resultado = $this->pagina(DB::select('SELECT * FROM inventarios.fn_familia_candidatos(?, ?, ?, ?)', [$famId, $busqueda, $pagina, $tamanio]));
+        $resultado = ListaPaginaWeb::pagina(DB::select('SELECT * FROM inventarios.fn_familia_candidatos(?, ?, ?, ?)', [$famId, $busqueda, $pagina, $tamanio]));
         $resultado['registros'] = $this->agregarPrecio($resultado['registros']);
 
         return $resultado;
@@ -100,10 +100,7 @@ class FamiliaService
     /** {registros, total}: [{fam_id, fam_nombre, categoria, marca, productos, fam_eliminado_en, fam_eliminado_usu_id, eliminado_por}] */
     public function papelera(string $busqueda, int $pagina, int $tamanio): array
     {
-        $resultado = $this->pagina(DB::select('SELECT * FROM inventarios.fn_familia_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]));
-        $resultado['registros'] = PapeleraPaginaWeb::agregarEliminadoPor($resultado['registros'], 'fam_eliminado_usu_id');
-
-        return $resultado;
+        return PapeleraPaginaWeb::pagina(DB::select('SELECT * FROM inventarios.fn_familia_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]), 'fam_eliminado_usu_id');
     }
 
     /** Borra para siempre las familias de la papelera. Devuelve cuántas. */
@@ -124,12 +121,6 @@ class FamiliaService
     // -----------------------------------------------------------------
     // Internos
     // -----------------------------------------------------------------
-
-    /** Filas paginadas de la base (cada una con su total) → {registros, total} */
-    private function pagina(array $filas): array
-    {
-        return ['registros' => $filas, 'total' => (int) ($filas[0]->total ?? 0)];
-    }
 
     /** A cada SKU le agrega su precio de la tienda (null si no está publicado) */
     private function agregarPrecio(array $filas): array

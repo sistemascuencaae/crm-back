@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
 use App\Servicios\PaginaWeb\GaleriaService;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -113,11 +114,13 @@ class GaleriaController extends Controller
         }
     }
 
-    // GET pagina-web/galerias-imagenes-papelera?gal_id=3
+    // GET pagina-web/galerias-imagenes-papelera?gal_id=3&busqueda=&pagina=1&tamanio=20   → {registros, total}
     public function papeleraImagenes(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papeleraImagenes((int) $request->input('gal_id'))));
+            $imagenes = $this->servicio->papeleraImagenes((int) $request->input('gal_id'), ...ListaPaginaWeb::paginacion($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $imagenes));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudo cargar la papelera');
         }
@@ -247,11 +250,14 @@ class GaleriaController extends Controller
         }
     }
 
-    // GET pagina-web/galerias-grupos-papelera?gal_id=5   (se vacía junto con las imágenes: DELETE galerias-imagenes-papelera)
+    // GET pagina-web/galerias-grupos-papelera?gal_id=5&busqueda=&pagina=1&tamanio=20   → {registros, total}
+    // (se vacía junto con las imágenes: DELETE galerias-imagenes-papelera)
     public function papeleraGrupos(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papeleraGrupos((int) $request->input('gal_id'))));
+            $grupos = $this->servicio->papeleraGrupos((int) $request->input('gal_id'), ...ListaPaginaWeb::paginacion($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $grupos));
         } catch (QueryException $e) {
             return $this->errorGrupo($e, 'No se pudo cargar la papelera');
         }

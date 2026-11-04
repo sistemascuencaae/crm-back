@@ -87,10 +87,10 @@ class EncabezadoService
         EncabezadoPiePublicoService::limpiarCache();
     }
 
-    /** [{een_id, een_padre_id, een_texto, padre_texto, subenlaces, een_eliminado_en, een_eliminado_usu_id, eliminado_por}] */
-    public function papelera(): array
+    /** {registros, total}: [{een_id, een_padre_id, een_texto, padre_texto, subenlaces, een_eliminado_en, een_eliminado_usu_id, eliminado_por}] */
+    public function papelera(string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_encabezado_enlace_papelera()'), 'een_eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_encabezado_enlace_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]), 'een_eliminado_usu_id');
     }
 
     /** Borra para siempre lo que está en la papelera. Devuelve cuántos enlaces borró (los que se veían en la papelera). */

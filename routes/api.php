@@ -287,6 +287,7 @@ Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaControl
 Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
 Route::get('public/pagina-web/categorias-menu', [CategoriaWebPublicaController::class, 'menu']);
 Route::get('public/pagina-web/marcas/{direccion}', [PaginaMarcaPublicaController::class, 'buscar']);
+Route::get('public/pagina-web/marcas/{direccion}/productos', [PaginaMarcaPublicaController::class, 'productos']);
 Route::get('public/pagina-web/espana-motos', [EspanaMotosPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/inicio', [InicioPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/productos', [ProductoTiendaPublicoController::class, 'buscar']);
@@ -2085,7 +2086,8 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::post('productos-tienda-imagenes-archivo', [ProductoTiendaController::class, 'subirImagen']);
     Route::post('productos-tienda-imagenes', [ProductoTiendaController::class, 'crearImagen']);
     Route::put('productos-tienda-imagenes-orden', [ProductoTiendaController::class, 'ordenarImagenes']);
-    Route::delete('productos-tienda-imagenes-papelera', [ProductoTiendaController::class, 'vaciarImagenes']);
+    Route::get('productos-tienda-imagenes-papelera', [ProductoTiendaController::class, 'papeleraImagenes']);
+    Route::delete('productos-tienda-imagenes-papelera',[ProductoTiendaController::class, 'vaciarImagenes']);
     Route::put('productos-tienda-imagenes/{pimId}/restaurar', [ProductoTiendaController::class, 'restaurarImagen'])->whereNumber('pimId');
     Route::put('productos-tienda-imagenes/{pimId}', [ProductoTiendaController::class, 'modificarImagen'])->whereNumber('pimId');
     Route::delete('productos-tienda-imagenes/{pimId}', [ProductoTiendaController::class, 'eliminarImagen'])->whereNumber('pimId');
@@ -2130,7 +2132,8 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::get('caracteristicas', [ProductoTiendaController::class, 'caracteristicas']);
     Route::post('caracteristicas', [ProductoTiendaController::class, 'crearCaracteristica']);
     Route::put('caracteristicas-orden', [ProductoTiendaController::class, 'ordenarCaracteristicas']);
-    Route::delete('caracteristicas-papelera', [ProductoTiendaController::class, 'vaciarCaracteristicas']);
+    Route::get('caracteristicas-papelera', [ProductoTiendaController::class, 'papeleraCaracteristicas']);
+    Route::delete('caracteristicas-papelera',[ProductoTiendaController::class, 'vaciarCaracteristicas']);
     Route::put('caracteristicas/{carId}/restaurar', [ProductoTiendaController::class, 'restaurarCaracteristica'])->whereNumber('carId');
     Route::put('caracteristicas/{carId}', [ProductoTiendaController::class, 'modificarCaracteristica'])->whereNumber('carId');
     Route::delete('caracteristicas/{carId}', [ProductoTiendaController::class, 'eliminarCaracteristica'])->whereNumber('carId');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\paginaWeb;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use App\Servicios\PaginaWeb\SucursalService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -31,11 +32,16 @@ class SucursalController extends Controller
     {
     }
 
-    /** Ciudades con sus sucursales, incluidas las inactivas. */
-    public function listar()
+    /**
+     * GET pagina-web/sucursales?busqueda=&pagina=1&tamanio=20   → {ciudades, registros, total}
+     * Todas las ciudades y una página de sucursales (incluidas las inactivas), ordenadas por ciudad y por su orden.
+     */
+    public function listar(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Sucursales listadas con éxito', $this->servicio->listarAdmin()));
+            $sucursales = $this->servicio->listarAdmin(...ListaPaginaWeb::paginacion($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Sucursales listadas con éxito', $sucursales));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudieron listar las sucursales');
         }
@@ -110,11 +116,11 @@ class SucursalController extends Controller
         }
     }
 
-    // GET pagina-web/sucursales-papelera   (ciudades y sucursales)
-    public function papelera()
+    // GET pagina-web/sucursales-papelera?busqueda=&pagina=1&tamanio=20   → {registros, total}   (ciudades y sucursales)
+    public function papelera(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera(...ListaPaginaWeb::paginacion($request))));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudo cargar la papelera');
         }
@@ -132,7 +138,10 @@ class SucursalController extends Controller
         }
     }
 
-    /** Body: {"sci_id": 1, "ids": [5, 3, 4]} con todas las sucursales de esa ciudad en el nuevo orden. */
+    /**
+     * Body: {"sci_id": 1, "ids": [5, 3, 4]} con las sucursales de esa ciudad que se ven en la página, en el nuevo orden;
+     * la base las reacomoda en los puestos que ya ocupaban.
+     */
     public function ordenar(Request $request)
     {
         $validator = Validator::make($request->all(), [

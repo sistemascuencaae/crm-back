@@ -5,6 +5,7 @@ namespace App\Http\Controllers\paginaWeb;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use App\Servicios\PaginaWeb\PaginaMarcaService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -40,11 +41,11 @@ class PaginaMarcaController extends Controller
         }
     }
 
-    // GET pagina-web/paginas-marca
-    public function listar()
+    // GET pagina-web/paginas-marca?busqueda=&pagina=1&tamanio=20   → {registros, total}
+    public function listar(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Páginas de marca', $this->servicio->listar()));
+            return response()->json(RespuestaApi::returnResultado('success', 'Páginas de marca', $this->servicio->listar(...ListaPaginaWeb::paginacion($request))));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudieron listar las páginas de marca');
         }
@@ -102,11 +103,11 @@ class PaginaMarcaController extends Controller
         }
     }
 
-    // GET pagina-web/paginas-marca-papelera
-    public function papelera()
+    // GET pagina-web/paginas-marca-papelera?busqueda=&pagina=1&tamanio=20   → {registros, total}
+    public function papelera(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera(...ListaPaginaWeb::paginacion($request))));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudo cargar la papelera');
         }

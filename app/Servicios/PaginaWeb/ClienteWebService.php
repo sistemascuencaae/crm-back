@@ -237,9 +237,7 @@ class ClienteWebService
     /** {registros: [...], total} */
     public function listar(string $busqueda, int $pagina, int $tamanio): array
     {
-        $registros = DB::select('SELECT * FROM ecommerce.fn_cliente_web_listar(?, ?, ?)', [$busqueda, $pagina, $tamanio]);
-
-        return ['registros' => $registros, 'total' => (int) ($registros[0]->total ?? 0)];
+        return ListaPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_cliente_web_listar(?, ?, ?)', [$busqueda, $pagina, $tamanio]));
     }
 
     public function buscar(int $clwId): ?object

@@ -109,10 +109,10 @@ class EspanaMotosService
         self::limpiarCache();
     }
 
-    /** [{emp_id, emp_nombre, categorias, emp_eliminado_en, emp_eliminado_usu_id, eliminado_por}] */
-    public function papeleraPestanas(): array
+    /** {registros, total}: [{emp_id, emp_nombre, categorias, emp_eliminado_en, emp_eliminado_usu_id, eliminado_por}] */
+    public function papeleraPestanas(string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_espana_motos_pestana_papelera()'), 'emp_eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_espana_motos_pestana_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]), 'emp_eliminado_usu_id');
     }
 
     /** Borra para siempre las pestañas de la papelera. Devuelve cuántas borró. */
@@ -165,10 +165,10 @@ class EspanaMotosService
         self::limpiarCache();
     }
 
-    /** [{emm_id, mar_id, mar_nombre, emm_eliminado_en, emm_eliminado_usu_id, eliminado_por}] */
-    public function papeleraMarcas(): array
+    /** {registros, total}: [{emm_id, mar_id, mar_nombre, emm_eliminado_en, emm_eliminado_usu_id, eliminado_por}] */
+    public function papeleraMarcas(string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_espana_motos_marca_papelera()'), 'emm_eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_espana_motos_marca_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]), 'emm_eliminado_usu_id');
     }
 
     /** Borra para siempre las marcas de la papelera. Devuelve cuántas borró. */

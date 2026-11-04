@@ -105,12 +105,15 @@ class GaleriaService
     }
 
     /**
-     * [{gim_id, ggr_id, ggr_nombre, gim_imagen, gim_imagen_movil, gim_nombre, gim_eliminado_en, gim_eliminado_usu_id, eliminado_por}]
+     * {registros, total}: [{gim_id, ggr_id, ggr_nombre, gim_imagen, gim_imagen_movil, gim_nombre, gim_eliminado_en, gim_eliminado_usu_id, eliminado_por}]
      * Las imágenes de un grupo borrado no salen aquí: vuelven con su grupo.
      */
-    public function papeleraImagenes(int $galId): array
+    public function papeleraImagenes(int $galId, string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_papelera(?)', [$galId]), 'gim_eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(
+            DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_papelera(?, ?, ?, ?)', [$galId, $busqueda, $pagina, $tamanio]),
+            'gim_eliminado_usu_id'
+        );
     }
 
     /**
@@ -120,8 +123,8 @@ class GaleriaService
     public function vaciarImagenes(int $galId, int $usuId): int
     {
         // La base devuelve una fila por archivo (imagen y, si tiene, la de celular): se cuentan antes
-        $cantidad = count(DB::select('SELECT gim_id FROM ecommerce.fn_galeria_imagen_papelera(?)', [$galId]))
-                  + count(DB::select('SELECT ggr_id FROM ecommerce.fn_galeria_grupo_papelera(?)', [$galId]));
+        $cantidad = (int) (DB::selectOne("SELECT total FROM ecommerce.fn_galeria_imagen_papelera(?, '', 1, 1)", [$galId])->total ?? 0)
+                  + (int) (DB::selectOne("SELECT total FROM ecommerce.fn_galeria_grupo_papelera(?, '', 1, 1)", [$galId])->total ?? 0);
 
         ArchivosPaginaWeb::borrar(array_column(DB::select('SELECT * FROM ecommerce.fn_galeria_imagen_vaciar(?, ?)', [$galId, $usuId]), 'imagen'));
         $this->limpiarCache($galId);
@@ -192,10 +195,13 @@ class GaleriaService
         $this->limpiarCache($galId);
     }
 
-    /** [{ggr_id, ggr_nombre, ggr_desde, ggr_hasta, total_imagenes, ggr_eliminado_en, ggr_eliminado_usu_id, eliminado_por}] (se vacía con vaciarImagenes) */
-    public function papeleraGrupos(int $galId): array
+    /** {registros, total}: [{ggr_id, ggr_nombre, ggr_desde, ggr_hasta, total_imagenes, ggr_eliminado_en, ggr_eliminado_usu_id, eliminado_por}] (se vacía con vaciarImagenes) */
+    public function papeleraGrupos(int $galId, string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_galeria_grupo_papelera(?)', [$galId]), 'ggr_eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(
+            DB::select('SELECT * FROM ecommerce.fn_galeria_grupo_papelera(?, ?, ?, ?)', [$galId, $busqueda, $pagina, $tamanio]),
+            'ggr_eliminado_usu_id'
+        );
     }
 
     // -----------------------------------------------------------------

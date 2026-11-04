@@ -11,13 +11,14 @@ use Illuminate\Support\Facades\DB;
  * e imágenes por sección (detalle, carátula, promoción). Llama a las funciones inventarios.fn_*.
  * Del ERP solo se leen código, nombre, categoría, marca, descripción, precio de venta y stock: nunca costos ni márgenes.
  * Qué productos están publicados (con su precio, precio anterior y stock) sale de una consulta lenta (~12 s): se guarda
- * 10 minutos en caché. La búsqueda pública del shop (buscarTienda) usa esa caché.
+ * en caché, que renueva el programador cada 5 minutos. La búsqueda pública del shop (buscarTienda) usa esa caché.
  */
 class ProductoTiendaService
 {
     private const CACHE_PUBLICADOS   = 'pagina_web.productos.publicados';
     private const MINUTOS_PUBLICADOS = 10;
-    private const TAMANIOS           = [10, 20, 30, 50, 100];   // los mismos que acepta fn_producto_web_listar
+    private const MINUTOS_RENOVADOS  = 15;    // más que los 5 minutos del programador: mientras corra, nunca vence
+    private const TAMANIOS          = [10, 20, 30, 50, 100];   // los mismos que acepta fn_producto_web_listar
 
     // Lo único que se pasa a la búsqueda del shop: los mismos nombres que la dirección de /shop
     public const FILTROS_SHOP = ['search', 'categoria', 'marca', 'price_min', 'price_max', 'in_stock', 'motos', 'sort', 'page', 'per_page'];
@@ -50,7 +51,8 @@ class ProductoTiendaService
      * Los productos publicados en la tienda con su precio de venta, su precio anterior (con tarjeta, va tachado) y stock:
      *   ['actualizado' => '2026-10-28T10:15:00-05:00',
      *    'productos' => [pro_id => ['precio' => float, 'precio_anterior' => float | null, 'stock' => float]]]
-     * No hay botón ni tarea programada: la caché se renueva sola al vencer.
+     * La renueva el programador cada 5 minutos (renovarPublicados), así ninguna visita paga la consulta (~6 s). Si el
+     * programador no corre, la visita que la encuentra vacía la calcula y la guarda 10 minutos.
      */
     public function publicados(): array
     {
@@ -67,6 +69,12 @@ class ProductoTiendaService
 
         // Si otra petición ya la está llenando, se espera a que termine y se usa lo que dejó
         return Cache::lock(self::CACHE_PUBLICADOS . '.llenando', 60)->block(45, $leer);
+    }
+
+    /** Calcula los publicados y reemplaza la caché por 15 minutos (comando pagina-web:renovar-publicados, cada 5 minutos) */
+    public function renovarPublicados(): void
+    {
+        Cache::put(self::CACHE_PUBLICADOS, $this->leerPublicados(), now()->addMinutes(self::MINUTOS_RENOVADOS));
     }
 
     // -----------------------------------------------------------------
@@ -121,7 +129,8 @@ class ProductoTiendaService
 
     /**
      * Todo lo que necesita el editor de un producto, o null si no existe o está inactivo:
-     *   {producto: {…, pro_nombre_web, pro_oferta_semana, pro_destacado, publicado, precio, precio_anterior, stock}, ficha: [...], imagenes: [...], papelera_imagenes: [...]}
+     *   {producto: {…, pro_nombre_web, pro_oferta_semana, pro_destacado, publicado, precio, precio_anterior, stock}, ficha: [...], imagenes: [...],
+     *    papelera_imagenes: {registros, total} (la 1.ª página; las demás, con papeleraImagenes)}
      */
     public function buscar(int $proId): ?array
     {
@@ -138,11 +147,17 @@ class ProductoTiendaService
             'producto'          => $producto,
             'ficha'             => DB::select('SELECT * FROM inventarios.fn_producto_ficha(?)', [$proId]),
             'imagenes'          => DB::select('SELECT * FROM inventarios.fn_producto_imagen_listar(?)', [$proId]),
-            'papelera_imagenes' => PapeleraPaginaWeb::agregarEliminadoPor(
-                DB::select('SELECT * FROM inventarios.fn_producto_imagen_papelera(?)', [$proId]),
-                'pim_eliminado_usu_id'
-            ),
+            'papelera_imagenes' => $this->papeleraImagenes($proId, '', 1, 20),
         ];
+    }
+
+    /** {registros, total}: las imágenes eliminadas del producto, con eliminado_por */
+    public function papeleraImagenes(int $proId, string $busqueda, int $pagina, int $tamanio): array
+    {
+        return PapeleraPaginaWeb::pagina(
+            DB::select('SELECT * FROM inventarios.fn_producto_imagen_papelera(?, ?, ?, ?)', [$proId, $busqueda, $pagina, $tamanio]),
+            'pim_eliminado_usu_id'
+        );
     }
 
     /** $datos: {valores: {car_id: valor}, sueltas: [{nombre, valor}], usu_id}. Un valor vacío borra ese dato. */
@@ -262,18 +277,44 @@ class ProductoTiendaService
     /**
      * Búsqueda del shop (GET public/pagina-web/productos). $filtros: solo las claves de FILTROS_SHOP que llegaron;
      * lo que no es válido, la base lo ignora. Sin caché de la respuesta: solo la de publicados.
+     * La cuadrícula de la página de marca la usa con {marcas, sort: 'nombre', destacados?, page, per_page} y sin opciones
+     * (PaginaMarcaService::productosPublicos).
      * Una familia sale en una sola tarjeta (familia, variantes y precio "Desde" ya vienen de la base).
      *   {productos: [tarjetas], total, pagina, por_pagina, ultima_pagina,
-     *    opciones: {categorias: [{tpr_id, nombre, cantidad}], marcas: [{mar_id, nombre, cantidad}], precio: {min, max} | null}}
+     *    opciones (solo con $conOpciones): {categorias: [{tpr_id, nombre, cantidad}], marcas: [{mar_id, nombre, cantidad}], precio: {min, max} | null}}
      */
-    public function buscarTienda(array $filtros): array
+    public function buscarTienda(array $filtros, bool $conOpciones = true): array
     {
         $publicados = $this->publicadosJson();
         $json       = $this->json($filtros);
 
         $filas = DB::select('SELECT * FROM inventarios.fn_producto_tienda_buscar(?::jsonb, ?::jsonb)', [$publicados, $json]);
 
+        $total     = (int) ($filas[0]->total ?? 0);
+        // La misma regla que la base: de 1 a 48; si no, 12
+        $porPagina = preg_match('/^\d{1,2}$/', (string) ($filtros['per_page'] ?? '')) && $filtros['per_page'] >= 1 && $filtros['per_page'] <= 48
+            ? (int) $filtros['per_page'] : 12;
+
+        $resultado = [
+            'productos'     => array_map(fn ($f) => $this->tarjetaTienda($f), $filas),
+            'total'         => $total,
+            'pagina'        => (int) ($filas[0]->pagina ?? 1),
+            'por_pagina'    => $porPagina,
+            'ultima_pagina' => max(1, (int) ceil($total / $porPagina)),
+        ];
+
+        if ($conOpciones) {
+            $resultado['opciones'] = $this->opcionesTienda($publicados, $json);
+        }
+
+        return $resultado;
+    }
+
+    /** Las opciones del panel de filtros del shop para lo que se buscó (consulta aparte, ~370 ms) */
+    private function opcionesTienda(string $publicados, string $json): array
+    {
         $opciones = ['categorias' => [], 'marcas' => [], 'precio' => null];
+
         foreach (DB::select('SELECT * FROM inventarios.fn_producto_tienda_opciones(?::jsonb, ?::jsonb)', [$publicados, $json]) as $o) {
             if ($o->tipo === 'categoria') {
                 $opciones['categorias'][] = ['tpr_id' => (int) $o->id, 'nombre' => $o->nombre, 'cantidad' => (int) $o->cantidad];
@@ -284,17 +325,7 @@ class ProductoTiendaService
             }
         }
 
-        $total     = (int) ($filas[0]->total ?? 0);
-        $porPagina = in_array((string) ($filtros['per_page'] ?? ''), ['24', '48'], true) ? (int) $filtros['per_page'] : 12;
-
-        return [
-            'productos'     => array_map(fn ($f) => $this->tarjetaTienda($f), $filas),
-            'total'         => $total,
-            'pagina'        => (int) ($filas[0]->pagina ?? 1),
-            'por_pagina'    => $porPagina,
-            'ultima_pagina' => max(1, (int) ceil($total / $porPagina)),
-            'opciones'      => $opciones,
-        ];
+        return $opciones;
     }
 
     /**
@@ -435,16 +466,25 @@ class ProductoTiendaService
     // Características (plantilla de la ficha por categoría)
     // -----------------------------------------------------------------
 
-    /** {plantilla: las de la categoría y las heredadas de arriba, papelera: las eliminadas de esta categoría} */
+    /**
+     * {plantilla: las de la categoría y las heredadas de arriba,
+     *  papelera: {registros, total} las eliminadas de esta categoría (la 1.ª página; las demás, con papeleraCaracteristicas)}
+     */
     public function caracteristicas(int $tprId): array
     {
         return [
             'plantilla' => DB::select('SELECT * FROM inventarios.fn_caracteristica_listar(?)', [$tprId]),
-            'papelera'  => PapeleraPaginaWeb::agregarEliminadoPor(
-                DB::select('SELECT * FROM inventarios.fn_caracteristica_papelera(?)', [$tprId]),
-                'car_eliminado_usu_id'
-            ),
+            'papelera'  => $this->papeleraCaracteristicas($tprId, '', 1, 20),
         ];
+    }
+
+    /** {registros, total}: las características eliminadas de la categoría, con eliminado_por */
+    public function papeleraCaracteristicas(int $tprId, string $busqueda, int $pagina, int $tamanio): array
+    {
+        return PapeleraPaginaWeb::pagina(
+            DB::select('SELECT * FROM inventarios.fn_caracteristica_papelera(?, ?, ?, ?)', [$tprId, $busqueda, $pagina, $tamanio]),
+            'car_eliminado_usu_id'
+        );
     }
 
     /** $datos: {tpr_id, car_nombre, car_tipo (texto | numero), car_unidad, usu_id}. Devuelve su id. */
