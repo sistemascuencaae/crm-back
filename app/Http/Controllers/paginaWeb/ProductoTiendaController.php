@@ -269,7 +269,7 @@ class ProductoTiendaController extends Controller
     public function eliminarCaracteristica(int $carId)
     {
         try {
-            $this->servicio->eliminarCaracteristica($carId, auth()->id());
+            $this->servicio->eliminarCaracteristica($carId);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Característica enviada a la papelera', ['car_id' => $carId]));
         } catch (QueryException $e) {
@@ -281,7 +281,7 @@ class ProductoTiendaController extends Controller
     public function restaurarCaracteristica(int $carId)
     {
         try {
-            $this->servicio->restaurarCaracteristica($carId, auth()->id());
+            $this->servicio->restaurarCaracteristica($carId);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Característica restaurada con éxito', ['car_id' => $carId]));
         } catch (QueryException $e) {
@@ -305,7 +305,7 @@ class ProductoTiendaController extends Controller
     public function vaciarCaracteristicas(Request $request)
     {
         try {
-            $cantidad = $this->servicio->vaciarCaracteristicas((int) $request->input('tpr_id'), auth()->id());
+            $cantidad = $this->servicio->vaciarCaracteristicas((int) $request->input('tpr_id'));
 
             return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
         } catch (QueryException $e) {

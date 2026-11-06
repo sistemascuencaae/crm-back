@@ -176,7 +176,9 @@ use App\Http\Controllers\ventas\CotizacionesController;
 use App\Http\Controllers\ventas\TarjetasContadoController;
 use App\Http\Controllers\ventas\TarjetasController;
 use App\Http\Controllers\ventas\BancosEmisoresController;
+use App\Http\Controllers\inventarios\CaracterísticasProductoController;
 use App\Http\Controllers\inventarios\ProductoController;
+use App\Http\Controllers\inventarios\TipoProducto;
 use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
 use App\Http\Controllers\formulario\EmpresaController;
@@ -2068,7 +2070,33 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::get('/stockBodegasProducto/{id}', [ProductoController::class, 'stockBodegasProducto']);
     Route::post('/crearProducto', [ProductoController::class, 'crearProducto']);
     Route::post('/editarProducto/{id}', [ProductoController::class, 'editarProducto']);
+    Route::post('/clonarProducto/{id}', [ProductoController::class, 'clonarProducto'])->whereNumber('id');
     Route::get('/productoAuditoria', [ProductoController::class, 'productoAuditoria']);
+    // Características: la plantilla de cada categoría de tercer nivel y sus valores en cada producto.
+    Route::get('/arbolTiposCaracteristicas', [CaracterísticasProductoController::class, 'arbolTiposProducto']);
+    Route::get('/listCaracteristicas', [CaracterísticasProductoController::class, 'listCaracteristicas']);
+    Route::get('/papeleraCaracteristicas', [CaracterísticasProductoController::class, 'papeleraCaracteristicas']);
+    Route::get('/getCaracteristica/{id}', [CaracterísticasProductoController::class, 'getCaracteristica'])->whereNumber('id');
+    Route::post('/crearCaracteristica', [CaracterísticasProductoController::class, 'crearCaracteristica']);
+    Route::post('/editarCaracteristica/{id}', [CaracterísticasProductoController::class, 'editarCaracteristica'])->whereNumber('id');
+    Route::post('/ordenarCaracteristicas', [CaracterísticasProductoController::class, 'ordenarCaracteristicas']);
+    Route::post('/eliminarCaracteristica/{id}', [CaracterísticasProductoController::class, 'eliminarCaracteristica'])->whereNumber('id');
+    Route::post('/restaurarCaracteristica/{id}', [CaracterísticasProductoController::class, 'restaurarCaracteristica'])->whereNumber('id');
+    Route::post('/vaciarCaracteristicas', [CaracterísticasProductoController::class, 'vaciarCaracteristicas']);
+    Route::get('/caracteristicaAuditoria', [CaracterísticasProductoController::class, 'caracteristicaAuditoria']);
+    Route::get('/fichaProducto/{id}', [CaracterísticasProductoController::class, 'fichaProducto'])->whereNumber('id');
+    Route::post('/fichaProducto/{id}', [CaracterísticasProductoController::class, 'guardarFichaProducto'])->whereNumber('id');
+    // Tipos de producto: reemplaza a la pantalla de Dynamo.
+    Route::post('/crearTipoProducto', [TipoProducto::class, 'crearTipoProducto']);
+    Route::post('/clonarTipoProducto/{tprId}', [TipoProducto::class, 'clonarTipoProducto'])->whereNumber('tprId');
+    Route::post('/editarTipoProducto/{tprId}', [TipoProducto::class, 'editarTipoProducto'])->whereNumber('tprId');
+    Route::get('/buscarTipoProducto/{tprId}', [TipoProducto::class, 'buscarTipoProducto'])->whereNumber('tprId');
+    Route::post('/eliminarTipoProducto/{tprId}', [TipoProducto::class, 'eliminarTipoProducto'])->whereNumber('tprId');
+    Route::post('/restaurarTipoProducto/{tprId}', [TipoProducto::class, 'restaurarTipoProducto'])->whereNumber('tprId');
+    Route::get('/papeleraTipoProducto', [TipoProducto::class, 'papeleraTipoProducto']);
+    Route::get('/listarCuentasContables', [TipoProducto::class, 'listarCuentasContables']);
+    Route::get('/arbolTipoProducto', [TipoProducto::class, 'arbolTipoProducto']);
+    Route::get('/auditoriaTipoProducto', [TipoProducto::class, 'auditoriaTipoProducto']);
 });
 
 // PÁGINA WEB: administración del encabezado, pie de página y contenido de la tienda desde el CRM

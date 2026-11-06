@@ -5,6 +5,7 @@ namespace App\Servicios\PaginaWeb;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Productos de la tienda: ficha técnica (plantilla de características por categoría + datos sueltos)
@@ -145,7 +146,7 @@ class ProductoTiendaService
 
         return [
             'producto'          => $producto,
-            'ficha'             => DB::select('SELECT * FROM inventarios.fn_producto_ficha(?)', [$proId]),
+            'ficha'             => $this->ficha($proId),
             'imagenes'          => DB::select('SELECT * FROM inventarios.fn_producto_imagen_listar(?)', [$proId]),
             'papelera_imagenes' => $this->papeleraImagenes($proId, '', 1, 20),
         ];
@@ -160,7 +161,13 @@ class ProductoTiendaService
         );
     }
 
-    /** $datos: {valores: {car_id: valor}, sueltas: [{nombre, valor}], usu_id}. Un valor vacío borra ese dato. */
+    /** La plantilla de su categoría con lo que tenga lleno (origen = plantilla) y sus datos sueltos (origen = suelta) */
+    public function ficha(int $proId): array
+    {
+        return DB::select('SELECT * FROM inventarios.fn_producto_ficha(?)', [$proId]);
+    }
+
+    /** $datos: {valores: {car_id: valor}, sueltas: [{nombre, valor}]}. Un valor vacío borra ese dato. */
     public function guardarFicha(int $proId, array $datos): void
     {
         // {} vacío llega a PHP como [] y se enviaría como arreglo: debe ir como objeto
@@ -168,7 +175,7 @@ class ProductoTiendaService
             $datos['valores'] = (object) $datos['valores'];
         }
 
-        DB::statement('SELECT inventarios.fn_producto_ficha_guardar(?, ?::jsonb)', [$proId, $this->json($datos)]);
+        DB::statement('SELECT inventarios.fn_producto_ficha_guardar(?::jsonb)', [$this->jsonAuditado(['pro_id' => $proId] + $datos)]);
     }
 
     /**
@@ -467,13 +474,19 @@ class ProductoTiendaService
     // -----------------------------------------------------------------
 
     /**
-     * {plantilla: las de la categoría y las heredadas de arriba,
+     * {plantilla: las de la categoría,
      *  papelera: {registros, total} las eliminadas de esta categoría (la 1.ª página; las demás, con papeleraCaracteristicas)}
      */
     public function caracteristicas(int $tprId): array
     {
+        $plantilla = DB::select('SELECT * FROM inventarios.fn_caracteristica_listar_paginacion(1, 100, ?, ?)', ['', $tprId]);
+
+        foreach ($plantilla as $fila) {
+            unset($fila->total_registros);
+        }
+
         return [
-            'plantilla' => DB::select('SELECT * FROM inventarios.fn_caracteristica_listar(?)', [$tprId]),
+            'plantilla' => $plantilla,
             'papelera'  => $this->papeleraCaracteristicas($tprId, '', 1, 20),
         ];
     }
@@ -481,45 +494,49 @@ class ProductoTiendaService
     /** {registros, total}: las características eliminadas de la categoría, con eliminado_por */
     public function papeleraCaracteristicas(int $tprId, string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::pagina(
-            DB::select('SELECT * FROM inventarios.fn_caracteristica_papelera(?, ?, ?, ?)', [$tprId, $busqueda, $pagina, $tamanio]),
-            'car_eliminado_usu_id'
-        );
+        $filas = DB::select('SELECT * FROM inventarios.fn_caracteristica_papelera_paginacion(?, ?, ?, ?)', [$pagina, $tamanio, $busqueda, $tprId]);
+
+        foreach ($filas as $fila) {
+            $fila->total = $fila->total_registros;
+            unset($fila->total_registros);
+        }
+
+        return PapeleraPaginaWeb::pagina($filas, 'car_eliminado_usu_id');
     }
 
-    /** $datos: {tpr_id, car_nombre, car_tipo (texto | numero), car_unidad, usu_id}. Devuelve su id. */
+    /** $datos: {tpr_id, car_nombre, car_tipo (texto | numero), car_unidad}. Devuelve su id. */
     public function crearCaracteristica(array $datos): int
     {
-        return DB::selectOne('SELECT inventarios.fn_caracteristica_crear(?::jsonb) AS id', [$this->json($datos)])->id;
+        return DB::selectOne('SELECT inventarios.fn_caracteristica_registrar(?::jsonb) AS id', [$this->jsonAuditado($datos)])->id;
     }
 
-    /** $datos: solo lo que cambia + usu_id (la categoría no se cambia) */
+    /** $datos: solo lo que cambia (la categoría no se cambia) */
     public function modificarCaracteristica(int $carId, array $datos): void
     {
-        DB::statement('SELECT inventarios.fn_caracteristica_modificar(?, ?::jsonb)', [$carId, $this->json($datos)]);
+        DB::statement('SELECT inventarios.fn_caracteristica_modificar(?::jsonb)', [$this->jsonAuditado(['car_id' => $carId] + $datos)]);
     }
 
     /** La manda a la papelera (los valores de los productos se conservan) */
-    public function eliminarCaracteristica(int $carId, int $usuId): void
+    public function eliminarCaracteristica(int $carId): void
     {
-        DB::statement('SELECT inventarios.fn_caracteristica_eliminar(?, ?)', [$carId, $usuId]);
+        DB::statement('SELECT inventarios.fn_caracteristica_eliminar(?::jsonb)', [$this->jsonAuditado(['car_id' => $carId])]);
     }
 
-    public function restaurarCaracteristica(int $carId, int $usuId): void
+    public function restaurarCaracteristica(int $carId): void
     {
-        DB::statement('SELECT inventarios.fn_caracteristica_restaurar(?, ?)', [$carId, $usuId]);
+        DB::statement('SELECT inventarios.fn_caracteristica_restaurar(?::jsonb)', [$this->jsonAuditado(['car_id' => $carId])]);
     }
 
-    /** $datos: {tpr_id, ids: [car_id…] (todas las de la categoría, en el nuevo orden), usu_id} */
+    /** $datos: {tpr_id, ids: [car_id…] (todas las de la categoría, en el nuevo orden)} */
     public function ordenarCaracteristicas(array $datos): void
     {
-        DB::statement('SELECT inventarios.fn_caracteristica_ordenar(?::jsonb)', [$this->json($datos)]);
+        DB::statement('SELECT inventarios.fn_caracteristica_ordenar(?::jsonb)', [$this->jsonAuditado($datos)]);
     }
 
     /** Borra para siempre las características de la papelera de la categoría (y sus valores en los productos). Devuelve cuántas. */
-    public function vaciarCaracteristicas(int $tprId, int $usuId): int
+    public function vaciarCaracteristicas(int $tprId): int
     {
-        return (int) DB::selectOne('SELECT inventarios.fn_caracteristica_vaciar(?, ?) AS cantidad', [$tprId, $usuId])->cantidad;
+        return (int) DB::selectOne('SELECT inventarios.fn_caracteristica_vaciar(?::jsonb) AS cantidad', [$this->jsonAuditado(['tpr_id' => $tprId])])->cantidad;
     }
 
     // -----------------------------------------------------------------
@@ -608,5 +625,20 @@ class ProductoTiendaService
     private function json(array $datos): string
     {
         return json_encode($datos, JSON_UNESCAPED_UNICODE);
+    }
+
+    /** El JSON con el bloque 'auditoria' que piden las funciones de características (auditoria.logs_cambios). */
+    private function jsonAuditado(array $datos): string
+    {
+        $u = auth('api')->user();
+
+        return $this->json($datos + ['auditoria' => [
+            'usuario_id'     => $u->id ?? null,
+            'usuario_login'  => $u->usu_alias ?? null,
+            'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+            'ip_address'     => request()->ip(),
+            'user_agent'     => request()->userAgent(),
+            'request_id'     => (string) Str::uuid(),
+        ]]);
     }
 }
