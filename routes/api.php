@@ -169,6 +169,7 @@ use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\ParametrosCotizadorController;
+use App\Http\Controllers\ventas\ParametrosTipoCalificacionClienteController;
 use App\Http\Controllers\ventas\MargenCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
 use App\Http\Controllers\ventas\CotizarController;
@@ -2030,6 +2031,12 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::post('/guardarEmisor', [BancosEmisoresController::class, 'guardarEmisor']);
     Route::get('/listarBancosDynamo', [BancosEmisoresController::class, 'listarBancosDynamo']);
     Route::post('/guardarBancoDynamo', [BancosEmisoresController::class, 'guardarBancoDynamo']);
+
+    Route::get('/listParametrosTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'listParametrosTipoCalificacionCliente']);
+    Route::get('/listEstadosCreditoTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'listEstadosCreditoTipoCalificacionCliente']);
+    Route::post('/guardarParametrosTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'guardarParametrosTipoCalificacionCliente']);
+    Route::delete('/deleteParametroTipoCalificacionCliente/{id}', [ParametrosTipoCalificacionClienteController::class, 'deleteParametroTipoCalificacionCliente']);
+    Route::get('/parametroTipoCalificacionClienteAuditoria', [ParametrosTipoCalificacionClienteController::class, 'parametroTipoCalificacionClienteAuditoria']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).
