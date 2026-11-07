@@ -39,6 +39,7 @@ use DateTime;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 
 class CasoController extends Controller
@@ -1195,6 +1196,7 @@ class CasoController extends Controller
                 [$casoId, $faseId, $tipo_caso_id]
             );
 
+            $hayAutomaticos = false;
             for ($i = 0; $i < sizeof($reqFase); $i++) {
                 $reqCaso = new RequerimientoCaso();
                 $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
@@ -1214,6 +1216,8 @@ class CasoController extends Controller
                 $reqCaso->editable = $reqFase[$i]->editable;
                 // 28-oct: las fases donde se habilita (texto integer[] de PostgreSQL); sin config, solo su fase.
                 $reqCaso->fases_habilitadas = $reqFase[$i]->fases_habilitadas ?? ('{' . (int) $reqFase[$i]->fase_id . '}');
+                // 06-nov: el dato que le manda al cotizador. No está en el fillable: desde el caso no se puede cambiar.
+                $reqCaso->dato_cotizador = $reqFase[$i]->dato_cotizador ?? null;
 
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(';', $reqCaso->valor_lista);
@@ -1248,7 +1252,16 @@ class CasoController extends Controller
                 }
 
                 $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
+                // 06-nov: los que llena el sistema nacen marcados: nunca frenan el cambio de fase, aunque el cálculo falle.
+                if (in_array($reqCaso->tipo_campo, RequerimientoCaso::TIPOS_AUTOMATICOS, true)) {
+                    $reqCaso->marcado = true;
+                    $hayAutomaticos = true;
+                }
                 $reqCaso->save();
+            }
+
+            if ($hayAutomaticos) {
+                $this->calcularRequerimientosAutomaticos((int) $casoId);
             }
 
             $log->logInfo(CasoController::class, 'Se agregaron con exito los requerimientos de la fase ' . $faseId . ', en el caso #' . $casoId);
@@ -1256,6 +1269,38 @@ class CasoController extends Controller
             $log->logError(CasoController::class, 'Error al agregar los requerimientos de la fase ' . $faseId . ', en el caso #' . $casoId, $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // Version 1.0
+    // 06-nov: llena los requerimientos que calcula el sistema (crm.fn_requerimientos_caso_automaticos_calcular). Corre al entrar a
+    // la fase y en Reintentar. Si falla, se registra y el caso sigue: dentro de la transacción de quien llama, DB::transaction es
+    // un savepoint y no la deja abortada.
+    public function calcularRequerimientosAutomaticos(int $casoId): void
+    {
+        $log = new Funciones();
+
+        try {
+            $u = auth('api')->user();
+            $payload = json_encode([
+                'caso_id' => $casoId,
+                'auditoria' => [
+                    'usuario_id' => $u->id ?? null,
+                    'usuario_login' => $u->usu_alias ?? null,
+                    'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                    'request_id' => (string) Str::uuid(),
+                ],
+            ], JSON_UNESCAPED_UNICODE);
+
+            $fila = DB::transaction(fn () => DB::selectOne('SELECT crm.fn_requerimientos_caso_automaticos_calcular(?::jsonb) AS resultado', [$payload]));
+
+            foreach (json_decode($fila->resultado, true)['errores'] ?? [] as $error) {
+                $log->logError(CasoController::class, 'No se pudo calcular el requerimiento "' . $error['titulo'] . '" del caso #' . $casoId . ': ' . $error['mensaje']);
+            }
+        } catch (\Throwable $e) {
+            $log->logError(CasoController::class, 'No se pudieron calcular los requerimientos automáticos del caso #' . $casoId, $e);
         }
     }
 

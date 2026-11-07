@@ -90,6 +90,9 @@ class CasoConsultaGarancheckController extends Controller
             $calificacion = $fila && $fila->resultado ? (json_decode($fila->resultado, true) ?: []) : [];
             $texto = $calificacion['calificacion_proveedor'] ?? null;
 
+            // 06-nov: con el score de la consulta se llenan los requerimientos automáticos que quedaron sin resultado.
+            app(CasoController::class)->calcularRequerimientosAutomaticos($casoId);
+
             // 3. El caso completo: para la tarjeta de todos (TableroEvent) y para el navegador que apretó el botón.
             $casoCompleto = app(CasoController::class)->getCaso($casoId);
             try {

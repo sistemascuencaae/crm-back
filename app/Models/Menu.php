@@ -12,13 +12,23 @@ class Menu extends Model
 
     protected $table = 'crm.menu';
 
+    // code ya no se escribe (06-nov): la columna queda con lo que tenía y las filas nuevas nacen sin código.
     protected $fillable = [
-        "code",
         "module",
         "description",
         "name",
         "url",
         "icon",
+        "padre_id",
+        "titulo",
+        "orden",
+        "en_menu",
+    ];
+
+    protected $casts = [
+        "padre_id" => "integer",
+        "orden" => "integer",
+        "en_menu" => "boolean",
     ];
 
     public function setCreatedAtAttribute($value)

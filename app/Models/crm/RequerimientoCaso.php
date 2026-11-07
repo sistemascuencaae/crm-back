@@ -14,6 +14,10 @@ class RequerimientoCaso extends Model
     use SoftDeletes;
     protected $table = 'crm.requerimientos_caso';
 
+    // 06-nov: los tipos de campo que llena el sistema (crm.fn_requerimientos_caso_automaticos_calcular). Su configuración va en
+    // valor_lista y su valor no se edita desde el caso.
+    public const TIPOS_AUTOMATICOS = ['comportamiento cliente', 'tipo cliente por score'];
+
     protected $fillable = [
         "descripcion",
         "caso_id",

@@ -40,6 +40,7 @@ class ParametrosTipoCalificacionClienteController extends Controller
         'PORCENTAJE_INVALIDO' => 'Los porcentajes deben estar entre 0 y 100.',
         'PARAMETRO_DUPLICADO' => 'Ya existe una fila con ese nombre y estado de crédito.',
         'PARAMETRO_NO_EXISTE' => 'La fila ya no existe.',
+        'PARAMETRO_EN_USO' => 'Esta fila la usa un requerimiento de comportamiento: cambie primero ese requerimiento.',
     ];
 
     public function __construct()

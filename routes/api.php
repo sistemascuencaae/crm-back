@@ -170,6 +170,7 @@ use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\ParametrosCotizadorController;
 use App\Http\Controllers\ventas\ParametrosTipoCalificacionClienteController;
+use App\Http\Controllers\ventas\ParametrosTipoClienteController;
 use App\Http\Controllers\ventas\MargenCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
 use App\Http\Controllers\ventas\CotizarController;
@@ -879,6 +880,10 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::delete('/deleteRequerimientos/{id}', [RequerimientoController::class, 'deleteRequerimientos']); // Eliminar
     // 28-oct: las fases para "Habilitado en las fases" y la auditoría de los requerimientos de una fase.
     Route::get('/listFasesAgrupadasPorTablero', [RequerimientoController::class, 'listFasesAgrupadasPorTablero']);
+    // 06-nov: las opciones al configurar los tipos que llena el sistema.
+    Route::get('/listOpcionesRequerimientosAutomaticos', [RequerimientoController::class, 'listOpcionesRequerimientosAutomaticos']);
+    Route::get('/listDatosCotizadorTipoCaso/{tipo_caso_id}', [RequerimientoController::class, 'listDatosCotizadorTipoCaso']);
+    Route::post('/avisoDatoCotizadorRequerimiento', [RequerimientoController::class, 'avisoDatoCotizadorRequerimiento']);
     Route::get('/requerimientosAuditoria/{fase_id}', [RequerimientoController::class, 'requerimientosAuditoria']);
 
 
@@ -1712,11 +1717,13 @@ Route::group(['prefix' => 'company', 'middleware' => ['jwt.auth', 'usuario.activ
 
 Route::group(['prefix' => 'menu', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     Route::get('list', [MenuController::class, 'list']);
+    Route::get('lateral', [MenuController::class, 'menuLateral']);
     Route::get('list/{id}', [MenuController::class, 'findById']);
 
     Route::post('addMenu', [MenuController::class, 'addMenu']);
     Route::post('editMenu/{id}', [MenuController::class, 'editMenu']);
     Route::delete('deleteMenu/{id}', [MenuController::class, 'deleteMenu']);
+    Route::post('moverMenu', [MenuController::class, 'moverMenu']);
 });
 
 Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
@@ -2037,6 +2044,12 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::post('/guardarParametrosTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'guardarParametrosTipoCalificacionCliente']);
     Route::delete('/deleteParametroTipoCalificacionCliente/{id}', [ParametrosTipoCalificacionClienteController::class, 'deleteParametroTipoCalificacionCliente']);
     Route::get('/parametroTipoCalificacionClienteAuditoria', [ParametrosTipoCalificacionClienteController::class, 'parametroTipoCalificacionClienteAuditoria']);
+
+    Route::get('/listParametrosTipoCliente', [ParametrosTipoClienteController::class, 'listParametrosTipoCliente']);
+    Route::get('/listTiposParametroTipoCliente', [ParametrosTipoClienteController::class, 'listTiposParametroTipoCliente']);
+    Route::post('/guardarParametrosTipoCliente', [ParametrosTipoClienteController::class, 'guardarParametrosTipoCliente']);
+    Route::delete('/deleteParametroTipoCliente/{id}', [ParametrosTipoClienteController::class, 'deleteParametroTipoCliente']);
+    Route::get('/parametroTipoClienteAuditoria', [ParametrosTipoClienteController::class, 'parametroTipoClienteAuditoria']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).
