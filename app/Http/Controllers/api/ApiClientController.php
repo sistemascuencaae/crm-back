@@ -148,9 +148,11 @@ class ApiClientController extends Controller
             // 30-oct F4: los usuarios agregados se leen ANTES de borrar (después ya no existen) para avisarles. Solo si es
             // el dueño (fn_api_coleccion_permiso no levanta error): si no lo es, lo dirá la función de eliminar.
             $usuariosAgregados = [];
+            $destinatarios = [];   // 07-nov: dueño y agregados, también leídos antes de borrar: el aviso va al canal de cada uno
             $permiso = DB::selectOne('SELECT crm.fn_api_coleccion_permiso(?::bigint, ?::bigint) AS rol', [(int) $id, $this->usuarioId()]);
             if ($permiso && $permiso->rol === 'dueno') {
                 $usuariosAgregados = $this->leerJsonb('SELECT crm.fn_api_coleccion_usuarios_listar(?::bigint, ?::bigint) AS datos', [(int) $id, $this->usuarioId()]) ?? [];
+                $destinatarios = ApiEventos::destinatarios((int) $id);
             }
 
             DB::selectOne('SELECT crm.fn_api_coleccion_eliminar(?::jsonb) AS id', [json_encode([
@@ -162,7 +164,8 @@ class ApiClientController extends Controller
 
             // 30-oct F4: aviso al canal de la colección y a cada usuario agregado
             $origen = $this->usuarioId();
-            ApiEventos::coleccion((int) $id, 'eliminada', $origen);
+            // DESACTIVADO 07-nov: ApiEventos::coleccion((int) $id, 'eliminada', $origen); (después de borrar ya no se sabe a quién avisar)
+            ApiEventos::coleccion((int) $id, 'eliminada', $origen, null, $destinatarios);
             foreach ($usuariosAgregados as $u) {
                 ApiEventos::usuario((int) ($u['users_id'] ?? 0), (int) $id, 'eliminada', $origen);
             }
