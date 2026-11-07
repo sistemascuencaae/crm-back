@@ -33,7 +33,6 @@ class MenuController extends Controller
         'TITULO_MUY_LARGO' => 'El título no puede pasar de 120 caracteres.',
         'NOMBRE_DUPLICADO' => 'Ya existe un menú con ese nombre.',
         'RUTA_DUPLICADA' => 'Otro menú ya usa esa ruta: el último tramo de la URL no se puede repetir.',
-        'REQUIERE_DESCRIPCION' => 'La descripción es obligatoria.',
         'URL_MUY_LARGA' => 'La URL no puede pasar de 50 caracteres.',
         'ICONO_MUY_LARGO' => 'El ícono no puede pasar de 50 caracteres.',
         'PADRE_NO_EXISTE' => 'El menú padre no existe.',
