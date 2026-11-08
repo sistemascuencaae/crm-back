@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm\garantias;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\series\AutorGexSeriesTrait; // 07-nov: autor desde el token
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\garantias\Comisiones;
 use Exception;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class ComisionesController extends Controller
 {
+    use AutorGexSeriesTrait; // 07-nov
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -61,8 +64,14 @@ class ComisionesController extends Controller
                 $porc_jfz = $request->input('porc_jfz');
                 $porc_jfv = $request->input('porc_jfv');
                 $porc_jfg = $request->input('porc_jfg');
-                $usuario_crea = $request->input('usuario_crea');
-                $usuario_modifica = $request->input('usuario_modifica');
+                // DESACTIVADO 07-nov: el autor llegaba del body
+                // $usuario_crea = $request->input('usuario_crea');
+                // $usuario_modifica = $request->input('usuario_modifica');
+                // 07-nov: el autor sale del token (crm.users); al editar se conservan el creador y la fecha de creación guardados
+                $autor = $this->autorGexSeries($request->all(), 'gex.comisiones', ['comi_id' => $comi_id], $fecha_crea, $fecha_modifica);
+                $usuario_crea = $autor['usuario_crea'];
+                $fecha_crea = $autor['fecha_crea'];
+                $usuario_modifica = $autor['usuario_modifica'];
 
                 DB::table('gex.comisiones')->updateOrInsert(
                     ['comi_id' => $comi_id],

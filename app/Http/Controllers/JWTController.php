@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Events\TableroEvent;
 use App\Http\Controllers\crm\CasoController;
+use App\Http\Resources\RespuestaApi; // 07-nov: respuesta de GET /api/access/sesion
+use App\Http\Traits\SesionUsuarioTrait; // 07-nov: arma el "user" de la sesión (login, access/sesion y cabecera X-Sesion-Usuario)
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 
 class JWTController extends Controller
 {
+    use SesionUsuarioTrait; // 07-nov
+
     /**
      * Create a new AuthController instance.
      *
@@ -207,27 +211,72 @@ class JWTController extends Controller
 
 
 
+    // DESACTIVADO 07-nov: el arreglo "user" pasó a SesionUsuarioTrait::armarUsuarioSesion (mismas llaves, mismos tipos), para que el
+    // login, GET /api/access/sesion y la cabecera X-Sesion-Usuario respondan lo mismo. Reactivar = descomentar este y comentar el de abajo.
+    // public function respondWithToken($token)
+    // {
+    //     // NO PUEDO SACAR EL ALM_CODIGO PORQUE EN MI TABLA AGENCIA NO EXISTE, POR LO TANTO LOS REPORTES DE VENTAS YA NO VAN A SERVIR
+    //     $alm = DB::selectOne('SELECT a.nombre AS alm_nombre, a.codigo AS alm_id
+    //                                     FROM crm.users u
+    //                                 INNER JOIN crm.agencia a ON a.codigo = CAST(u.alm_id AS VARCHAR)
+    //                                 WHERE u.id = ?', [auth('api')->user()->id]);
+    //
+    //     $alm_id = null;
+    //     $alm_nombre = '';
+    //
+    //     $accesos = DB::select("SELECT u.id as user_id, me.name, me.url from crm.users u
+    //     inner join crm.profiles p on p.id = u.profile_id
+    //     inner join crm.access acc on acc.profile_id = p.id and acc.ejecutar = 1
+    //     inner join crm.menu me on me.id = acc.menu_id
+    //     where u.id = ?;",[auth('api')->user()->id]);
+    //
+    //     if ($alm) {
+    //         $alm_nombre = $alm->alm_nombre;
+    //         $alm_id = $alm->alm_id;
+    //     }
+    //
+    //     $usuario = User::findOrFail(auth('api')->user()->id);
+    //
+    //     $usuario->update([
+    //         "en_linea" => true,
+    //     ]);
+    //
+    //     return response()->json([
+    //         'access_token' => $token,
+    //         'token_type' => 'bearer',
+    //         'expires_in' => auth()->factory()->getTTL(),
+    //         'accesos' => $accesos,
+    //         'user' => [
+    //             "id" => auth('api')->user()->id,
+    //             "en_linea" => $usuario->en_linea,
+    //             "full_name" => auth('api')->user()->usu_alias . ' - ' . auth('api')->user()->name . ' ' . auth('api')->user()->surname,
+    //             "name" => auth('api')->user()->name,
+    //             "surname" => auth('api')->user()->surname,
+    //             "email" => auth('api')->user()->email,
+    //             "usu_tipo_analista" => auth('api')->user()->usu_tipo_analista,
+    //             "usu_tipo" => auth('api')->user()->usu_tipo,
+    //             "usu_alias" => auth('api')->user()->usu_alias,
+    //             "dep_id" => auth('api')->user()->dep_id,
+    //             "profile_id" => auth('api')->user()->profile_id,
+    //             "bod_id" => auth('api')->user()->bod_id,
+    //             "alm_nombre" => $alm_nombre,
+    //             "alm_id" => $alm_id,
+    //         ]
+    //     ]);
+    // }
+
+    // 07-nov: responde igual que antes (access_token, token_type, expires_in, accesos y user, con las mismas consultas y en el mismo
+    // orden); solo el arreglo "user" sale de SesionUsuarioTrait.
     public function respondWithToken($token)
     {
         // NO PUEDO SACAR EL ALM_CODIGO PORQUE EN MI TABLA AGENCIA NO EXISTE, POR LO TANTO LOS REPORTES DE VENTAS YA NO VAN A SERVIR
-        $alm = DB::selectOne('SELECT a.nombre AS alm_nombre, a.codigo AS alm_id 
-                                        FROM crm.users u
-                                    INNER JOIN crm.agencia a ON a.codigo = CAST(u.alm_id AS VARCHAR) 
-                                    WHERE u.id = ?', [auth('api')->user()->id]);
-
-        $alm_id = null;
-        $alm_nombre = '';
+        $alm = $this->agenciaSesionUsuario(auth('api')->user());
 
         $accesos = DB::select("SELECT u.id as user_id, me.name, me.url from crm.users u
         inner join crm.profiles p on p.id = u.profile_id
         inner join crm.access acc on acc.profile_id = p.id and acc.ejecutar = 1
         inner join crm.menu me on me.id = acc.menu_id
         where u.id = ?;",[auth('api')->user()->id]);
-
-        if ($alm) {
-            $alm_nombre = $alm->alm_nombre;
-            $alm_id = $alm->alm_id;
-        }
 
         $usuario = User::findOrFail(auth('api')->user()->id);
 
@@ -240,23 +289,22 @@ class JWTController extends Controller
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL(),
             'accesos' => $accesos,
-            'user' => [
-                "id" => auth('api')->user()->id,
-                "en_linea" => $usuario->en_linea,
-                "full_name" => auth('api')->user()->usu_alias . ' - ' . auth('api')->user()->name . ' ' . auth('api')->user()->surname,
-                "name" => auth('api')->user()->name,
-                "surname" => auth('api')->user()->surname,
-                "email" => auth('api')->user()->email,
-                "usu_tipo_analista" => auth('api')->user()->usu_tipo_analista,
-                "usu_tipo" => auth('api')->user()->usu_tipo,
-                "usu_alias" => auth('api')->user()->usu_alias,
-                "dep_id" => auth('api')->user()->dep_id,
-                "profile_id" => auth('api')->user()->profile_id,
-                "bod_id" => auth('api')->user()->bod_id,
-                "alm_nombre" => $alm_nombre,
-                "alm_id" => $alm_id,
-            ]
+            'user' => $this->armarUsuarioSesion(auth('api')->user(), $usuario->en_linea, $alm),
         ]);
+    }
+
+    // 07-nov: GET /api/access/sesion. El usuario de la sesión con el token, armado igual que el "user" del login (sin tocar en_linea):
+    // el front lo pide al arrancar, antes de pintar, porque el user ya no vive en el localStorage.
+    public function sesion()
+    {
+        $usuario = auth('api')->user();
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Sesión del usuario', [
+            'user' => $this->armarUsuarioSesion($usuario, $usuario->en_linea, $this->agenciaSesionUsuario($usuario)),
+            // 08-nov: el nombre del perfil, para el aviso "te cambiaron del perfil X al perfil Y". Va aparte porque el "user" debe
+            // quedar idéntico al del login.
+            'perfil_nombre' => (string) (DB::table('crm.profiles')->where('id', $usuario->profile_id)->value('name') ?? ''),
+        ]));
     }
 
 

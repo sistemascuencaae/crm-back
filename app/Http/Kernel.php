@@ -43,6 +43,7 @@ class Kernel extends HttpKernel
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\AuditoriaContexto::class, // JGSJ contexto app.* para auditoría forense
+            \App\Http\Middleware\CabeceraSesionUsuario::class, // 07-nov: cabecera X-Sesion-Usuario con el usuario actual en cada respuesta con token
         ],
     ];
 

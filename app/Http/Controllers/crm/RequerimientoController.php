@@ -217,6 +217,9 @@ class RequerimientoController extends Controller
     {
         try {
             $payload = $request->only(self::CAMPOS_PAYLOAD);
+            // 07-nov: quien crea el requerimiento (crm.requerimientos_predefinidos.user_id) es el usuario del token, no el
+            // user_id que manda el front. Editar no lo toca: crm.fn_requerimientos_predefinidos_modificar no usa user_id.
+            $payload['user_id'] = auth('api')->id();
             $payload['auditoria'] = $this->contextoAuditoriaForense($request);
 
             $r = $this->ejecutarFuncion('crm.fn_requerimientos_predefinidos_crear', $payload);

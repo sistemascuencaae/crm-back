@@ -97,6 +97,8 @@ class ChatController extends Controller
                 END AS recibe
                 from crm.chat_conversaciones cc where cc.id = ?", [$user_id, $user_id, $converId]);
             $dataMensaje = $request->all();
+            // 07-nov: el autor del mensaje es el usuario autenticado (token); el user_id que mande el front se ignora
+            $dataMensaje['user_id'] = $user_id;
             $mensajeGuardado = ChatMensajes::create($dataMensaje);
             //$dataMensajeCreado = $this->getMensaje($mensajeGuardado->id);
             $dataMensajes = $this->getMensajes($converId, $tipoConver, 15);
@@ -194,10 +196,15 @@ class ChatController extends Controller
         }
     }
 
+    // 07-nov: «mis conversaciones» salen del usuario autenticado (token). El {userId} de la ruta ya no se usa:
+    // con él se leían las conversaciones de cualquiera. La ruta está en el grupo con jwt.auth, así que hay usuario
+    // aunque el constructor la tenga en el 'except'.
     public function listConversaciones($userId)
     {
         try {
-            $data = $this->getConversacionesUser($userId);
+            // DESACTIVADO 07-nov: el id llegaba del front
+            // $data = $this->getConversacionesUser($userId);
+            $data = $this->getConversacionesUser(Auth::id());
             return response()->json(RespuestaApi::returnResultado('success', 'Listado con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar.', $th));
@@ -374,6 +381,8 @@ class ChatController extends Controller
             $result = DB::transaction(function () use ($request) {
                 $userCreadorId = Auth::id(); //user creador;
                 $converData = $request->all();
+                // 07-nov: quien inicia el chat (user_uno_id) es el usuario autenticado; user_dos_id es el contacto elegido
+                $converData['user_uno_id'] = $userCreadorId;
                 $newConver = ChatConversaciones::create($converData);
                 $userDos = User::find($newConver->user_dos_id);
                 $mensajeSaludo = ChatMensajes::create([
@@ -441,6 +450,8 @@ class ChatController extends Controller
                 $msjDataJSON = json_decode($request->input("msg"));
                 $nuevoMensajeImg = null;
                 $contMSg = false;
+                // 07-nov: el autor de los mensajes es el usuario autenticado (token), no el user_id del JSON 'msg'
+                $userAutorId = Auth::id();
 
                 $parametro = DB::table('crm.parametro')
                     ->where('abreviacion', 'NAS')
@@ -461,7 +472,8 @@ class ChatController extends Controller
                             $nuevoMensajeImg = ChatMensajes::create([
                                 "chatconve_id" => $msjDataJSON->chatconve_id,
                                 "chatgrupo_id" => $msjDataJSON->chatgrupo_id,
-                                "user_id" => $msjDataJSON->user_id,
+                                // DESACTIVADO 07-nov: "user_id" => $msjDataJSON->user_id,
+                                "user_id" => $userAutorId, // 07-nov
                                 "mensaje" => '',
                             ]);
                             $contMSg = true;
@@ -506,7 +518,8 @@ class ChatController extends Controller
                         $nuevoMensajeFile = ChatMensajes::create([
                             "chatconve_id" => $msjDataJSON->chatconve_id,
                             "chatgrupo_id" => $msjDataJSON->chatgrupo_id,
-                            "user_id" => $msjDataJSON->user_id,
+                            // DESACTIVADO 07-nov: "user_id" => $msjDataJSON->user_id,
+                            "user_id" => $userAutorId, // 07-nov
                             // "mensaje" => $archivoData->getClientOriginalName(),
                             "mensaje" => str_replace(' ', '-', $archivoData->getClientOriginalName()), // Reemplazar espacios por -
                             "archivo_id" => $nuevoArchivo->id
@@ -517,7 +530,8 @@ class ChatController extends Controller
                     $nuevoMensajeImg = ChatMensajes::create([
                         "chatconve_id" => $msjDataJSON->chatconve_id,
                         "chatgrupo_id" => $msjDataJSON->chatgrupo_id,
-                        "user_id" => $msjDataJSON->user_id,
+                        // DESACTIVADO 07-nov: "user_id" => $msjDataJSON->user_id,
+                        "user_id" => $userAutorId, // 07-nov
                         "mensaje" => $msjDataJSON->mensaje,
                     ]);
                 }

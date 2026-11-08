@@ -114,12 +114,19 @@ class DActividadController extends Controller
         $log = new Funciones();
 
         try {
+            // 07-nov: el departamento sale del usuario del token, no de la URL (ver filtrarActividadesUsuarioComun)
+            $dep_id = auth('api')->user()->dep_id;
+
             $actividades = DTipoActividad::where('caso_id', $caso_id)
-                ->where(function ($query) use ($dep_id) {
-                    $query->whereHas('usuario', function ($subquery) use ($dep_id) {
-                        $subquery->where('dep_id', $dep_id);
-                    })
-                        ->orWhere('acc_publico', true);
+                // DESACTIVADO 07-nov (ahora lo arma filtrarActividadesUsuarioComun con el usu_tipo y el dep_id de la base):
+                // ->where(function ($query) use ($dep_id) {
+                //     $query->whereHas('usuario', function ($subquery) use ($dep_id) {
+                //         $subquery->where('dep_id', $dep_id);
+                //     })
+                //         ->orWhere('acc_publico', true);
+                // })
+                ->where(function ($query) {
+                    $this->filtrarActividadesUsuarioComun($query);
                 })
                 ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
                 ->selectRaw("*, 
@@ -158,6 +165,21 @@ class DActividadController extends Controller
         }
     }
 
+    // 07-nov: el front elige entre esta ruta y la de arriba con el usu_tipo de su sesión; el back ya no le cree: las dos
+    // aplican el mismo filtro con el usuario del token. El usuario común (usu_tipo 4 en la base) solo ve las actividades
+    // de su departamento (crm.users.dep_id) y las públicas; los demás ven todas.
+    private function filtrarActividadesUsuarioComun($query)
+    {
+        $usuario = auth('api')->user();
+        if ($usuario && (int) $usuario->usu_tipo === 4) {
+            $depId = $usuario->dep_id;
+            $query->whereHas('usuario', function ($subquery) use ($depId) {
+                $subquery->where('dep_id', $depId);
+            })
+                ->orWhere('acc_publico', true);
+        }
+    }
+
     // LISTA PARA SUPER USUARIO
     public function listAllActividadesByCasoId($caso_id)
     {
@@ -165,6 +187,10 @@ class DActividadController extends Controller
 
         try {
             $actividades = DTipoActividad::where('caso_id', $caso_id)
+                // 07-nov: si el usuario del token es tipo 4, solo su departamento y las públicas (filtrarActividadesUsuarioComun)
+                ->where(function ($query) {
+                    $this->filtrarActividadesUsuarioComun($query);
+                })
                 ->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento')
                 ->selectRaw("*, 
             CASE 
@@ -402,6 +428,10 @@ class DActividadController extends Controller
         $log = new Funciones();
 
         try {
+            // 07-nov: "Mis actividades" son las del usuario del token; el {user_id} de la URL se ignora (solo lo manda
+            // list-mis-actividades con el id propio)
+            $user_id = auth('api')->id();
+
             $actividades = DTipoActividad::where('user_id', $user_id)->with('cTipoActividad.tablero', 'estado_actividad', 'cTipoResultadoCierre', 'usuario.departamento', 'caso:id,cliente_id') // Aquí especificamos que solo queremos el campo 'cliente_id' de la tabla 'caso')
                 ->selectRaw("*, 
                 CASE 
@@ -473,6 +503,8 @@ class DActividadController extends Controller
         $log = new Funciones();
 
         try {
+            // 07-nov: el {user_id} de la URL solo servía para devolver "mis actividades": ahora es el del token
+            $user_id = auth('api')->id();
             $usuarioMiembro = $request->input('usuario');
 
             $data = DB::transaction(function () use ($usuarioMiembro, $request, $user_id) {
@@ -553,6 +585,8 @@ class DActividadController extends Controller
         $log = new Funciones();
 
         try {
+            // 07-nov: el {user_id} de la URL solo servía para devolver la fila de "mis actividades": ahora es el del token
+            $user_id = auth('api')->id();
             $usuarioMiembro = $request->input('usuario');
             $actividad = DTipoActividad::findOrFail($id);
 
@@ -633,6 +667,9 @@ class DActividadController extends Controller
         $log = new Funciones();
 
         try {
+            // 07-nov: el calendario muestra las del usuario del token; el {user_id} de la URL se ignora
+            $user_id = auth('api')->id();
+
             $actividades = DTipoActividad::where('user_id', $user_id)
                 ->whereHas('estado_actividad', function ($query) {
                     $query->where('nombre', 'Iniciado');

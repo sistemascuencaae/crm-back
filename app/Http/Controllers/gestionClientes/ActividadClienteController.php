@@ -201,7 +201,8 @@ class ActividadClienteController extends Controller
         try {
             $request->validate([
                 'cliente_id' => 'required|integer',
-                'user_id' => 'required|integer',
+                // DESACTIVADO 07-nov: el dueño ya no llega del front, sale del token (abajo)
+                // 'user_id' => 'required|integer',
                 'tipo_actividad_id' => 'required|integer',
                 'prioridad_actividad_id' => 'required|integer',
                 'estado_actividad_id' => 'required|integer',
@@ -213,7 +214,10 @@ class ActividadClienteController extends Controller
             ]);
 
             $actividad = DB::transaction(function () use ($request) {
-                $actividad = ActividadCliente::create($request->all());
+                // DESACTIVADO 07-nov: user_id llegaba del front
+                // $actividad = ActividadCliente::create($request->all());
+                // 07-nov: el dueño de la actividad es quien la crea (usuario autenticado), como la bitácora de abajo
+                $actividad = ActividadCliente::create(array_merge($request->all(), ['user_id' => auth()->id()]));
 
                 // Registrar en bitácora
                 BitacoraGestionCliente::create([

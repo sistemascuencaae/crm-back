@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm\garantias;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\series\AutorGexSeriesTrait; // 07-nov: autor desde el token
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\garantias\ExepcionGex;
 use Exception;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class ExepcionGexController extends Controller
 {
+    use AutorGexSeriesTrait; // 07-nov
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -85,8 +88,14 @@ class ExepcionGexController extends Controller
                 $porc_gex = $request->input('porc_gex');
                 $fecha_ini = $request->input('fecha_ini');
                 $fecha_fin = $request->input('fecha_fin');
-                $usuario_crea = $request->input('usuario_crea');
-                $usuario_modifica = $request->input('usuario_modifica');
+                // DESACTIVADO 07-nov: el autor llegaba del body
+                // $usuario_crea = $request->input('usuario_crea');
+                // $usuario_modifica = $request->input('usuario_modifica');
+                // 07-nov: el autor sale del token (crm.users); al editar se conservan el creador y la fecha de creación guardados
+                $autor = $this->autorGexSeries($request->all(), 'gex.excepciones_gex', ['exce_id' => $exce_id], $fecha_crea, $fecha_modifica);
+                $usuario_crea = $autor['usuario_crea'];
+                $fecha_crea = $autor['fecha_crea'];
+                $usuario_modifica = $autor['usuario_modifica'];
 
                 DB::table('gex.excepciones_gex')->updateOrInsert(
                     ['exce_id' => $exce_id],

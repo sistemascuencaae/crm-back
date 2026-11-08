@@ -832,10 +832,14 @@ class UserController extends Controller
         }
     }
 
+    // 07-nov: «mis datos» salen del usuario autenticado (token). El {user_id} de la ruta ya no se usa:
+    // el único llamador (d-add-actividad) manda su propio id, y con él se podían leer los datos de otro.
     public function listUsuarioById($user_id)
     {
         try {
-            $usuario = User::where('id', $user_id)->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia')->first();
+            // DESACTIVADO 07-nov: el id llegaba del front
+            // $usuario = User::where('id', $user_id)->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia')->first();
+            $usuario = User::where('id', auth('api')->id())->with('Departamento', 'perfil_analista', 'perfil', 'almacen', 'agencia')->first();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $usuario));
         } catch (Exception $e) {
@@ -861,14 +865,19 @@ class UserController extends Controller
         }
     }
 
+    // 07-nov: el estado en línea es siempre el del usuario autenticado (token). El {user_id} de la ruta ya no se usa:
+    // con él cualquiera con token ponía a otro en línea o fuera de línea.
     public function editEnLineaUser(Request $request, $user_id)
     {
         try {
             $usuario = $request->all();
+            $userIdSesion = auth('api')->id(); // 07-nov
 
-            $data = DB::transaction(function () use ($usuario, $user_id, $request) {
+            $data = DB::transaction(function () use ($usuario, $user_id, $request, $userIdSesion) {
 
-                $usuario = User::findOrFail($user_id);
+                // DESACTIVADO 07-nov: el id llegaba del front
+                // $usuario = User::findOrFail($user_id);
+                $usuario = User::findOrFail($userIdSesion);
 
                 $usuario->update([
                     "en_linea" => $request->en_linea,

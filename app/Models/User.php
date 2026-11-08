@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\SesionUsuarioEvent; // 08-nov: aviso de cambio de agencia o perfil
 use App\Models\configuracion\Agencia;
 use App\Models\configuracion\UsuarioCHorario;
 use App\Models\crm\Almacen;
@@ -170,5 +171,29 @@ class User extends Authenticatable implements JWTSubject
     public function usuario_crea_actualiza()
     {
         return $this->belongsTo(User::class, "id_usu_crea_actualiza", "id");
+    }
+
+    // 08-nov: si al guardar cambió la agencia (alm_id) o el perfil (profile_id), se avisa al usuario por su canal usuario.{id}
+    // (SesionUsuarioEvent): el front muestra el aviso con Entendido y recarga. Cubre todo lo que guarda con el modelo: Editar usuario
+    // (UserController::editUser) y la agencia de la cajera desde Dynamo (UserDynamoController). Un cambio directo en la base no pasa
+    // por aquí: lo detecta el front en el siguiente clic o al volver a la app.
+    // Cambio de agencia (soporte) guarda con una función SQL y avisa desde su controlador (CambioAgenciaController).
+    // El aviso sale después del commit y nunca tumba el guardado (SesionUsuarioEvent::avisar).
+    protected static function booted()
+    {
+        static::updated(function (User $usuario) {
+            $cambios = [];
+            if ($usuario->wasChanged('alm_id')) {
+                $cambios[] = 'agencia';
+            }
+            if ($usuario->wasChanged('profile_id')) {
+                $cambios[] = 'perfil';
+            }
+            if (!$cambios) {
+                return;
+            }
+
+            SesionUsuarioEvent::avisar((int) $usuario->id, $cambios);
+        });
     }
 }

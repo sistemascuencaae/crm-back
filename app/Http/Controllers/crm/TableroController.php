@@ -114,7 +114,18 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
-            $tableros = Tablero::where('estado', false)->orderBy("nombre", "asc")->get();
+            // DESACTIVADO 07-nov: $tableros = Tablero::where('estado', false)->orderBy("nombre", "asc")->get();
+            // 07-nov: "el superusuario ve todos los tableros inactivos" lo decidía solo el front (Lista de tableros la pide
+            // si el usu_tipo de su sesión es 3). Ahora decide el usu_tipo de la base: el 3 ve todos; los demás, solo los
+            // inactivos donde son miembros. Ninguna otra pantalla usa esta ruta.
+            $usuario = auth('api')->user();
+            $tableros = Tablero::where('estado', false)
+                ->when((int) $usuario->usu_tipo !== 3, function ($query) use ($usuario) {
+                    $query->whereHas('tableroUsuario', function ($sub) use ($usuario) {
+                        $sub->where('user_id', $usuario->id);
+                    });
+                })
+                ->orderBy("nombre", "asc")->get();
 
             $log->logInfo(TableroController::class, 'Se listo con exito todos los tableros inactivos');
 
@@ -377,6 +388,8 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
+            // 07-nov: el permiso es el del usuario del token; el {user_id} de la URL se ignora
+            $user_id = auth('api')->id();
             $tablero = TableroUsuario::where('tab_id', $tab_id)->where('user_id', $user_id)->first();
 
             $log->logInfo(TableroController::class, 'Se listo con exito el permiso del usuario ID: ' . $user_id . ' y del tablero con ID: ' . $tab_id);
@@ -422,6 +435,10 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
+            // 07-nov: "Mis casos" son los del usuario del token; el {user_id} de la URL se ignora (solo lo manda
+            // tablero-mis-casos con el id propio; ninguna pantalla de administrador la usa para ver a otro)
+            $user_id = auth('api')->id();
+
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
@@ -450,6 +467,8 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
+            $user_id = auth('api')->id(); // 07-nov: el del token, no el de la URL (ver listTableroMisCasosPendientes)
+
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
@@ -478,6 +497,8 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
+            $user_id = auth('api')->id(); // 07-nov: el del token, no el de la URL (ver listTableroMisCasosPendientes)
+
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
@@ -510,6 +531,8 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
+            $user_id = auth('api')->id(); // 07-nov: el del token, no el de la URL (ver listTableroMisCasosPendientes)
+
             $data = VistaMisCasos::where(function ($query) use ($user_id) {
                 $query->where('id_usuario_miembro', $user_id);
             })
@@ -534,6 +557,8 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
+            $user_id = auth('api')->id(); // 07-nov: el del token, no el de la URL (ver listTableroMisCasosPendientes)
+
             $data = VistaMisCasos::where(function ($query) use ($user_id) {
                 $query->where('id_usuario_miembro', $user_id);
             })
@@ -558,6 +583,8 @@ class TableroController extends Controller
     {
         $log = new Funciones();
         try {
+            $user_id = auth('api')->id(); // 07-nov: el del token, no el de la URL (ver listTableroMisCasosPendientes)
+
             $data = VistaMisCasos::where(function ($query) use ($user_id) {
                 $query->where('id_usuario_miembro', $user_id);
             })
@@ -1034,14 +1061,16 @@ class TableroController extends Controller
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                ->with([
-                    'estadodos'
-                ])
-                ->whereHas('estadodos', function ($query) {
-                    $query->where('nombre', '!=', 'TERMINADO');
-                })
-                ->get();
+            // DESACTIVADO 07-nov (el alcance lo decide reasignarCasosPendientesPorUsuTipo con el usu_tipo de la base):
+            // $data = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+            //     ->with([
+            //         'estadodos'
+            //     ])
+            //     ->whereHas('estadodos', function ($query) {
+            //         $query->where('nombre', '!=', 'TERMINADO');
+            //     })
+            //     ->get();
+            $data = $this->reasignarCasosPendientesPorUsuTipo($fechaInicio, $fechaFin, null);
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -1065,15 +1094,17 @@ class TableroController extends Controller
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                ->with([
-                    'estadodos'
-                ])
-                ->whereHas('estadodos', function ($query) {
-                    $query->where('nombre', '!=', 'TERMINADO');
-                })
-                ->get();
+            // DESACTIVADO 07-nov (el alcance lo decide reasignarCasosPendientesPorUsuTipo con el usu_tipo de la base):
+            // $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+            //     ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+            //     ->with([
+            //         'estadodos'
+            //     ])
+            //     ->whereHas('estadodos', function ($query) {
+            //         $query->where('nombre', '!=', 'TERMINADO');
+            //     })
+            //     ->get();
+            $data = $this->reasignarCasosPendientesPorUsuTipo($fechaInicio, $fechaFin, $tab_id);
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -1097,16 +1128,19 @@ class TableroController extends Controller
             $fechaInicio = Carbon::parse($fechaInicio)->startOfDay(); // Opcional: incluye todo el día
             $fechaFin = Carbon::parse($fechaFin)->endOfDay();         // Opcional: incluye todo el día
 
-            $data = VistaTodosLosCasos::where('tab_id', $tab_id)
-                ->where('user_id', $user_id)
-                ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
-                ->with([
-                    'estadodos'
-                ])
-                ->whereHas('estadodos', function ($query) {
-                    $query->where('nombre', '!=', 'TERMINADO');
-                })
-                ->get();
+            // DESACTIVADO 07-nov (el alcance lo decide reasignarCasosPendientesPorUsuTipo con el usu_tipo de la base y el
+            // usuario sale del token; el {user_id} de la URL se ignora):
+            // $data = VistaTodosLosCasos::where('tab_id', $tab_id)
+            //     ->where('user_id', $user_id)
+            //     ->whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+            //     ->with([
+            //         'estadodos'
+            //     ])
+            //     ->whereHas('estadodos', function ($query) {
+            //         $query->where('nombre', '!=', 'TERMINADO');
+            //     })
+            //     ->get();
+            $data = $this->reasignarCasosPendientesPorUsuTipo($fechaInicio, $fechaFin, $tab_id);
 
             // // Especificar las propiedades que representan fechas en tu objeto
             // $dateFields = ['created_at'];
@@ -1121,6 +1155,44 @@ class TableroController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
         }
+    }
+
+    // 07-nov: casos pendientes de Reasignar casos y Mover casos. El front elige la ruta (SuperUsuario, Administrador o
+    // UsuarioComun) con el usu_tipo de su sesión; el back no le cree y decide con el usu_tipo de la base:
+    //   3 (superusuario)          -> todos los tableros, o el tablero que llegó (como hoy);
+    //   2 y 5 (admin, moderador)  -> el tablero que llegó; sin tablero (ruta de superusuario), los tableros donde es miembro;
+    //   4 y los demás             -> solo los casos asignados a él (del tablero que llegó, si llegó).
+    // Con la sesión al día da lo mismo que hoy; cambia solo si la sesión del front está vieja o alguien pide otra ruta.
+    private function reasignarCasosPendientesPorUsuTipo($fechaInicio, $fechaFin, $tab_id = null)
+    {
+        $usuario = auth('api')->user();
+        $usuTipo = (int) $usuario->usu_tipo;
+
+        $query = VistaTodosLosCasos::whereBetween('fecha_inicio', [$fechaInicio, $fechaFin])
+            ->with([
+                'estadodos'
+            ])
+            ->whereHas('estadodos', function ($query) {
+                $query->where('nombre', '!=', 'TERMINADO');
+            });
+
+        if ($tab_id !== null) {
+            $query->where('tab_id', $tab_id);
+        }
+
+        if ($usuTipo === 3) {
+            // ve todo (o el tablero que llegó)
+        } elseif ($usuTipo === 2 || $usuTipo === 5) {
+            if ($tab_id === null) {
+                $query->whereIn('tab_id', function ($sub) use ($usuario) {
+                    $sub->select('tab_id')->from('crm.tablero_user')->where('user_id', $usuario->id);
+                });
+            }
+        } else {
+            $query->where('user_id', $usuario->id);
+        }
+
+        return $query->get();
     }
     // !END EndPoint para la tabla o pantalla de REASIGNAR CASOS
 

@@ -92,10 +92,14 @@ class ReporteLinkController extends Controller
     }
 
     // listado de reportes al que tiene permiso el usuario
+    // 07-nov: «mis reportes» salen del usuario autenticado (token). El {id} de la ruta ya no se usa:
+    // cambiándolo se veían los enlaces de Power BI asignados a otro usuario.
     public function listReporteLinkByUserId($id)
     {
         try {
-            $data = ReporteLinkUsuario::where('user_id', $id)
+            // DESACTIVADO 07-nov: el id llegaba del front
+            // $data = ReporteLinkUsuario::where('user_id', $id)
+            $data = ReporteLinkUsuario::where('user_id', auth('api')->id())
                 ->whereHas('reporteLink', function ($query) {
                     $query->where('estado', true);
                 })

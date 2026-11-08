@@ -121,7 +121,9 @@ class UltimoIdController extends Controller
                     // Crear el caso usando el controlador
                     $casoController = new CasoController();
                     $requestSimulado = new Request((array)$objeto_nuevo_caso);
-                    $respuestaCaso = $casoController->add($requestSimulado);
+                    // DESACTIVADO 07-nov: $respuestaCaso = $casoController->add($requestSimulado);
+                    // 07-nov: alta interna: el creador es el usuario de la fórmula 33, no el del token (si lo hubiera)
+                    $respuestaCaso = $casoController->addInterno($requestSimulado);
 
                     if (isset($respuestaCaso->original['status']) && $respuestaCaso->original['status'] != 'success') {
                         throw new Exception("Error al crear el caso: " . $respuestaCaso->original['message']);

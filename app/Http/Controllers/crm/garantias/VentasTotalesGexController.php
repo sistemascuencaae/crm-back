@@ -17,6 +17,9 @@ class VentasTotalesGexController extends Controller
 
     public function almacenes($usuario)
     {
+        // 07-nov: el usuario sale del token (crm.users), no de la URL; sin token, como hoy
+        $usuario = auth('api')->id() ?? $usuario;
+
         $data = DB::select("select a.alm_id, a.alm_nombre
                             from almacen a join gex.rel_usuario_almacenes rua on a.alm_id = rua.alm_id
                                            join crm.users u on rua.usu_id = u.usu_id
@@ -41,6 +44,9 @@ class VentasTotalesGexController extends Controller
 
     public function VentasTotalesGex($almacen, $usuario, $vendedor, $fecIni, $fecFin)
     {
+        // 07-nov: el usuario sale del token (crm.users), no de la URL; sin token, como hoy. {almacen} y {vendedor} sí los elige la pantalla
+        $usuario = auth('api')->id() ?? $usuario;
+
         $data = DB::select("select alm_id, alm_nombre, pve_nombre, emp_id, vendedor, ci_vendedor,
                                     sum(venta_bruta) as vta_bruto, sum(iva) as iva, sum(intereses) as intereses, sum(venta_neta) as vta_neta,
                                     sum(devolucion_bruta) as dev_bruta, sum(iva_devolucion) as iva_dev, sum(interes_devolucion) as interes_dev, sum(devolucion_neta) as dev_neta,
@@ -131,6 +137,9 @@ class VentasTotalesGexController extends Controller
 
     public function VentasTotalesGexAlmacen($almacen, $usuario, $fecIni, $fecFin)
     {
+        // 07-nov: el usuario sale del token (crm.users), no de la URL; sin token, como hoy. {almacen} sí lo elige la pantalla
+        $usuario = auth('api')->id() ?? $usuario;
+
         $data = DB::select("SELECT alm_id, alm_nombre, pve_nombre,
                                     sum(venta_bruta) as vta_bruto, sum(iva) as iva, sum(intereses) as intereses, sum(venta_neta) as vta_neta,
                                     sum(devolucion_bruta) as dev_bruta, sum(iva_devolucion) as iva_dev, sum(interes_devolucion) as interes_dev, sum(devolucion_neta) as dev_neta,

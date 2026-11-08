@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm\garantias;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\series\AutorGexSeriesTrait; // 07-nov: autor desde el token
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\garantias\ContratoGex;
 use App\Models\crm\garantias\FolioContratos;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class ContratosController extends Controller
 {
+    use AutorGexSeriesTrait; // 07-nov
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -190,9 +193,14 @@ class ContratosController extends Controller
                     $meses_gex = $c['meses_gex'];
                     $fecha_desde = $c['fecha_desde'];
                     $fecha_hasta = $c['fecha_hasta'];
-                    $usuario_crea = $c['usuario_crea'];
-                    $usuario_modifica = $c['usuario_modifica'];
+                    // DESACTIVADO 07-nov: el autor llegaba del body
+                    // $usuario_crea = $c['usuario_crea'];
+                    // $usuario_modifica = $c['usuario_modifica'];
                     $fecha_crea = date("Y-m-d h:i:s");
+                    // 07-nov: el autor sale del token (crm.users); aquí siempre es alta
+                    $autor = $this->autorGexSeries($c, 'gex.contrato_gex', ['alm_id' => $alm_id, 'numero' => $numero], $fecha_crea, null);
+                    $usuario_crea = $autor['usuario_crea'];
+                    $usuario_modifica = $autor['usuario_modifica'];
                     $km_garantia = $c['km_garantia'];
                     $km_factor = $c['km_factor'];
                     $tipo_servicio = $c['tipo_servicio'];
