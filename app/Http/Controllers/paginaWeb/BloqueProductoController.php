@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\BloqueProductoService;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 
@@ -68,11 +69,11 @@ class BloqueProductoController extends Controller
         }
     }
 
-    // GET pagina-web/bloques-productos-papelera
-    public function papelera()
+    // GET pagina-web/bloques-productos-papelera?busqueda=&pagina=1&tamanio=20   → {registros, total}
+    public function papelera(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera(...ListaPaginaWeb::paginacion($request))));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudo cargar la papelera');
         }

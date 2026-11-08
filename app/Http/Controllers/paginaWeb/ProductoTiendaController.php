@@ -4,7 +4,9 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use App\Servicios\PaginaWeb\ProductoTiendaService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -122,21 +124,11 @@ class ProductoTiendaController extends Controller
     // Solo sube el archivo; la URL se guarda después con crear o modificar.
     public function subirImagen(Request $request)
     {
-        // mimes y mimetypes revisan el contenido real del archivo, no solo su nombre
-        $validator = Validator::make($request->all(), [
-            'pro_id'  => 'required|integer|min:1',
-            'archivo' => 'required|file|mimes:webp|mimetypes:image/webp|max:2048',
-        ], [
-            'pro_id.*'          => 'Falta el producto.',
-            'archivo.required'  => 'Elige una imagen.',
-            'archivo.file'      => 'Elige una imagen.',
-            'archivo.mimes'     => 'La imagen debe ser WEBP.',
-            'archivo.mimetypes' => 'La imagen debe ser WEBP.',
-            'archivo.max'       => 'La imagen no puede pesar más de 2 MB.',
-        ]);
+        $validator = Validator::make($request->all(), ['pro_id' => 'required|integer|min:1'], ['pro_id.*' => 'Falta el producto.']);
+        $error     = $validator->fails() ? $validator->errors()->first() : ArchivosPaginaWeb::errorImagen($request, 'archivo');
 
-        if ($validator->fails()) {
-            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+        if ($error) {
+            return response()->json(RespuestaApi::returnResultado('error', $error, null));
         }
 
         return app(ArchivoPaginaWebController::class)->guardar(
@@ -196,6 +188,19 @@ class ProductoTiendaController extends Controller
         }
     }
 
+    // GET pagina-web/productos-tienda-imagenes-papelera?pro_id=8004906&busqueda=&pagina=1&tamanio=20   → {registros, total}
+    // (el editor del producto ya trae la 1.ª página en papelera_imagenes)
+    public function papeleraImagenes(Request $request)
+    {
+        try {
+            $imagenes = $this->servicio->papeleraImagenes((int) $request->input('pro_id'), ...ListaPaginaWeb::paginacion($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $imagenes));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
+        }
+    }
+
     // DELETE pagina-web/productos-tienda-imagenes-papelera?pro_id=8004906   → {cantidad} (borra también los archivos)
     public function vaciarImagenes(Request $request)
     {
@@ -224,7 +229,7 @@ class ProductoTiendaController extends Controller
     // Características (plantilla de la ficha por categoría)
     // -----------------------------------------------------------------
 
-    // GET pagina-web/caracteristicas?tpr_id=416   → {plantilla, papelera}
+    // GET pagina-web/caracteristicas?tpr_id=416   → {plantilla, papelera: {registros, total} (la 1.ª página)}
     public function caracteristicas(Request $request)
     {
         try {
@@ -264,7 +269,7 @@ class ProductoTiendaController extends Controller
     public function eliminarCaracteristica(int $carId)
     {
         try {
-            $this->servicio->eliminarCaracteristica($carId, auth()->id());
+            $this->servicio->eliminarCaracteristica($carId);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Característica enviada a la papelera', ['car_id' => $carId]));
         } catch (QueryException $e) {
@@ -276,7 +281,7 @@ class ProductoTiendaController extends Controller
     public function restaurarCaracteristica(int $carId)
     {
         try {
-            $this->servicio->restaurarCaracteristica($carId, auth()->id());
+            $this->servicio->restaurarCaracteristica($carId);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Característica restaurada con éxito', ['car_id' => $carId]));
         } catch (QueryException $e) {
@@ -284,11 +289,23 @@ class ProductoTiendaController extends Controller
         }
     }
 
+    // GET pagina-web/caracteristicas-papelera?tpr_id=416&busqueda=&pagina=1&tamanio=20   → {registros, total}
+    public function papeleraCaracteristicas(Request $request)
+    {
+        try {
+            $caracteristicas = $this->servicio->papeleraCaracteristicas((int) $request->input('tpr_id'), ...ListaPaginaWeb::paginacion($request));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $caracteristicas));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la papelera');
+        }
+    }
+
     // DELETE pagina-web/caracteristicas-papelera?tpr_id=416   → {cantidad} (borra también los valores de los productos)
     public function vaciarCaracteristicas(Request $request)
     {
         try {
-            $cantidad = $this->servicio->vaciarCaracteristicas((int) $request->input('tpr_id'), auth()->id());
+            $cantidad = $this->servicio->vaciarCaracteristicas((int) $request->input('tpr_id'));
 
             return response()->json(RespuestaApi::returnResultado('success', 'Papelera vaciada', ['cantidad' => $cantidad]));
         } catch (QueryException $e) {

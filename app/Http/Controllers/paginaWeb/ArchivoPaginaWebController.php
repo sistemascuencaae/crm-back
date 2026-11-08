@@ -19,20 +19,11 @@ class ArchivoPaginaWebController extends Controller
     private const PDF_VALIDO    = '/^[A-Za-z0-9]+\.pdf$/';
     private const WEBP_VALIDO   = '/^[A-Za-z0-9]+\.webp$/';     // imágenes de productos de la tienda
 
+    // POST pagina-web/imagenes   multipart: imagen (solo WebP, máx. 2 MB) → {url}
     public function subirImagen(Request $request)
     {
-        // mimes revisa el contenido real del archivo, no solo su nombre. Sin SVG: puede llevar código.
-        $validator = Validator::make($request->all(), [
-            'imagen' => 'required|file|mimes:jpg,jpeg,png,webp|max:2048',
-        ], [
-            'imagen.required' => 'Elige una imagen.',
-            'imagen.file'     => 'Elige una imagen.',
-            'imagen.mimes'    => 'La imagen debe ser JPG, PNG o WEBP.',
-            'imagen.max'      => 'La imagen no puede pesar más de 2 MB.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+        if ($error = ArchivosPaginaWeb::errorImagen($request, 'imagen')) {
+            return response()->json(RespuestaApi::returnResultado('error', $error, null));
         }
 
         return $this->guardar($request->file('imagen'), 'api/public/pagina-web/imagenes/', 'Imagen subida');

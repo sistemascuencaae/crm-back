@@ -4,6 +4,7 @@ namespace App\Http\Controllers\inventarios;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ProductoTiendaService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,7 @@ class ProductoController extends Controller
         'NOMBRE_DUPLICADO' => 'Ya existe un producto con ese nombre.',
         'TIPO_CON_OTRAS_CUENTAS' => 'No se puede cambiar a ese tipo: sus cuentas contables son distintas a las del tipo actual.',
         'TIPO_NO_VALIDO' => 'El tipo de producto no es válido: debe estar activo y ser del último nivel.',
+        'TIPO_NO_TRANSACCIONAL' => 'Los productos nuevos solo se crean en categorías de tercer nivel.',
         'MARCA_NO_VALIDA' => 'La marca no es válida o no está activa.',
         'IVA_NO_VALIDO' => 'Indique si el producto graba IVA.',
         'IVA_BLOQUEADO' => 'No se puede cambiar el IVA: el producto ya tiene movimientos o facturas.',
@@ -42,6 +44,10 @@ class ProductoController extends Controller
         'PRODUCTO_NO_EXISTE' => 'El producto no existe.',
         'OBSERVACION_FACTURA_NO_VALIDA' => 'Elija qué datos pide la factura (MOTOS o GENERAL).',
         'USUARIO_SIN_DYNAMO' => 'Su usuario del CRM no tiene un usuario en Dynamo: no se puede registrar la bitácora.',
+        'CAMPO_LARGO:pro_codigo2' => 'El código 2 no puede tener más de 15 caracteres.',
+        'CAMPO_LARGO:pro_codigo3' => 'El código 3 no puede tener más de 15 caracteres.',
+        'CAMPO_LARGO:pro_codbarras' => 'El código de barras no puede tener más de 200 caracteres.',
+        'CAMPO_LARGO:pro_observacion' => 'La descripción no puede tener más de 500 caracteres.',
     ];
 
     private const CAMPOS_CREAR = [
@@ -52,15 +58,17 @@ class ProductoController extends Controller
         'uni_id',
         'pro_impuesto',
         'pro_inventario',
-        'pro_peso',
-        'pro_largo',
-        'pro_ancho',
         'costo_negociacion',
         'pro_observacion_factura',
+        'pro_observacion',
         'obs_id',
+        'pro_codigo2',
+        'pro_codigo3',
+        'pro_codbarras',
     ];
 
-    // El código y la unidad no se cambian al editar (igual que en Dynamo).
+    // El código y la unidad no se cambian al editar (igual que en Dynamo); el peso y las medidas tampoco.
+    // pro_codigo2, pro_codigo3, pro_codbarras y pro_observacion son opcionales: si no vienen, conservan su valor.
     private const CAMPOS_EDITAR = [
         'pro_nombre',
         'tpr_id',
@@ -68,12 +76,13 @@ class ProductoController extends Controller
         'pro_impuesto',
         'pro_inventario',
         'pro_activo',
-        'pro_peso',
-        'pro_largo',
-        'pro_ancho',
         'costo_negociacion',
         'pro_observacion_factura',
+        'pro_observacion',
         'obs_id',
+        'pro_codigo2',
+        'pro_codigo3',
+        'pro_codbarras',
     ];
 
     private const REGLAS_COMUNES = [
@@ -82,13 +91,15 @@ class ProductoController extends Controller
         'mar_id' => 'required|integer',
         'pro_impuesto' => 'required|boolean',
         'pro_inventario' => 'required|boolean',
-        'pro_peso' => 'nullable|numeric|min:0',
-        'pro_largo' => 'nullable|numeric|min:0',
-        'pro_ancho' => 'nullable|numeric|min:0',
         'costo_negociacion' => 'nullable|numeric|gt:0',
         // Serie requerida al facturar: pro_observacion_factura + obs_id (MOTOS o GENERAL).
         'pro_observacion_factura' => 'required|boolean',
         'obs_id' => 'nullable|integer',
+        'pro_codigo2' => 'nullable|string|max:15',
+        'pro_codigo3' => 'nullable|string|max:15',
+        'pro_codbarras' => 'nullable|string|max:200',
+        // La descripción del producto; vacía = sin descripción.
+        'pro_observacion' => 'nullable|string|max:500',
     ];
 
     // Árbol de tipos (niveles 1, 2 y 3) con los productos de cada rama; con búsqueda, solo las ramas que coinciden.
@@ -202,9 +213,36 @@ class ProductoController extends Controller
         try {
             $resultado = DB::selectOne('SELECT crm.fn_producto_registrar(?::jsonb) AS pro_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
+            ProductoTiendaService::limpiarCacheTienda();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Producto creado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al crear el producto');
+        }
+    }
+
+    // Crea un producto nuevo a partir de otro: los campos del formulario llegan aquí y el resto se copia del origen.
+    public function clonarProducto(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), self::REGLAS_COMUNES + [
+            'pro_codigo' => 'required|string|max:15',
+            'uni_id' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
+        }
+
+        $payload = $request->only(self::CAMPOS_CREAR) + ['pro_id_origen' => $id];
+
+        try {
+            $resultado = DB::selectOne('SELECT crm.fn_producto_clonar(?::jsonb) AS pro_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            ProductoTiendaService::limpiarCacheTienda();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Producto clonado con éxito', ['pro_id' => $resultado->pro_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al clonar el producto');
         }
     }
 
@@ -223,6 +261,9 @@ class ProductoController extends Controller
 
         try {
             $resultado = DB::selectOne('SELECT crm.fn_producto_modificar(?::jsonb) AS pro_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            // La tienda cachea el nombre y si está activo.
+            ProductoTiendaService::limpiarCacheTienda();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto modificado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {

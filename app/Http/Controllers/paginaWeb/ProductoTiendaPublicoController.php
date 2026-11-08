@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
  */
 class ProductoTiendaPublicoController extends Controller
 {
-    // GET public/pagina-web/productos/{proId}   → {producto, franjas, relacionados}
+    // GET public/pagina-web/productos/{proId}   → {producto, familia (null o sus variantes), franjas, relacionados}
     // Si no está publicado o su categoría no se ve: code 404 en el cuerpo (HTTP 200), status 'error' y data null; la
     // tienda muestra "Producto no disponible". Una falla interna responde code 500: así la tienda los distingue.
     public function detalle(int $proId, ProductoTiendaService $productos, FranjaDetalleService $franjas)
@@ -34,6 +34,7 @@ class ProductoTiendaPublicoController extends Controller
             return response()
                 ->json(RespuestaApi::returnResultado('success', 'Producto', [
                     'producto'     => $detalle['producto'],
+                    'familia'      => $detalle['familia'],
                     'franjas'      => $franjas->publicas(),
                     'relacionados' => $detalle['relacionados'],
                 ]))

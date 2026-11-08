@@ -66,5 +66,18 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'usuario.activo' => \App\Http\Middleware\VerificarUsuarioActivo::class, // JGSJ MIDDLEWARE USUARIO ACTIVO usuario.activo
         'verificar.version' => \App\Http\Middleware\VerificarVersionCrm::class, // JGSJ MIDDLEWARE VERIFICAR VERSION CRM
+        'jwt.auth' => \App\Http\Middleware\AutenticarJwtCrm::class, // el de tymon + rechaza los tokens de clientes de la tienda
+        'cliente.sesion' => \App\Http\Middleware\VerificarSesionCliente::class, // cuenta de un cliente de la tienda
     ];
+
+    /**
+     * El service provider de tymon vuelve a registrar el alias 'jwt.auth' (su Authenticate) al arrancar, después de
+     * que el Kernel cargó los suyos: se vuelven a cargar los de aquí para que gane AutenticarJwtCrm.
+     */
+    public function bootstrap()
+    {
+        parent::bootstrap();
+
+        $this->syncMiddlewareToRouter();
+    }
 }

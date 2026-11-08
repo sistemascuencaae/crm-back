@@ -2,16 +2,36 @@
 
 namespace App\Servicios\PaginaWeb;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Archivos que sube Página Web (ArchivoPaginaWebController): se guardan en storage/app/pagina-web (carpeta privada)
- * y la tienda los pide por api/public/pagina-web/imagenes/…. Aquí se borran al vaciar una papelera.
+ * y la tienda los pide por api/public/pagina-web/imagenes/…. Aquí está la única regla para subir una imagen y aquí
+ * se borran los archivos al vaciar una papelera.
  */
 class ArchivosPaginaWeb
 {
     public const CARPETA = 'pagina-web';
+
+    // Toda imagen que se sube desde el módulo: solo WebP (mimetypes mira el tipo real del contenido, no la extensión;
+    // un PNG renombrado a .webp no pasa) y hasta 2 MB. Las JPG y PNG que ya estaban guardadas siguen sirviendo.
+    private const REGLA_IMAGEN = 'required|file|mimetypes:image/webp|max:2048';
+
+    /** Revisa la imagen del campo $campo: el mensaje del error, o null si está bien. */
+    public static function errorImagen(Request $request, string $campo): ?string
+    {
+        $validator = Validator::make($request->all(), [$campo => self::REGLA_IMAGEN], [
+            $campo . '.required'  => 'Elige una imagen.',
+            $campo . '.file'      => 'Elige una imagen.',
+            $campo . '.mimetypes' => 'Solo se aceptan imágenes WebP.',
+            $campo . '.max'       => 'La imagen no puede pesar más de 2 MB.',
+        ]);
+
+        return $validator->fails() ? $validator->errors()->first() : null;
+    }
 
     // Lo que viene después de .../api/public/pagina-web/imagenes/ en una dirección nuestra:
     // abc.webp, productos/15/abc.webp o marcas/abc.png (nombre aleatorio de Laravel, sin / ni ..)

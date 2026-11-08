@@ -41,10 +41,17 @@ class MarcaWebService
     // CRM
     // -----------------------------------------------------------------
 
-    /** [{mar_id, mar_nombre, mar_activo, mar_imagen, mar_web_destacada, mar_web_orden, productos, pagina_direccion}] */
-    public function listar(): array
+    /**
+     * {registros, total}: [{mar_id, mar_nombre, mar_activo, mar_imagen, mar_web_destacada, mar_web_orden, productos, pagina_direccion}]
+     * $destacadas: false = todas por nombre; true = solo las de Nuestras marcas, en su orden. Busca en el nombre.
+     */
+    public function listar(bool $destacadas, string $busqueda, int $pagina, int $tamanio): array
     {
-        return array_map(fn ($m) => [
+        $lista = ListaPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_marca_web_listar(?::boolean, ?, ?, ?)', [
+            $destacadas ? 'true' : 'false', $busqueda, $pagina, $tamanio,
+        ]));
+
+        $lista['registros'] = array_map(fn ($m) => [
             'mar_id'            => (int) $m->mar_id,
             'mar_nombre'        => $m->mar_nombre,
             'mar_activo'        => (bool) $m->mar_activo,
@@ -53,7 +60,9 @@ class MarcaWebService
             'mar_web_orden'     => (int) $m->mar_web_orden,
             'productos'         => (int) $m->productos,
             'pagina_direccion'  => $m->pagina_direccion,
-        ], DB::select('SELECT * FROM ecommerce.fn_marca_web_listar()'));
+        ], $lista['registros']);
+
+        return $lista;
     }
 
     /** $datos: solo lo que cambia (mar_imagen, mar_web_destacada) + usu_id */
@@ -63,7 +72,7 @@ class MarcaWebService
         self::limpiarCache();
     }
 
-    /** $datos: {ids: [mar_id…] (todas las de Nuestras marcas, en el nuevo orden), usu_id} */
+    /** $datos: {ids: [mar_id…] (las de Nuestras marcas que se ven en la página, en el nuevo orden), usu_id} */
     public function ordenar(array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_marca_web_ordenar(?::jsonb)', [$this->json($datos)]);

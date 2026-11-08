@@ -4,14 +4,25 @@ namespace App\Servicios\PaginaWeb;
 
 use Illuminate\Support\Facades\DB;
 
-/** Lo común de las papeleras del módulo. */
+/**
+ * Lo común de las papeleras del módulo. Son listas paginadas (ListaPaginaWeb) ordenadas por lo último borrado primero.
+ */
 class PapeleraPaginaWeb
 {
+    /** Filas de una función de papelera → {registros, total}: cada registro con eliminado_por y sin la columna total */
+    public static function pagina(array $filas, string $columna): array
+    {
+        $lista = ListaPaginaWeb::pagina($filas);
+        $lista['registros'] = self::agregarEliminadoPor($lista['registros'], $columna);
+
+        return $lista;
+    }
+
     /**
      * A cada fila de una papelera le agrega eliminado_por con el nombre de quien la eliminó ("Usuario #<id>" si no se encuentra).
      * Los nombres salen de crm.users (la tabla del login del CRM), en una sola consulta para toda la lista.
      */
-    public static function agregarEliminadoPor(array $filas, string $columna): array
+    private static function agregarEliminadoPor(array $filas, string $columna): array
     {
         $ids = array_values(array_unique(array_filter(array_map(fn ($f) => (int) $f->$columna, $filas))));
 

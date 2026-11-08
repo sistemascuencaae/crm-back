@@ -114,10 +114,10 @@ class PiePaginaService
 
     // ---------- Papelera (columnas y enlaces) ----------
 
-    /** [{tipo ('columna' | 'enlace'), id, texto, detalle, eliminado_en, eliminado_usu_id, eliminado_por}] */
-    public function papelera(): array
+    /** {registros, total}: [{tipo ('columna' | 'enlace'), id, texto, detalle, eliminado_en, eliminado_usu_id, eliminado_por}] */
+    public function papelera(string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_pie_papelera()'), 'eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_pie_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]), 'eliminado_usu_id');
     }
 
     /** Borra para siempre lo que está en la papelera. Devuelve cuántos borró (los que se veían en la papelera). */

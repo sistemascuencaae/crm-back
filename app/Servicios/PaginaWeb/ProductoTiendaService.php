@@ -5,19 +5,21 @@ namespace App\Servicios\PaginaWeb;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Productos de la tienda: ficha técnica (plantilla de características por categoría + datos sueltos)
  * e imágenes por sección (detalle, carátula, promoción). Llama a las funciones inventarios.fn_*.
  * Del ERP solo se leen código, nombre, categoría, marca, descripción, precio de venta y stock: nunca costos ni márgenes.
  * Qué productos están publicados (con su precio, precio anterior y stock) sale de una consulta lenta (~12 s): se guarda
- * 10 minutos en caché. La búsqueda pública del shop (buscarTienda) usa esa caché.
+ * en caché, que renueva el programador cada 5 minutos. La búsqueda pública del shop (buscarTienda) usa esa caché.
  */
 class ProductoTiendaService
 {
     private const CACHE_PUBLICADOS   = 'pagina_web.productos.publicados';
     private const MINUTOS_PUBLICADOS = 10;
-    private const TAMANIOS           = [10, 20, 30, 50, 100];   // los mismos que acepta fn_producto_web_listar
+    private const MINUTOS_RENOVADOS  = 15;    // más que los 5 minutos del programador: mientras corra, nunca vence
+    private const TAMANIOS          = [10, 20, 30, 50, 100];   // los mismos que acepta fn_producto_web_listar
 
     // Lo único que se pasa a la búsqueda del shop: los mismos nombres que la dirección de /shop
     public const FILTROS_SHOP = ['search', 'categoria', 'marca', 'price_min', 'price_max', 'in_stock', 'motos', 'sort', 'page', 'per_page'];
@@ -50,7 +52,8 @@ class ProductoTiendaService
      * Los productos publicados en la tienda con su precio de venta, su precio anterior (con tarjeta, va tachado) y stock:
      *   ['actualizado' => '2026-10-28T10:15:00-05:00',
      *    'productos' => [pro_id => ['precio' => float, 'precio_anterior' => float | null, 'stock' => float]]]
-     * No hay botón ni tarea programada: la caché se renueva sola al vencer.
+     * La renueva el programador cada 5 minutos (renovarPublicados), así ninguna visita paga la consulta (~6 s). Si el
+     * programador no corre, la visita que la encuentra vacía la calcula y la guarda 10 minutos.
      */
     public function publicados(): array
     {
@@ -67,6 +70,12 @@ class ProductoTiendaService
 
         // Si otra petición ya la está llenando, se espera a que termine y se usa lo que dejó
         return Cache::lock(self::CACHE_PUBLICADOS . '.llenando', 60)->block(45, $leer);
+    }
+
+    /** Calcula los publicados y reemplaza la caché por 15 minutos (comando pagina-web:renovar-publicados, cada 5 minutos) */
+    public function renovarPublicados(): void
+    {
+        Cache::put(self::CACHE_PUBLICADOS, $this->leerPublicados(), now()->addMinutes(self::MINUTOS_RENOVADOS));
     }
 
     // -----------------------------------------------------------------
@@ -121,7 +130,8 @@ class ProductoTiendaService
 
     /**
      * Todo lo que necesita el editor de un producto, o null si no existe o está inactivo:
-     *   {producto: {…, pro_nombre_web, pro_oferta_semana, pro_destacado, publicado, precio, precio_anterior, stock}, ficha: [...], imagenes: [...], papelera_imagenes: [...]}
+     *   {producto: {…, pro_nombre_web, pro_oferta_semana, pro_destacado, publicado, precio, precio_anterior, stock}, ficha: [...], imagenes: [...],
+     *    papelera_imagenes: {registros, total} (la 1.ª página; las demás, con papeleraImagenes)}
      */
     public function buscar(int $proId): ?array
     {
@@ -136,16 +146,28 @@ class ProductoTiendaService
 
         return [
             'producto'          => $producto,
-            'ficha'             => DB::select('SELECT * FROM inventarios.fn_producto_ficha(?)', [$proId]),
+            'ficha'             => $this->ficha($proId),
             'imagenes'          => DB::select('SELECT * FROM inventarios.fn_producto_imagen_listar(?)', [$proId]),
-            'papelera_imagenes' => PapeleraPaginaWeb::agregarEliminadoPor(
-                DB::select('SELECT * FROM inventarios.fn_producto_imagen_papelera(?)', [$proId]),
-                'pim_eliminado_usu_id'
-            ),
+            'papelera_imagenes' => $this->papeleraImagenes($proId, '', 1, 20),
         ];
     }
 
-    /** $datos: {valores: {car_id: valor}, sueltas: [{nombre, valor}], usu_id}. Un valor vacío borra ese dato. */
+    /** {registros, total}: las imágenes eliminadas del producto, con eliminado_por */
+    public function papeleraImagenes(int $proId, string $busqueda, int $pagina, int $tamanio): array
+    {
+        return PapeleraPaginaWeb::pagina(
+            DB::select('SELECT * FROM inventarios.fn_producto_imagen_papelera(?, ?, ?, ?)', [$proId, $busqueda, $pagina, $tamanio]),
+            'pim_eliminado_usu_id'
+        );
+    }
+
+    /** La plantilla de su categoría con lo que tenga lleno (origen = plantilla) y sus datos sueltos (origen = suelta) */
+    public function ficha(int $proId): array
+    {
+        return DB::select('SELECT * FROM inventarios.fn_producto_ficha(?)', [$proId]);
+    }
+
+    /** $datos: {valores: {car_id: valor}, sueltas: [{nombre, valor}]}. Un valor vacío borra ese dato. */
     public function guardarFicha(int $proId, array $datos): void
     {
         // {} vacío llega a PHP como [] y se enviaría como arreglo: debe ir como objeto
@@ -153,7 +175,7 @@ class ProductoTiendaService
             $datos['valores'] = (object) $datos['valores'];
         }
 
-        DB::statement('SELECT inventarios.fn_producto_ficha_guardar(?, ?::jsonb)', [$proId, $this->json($datos)]);
+        DB::statement('SELECT inventarios.fn_producto_ficha_guardar(?::jsonb)', [$this->jsonAuditado(['pro_id' => $proId] + $datos)]);
     }
 
     /**
@@ -223,8 +245,11 @@ class ProductoTiendaService
 
     /**
      * Tarjetas de productos publicados, con la misma forma en todo el sitio (nombre = el de la tienda):
-     *   [{pro_id, codigo, nombre, marca, tpr_id, categoria, imagenes: [url…], destacado, precio, precio_anterior, stock}]
+     *   [{pro_id, codigo, nombre, marca, tpr_id, categoria, imagenes: [url…], destacado, precio, precio_anterior, stock,
+     *     familia, variantes}]
      * imagenes: todas las carátulas en orden; sin carátulas, la primera del detalle; sin fotos, [].
+     * Una familia sale en una sola tarjeta: familia = su nombre, variantes = cuántas están publicadas, precio = el menor
+     * de ellas ("Desde") y precio_anterior = null. Un producto suelto: familia y variantes null.
      * Filtros opcionales: solo ofertas de la semana, solo destacados, una categoría (con su rama) o unas marcas
      * ($marcas: [mar_id…]; null = cualquier marca). $cantidad null = todas.
      */
@@ -241,23 +266,62 @@ class ProductoTiendaService
             $cantidad,
         ]);
 
-        return array_map(fn ($f) => $this->tarjeta($f, $publicados[(int) $f->pro_id] ?? []), $filas);
+        return array_map(function ($f) use ($publicados) {
+            $datos = $publicados[(int) $f->pro_id] ?? [];
+
+            if ($f->familia !== null) {
+                // variantes llega como arreglo de Postgres con los pro_id publicados de la familia: "{12,15,20}"
+                $variantes = array_map('intval', array_filter(explode(',', trim((string) $f->variantes, '{}'))));
+                $precios   = array_filter(array_map(fn ($id) => $publicados[$id]['precio'] ?? null, $variantes), fn ($p) => $p !== null);
+                $datos     = ['precio' => $precios ? min($precios) : null, 'precio_anterior' => null, 'stock' => $datos['stock'] ?? null,
+                              'variantes' => count($variantes)];
+            }
+
+            return $this->tarjeta($f, $datos);
+        }, $filas);
     }
 
     /**
      * Búsqueda del shop (GET public/pagina-web/productos). $filtros: solo las claves de FILTROS_SHOP que llegaron;
      * lo que no es válido, la base lo ignora. Sin caché de la respuesta: solo la de publicados.
+     * La cuadrícula de la página de marca la usa con {marcas, sort: 'nombre', destacados?, page, per_page} y sin opciones
+     * (PaginaMarcaService::productosPublicos).
+     * Una familia sale en una sola tarjeta (familia, variantes y precio "Desde" ya vienen de la base).
      *   {productos: [tarjetas], total, pagina, por_pagina, ultima_pagina,
-     *    opciones: {categorias: [{tpr_id, nombre, cantidad}], marcas: [{mar_id, nombre, cantidad}], precio: {min, max} | null}}
+     *    opciones (solo con $conOpciones): {categorias: [{tpr_id, nombre, cantidad}], marcas: [{mar_id, nombre, cantidad}], precio: {min, max} | null}}
      */
-    public function buscarTienda(array $filtros): array
+    public function buscarTienda(array $filtros, bool $conOpciones = true): array
     {
         $publicados = $this->publicadosJson();
         $json       = $this->json($filtros);
 
         $filas = DB::select('SELECT * FROM inventarios.fn_producto_tienda_buscar(?::jsonb, ?::jsonb)', [$publicados, $json]);
 
+        $total     = (int) ($filas[0]->total ?? 0);
+        // La misma regla que la base: de 1 a 48; si no, 12
+        $porPagina = preg_match('/^\d{1,2}$/', (string) ($filtros['per_page'] ?? '')) && $filtros['per_page'] >= 1 && $filtros['per_page'] <= 48
+            ? (int) $filtros['per_page'] : 12;
+
+        $resultado = [
+            'productos'     => array_map(fn ($f) => $this->tarjetaTienda($f), $filas),
+            'total'         => $total,
+            'pagina'        => (int) ($filas[0]->pagina ?? 1),
+            'por_pagina'    => $porPagina,
+            'ultima_pagina' => max(1, (int) ceil($total / $porPagina)),
+        ];
+
+        if ($conOpciones) {
+            $resultado['opciones'] = $this->opcionesTienda($publicados, $json);
+        }
+
+        return $resultado;
+    }
+
+    /** Las opciones del panel de filtros del shop para lo que se buscó (consulta aparte, ~370 ms) */
+    private function opcionesTienda(string $publicados, string $json): array
+    {
         $opciones = ['categorias' => [], 'marcas' => [], 'precio' => null];
+
         foreach (DB::select('SELECT * FROM inventarios.fn_producto_tienda_opciones(?::jsonb, ?::jsonb)', [$publicados, $json]) as $o) {
             if ($o->tipo === 'categoria') {
                 $opciones['categorias'][] = ['tpr_id' => (int) $o->id, 'nombre' => $o->nombre, 'cantidad' => (int) $o->cantidad];
@@ -268,41 +332,37 @@ class ProductoTiendaService
             }
         }
 
-        $total     = (int) ($filas[0]->total ?? 0);
-        $porPagina = in_array((string) ($filtros['per_page'] ?? ''), ['24', '48'], true) ? (int) $filtros['per_page'] : 12;
-
-        return [
-            'productos'     => array_map(fn ($f) => $this->tarjetaTienda($f), $filas),
-            'total'         => $total,
-            'pagina'        => (int) ($filas[0]->pagina ?? 1),
-            'por_pagina'    => $porPagina,
-            'ultima_pagina' => max(1, (int) ceil($total / $porPagina)),
-            'opciones'      => $opciones,
-        ];
+        return $opciones;
     }
 
     /**
      * Detalle de un producto para la tienda, o null si no está publicado o su categoría no se ve en la tienda:
      *   {producto: {pro_id, codigo, nombre, descripcion, tpr_id, categoria, destacado, imagenes, ficha: [{nombre, valor, unidad}],
      *               precio, precio_anterior, marca: {mar_id, nombre, logo, enlace} | null},
-     *    relacionados: [hasta 8 tarjetas de su categoría, sin él]}
+     *    familia: null | {nombre, caracteristicas: [{nombre, unidad}], variantes: [{pro_id, nombre, valores, posiciones,
+     *                     precio, precio_anterior, actual}]},
+     *    relacionados: [hasta 8 tarjetas de su categoría, sin él ni las otras variantes de su familia]}
      * Sin caché: el precio sale de la caché de publicados, como en el shop. Las franjas las agrega el controlador.
      */
     public function detalle(int $proId): ?array
     {
-        $precios = $this->publicados()['productos'][$proId] ?? null;
-        $p       = $precios === null ? null : DB::selectOne('SELECT * FROM inventarios.fn_producto_detalle_publico(?)', [$proId]);
+        $publicados = $this->publicados()['productos'];
+        $precios    = $publicados[$proId] ?? null;
+        $p          = $precios === null ? null : DB::selectOne('SELECT * FROM inventarios.fn_producto_detalle_publico(?)', [$proId]);
 
         if ($p === null) {
             return null;
         }
+
+        $familia = $this->familiaDelDetalle($proId, $publicados);
+        $fuera   = $familia === null ? [$proId] : array_column($familia['variantes'], 'pro_id');
 
         $relacionados = array_filter(
             DB::select('SELECT * FROM inventarios.fn_producto_tienda_buscar(?::jsonb, ?::jsonb)', [
                 $this->publicadosJson(),
                 $this->json(['categoria' => (int) $p->tpr_id, 'per_page' => 12]),
             ]),
-            fn ($f) => (int) $f->pro_id !== $proId
+            fn ($f) => !in_array((int) $f->pro_id, $fuera, true)
         );
 
         return [
@@ -325,7 +385,42 @@ class ProductoTiendaService
                     'enlace' => $p->marca_enlace,
                 ],
             ],
+            'familia'      => $familia,
             'relacionados' => array_map(fn ($f) => $this->tarjetaTienda($f), array_slice(array_values($relacionados), 0, 8)),
+        ];
+    }
+
+    /**
+     * La familia del producto para el detalle (los botones de las variantes), o null si no es de ninguna o le quedan menos
+     * de 2 variantes válidas y publicadas. Cada variante con su precio de la caché de publicados.
+     */
+    private function familiaDelDetalle(int $proId, array $publicados): ?array
+    {
+        $filas = DB::select('SELECT * FROM inventarios.fn_familia_detalle_publico(?, ?::integer[])', [$proId, $this->arreglo(array_keys($publicados))]);
+
+        if (!$filas) {
+            return null;
+        }
+
+        $f               = $filas[0];
+        $caracteristicas = [['nombre' => $f->caracteristica_1, 'unidad' => $f->unidad_1]];
+        if ($f->caracteristica_2 !== null) {
+            $caracteristicas[] = ['nombre' => $f->caracteristica_2, 'unidad' => $f->unidad_2];
+        }
+        $dos = count($caracteristicas) === 2;
+
+        return [
+            'nombre'          => $f->fam_nombre,
+            'caracteristicas' => $caracteristicas,
+            'variantes'       => array_map(fn ($v) => [
+                'pro_id'          => (int) $v->pro_id,
+                'nombre'          => $v->nombre,
+                'valores'         => $dos ? [$v->valor_1, $v->valor_2] : [$v->valor_1],
+                'posiciones'      => $dos ? [(int) $v->posicion_1, (int) $v->posicion_2] : [(int) $v->posicion_1],
+                'precio'          => $publicados[(int) $v->pro_id]['precio'] ?? null,
+                'precio_anterior' => $publicados[(int) $v->pro_id]['precio_anterior'] ?? null,
+                'actual'          => (bool) $v->actual,
+            ], $filas),
         ];
     }
 
@@ -341,8 +436,9 @@ class ProductoTiendaService
     }
 
     /**
-     * Tarjetas de promoción de los productos publicados, una por producto:
+     * Tarjetas del carrusel de un bloque destacado: los productos destacados publicados, uno por producto:
      *   [{pro_id, marca, nombre, imagen, tpr_id, precio, precio_anterior}]
+     * imagen: la de Promoción o, si no tiene, la carátula o una del detalle; null sin fotos.
      * Filtros opcionales (null = no filtra): una categoría (con su rama) o unas marcas ([mar_id…]).
      */
     public function promociones(?int $tprId, ?array $marcas): array
@@ -377,51 +473,70 @@ class ProductoTiendaService
     // Características (plantilla de la ficha por categoría)
     // -----------------------------------------------------------------
 
-    /** {plantilla: las de la categoría y las heredadas de arriba, papelera: las eliminadas de esta categoría} */
+    /**
+     * {plantilla: las de la categoría,
+     *  papelera: {registros, total} las eliminadas de esta categoría (la 1.ª página; las demás, con papeleraCaracteristicas)}
+     */
     public function caracteristicas(int $tprId): array
     {
+        $plantilla = DB::select('SELECT * FROM inventarios.fn_caracteristica_listar_paginacion(1, 100, ?, ?)', ['', $tprId]);
+
+        foreach ($plantilla as $fila) {
+            unset($fila->total_registros);
+        }
+
         return [
-            'plantilla' => DB::select('SELECT * FROM inventarios.fn_caracteristica_listar(?)', [$tprId]),
-            'papelera'  => PapeleraPaginaWeb::agregarEliminadoPor(
-                DB::select('SELECT * FROM inventarios.fn_caracteristica_papelera(?)', [$tprId]),
-                'car_eliminado_usu_id'
-            ),
+            'plantilla' => $plantilla,
+            'papelera'  => $this->papeleraCaracteristicas($tprId, '', 1, 20),
         ];
     }
 
-    /** $datos: {tpr_id, car_nombre, car_tipo (texto | numero), car_unidad, usu_id}. Devuelve su id. */
-    public function crearCaracteristica(array $datos): int
+    /** {registros, total}: las características eliminadas de la categoría, con eliminado_por */
+    public function papeleraCaracteristicas(int $tprId, string $busqueda, int $pagina, int $tamanio): array
     {
-        return DB::selectOne('SELECT inventarios.fn_caracteristica_crear(?::jsonb) AS id', [$this->json($datos)])->id;
+        $filas = DB::select('SELECT * FROM inventarios.fn_caracteristica_papelera_paginacion(?, ?, ?, ?)', [$pagina, $tamanio, $busqueda, $tprId]);
+
+        foreach ($filas as $fila) {
+            $fila->total = $fila->total_registros;
+            unset($fila->total_registros);
+        }
+
+        return PapeleraPaginaWeb::pagina($filas, 'car_eliminado_usu_id');
     }
 
-    /** $datos: solo lo que cambia + usu_id (la categoría no se cambia) */
+    /** $datos: {tpr_id, car_nombre, car_tipo (texto | numero), car_unidad}. Devuelve su id. */
+    public function crearCaracteristica(array $datos): int
+    {
+        return DB::selectOne('SELECT inventarios.fn_caracteristica_registrar(?::jsonb) AS id', [$this->jsonAuditado($datos)])->id;
+    }
+
+    /** $datos: solo lo que cambia (la categoría no se cambia) */
     public function modificarCaracteristica(int $carId, array $datos): void
     {
-        DB::statement('SELECT inventarios.fn_caracteristica_modificar(?, ?::jsonb)', [$carId, $this->json($datos)]);
+        DB::statement('SELECT inventarios.fn_caracteristica_modificar(?::jsonb)', [$this->jsonAuditado(['car_id' => $carId] + $datos)]);
     }
 
     /** La manda a la papelera (los valores de los productos se conservan) */
-    public function eliminarCaracteristica(int $carId, int $usuId): void
+    public function eliminarCaracteristica(int $carId): void
     {
-        DB::statement('SELECT inventarios.fn_caracteristica_eliminar(?, ?)', [$carId, $usuId]);
+        DB::statement('SELECT inventarios.fn_caracteristica_eliminar(?::jsonb)', [$this->jsonAuditado(['car_id' => $carId])]);
     }
 
-    public function restaurarCaracteristica(int $carId, int $usuId): void
+    public function restaurarCaracteristica(int $carId): void
     {
-        DB::statement('SELECT inventarios.fn_caracteristica_restaurar(?, ?)', [$carId, $usuId]);
+        DB::statement('SELECT inventarios.fn_caracteristica_restaurar(?::jsonb)', [$this->jsonAuditado(['car_id' => $carId])]);
     }
 
-    /** $datos: {tpr_id, ids: [car_id…] (todas las de la categoría, en el nuevo orden), usu_id} */
+    /** $datos: {tpr_id, ids: [car_id…] (todas las de la categoría, en el nuevo orden)} */
     public function ordenarCaracteristicas(array $datos): void
     {
-        DB::statement('SELECT inventarios.fn_caracteristica_ordenar(?::jsonb)', [$this->json($datos)]);
+        DB::statement('SELECT inventarios.fn_caracteristica_ordenar(?::jsonb)', [$this->jsonAuditado($datos)]);
     }
 
     /** Borra para siempre las características de la papelera de la categoría (y sus valores en los productos). Devuelve cuántas. */
-    public function vaciarCaracteristicas(int $tprId, int $usuId): int
+    public function vaciarCaracteristicas(int $tprId): int
     {
-        return (int) DB::selectOne('SELECT inventarios.fn_caracteristica_vaciar(?, ?) AS cantidad', [$tprId, $usuId])->cantidad;
+        return (int) DB::selectOne('SELECT inventarios.fn_caracteristica_vaciar(?::jsonb) AS cantidad', [$this->jsonAuditado(['tpr_id' => $tprId])])->cantidad;
     }
 
     // -----------------------------------------------------------------
@@ -442,8 +557,11 @@ class ProductoTiendaService
         return ['actualizado' => now()->format('Y-m-d\TH:i:sP'), 'productos' => $productos];
     }
 
-    /** La tarjeta de producto de todo el sitio; $precios: {precio, precio_anterior, stock} (vacío = no está publicado) */
-    private function tarjeta(object $f, array $precios): array
+    /**
+     * La tarjeta de producto de todo el sitio. $datos: {precio, precio_anterior, stock, variantes} (vacío = no está
+     * publicado). familia: el nombre de la familia si la tarjeta es de una (con variantes = cuántas); si no, null.
+     */
+    private function tarjeta(object $f, array $datos): array
     {
         return [
             'pro_id'          => (int) $f->pro_id,
@@ -454,19 +572,22 @@ class ProductoTiendaService
             'categoria'       => $f->categoria,
             'imagenes'        => json_decode($f->imagenes ?? '[]', true) ?? [],
             'destacado'       => (bool) $f->destacado,
-            'precio'          => $precios['precio'] ?? null,
-            'precio_anterior' => $precios['precio_anterior'] ?? null,
-            'stock'           => $precios['stock'] ?? null,
+            'precio'          => $datos['precio'] ?? null,
+            'precio_anterior' => $datos['precio_anterior'] ?? null,
+            'stock'           => $datos['stock'] ?? null,
+            'familia'         => $f->familia ?? null,
+            'variantes'       => $datos['variantes'] ?? null,
         ];
     }
 
-    /** Tarjeta de una fila de fn_producto_tienda_buscar, que ya trae precio, precio_anterior y stock */
+    /** Tarjeta de una fila de fn_producto_tienda_buscar, que ya trae precio ("Desde" en una familia), stock y variantes */
     private function tarjetaTienda(object $f): array
     {
         return $this->tarjeta($f, [
             'precio'          => (float) $f->precio,
             'precio_anterior' => $f->precio_anterior === null ? null : (float) $f->precio_anterior,
             'stock'           => (float) $f->stock,
+            'variantes'       => $f->variantes === null ? null : (int) $f->variantes,
         ]);
     }
 
@@ -504,5 +625,20 @@ class ProductoTiendaService
     private function json(array $datos): string
     {
         return json_encode($datos, JSON_UNESCAPED_UNICODE);
+    }
+
+    /** El JSON con el bloque 'auditoria' que piden las funciones de características (auditoria.logs_cambios). */
+    private function jsonAuditado(array $datos): string
+    {
+        $u = auth('api')->user();
+
+        return $this->json($datos + ['auditoria' => [
+            'usuario_id'     => $u->id ?? null,
+            'usuario_login'  => $u->usu_alias ?? null,
+            'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+            'ip_address'     => request()->ip(),
+            'user_agent'     => request()->userAgent(),
+            'request_id'     => (string) Str::uuid(),
+        ]]);
     }
 }

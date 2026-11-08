@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
 use App\Servicios\PaginaWeb\EspanaMotosService;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 
@@ -105,11 +106,11 @@ class EspanaMotosController extends Controller
         }
     }
 
-    // GET pagina-web/espana-motos-pestanas-papelera
-    public function papeleraPestanas()
+    // GET pagina-web/espana-motos-pestanas-papelera?busqueda=&pagina=1&tamanio=20   → {registros, total}
+    public function papeleraPestanas(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papeleraPestanas()));
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papeleraPestanas(...ListaPaginaWeb::paginacion($request))));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudo cargar la papelera');
         }
@@ -191,11 +192,11 @@ class EspanaMotosController extends Controller
         }
     }
 
-    // GET pagina-web/espana-motos-marcas-papelera
-    public function papeleraMarcas()
+    // GET pagina-web/espana-motos-marcas-papelera?busqueda=&pagina=1&tamanio=20   → {registros, total}
+    public function papeleraMarcas(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papeleraMarcas()));
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papeleraMarcas(...ListaPaginaWeb::paginacion($request))));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudo cargar la papelera');
         }

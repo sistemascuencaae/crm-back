@@ -54,6 +54,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Dirección de la tienda web: los enlaces de los correos a los clientes apuntan aquí
+    'tienda_url' => env('TIENDA_URL', 'http://localhost:4500'),
+
     'asset_url' => env('ASSET_URL', null),
 
     /*

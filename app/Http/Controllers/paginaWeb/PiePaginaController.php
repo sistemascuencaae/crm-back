@@ -5,6 +5,7 @@ namespace App\Http\Controllers\paginaWeb;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ErroresPaginaWeb;
+use App\Servicios\PaginaWeb\ListaPaginaWeb;
 use App\Servicios\PaginaWeb\PiePaginaService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -177,11 +178,11 @@ class PiePaginaController extends Controller
 
     // ---------- Papelera (columnas y enlaces) ----------
 
-    // GET pagina-web/pie-papelera
-    public function papelera()
+    // GET pagina-web/pie-papelera?busqueda=&pagina=1&tamanio=20   → {registros, total}
+    public function papelera(Request $request)
     {
         try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera()));
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera', $this->servicio->papelera(...ListaPaginaWeb::paginacion($request))));
         } catch (QueryException $e) {
             return ErroresPaginaWeb::respuesta($e, 'No se pudo cargar la papelera');
         }

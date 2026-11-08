@@ -121,10 +121,10 @@ class SucursalService
     // Papelera (ciudades y sucursales)
     // -----------------------------------------------------------------
 
-    /** [{tipo ('ciudad' | 'sucursal'), id, texto, detalle, eliminado_en, eliminado_usu_id, eliminado_por}] */
-    public function papelera(): array
+    /** {registros, total}: [{tipo ('ciudad' | 'sucursal'), id, texto, detalle, eliminado_en, eliminado_usu_id, eliminado_por}] */
+    public function papelera(string $busqueda, int $pagina, int $tamanio): array
     {
-        return PapeleraPaginaWeb::agregarEliminadoPor(DB::select('SELECT * FROM ecommerce.fn_sucursal_papelera()'), 'eliminado_usu_id');
+        return PapeleraPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_sucursal_papelera(?, ?, ?)', [$busqueda, $pagina, $tamanio]), 'eliminado_usu_id');
     }
 
     /** Borra para siempre lo que está en la papelera. Devuelve cuántos borró (los que se veían en la papelera). */
@@ -147,22 +147,15 @@ class SucursalService
     // -----------------------------------------------------------------
 
     /**
-     * CRM: todas las ciudades (aunque estén vacías o inactivas), cada una con sus sucursales.
-     * Misma forma que antes: [{sci_id, sci_nombre, ..., sucursales: [{suc_id, ...}]}]
+     * CRM: {ciudades: todas (aunque estén vacías o inactivas), registros: una página de sucursales, total}.
+     * Las sucursales vienen ordenadas por ciudad y por su orden, cada una con su sci_id; busca en nombre, dirección y ciudad.
      */
-    public function listarAdmin(): array
+    public function listarAdmin(string $busqueda, int $pagina, int $tamanio): array
     {
-        $ciudades   = DB::select('SELECT * FROM ecommerce.fn_sucursal_ciudad_listar()');
-        $sucursales = collect(DB::select('SELECT * FROM ecommerce.fn_sucursal_listar()'))
-            ->map(fn ($s) => $this->normalizarCoordenadas($s))
-            ->groupBy('sci_id');
+        $lista = ListaPaginaWeb::pagina(DB::select('SELECT * FROM ecommerce.fn_sucursal_listar(?, ?, ?)', [$busqueda, $pagina, $tamanio]));
+        $lista['registros'] = array_map(fn ($s) => $this->normalizarCoordenadas($s), $lista['registros']);
 
-        return collect($ciudades)
-            ->map(fn ($c) => (array) $c + [
-                'sucursales' => $sucursales->get($c->sci_id, collect())->values()->all(),
-            ])
-            ->values()
-            ->all();
+        return ['ciudades' => DB::select('SELECT * FROM ecommerce.fn_sucursal_ciudad_listar()')] + $lista;
     }
 
     /**
