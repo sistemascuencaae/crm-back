@@ -23,6 +23,10 @@ class TutorialUsuarioController extends Controller
     public function listTutorialesByUserId($user_id)
     {
         try {
+            // 07-nov: "Mis tutoriales" son los del usuario del token; el {user_id} de la URL se ignora (solo lo manda
+            // list-tutoriales-usuarios con el id propio)
+            $user_id = auth('api')->id();
+
             $data = TutorialUsuario::where('user_id', $user_id)
                         ->with('archivos', 'galerias')
                         ->get();

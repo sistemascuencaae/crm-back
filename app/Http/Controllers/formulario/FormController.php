@@ -360,6 +360,8 @@ class FormController extends Controller
                 foreach ($listaCampos as $key => $value) {
                     $value['created_at'] = $fechaHoraActual;
                     $value['update_at'] = $fechaHoraActual;
+                    // 07-nov: el autor de cada valor es el usuario autenticado (token); el user_id que mande el front se ignora
+                    $value['user_id'] = auth()->id();
                     $newItem = $this->addCampoValores(new Request($value));
                     array_push($data, $newItem);
                 }

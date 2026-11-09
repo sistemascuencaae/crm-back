@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm\garantias;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\series\AutorGexSeriesTrait; // 07-nov: autor desde el token
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\garantias\ProcComi;
 use App\Models\crm\garantias\ProcComiDet;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class ProcComiController extends Controller
 {
+    use AutorGexSeriesTrait; // 07-nov
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -159,9 +162,15 @@ class ProcComiController extends Controller
                     $fecha_modifica = date("Y-m-d h:i:s");
                 }
     
-                $usuario_crea = $request->input('usuario_crea');
-                $usuario_modifica = $request->input('usuario_modifica');
-    
+                // DESACTIVADO 07-nov: el autor llegaba del body
+                // $usuario_crea = $request->input('usuario_crea');
+                // $usuario_modifica = $request->input('usuario_modifica');
+                // 07-nov: el autor sale del token (crm.users); al editar se conservan el creador y la fecha de creación guardados
+                $autor = $this->autorGexSeries($request->all(), 'gex.cproc_comisiones', ['procomi_id' => $procomi_id, 'cumpli_id' => $cumpli_id, 'alm_id' => $alm_id], $fecha_crea, $fecha_modifica);
+                $usuario_crea = $autor['usuario_crea'];
+                $fecha_crea = $autor['fecha_crea'];
+                $usuario_modifica = $autor['usuario_modifica'];
+
                 DB::table('gex.cproc_comisiones')->updateOrInsert(
                     [
                         'procomi_id' => $procomi_id,

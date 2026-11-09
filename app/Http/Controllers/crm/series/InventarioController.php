@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class InventarioController extends Controller
 {
+    use AutorGexSeriesTrait; // 07-nov: autor desde el token
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -111,8 +113,15 @@ class InventarioController extends Controller
                 $bod_id = $request->input('bod_id');
                 $responsable = $request->input('responsable');
 
-                $usuario_crea = $request->input('usuario_crea');
-                $usuario_modifica = $request->input('usuario_modifica');
+                // DESACTIVADO 07-nov: el autor llegaba del body
+                // $usuario_crea = $request->input('usuario_crea');
+                // $usuario_modifica = $request->input('usuario_modifica');
+                // 07-nov: el autor sale del token (crm.users); al editar o procesar se conservan el creador y la fecha de creación guardados.
+                // La bodega (bod_id) y el responsable sí los elige la pantalla.
+                $autor = $this->autorGexSeries($request->all(), 'gex.cinventario', ['numero' => $numero], $fecha_crea, $fecha_modifica);
+                $usuario_crea = $autor['usuario_crea'];
+                $fecha_crea = $autor['fecha_crea'];
+                $usuario_modifica = $autor['usuario_modifica'];
 
                 DB::table('gex.cinventario')->updateOrInsert(
                     ['numero' => $numero],

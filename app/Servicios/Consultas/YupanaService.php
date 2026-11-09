@@ -31,6 +31,11 @@ class YupanaService implements ProveedorConsulta
     private const RUTA_PERFIL = '/profile/perfil-cliente';
     private const EVENTO_PERFIL = 'perfilCliente';
 
+    // 06-nov (pedido del usuario: "si Yupana rechaza debe decir RECHAZADO en el caso, sin Reintentar"): los HTTP 422 del perfil que
+    // son un rechazo directo (type = .../problems/<tipo>, guía en PDF). Cualquier otro error, incluso otro 422, es falla: queda sin
+    // calificación y con Reintentar. Solo estos, porque la calificación del caso queda fija y un RECHAZADO equivocado no se corrige.
+    private const TIPOS_RECHAZO_PERFIL = ['rechazo-buro', 'listas-restrictivas', 'score-insuficiente'];
+
     private const CLAVE_TOKEN = 'yupana:token';
     private const TOKEN_MINUTOS = 55;
 
@@ -273,6 +278,14 @@ class YupanaService implements ProveedorConsulta
 
         $json = $response->json();
 
+        // 06-nov: el rechazo directo del perfil no es una falla: Yupana ya respondió. Su fila lleva el cuerpo tal como llegó.
+        $rechazo = $servicio === self::SERVICIO_PERFIL ? $this->perfilRechazado($response->status(), $json) : null;
+        if ($rechazo !== null) {
+            $this->registrar($filaServicio, ProveedorRespuestasService::OK, $inicio, 'Rechazado: ' . $rechazo['rechazo']['tipo'], $response->status(), $response->body());
+
+            return $rechazo;
+        }
+
         if (!$response->successful()) {
             $detalle = is_array($json) ? trim((string) ($json['detail'] ?? $json['title'] ?? '')) : '';
             $this->registrar($filaServicio, ProveedorRespuestasService::ERROR_HTTP, $inicio,
@@ -295,6 +308,32 @@ class YupanaService implements ProveedorConsulta
         $this->registrar($filaServicio, ProveedorRespuestasService::OK, $inicio, null, $response->status());
 
         return $json['data'][0];
+    }
+
+    // El rechazo directo con la forma de data[0], para que se guarde y se muestre como cualquier resultado; null si la respuesta no
+    // es un rechazo. El motivo va en descripcionPerfil, que la pantalla de la calificación ya muestra.
+    private function perfilRechazado(int $status, $json): ?array
+    {
+        if ($status !== 422 || !is_array($json)) {
+            return null;
+        }
+
+        $tipo = strtolower(basename(trim((string) ($json['type'] ?? ''))));
+        if (!in_array($tipo, self::TIPOS_RECHAZO_PERFIL, true)) {
+            return null;
+        }
+
+        $motivos = array_filter(array_map(fn ($e) => is_array($e) ? trim((string) ($e['message'] ?? '')) : '', (array) ($json['errors'] ?? [])));
+        $descripcion = trim(trim((string) ($json['detail'] ?? $json['title'] ?? '')) . ' ' . implode('; ', $motivos));
+
+        return [
+            'informacionPerfil' => ['perfil' => null, 'descripcionPerfil' => $descripcion !== '' ? $descripcion : null],
+            'resultadoCalificadora' => 'RECHAZADO',
+            'scoreCalificadora' => null,
+            'idCliente' => null,
+            'flujoFinal' => false,
+            'rechazo' => ['tipo' => $tipo, 'fechaReintento' => $json['fechaReintento'] ?? null],
+        ];
     }
 
     private function post(array $config, string $token, string $ruta, array $cuerpo)

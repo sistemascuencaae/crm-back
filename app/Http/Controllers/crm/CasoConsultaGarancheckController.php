@@ -22,6 +22,13 @@ class CasoConsultaGarancheckController extends Controller
 {
     private const MSG_SIN_CONSULTA = 'El caso no tiene consulta de calificación.';
 
+    // 06-nov: los códigos de crm.fn_caso_calificar_validaciones.
+    private const MENSAJES_ERROR = [
+        'CASO_NO_EXISTE' => 'El caso no existe.',
+        'CASO_YA_CALIFICADO' => 'Este caso ya tiene calificación y no se puede cambiar.',
+        'CASO_SIN_IDENTIFICACION' => 'El caso no tiene la identificación del cliente; no se puede calificar.',
+    ];
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -58,21 +65,19 @@ class CasoConsultaGarancheckController extends Controller
     // hecha por otro usuario o el perfil de Yupana que llegó después también cuentan. 3) Avisa al tablero con el caso
     // completo (TableroEvent) y lo devuelve con la consulta para refrescar la cabecera y la pestaña. Si el calificador falla,
     // status error con el motivo y su Cód., pero data trae igual el caso.
+    // 06-nov (regla del usuario): la calificación que el caso ya tiene queda fija, es su histórico. Se valida ANTES de consultar
+    // para no llamar al calificador ni cobrar; un caso ya calificado responde error y data trae el caso, para que una pantalla
+    // abierta desde antes se ponga al día y deje de ofrecer Reintentar.
     public function calificar(Request $request, $casoId)
     {
         $log = new Funciones();
         $casoId = (int) $casoId;
 
         try {
-            $caso = DB::selectOne('SELECT id, identificacion, requiere_calificacion, codigo_agencia FROM crm.caso WHERE id = ?', [$casoId]);
-            if (!$caso) {
-                return response()->json(RespuestaApi::returnResultado('error', 'El caso no existe.', null));
-            }
+            DB::transaction(fn () => DB::selectOne('SELECT crm.fn_caso_calificar_validaciones(?)', [$casoId]));
 
+            $caso = DB::selectOne('SELECT identificacion, codigo_agencia FROM crm.caso WHERE id = ?', [$casoId]);
             $identificacion = trim((string) $caso->identificacion);
-            if ($identificacion === '') {
-                return response()->json(RespuestaApi::returnResultado('error', 'El caso no tiene la identificación del cliente; no se puede calificar.', null));
-            }
 
             // 1. La consulta, con el calificador de la agencia del caso.
             $respuesta = app(ConsultasController::class)->consultarParaCaso($request, $identificacion, $caso->codigo_agencia !== null ? (string) $caso->codigo_agencia : null);
@@ -84,6 +89,9 @@ class CasoConsultaGarancheckController extends Controller
             $fila = DB::selectOne('SELECT crm.fn_caso_calificar(?) AS resultado', [$casoId]);
             $calificacion = $fila && $fila->resultado ? (json_decode($fila->resultado, true) ?: []) : [];
             $texto = $calificacion['calificacion_proveedor'] ?? null;
+
+            // 06-nov: con el score de la consulta se llenan los requerimientos automáticos que quedaron sin resultado.
+            app(CasoController::class)->calcularRequerimientosAutomaticos($casoId);
 
             // 3. El caso completo: para la tarjeta de todos (TableroEvent) y para el navegador que apretó el botón.
             $casoCompleto = app(CasoController::class)->getCaso($casoId);
@@ -113,17 +121,17 @@ class CasoConsultaGarancheckController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', $mensaje, $data));
         } catch (Throwable $e) {
-            $log->logError(CasoConsultaGarancheckController::class, 'Error al calificar el caso #' . $casoId, $e);
+            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
+                if (strpos($e->getMessage(), $codigo) !== false) {
+                    $data = $codigo === 'CASO_YA_CALIFICADO' ? ['caso' => app(CasoController::class)->getCaso($casoId)] : null;
 
-            if (strpos($e->getMessage(), 'CASO_SIN_IDENTIFICACION') !== false) {
-                $mensaje = 'El caso no tiene la identificación del cliente; no se puede calificar.';
-            } elseif (strpos($e->getMessage(), 'CASO_NO_EXISTE') !== false) {
-                $mensaje = 'El caso no existe.';
-            } else {
-                $mensaje = 'No se pudo calificar el caso.';
+                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, $data));
+                }
             }
 
-            return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
+            $log->logError(CasoConsultaGarancheckController::class, 'Error al calificar el caso #' . $casoId, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo calificar el caso.', null));
         }
     }
 

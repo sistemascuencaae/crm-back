@@ -210,17 +210,22 @@ class RequerimientoController extends Controller
     private const CAMPOS_PAYLOAD = [
         'nombre', 'estado', 'tipo', 'fase_id', 'tab_id', 'user_id', 'valor_lista', 'requerido', 'orden',
         'acc_publico', 'desc_requerida', 'tipo_caso_id', 'minimo', 'maximo', 'editable', 'fases_habilitadas',
+        'dato_cotizador', 'confirmar_dato_cotizador',
     ];
 
     public function addRequerimientos(Request $request)
     {
         try {
             $payload = $request->only(self::CAMPOS_PAYLOAD);
+            // 07-nov: quien crea el requerimiento (crm.requerimientos_predefinidos.user_id) es el usuario del token, no el
+            // user_id que manda el front. Editar no lo toca: crm.fn_requerimientos_predefinidos_modificar no usa user_id.
+            $payload['user_id'] = auth('api')->id();
             $payload['auditoria'] = $this->contextoAuditoriaForense($request);
 
             $r = $this->ejecutarFuncion('crm.fn_requerimientos_predefinidos_crear', $payload);
             if (!($r['success'] ?? false)) {
-                return response()->json(RespuestaApi::returnResultado('error', $r['message'] ?? 'No se pudo guardar el requerimiento.', ''));
+                // 06-nov: si el dato ya lo tiene otro o el campo no le sirve al cotizador, la función pide confirmar: la pantalla pregunta y reenvía.
+                return response()->json(RespuestaApi::returnResultado('error', $r['message'] ?? 'No se pudo guardar el requerimiento.', ($r['requiere_confirmacion'] ?? false) ? ['requiere_confirmacion' => true] : ''));
             }
 
             $requerimiento = Requerimientos::find($r['id']);
@@ -245,7 +250,7 @@ class RequerimientoController extends Controller
 
             $r = $this->ejecutarFuncion('crm.fn_requerimientos_predefinidos_modificar', $payload);
             if (!($r['success'] ?? false)) {
-                return response()->json(RespuestaApi::returnResultado('error', $r['message'] ?? 'No se pudo actualizar el requerimiento.', ''));
+                return response()->json(RespuestaApi::returnResultado('error', $r['message'] ?? 'No se pudo actualizar el requerimiento.', ($r['requiere_confirmacion'] ?? false) ? ['requiere_confirmacion' => true] : ''));
             }
 
             $resultado = Requerimientos::where('id', $id)->with('tipo_caso')->first();
@@ -299,6 +304,60 @@ class RequerimientoController extends Controller
             $this->log->logError(RequerimientoController::class, 'Error al listar las fases por tablero', $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar las fases', $e->getMessage()));
+        }
+    }
+
+    // Version 1.2
+    // GET /api/crm/listOpcionesRequerimientosAutomaticos — 06-nov: qué se puede elegir al configurar los tipos que llena el sistema:
+    // las filas de Comportamiento y los tipos de la pestaña Tipo de cliente (codigo, nombre). Fase 3: y los cinco datos para el
+    // cotizador (codigo, nombre).
+    public function listOpcionesRequerimientosAutomaticos()
+    {
+        try {
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
+                'comportamiento' => DB::select('SELECT * FROM ventas.fn_parametros_tipo_calificacion_cliente_opciones_listar()'),
+                'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_parametros_tipo_cliente_tipos_listar()'),
+                'datos_cotizador' => DB::select('SELECT codigo, nombre FROM crm.fn_requerimientos_predefinidos_datos_cotizador_listar()'),
+            ]));
+        } catch (Exception $e) {
+            $this->log->logError(RequerimientoController::class, 'Error al listar las opciones de los requerimientos automáticos', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar las opciones', $e->getMessage()));
+        }
+    }
+
+    // Version 1.0
+    // GET /api/crm/listDatosCotizadorTipoCaso/{tipo_caso_id}?excluir= — 06-nov: los cinco datos para el cotizador y, si otro requerimiento
+    // del tipo de caso ya recibe uno, quién (requerimiento_id, titular). excluir = el requerimiento que se está editando.
+    public function listDatosCotizadorTipoCaso(Request $request, $tipo_caso_id)
+    {
+        try {
+            $excluir = (int) $request->query('excluir', 0);
+            $datos = DB::select('SELECT * FROM crm.fn_requerimientos_predefinidos_datos_cotizador_tipo_caso(?, ?)', [(int) $tipo_caso_id, $excluir > 0 ? $excluir : null]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $datos));
+        } catch (Exception $e) {
+            $this->log->logError(RequerimientoController::class, 'Error al listar los datos para el cotizador del tipo de caso: ' . $tipo_caso_id, $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar quién recibe cada dato', $e->getMessage()));
+        }
+    }
+
+    // Version 1.0
+    // POST /api/crm/avisoDatoCotizadorRequerimiento — 06-nov: Flujos guarda al final, así que su modal pregunta antes de pasar el dato en el
+    // borrador: el mismo mensaje que Agregar y Editar, con el titular que hay en el borrador. data = {aviso}; aviso null = no hay que preguntar.
+    public function avisoDatoCotizadorRequerimiento(Request $request)
+    {
+        try {
+            $fila = DB::selectOne('SELECT crm.fn_requerimientos_predefinidos_dato_cotizador_aviso(?::jsonb) AS aviso', [
+                json_encode($request->only(['dato_cotizador', 'tipo', 'nombre', 'titular', 'dato_anterior', 'tipo_anterior'])),
+            ]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se revisó el dato para el cotizador', ['aviso' => $fila->aviso]));
+        } catch (Exception $e) {
+            $this->log->logError(RequerimientoController::class, 'Error al revisar el dato para el cotizador', $e);
+
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo revisar el dato para el cotizador', $e->getMessage()));
         }
     }
 

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class DespachoController extends Controller
 {
+    use AutorGexSeriesTrait; // 07-nov: autor desde el token
 
     protected $variosSeries;
     public function __construct(VariosSeries $variosSeries)
@@ -309,9 +310,15 @@ class DespachoController extends Controller
 
     public function bodegaUsuario($usuario)
     {
+        // DESACTIVADO 07-nov: el usuario llegaba en la URL y se concatenaba en el SQL
+        // $data = DB::selectOne("select b.bod_id, b.bod_nombre as presenta from bodega b join puntoventa p on b.bod_id = p.bod_id
+        //                     where p.pve_id = (select (case when us.pve_id is null then u.pve_id else us.pve_id end) as ptoVta from crm.users u left outer join usuario us on u.usu_id  = us.usu_id
+        //                                     where id = " . $usuario . ")");
+        // 07-nov: la bodega es la del usuario del token (crm.users); sin token, como hoy (el de la URL, ahora como parámetro)
+        $usuarioId = auth('api')->id() ?? $usuario;
         $data = DB::selectOne("select b.bod_id, b.bod_nombre as presenta from bodega b join puntoventa p on b.bod_id = p.bod_id
                             where p.pve_id = (select (case when us.pve_id is null then u.pve_id else us.pve_id end) as ptoVta from crm.users u left outer join usuario us on u.usu_id  = us.usu_id
-                                            where id = " . $usuario . ")");
+                                            where id = ?)", [$usuarioId]);
 
         return response()->json(RespuestaApi::returnResultado('success', '200', $data));
     }
@@ -404,8 +411,15 @@ class DespachoController extends Controller
                 $cfa_id = $request->input('cfa_id');
                 $bod_id_origen = $request->input('bod_id_origen');
 
-                $usuario_crea = $request->input('usuario_crea');
-                $usuario_modifica = $request->input('usuario_modifica');
+                // DESACTIVADO 07-nov: el autor llegaba del body
+                // $usuario_crea = $request->input('usuario_crea');
+                // $usuario_modifica = $request->input('usuario_modifica');
+                // 07-nov: el autor sale del token (crm.users); al editar se conservan el creador y la fecha de creación guardados.
+                // La bodega (bod_id) sí la elige la pantalla en su combo.
+                $autor = $this->autorGexSeries($request->all(), 'gex.cdespacho', ['numero' => $numero], $fecha_crea, $fecha_modifica);
+                $usuario_crea = $autor['usuario_crea'];
+                $fecha_crea = $autor['fecha_crea'];
+                $usuario_modifica = $autor['usuario_modifica'];
 
                 DB::table('gex.cdespacho')->updateOrInsert(
                     ['numero' => $numero],

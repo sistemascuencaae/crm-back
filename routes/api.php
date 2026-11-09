@@ -169,6 +169,8 @@ use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\ParametrosCotizadorController;
+use App\Http\Controllers\ventas\ParametrosTipoCalificacionClienteController;
+use App\Http\Controllers\ventas\ParametrosTipoClienteController;
 use App\Http\Controllers\ventas\MargenCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
 use App\Http\Controllers\ventas\CotizarController;
@@ -907,6 +909,10 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::delete('/deleteRequerimientos/{id}', [RequerimientoController::class, 'deleteRequerimientos']); // Eliminar
     // 28-oct: las fases para "Habilitado en las fases" y la auditoría de los requerimientos de una fase.
     Route::get('/listFasesAgrupadasPorTablero', [RequerimientoController::class, 'listFasesAgrupadasPorTablero']);
+    // 06-nov: las opciones al configurar los tipos que llena el sistema.
+    Route::get('/listOpcionesRequerimientosAutomaticos', [RequerimientoController::class, 'listOpcionesRequerimientosAutomaticos']);
+    Route::get('/listDatosCotizadorTipoCaso/{tipo_caso_id}', [RequerimientoController::class, 'listDatosCotizadorTipoCaso']);
+    Route::post('/avisoDatoCotizadorRequerimiento', [RequerimientoController::class, 'avisoDatoCotizadorRequerimiento']);
     Route::get('/requerimientosAuditoria/{fase_id}', [RequerimientoController::class, 'requerimientosAuditoria']);
 
 
@@ -939,7 +945,26 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/listEstadosFormulasFlujoByTipoCasoId/{tipo_caso_id}', [EstadosFormulasController::class, 'listEstadosFormulasFlujoByTipoCasoId']); // 27-oct: flujo del tipo de caso (demo)
     Route::get('/listFlujoCatalogosByTipoCasoId/{tipo_caso_id}', [EstadosFormulasController::class, 'listFlujoCatalogosByTipoCasoId']); // 28-oct: combos del editor del flujo (demo)
     Route::post('/guardarFlujoTipoCaso/{tipo_caso_id}', [EstadosFormulasController::class, 'guardarFlujoTipoCaso']); // 28-oct: Guardar del editor del flujo (demo)
-    Route::post('/clonarTipoCaso/{tipo_caso_id}', [EstadosFormulasController::class, 'clonarTipoCaso']); // 28-oct: clonar el tipo de caso con su flujo (demo)
+    Route::post('/clonarTipoCaso/{tipo_caso_id}', [EstadosFormulasController::class, 'clonarTipoCaso']); // 28-oct: clonar el tipo de caso con su flujo (demo); 07-nov: con nombre
+    Route::get('/sugerirNombreClonTipoCaso/{tipo_caso_id}', [EstadosFormulasController::class, 'sugerirNombreClonTipoCaso']); // 07-nov: nombre que propone Clonar (demo)
+    // 07-nov: la URL era /listTiposCasoByTableroId/{tab_id}, que ya existe (TableroController, Mover casos) y quedaba tapada: renombrada.
+    Route::get('/listTiposCasoUsanTablero/{tab_id}', [EstadosFormulasController::class, 'listTiposCasoUsanTablero']); // 07-nov: tipos de caso que usan un tablero (demo)
+    Route::post('/crearFaseFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'crearFaseFlujo']); // 07-nov: nueva fase desde el editor del flujo (demo)
+    Route::post('/ordenarFasesFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'ordenarFasesFlujo']); // 07-nov: ordenar las fases de un tablero desde el editor (demo)
+    // 07-nov (etapas 2 y 3 del editor de flujos, demo): configuración del tablero, tableros del tipo, copiar y revisar.
+    Route::get('/listConfiguracionTableroFlujo/{tab_id}', [EstadosFormulasController::class, 'listConfiguracionTableroFlujo']);
+    Route::post('/modificarFaseFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'modificarFaseFlujo']);
+    Route::post('/crearEstadoFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'crearEstadoFlujo']);
+    Route::post('/modificarEstadoFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'modificarEstadoFlujo']);
+    Route::post('/eliminarEstadoFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'eliminarEstadoFlujo']);
+    Route::post('/crearRespuestaFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'crearRespuestaFlujo']);
+    Route::post('/modificarRespuestaFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'modificarRespuestaFlujo']);
+    Route::post('/eliminarRespuestaFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'eliminarRespuestaFlujo']);
+    Route::get('/listTablerosTipoCasoFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'listTablerosTipoCasoFlujo']);
+    Route::post('/agregarTableroTipoCasoFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'agregarTableroTipoCasoFlujo']);
+    Route::post('/quitarTableroTipoCasoFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'quitarTableroTipoCasoFlujo']);
+    Route::post('/prepararCopiaFormulasFlujo/{tipo_caso_id}', [EstadosFormulasController::class, 'prepararCopiaFormulasFlujo']);
+    Route::post('/revisarFlujoTipoCaso/{tipo_caso_id}', [EstadosFormulasController::class, 'revisarFlujoTipoCaso']);
     Route::post('/addEstadosFormulas', [EstadosFormulasController::class, 'addEstadosFormulas']); // guardar
     Route::post('/editEstadosFormulas/{id}', [EstadosFormulasController::class, 'editEstadosFormulas']); // Editar
     Route::delete('/deleteEstadosFormulas/{id}', [EstadosFormulasController::class, 'deleteEstadosFormulas']); // Eliminar
@@ -1731,6 +1756,7 @@ Route::group(['prefix' => 'profile', 'middleware' => ['jwt.auth', 'usuario.activ
 Route::group(['prefix' => 'access', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     Route::get('program/{profile}/{program}', [ProfileController::class, 'findByProgram']);
     Route::get('menu/{userid}', [ProfileController::class, 'findByUser']);
+    Route::get('sesion', [JWTController::class, 'sesion']); // 07-nov: usuario de la sesión (el front ya no lo guarda en el localStorage)
 });
 
 Route::group(['prefix' => 'company', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
@@ -1740,11 +1766,13 @@ Route::group(['prefix' => 'company', 'middleware' => ['jwt.auth', 'usuario.activ
 
 Route::group(['prefix' => 'menu', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     Route::get('list', [MenuController::class, 'list']);
+    Route::get('lateral', [MenuController::class, 'menuLateral']);
     Route::get('list/{id}', [MenuController::class, 'findById']);
 
     Route::post('addMenu', [MenuController::class, 'addMenu']);
     Route::post('editMenu/{id}', [MenuController::class, 'editMenu']);
     Route::delete('deleteMenu/{id}', [MenuController::class, 'deleteMenu']);
+    Route::post('moverMenu', [MenuController::class, 'moverMenu']);
 });
 
 Route::group(["prefix" => "activos", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
@@ -2059,6 +2087,18 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::post('/guardarEmisor', [BancosEmisoresController::class, 'guardarEmisor']);
     Route::get('/listarBancosDynamo', [BancosEmisoresController::class, 'listarBancosDynamo']);
     Route::post('/guardarBancoDynamo', [BancosEmisoresController::class, 'guardarBancoDynamo']);
+
+    Route::get('/listParametrosTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'listParametrosTipoCalificacionCliente']);
+    Route::get('/listEstadosCreditoTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'listEstadosCreditoTipoCalificacionCliente']);
+    Route::post('/guardarParametrosTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'guardarParametrosTipoCalificacionCliente']);
+    Route::delete('/deleteParametroTipoCalificacionCliente/{id}', [ParametrosTipoCalificacionClienteController::class, 'deleteParametroTipoCalificacionCliente']);
+    Route::get('/parametroTipoCalificacionClienteAuditoria', [ParametrosTipoCalificacionClienteController::class, 'parametroTipoCalificacionClienteAuditoria']);
+
+    Route::get('/listParametrosTipoCliente', [ParametrosTipoClienteController::class, 'listParametrosTipoCliente']);
+    Route::get('/listTiposParametroTipoCliente', [ParametrosTipoClienteController::class, 'listTiposParametroTipoCliente']);
+    Route::post('/guardarParametrosTipoCliente', [ParametrosTipoClienteController::class, 'guardarParametrosTipoCliente']);
+    Route::delete('/deleteParametroTipoCliente/{id}', [ParametrosTipoClienteController::class, 'deleteParametroTipoCliente']);
+    Route::get('/parametroTipoClienteAuditoria', [ParametrosTipoClienteController::class, 'parametroTipoClienteAuditoria']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).

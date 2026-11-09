@@ -55,9 +55,21 @@ class GestionController extends Controller
     public function addGestion(Request $request)
     {
         try {
-            $data = DB::transaction(function () use ($request) {
+            // 07-nov: el usuario y la agencia salen del usuario autenticado (la base), no del body.
+            // Es la misma agencia con la que listGestionesByIdAgencia arma la lista de esta pantalla.
+            $user = auth('api')->user();
+            if (!$user || $user->alm_id === null) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Su usuario no tiene agencia asignada.', null));
+            }
 
-                $gestion = Gestion::create($request->all());
+            $data = DB::transaction(function () use ($request, $user) {
+
+                // DESACTIVADO 07-nov: agencia_id y user_id llegaban del front
+                // $gestion = Gestion::create($request->all());
+                $gestion = Gestion::create(array_merge($request->all(), [
+                    'agencia_id' => $user->alm_id,
+                    'user_id' => $user->id,
+                ]));
 
                 // Insertamos el array de casos
                 if (isset($request->casos) && count($request->casos) > 0) {

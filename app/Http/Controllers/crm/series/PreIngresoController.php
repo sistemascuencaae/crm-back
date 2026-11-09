@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class PreIngresoController extends Controller
 {
+    use AutorGexSeriesTrait; // 07-nov: autor desde el token
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -196,8 +198,14 @@ class PreIngresoController extends Controller
                 $guia_remision = $request->input('guia_remision');
                 $cli_id = $request->input('cli_id');
 
-                $usuario_crea = $request->input('usuario_crea');
-                $usuario_modifica = $request->input('usuario_modifica');
+                // DESACTIVADO 07-nov: el autor llegaba del body
+                // $usuario_crea = $request->input('usuario_crea');
+                // $usuario_modifica = $request->input('usuario_modifica');
+                // 07-nov: el autor sale del token (crm.users); al editar se conservan el creador y la fecha de creación guardados
+                $autor = $this->autorGexSeries($request->all(), 'gex.cpreingreso', ['numero' => $numero], $fecha_crea, $fecha_modifica);
+                $usuario_crea = $autor['usuario_crea'];
+                $fecha_crea = $autor['fecha_crea'];
+                $usuario_modifica = $autor['usuario_modifica'];
 
                 DB::table('gex.cpreingreso')->updateOrInsert(
                     ['numero' => $numero],
@@ -444,8 +452,14 @@ class PreIngresoController extends Controller
                     $cmo_id = $p['cmo_id'];
                     $cfa_id = $p['cfa_id'];
 
-                    $usuario_crea = $p['usuario_crea'];
-                    $usuario_modifica = $p['usuario_modifica'];
+                    // DESACTIVADO 07-nov: el autor llegaba del body (y pisaba el usuario_crea original)
+                    // $usuario_crea = $p['usuario_crea'];
+                    // $usuario_modifica = $p['usuario_modifica'];
+                    // 07-nov: el que relaciona sale del token (crm.users); el creador y la fecha de creación se conservan de la fila guardada
+                    $autor = $this->autorGexSeries($p, 'gex.cpreingreso', ['numero' => $numero], $fecha_crea, $fecha_modifica);
+                    $usuario_crea = $autor['usuario_crea'];
+                    $fecha_crea = $autor['fecha_crea'];
+                    $usuario_modifica = $autor['usuario_modifica'];
 
                     DB::table('gex.cpreingreso')->updateOrInsert(
                         ['numero' => $numero],
@@ -483,7 +497,10 @@ class PreIngresoController extends Controller
                 $cfa_id = null;
 
                 $usuario_crea = $data['usuario_crea'];
-                $usuario_modifica = $usuario;
+                // DESACTIVADO 07-nov: el que quita la relación llegaba en la URL
+                // $usuario_modifica = $usuario;
+                // 07-nov: el que quita la relación sale del token (crm.users); sin token, como hoy
+                $usuario_modifica = auth('api')->id() ?? $usuario;
 
                 DB::table('gex.cpreingreso')->updateOrInsert(
                     ['numero' => $numero],

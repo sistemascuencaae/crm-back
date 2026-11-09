@@ -78,7 +78,9 @@ class ActasController extends Controller
 
                 // Crear la cabecera del acta (Cacta)
                 $cacta = Cacta::create([
-                    'id_user' => $request->input('id_user'),
+                    // DESACTIVADO 07-nov: id_user llegaba del front
+                    // 'id_user' => $request->input('id_user'),
+                    'id_user' => auth()->id(), // 07-nov: «Realizado por» = el usuario autenticado (token)
                     'id_localidad' => $request->input('id_localidad'),
                     'id_departamento' => $request->input('id_departamento'),
                     'numero' => $nuevoNumero,
@@ -214,7 +216,10 @@ class ActasController extends Controller
 
                 // Actualizar la cabecera del acta
                 $cacta->update([
-                    'id_user' => $request->input('id_user'),
+                    // DESACTIVADO 07-nov: id_user llegaba del front
+                    // 'id_user' => $request->input('id_user'),
+                    // 07-nov: igual que antes, quien edita queda como «Realizado por», pero sale del token
+                    'id_user' => auth()->id(),
                     'id_localidad' => $request->input('id_localidad'),
                     'id_departamento' => $request->input('id_departamento'),
                     'estado' => $request->input('estado', true), // Actualizar el estado del acta

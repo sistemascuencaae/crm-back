@@ -55,7 +55,16 @@ class ComentariosController extends Controller
         $log = new Funciones();
 
         try {
-            $coment = Comentarios::create($request->all());
+            // DESACTIVADO 07-nov: $coment = Comentarios::create($request->all());
+            // 07-nov: el autor sale del usuario del token (id y alias de crm.users), no del body; del body solo se toman
+            // el caso y el texto
+            $autor = auth('api')->user();
+            $coment = Comentarios::create([
+                'caso_id' => $request->input('caso_id'),
+                'comentario' => $request->input('comentario'),
+                'user_id' => $autor->id,
+                'nombre_usuario' => $autor->usu_alias,
+            ]);
 
             // START Bloque de código que genera un registro de auditoría manualmente
             $audit = new Audits();

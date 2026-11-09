@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\crm\garantias;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\series\AutorGexSeriesTrait; // 07-nov: autor desde el token
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\garantias\RubrosReservas;
 use Exception;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class RubrosReservaController extends Controller
 {
+    use AutorGexSeriesTrait; // 07-nov
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -58,8 +61,14 @@ class RubrosReservaController extends Controller
                 $porc_calculo = $request->input('porc_calculo');
                 $capital_sn = $request->input('capital_sn');
                 $estado = $request->input('estado');
-                $usuario_crea = $request->input('usuario_crea');
-                $usuario_modifica = $request->input('usuario_modifica');
+                // DESACTIVADO 07-nov: el autor llegaba del body
+                // $usuario_crea = $request->input('usuario_crea');
+                // $usuario_modifica = $request->input('usuario_modifica');
+                // 07-nov: el autor sale del token (crm.users); al editar se conservan el creador y la fecha de creación guardados
+                $autor = $this->autorGexSeries($request->all(), 'gex.rubro_reserva', ['rr_id' => $rr_id], $fecha_crea, $fecha_modifica);
+                $usuario_crea = $autor['usuario_crea'];
+                $fecha_crea = $autor['fecha_crea'];
+                $usuario_modifica = $autor['usuario_modifica'];
 
                 DB::table('gex.rubro_reserva')->updateOrInsert(
                     ['rr_id' => $rr_id],

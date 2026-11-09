@@ -44,7 +44,15 @@ class ContratoGexController extends Controller
     public function listarContratosBodega($bodId)
     {
         try {
-            $data = ContratoGexCRM::where("bod_id", $bodId)->get();
+            // 07-nov: la bodega es la del usuario del token (crm.users.bod_id), no la de la URL; sin token, como hoy
+            $usuario = auth('api')->user();
+            if ($usuario) {
+                $bodId = $usuario->bod_id;
+            }
+            // DESACTIVADO 07-nov: con el bod_id de la URL
+            // $data = ContratoGexCRM::where("bod_id", $bodId)->get();
+            // 07-nov: sin bodega no hay contratos (where con null sería "bod_id is null")
+            $data = $bodId === null ? collect() : ContratoGexCRM::where("bod_id", $bodId)->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito.', $data));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error al listar', $th->getMessage()));
@@ -54,6 +62,12 @@ class ContratoGexController extends Controller
     public function loadInitialData($almId)
     {
         try {
+            // 07-nov: la agencia es la del usuario del token (crm.users.alm_id), no la de la URL; sin token, como hoy
+            $usuario = auth('api')->user();
+            if ($usuario) {
+                $almId = $usuario->alm_id;
+            }
+
             // $facturas = DB::select("SELECT p.alm_id,
             //             a.alm_nombre as nom_almacen,
             //             concat((case when e.ent_nombres = '' then e.ent_apellidos else concat(e.ent_nombres, ' ', e.ent_apellidos) end)) as nom_cliente,
@@ -223,6 +237,7 @@ class ContratoGexController extends Controller
                 $dataContrato["fecha"] = Carbon::now();
                 $dataContrato["bod_id"] = $bodUser->bod_id;
                 $dataContrato["usuario_crea"] = $userId;
+                $dataContrato["usuario_modifica"] = null; // 07-nov: es alta; no se cree un usuario_modifica que llegue en el body (es fillable)
                 $data = ContratoGexCRM::create($dataContrato);
                 //Eliminar serie del inventario
                 $serieExiste = DB::selectOne("SELECT ss.id, ss.serie, bod_id from crm.stock_pro_serie ss where serie = ?;", [$serie]);
@@ -291,7 +306,11 @@ class ContratoGexController extends Controller
         try {
             $serie = $request->input("serie");
             $proId = $request->input("proId");
-            $bodId = $request->input("bodId");
+            // DESACTIVADO 07-nov: la bodega llegaba en el body
+            // $bodId = $request->input("bodId");
+            // 07-nov: la bodega es la del usuario del token (crm.users.bod_id); sin token, como hoy
+            $usuario = auth('api')->user();
+            $bodId = $usuario ? $usuario->bod_id : $request->input("bodId");
             //Eliminar serie del inventario
             $serieExiste = DB::selectOne("SELECT ss.id, ss.serie, bod_id from crm.stock_pro_serie ss
                             where serie = ? and pro_id = ? and bod_id = ?;", [$serie, $proId, $bodId]);

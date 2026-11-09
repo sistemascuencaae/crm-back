@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\crm\cambioAgencia;
 
+use App\Events\SesionUsuarioEvent; // 08-nov: aviso de cambio de agencia
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\UsuarioAlmacen;
@@ -100,11 +101,20 @@ class CambioAgenciaController extends Controller
             $payload = $request->only(['pve_id', 'alm_id', 'usu_id_dynamo', 'usu_id_crm']);
             $payload['auditoria'] = $this->contextoAuditoriaForense($request);
 
+            // 08-nov: la agencia que tenía en el CRM, para avisarle solo si de verdad cambió
+            $usuarioCrm = $request->filled('usu_id_crm') ? (int) $request->input('usu_id_crm') : null;
+            $agenciaAnterior = $usuarioCrm ? DB::table('crm.users')->where('id', $usuarioCrm)->value('alm_id') : null;
+
             $resultado = DB::selectOne('SELECT crm.fn_vendedor_actualizar_agencia(?::jsonb) AS resultado', [json_encode($payload)]);
 
             $respuesta = json_decode($resultado->resultado, true);
 
             if ($respuesta['success']) {
+                // 08-nov: aviso al usuario por su canal usuario.{id}: le sale "te cambiaron de agencia" con Entendido, que recarga.
+                // La función guarda directo en la base (no pasa por el modelo User), por eso se avisa aquí.
+                if ($usuarioCrm && (string) $agenciaAnterior !== (string) $request->input('alm_id')) {
+                    SesionUsuarioEvent::avisar($usuarioCrm, ['agencia']);
+                }
                 return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], null));
             } else {
                 return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));

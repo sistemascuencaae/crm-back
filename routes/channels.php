@@ -93,16 +93,23 @@ Broadcast::channel('chat.refresh.conver.{id}', function ($user, $id) {
 
 
 
-// JGSJ - NO LO ESTOY OCUPANDO EN NINGUN LADO (QUITAR ESTE COMENTARIO CUANDO SE LO OCUPE EN ALGUN LADO) 
-Broadcast::channel('usuario.{id}', function ($user) {
-    $usuario = User::where("id", $user->id)->first();
+// JGSJ - NO LO ESTOY OCUPANDO EN NINGUN LADO (QUITAR ESTE COMENTARIO CUANDO SE LO OCUPE EN ALGUN LADO)
+// DESACTIVADO 08-nov: dejaba a cualquier usuario escuchar el canal de otro (solo revisaba que quien pide exista)
+// Broadcast::channel('usuario.{id}', function ($user) {
+//     $usuario = User::where("id", $user->id)->first();
+//
+//     // echo('ingresamos al chanel'.json_encode($tablero));
+//     if ($usuario) {
+//         return true;
+//     } else {
+//         return false;
+//     }
+// });
 
-    // echo('ingresamos al chanel'.json_encode($tablero));
-    if ($usuario) {
-        return true;
-    } else {
-        return false;
-    }
+// 08-nov: canal de cada usuario. Lo escucha el header en todas las pantallas; por aquí llega el aviso de cambio de agencia o de
+// perfil (SesionUsuarioEvent). Solo el dueño puede escucharlo.
+Broadcast::channel('usuario.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
 });
 
 

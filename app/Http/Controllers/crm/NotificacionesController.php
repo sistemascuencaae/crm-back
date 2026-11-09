@@ -119,6 +119,12 @@ class NotificacionesController extends Controller
         try {
             $leido = $request->input('leido', true);
 
+            // 07-nov: el departamento es el del usuario del token (crm.users.dep_id), no el {dep_id} de la URL que manda el
+            // front con su sesión. Lo demás queda como hoy (marca y devuelve las del departamento). No se pasó a "las de sus
+            // casos" (como lista allByDepartamento) porque a un administrador le devolvería 50.000-73.000 filas en vez de las
+            // de su departamento.
+            $dep_id = Auth::user()->dep_id;
+
             $data = DB::transaction(function () use ($leido, $dep_id) {
                 Notificaciones::where('dep_id', $dep_id)->update([
                     "leido" => $leido,

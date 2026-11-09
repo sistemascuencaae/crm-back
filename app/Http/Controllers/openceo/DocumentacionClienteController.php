@@ -15,16 +15,23 @@ class DocumentacionClienteController extends Controller
     // solo tipos de caso 149 y 151, ordenado por caso DESC. Paginación server-side (default 20).
     // busqueda (opcional) filtra por nº de caso / identificación / cliente (ILIKE).
     // La agencia la envía el front desde el usuario logueado (== crm.caso.codigo_agencia).
+    // 07-nov: ya no: la agencia sale del usuario autenticado (crm.users.alm_id, la misma con la que el login arma
+    // user.alm_id = crm.agencia.codigo). El ?codigo_agencia= que mande el front se ignora: cambiándolo se veían
+    // los casos de otra agencia.
     public function listar_casos_clientes_by_agencia(Request $request)
     {
         try {
-            $agencia  = trim((string) $request->query('codigo_agencia', ''));
+            // DESACTIVADO 07-nov: la agencia llegaba del front
+            // $agencia  = trim((string) $request->query('codigo_agencia', ''));
+            $user = auth('api')->user();
+            $agencia  = ($user && $user->alm_id !== null) ? trim((string) $user->alm_id) : '';
             $pagina   = max((int) $request->query('pagina', 1), 1);
             $tamanio  = max((int) $request->query('tamanio', 20), 1);
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             if ($agencia === '') {
-                return response()->json(RespuestaApi::returnResultado('error', 'La agencia es obligatoria', null));
+                // DESACTIVADO 07-nov: return response()->json(RespuestaApi::returnResultado('error', 'La agencia es obligatoria', null));
+                return response()->json(RespuestaApi::returnResultado('error', 'Su usuario no tiene agencia asignada', null)); // 07-nov
             }
 
             $registros = DB::select('SELECT * FROM crm.fn_cliente_listar_casos_paginacion(?, ?, ?, ?)', [$agencia, $pagina, $tamanio, $busqueda]);

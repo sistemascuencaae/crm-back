@@ -56,8 +56,11 @@ class ProfileController extends Controller
         return response()->json($data, $data['code']);
     }
 
+    // Version 2.0: el permiso se revisa con el perfil ACTUAL del usuario autenticado, el mismo con el que se arma el menú lateral, y no con
+    // el que el navegador guardó al iniciar sesión: si le cambian el perfil, el menú y la validación no se contradicen.
     public function findByProgram($profile, $program)
     {
+        $profile = auth('api')->user()->profile_id ?? $profile;
 
         /*$profile = Access::where([
                     ['profile_id','=',$profile],
@@ -89,13 +92,13 @@ class ProfileController extends Controller
     {
         $sql = "SELECT u.id,u.name,u.surname,u.login,u.profile_id,
                     a.menu_id,
-                    m.code,m.module,m.name,m.url,m.icon,
+                    m.module,m.name,m.url,m.icon,
                     a.create,a.edit,a.delete,a.report,a.cerrar_actividad,a.cerrar_reagendar_actividad,a.audit,a.solicitud_credito,a.revertir,a.rutaje,a.canal_cliente,a.ejecutar,a.ver_costos
                 FROM crm.users u
                 INNER JOIN access a on u.profile_id=a.profile_id
                 INNER JOIN menu m on a.menu_id=m.id
                 where  u.id=?
-                ORDER BY m.code";
+                ORDER BY m.orden, m.id";
 
         try {
             $accesos = DB::select($sql, [$userid]);
@@ -195,18 +198,23 @@ class ProfileController extends Controller
         }
     }
 
+    // Version 2.0: los menús traen padre_id, orden y es_grupo para el árbol de la matriz. Un grupo no tiene permisos: va
+    // solo para armar el árbol y el front no le pone switches ni lo manda al guardar. Una sola consulta de accesos.
     public function buscarAccesosByProfileId(Request $request, $profile_id)
     {
         try {
-            $menus = Menu::orderBy('code', 'asc')->get();
+            $menus = Menu::fromQuery('SELECT * FROM crm.fn_menu_arbol_listar() ORDER BY posicion');
+            // Si un perfil tiene dos filas del mismo menú, manda la más antigua (keyBy se queda con la última).
+            $accesos = Access::where('profile_id', $profile_id)->orderBy('id', 'desc')->get()->keyBy('menu_id');
 
             $accesosPerfil = [];
 
             foreach ($menus as $menuData) {
-                $acceso = Access::where('profile_id', $profile_id)->where('menu_id', $menuData['id'])->with('menu')->first();
+                $acceso = $accesos->get($menuData['id']);
 
                 if ($acceso) {
                     // Agregamos el acceso al array, como hacer un push en el front angular
+                    $acceso->setRelation('menu', $menuData);
                     $accesosPerfil[] = $acceso;
                 } else {
                     // Si no se encuentra un acceso de un menu, creamos uno default

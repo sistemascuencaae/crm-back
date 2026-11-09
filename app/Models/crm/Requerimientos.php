@@ -28,6 +28,7 @@ class Requerimientos extends Model
         "minimo",
         "maximo",
         "editable",
+        "dato_cotizador",
     ];
 
     public function setCreatedAtAttribute($value)

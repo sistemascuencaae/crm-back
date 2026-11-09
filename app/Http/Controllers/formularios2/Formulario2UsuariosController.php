@@ -89,10 +89,14 @@ class Formulario2UsuariosController extends Controller
     }
     
 
+    // 07-nov: «mis formularios» salen del usuario autenticado (token). El {usu_id} de la ruta ya no se usa:
+    // el front manda su propio id y, cambiándolo, se veían los formularios asignados a otro.
     public function listFormulariosByUsuId($user_id)
     {
         try {
-            $data = FormUser::where('user_id', $user_id)
+            // DESACTIVADO 07-nov: el id llegaba del front
+            // $data = FormUser::where('user_id', $user_id)
+            $data = FormUser::where('user_id', auth('api')->id())
                 ->with('form')
                 ->select('form_id', 'user_id')
                 ->distinct()

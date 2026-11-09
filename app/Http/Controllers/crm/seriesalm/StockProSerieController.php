@@ -198,6 +198,12 @@ class StockProSerieController extends Controller
     public function getSerieDesCliente($serie, $bodId)
     {
         try {
+            // 07-nov: la bodega es la del usuario del token (crm.users.bod_id), no la de la URL; sin token, como hoy
+            $usuario = auth('api')->user();
+            if ($usuario) {
+                $bodId = $usuario->bod_id;
+            }
+
             $data = DB::selectOne("SELECT ss.serie, p.pro_codigo, p.pro_nombre from crm.stock_pro_serie ss
                  inner join public.producto p on p.pro_id = ss.pro_id and ss.bod_id = ? where serie = ?;", [$bodId, $serie]);
 

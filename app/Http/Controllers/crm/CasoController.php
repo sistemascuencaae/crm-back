@@ -39,6 +39,7 @@ use DateTime;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 
 class CasoController extends Controller
@@ -56,11 +57,48 @@ class CasoController extends Controller
         ]);
     }
 
+    // 07-nov: alta por la ruta POST /api/crm/addCaso (Soporte; la página web llega sin token). Con usuario autenticado,
+    // el creador, el anterior y el departamento salen de la base (ver contextoCreadorCaso); la agencia también, pero solo
+    // si el body trae codigo_agencia: Soporte no la manda y cae en el DEFAULT '1' de crm.caso, y cambiarla es una decisión
+    // pendiente (C12 del inventario: con la agencia de quien pide, el tablero de RRHH dejaría de verlos). Sin usuario
+    // autenticado queda como hoy.
     public function add(Request $request)
+    {
+        return $this->guardarCasoAdd($request, true);
+    }
+
+    // 07-nov: altas internas que arman su Request con el creador ya sacado de la base (app móvil, addCasoOPMICreativa:
+    // empleado del pedido o usuario de la fórmula; automático, UltimoIdController: usuario de la fórmula 33). No se pisan
+    // con el usuario del token: en la app móvil quien llama la ruta no es el creador del caso.
+    public function addInterno(Request $request)
+    {
+        return $this->guardarCasoAdd($request, false);
+    }
+
+    // 07-nov: el cuerpo que antes era add(). $usarUsuarioAutenticado = true solo para la ruta HTTP.
+    private function guardarCasoAdd(Request $request, bool $usarUsuarioAutenticado)
     {
         $log = new Funciones();
 
         $casoInput = $request->all();
+
+        // 07-nov: con usuario autenticado, creador, anterior y departamento (y la agencia si vino en el body) de la base
+        $actor = $usarUsuarioAutenticado ? auth('api')->user() : null;
+        if ($actor) {
+            try {
+                $conAgencia = $request->has('codigo_agencia');
+                $casoInput = array_merge($casoInput, $this->contextoCreadorCaso($actor, $conAgencia));
+                if (!$conAgencia) {
+                    // Sin agencia en el body tampoco se acepta su zona: quedan los DEFAULT de crm.caso, como hoy en Soporte
+                    unset($casoInput['id_zona_agencia']);
+                }
+            } catch (\Throwable $e) {
+                $log->logError(CasoController::class, 'No se pudo armar el creador del caso', $e);
+
+                return response()->json(RespuestaApi::returnResultado('error', 'No se pudo crear el caso: ' . $e->getMessage(), null));
+            }
+        }
+
         // $miembros = $request->input('miembros');
         $miembros2 = $request->input('miembros');
         //datos formulario estatico creacion de usuario
@@ -107,7 +145,9 @@ class CasoController extends Controller
             //--------------------
             $caso->estado_2 = $estadoInicial->id;
             $caso->nombre = 'CASO # ' . $caso->id;
-            $caso->user_creador_id = $request->user_creador_id;
+            // DESACTIVADO 07-nov: $caso->user_creador_id = $request->user_creador_id;
+            // 07-nov: de $casoInput: el de la base con usuario autenticado; sin él (y en las altas internas), el del body como hoy
+            $caso->user_creador_id = $casoInput['user_creador_id'] ?? null;
 
             $caso->cliente_id = $this->validarClienteSolicitudCredito($caso->ent_id)->id;
 
@@ -226,6 +266,49 @@ class CasoController extends Controller
         } catch (\Throwable $e) {
             (new Funciones())->logError(CasoController::class, 'No se pudo casar la consulta GaranCheck con el caso #' . $casoId, $e);
         }
+    }
+
+    // 07-nov: mensaje cuando el usuario que crea el caso no tiene una agencia que exista en crm.agencia.
+    private const MENSAJE_CREADOR_SIN_AGENCIA = 'tu usuario no tiene una agencia válida. Pide que la revisen en Configuración > Usuarios.';
+
+    // 07-nov: PARTE 2 (el back decide con la base). Quién crea el caso y desde qué agencia salen de crm.users, no del
+    // front: auth('api')->user() es la fila de la base de ESTA petición (el JWT solo lleva el id), así que un cambio de
+    // agencia o de departamento vale en el siguiente caso aunque la pantalla tenga la sesión vieja.
+    // La agencia es crm.users.alm_id validada contra crm.agencia.codigo, igual que en el login
+    // (JWTController::respondWithToken), y la zona sale de esa misma agencia. Se llama solo con usuario autenticado.
+    private function contextoCreadorCaso($usuario, bool $conAgencia = true): array
+    {
+        $contexto = [
+            'user_creador_id' => $usuario->id,
+            'user_anterior_id' => $usuario->id,
+            'dep_creacion_id' => $usuario->dep_id,
+        ];
+
+        if ($conAgencia) {
+            $agencia = $usuario->alm_id !== null ? Agencia::where('codigo', (string) $usuario->alm_id)->first() : null;
+            if (!$agencia) {
+                throw new \RuntimeException(self::MENSAJE_CREADOR_SIN_AGENCIA);
+            }
+            $contexto['codigo_agencia'] = $agencia->codigo;
+            $contexto['id_zona_agencia'] = $agencia->id_zona_agencia;
+        }
+
+        return $contexto;
+    }
+
+    // 07-nov: el nombre con que se bloquea un caso: el mismo full_name que arma el login (alias - nombres apellidos),
+    // que es con el que el Kanban y la Lista comparan bloqueado_user.
+    private function nombreCompletoUsuario($usuario): string
+    {
+        return $usuario->usu_alias . ' - ' . $usuario->name . ' ' . $usuario->surname;
+    }
+
+    // 07-nov: ¿el usuario del token es usuario común (usu_tipo 4)? Se lee de la base, no de la sesión del front.
+    private function esUsuarioComunActor(): bool
+    {
+        $usuario = auth('api')->user();
+
+        return $usuario !== null && (int) $usuario->usu_tipo === 4;
     }
 
     // LISTADO/ HISTORICO DE LOS ESTADOS DEL CASO
@@ -391,8 +474,13 @@ class CasoController extends Controller
 
         $casoId = $request->input("casoId");
         $bloqueado = $request->input("bloqueado");
-        $bloqueado_user = $request->input("bloqueado_user");
+        // DESACTIVADO 07-nov: $bloqueado_user = $request->input("bloqueado_user");
         $user = auth('api')->user();
+        // 07-nov: el nombre de quien bloquea se arma con el usuario del token (el full_name del login), no con el que
+        // manda el front. Al desbloquear, el Kanban, la Lista y el modal mandan bloqueado_user vacío y por eso nunca
+        // cuenta como desbloqueo forzado; se conserva: solo se revisa el forzado si el llamador mandó un nombre.
+        $bloqueado_user = $this->nombreCompletoUsuario($user);
+        $desbloqueoConNombre = $request->filled('bloqueado_user');
 
         // Usar transacción para evitar condiciones de carrera (race conditions)
         DB::beginTransaction();
@@ -486,11 +574,14 @@ class CasoController extends Controller
                 // 2. Tiene un usuario que lo bloqueó
                 // 3. El usuario que desbloquea NO es el mismo (y no es vacío)
                 // 4. El usuario que desbloquea ES admin/superusuario
-                if ($caso->bloqueado && $caso->bloqueado_user && $bloqueado_user && $caso->bloqueado_user !== $bloqueado_user && $esAdmin) {
+                // DESACTIVADO 07-nov: if ($caso->bloqueado && $caso->bloqueado_user && $bloqueado_user && $caso->bloqueado_user !== $bloqueado_user && $esAdmin) {
+                // 07-nov: $bloqueado_user ya sale de la base y nunca viene vacío; "mandó nombre" lo dice $desbloqueoConNombre
+                if ($caso->bloqueado && $caso->bloqueado_user && $desbloqueoConNombre && $caso->bloqueado_user !== $bloqueado_user && $esAdmin) {
                     $desbloqueoForzado = true;
                     $usuarioAnterior = $caso->bloqueado_user;
                     $log->logInfo(CasoController::class, 'Desbloqueo FORZADO - Admin/Superusuario: ' . $bloqueado_user . ' desbloqueó el caso #' . $casoId . ' que estaba bloqueado por: ' . $usuarioAnterior);
                 } else {
+                    // 07-nov: $bloqueado_user ya es el nombre del usuario del token
                     $log->logInfo(CasoController::class, 'Caso #' . $casoId . ' desbloqueado por: ' . ($bloqueado_user ?: 'usuario'));
                 }
 
@@ -760,14 +851,16 @@ class CasoController extends Controller
             $notificacion = DB::transaction(function () use ($request, $audit) {
                 $caso_id = $request->input('caso_id');
                 $estado_2 = $request->input('estado_2');
-                $user_anterior_id = $request->input('user_anterior_id');
+                // DESACTIVADO 07-nov: $user_anterior_id = $request->input('user_anterior_id');
                 $fase_anterior_id = $request->input('fase_anterior_id');
                 $fase_anterior_id_reasigna = $request->input('fase_anterior_id_reasigna');
                 $tablero_anterior_id = $request->input('tablero_anterior_id');
                 $dep_anterior_id = $request->input('dep_anterior_id');
-                $new_user_id = $request->input('new_user_id');
+                // DESACTIVADO 07-nov: $new_user_id = $request->input('new_user_id');
+                // 07-nov: "Asignarme" (único que llama esta ruta) ya no manda su id: si no llega usuario, es el del token
+                $new_user_id = $request->input('new_user_id') ?: auth('api')->id();
                 $new_fase_id = $request->input('new_fase_id');
-                $new_dep_id = $request->input('new_dep_id');
+                $new_dep_id = $request->input('new_dep_id'); // 07-nov: no se usa (el front ya no lo manda)
                 $new_tablero_id = $request->input('new_tablero_id');
 
                 //try {
@@ -778,6 +871,9 @@ class CasoController extends Controller
                     'fase.tablero',
                     'estadodos',
                 )->find($caso_id);
+
+                // 07-nov: el usuario anterior es el asignado que tiene el caso en la base, no la copia del caso en el front
+                $user_anterior_id = $casoEnProceso->user_id;
 
                 if ($casoEnProceso->fas_id != $new_fase_id) {
                     $casoEnProceso->fecha_ingreso_fase = now(); // orden de llegada a la fase
@@ -1195,6 +1291,7 @@ class CasoController extends Controller
                 [$casoId, $faseId, $tipo_caso_id]
             );
 
+            $hayAutomaticos = false;
             for ($i = 0; $i < sizeof($reqFase); $i++) {
                 $reqCaso = new RequerimientoCaso();
                 $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
@@ -1214,6 +1311,8 @@ class CasoController extends Controller
                 $reqCaso->editable = $reqFase[$i]->editable;
                 // 28-oct: las fases donde se habilita (texto integer[] de PostgreSQL); sin config, solo su fase.
                 $reqCaso->fases_habilitadas = $reqFase[$i]->fases_habilitadas ?? ('{' . (int) $reqFase[$i]->fase_id . '}');
+                // 06-nov: el dato que le manda al cotizador. No está en el fillable: desde el caso no se puede cambiar.
+                $reqCaso->dato_cotizador = $reqFase[$i]->dato_cotizador ?? null;
 
                 if ($reqCaso->tipo_campo == 'lista') {
                     $array = explode(';', $reqCaso->valor_lista);
@@ -1248,7 +1347,16 @@ class CasoController extends Controller
                 }
 
                 $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
+                // 06-nov: los que llena el sistema nacen marcados: nunca frenan el cambio de fase, aunque el cálculo falle.
+                if (in_array($reqCaso->tipo_campo, RequerimientoCaso::TIPOS_AUTOMATICOS, true)) {
+                    $reqCaso->marcado = true;
+                    $hayAutomaticos = true;
+                }
                 $reqCaso->save();
+            }
+
+            if ($hayAutomaticos) {
+                $this->calcularRequerimientosAutomaticos((int) $casoId);
             }
 
             $log->logInfo(CasoController::class, 'Se agregaron con exito los requerimientos de la fase ' . $faseId . ', en el caso #' . $casoId);
@@ -1256,6 +1364,38 @@ class CasoController extends Controller
             $log->logError(CasoController::class, 'Error al agregar los requerimientos de la fase ' . $faseId . ', en el caso #' . $casoId, $e);
 
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
+        }
+    }
+
+    // Version 1.0
+    // 06-nov: llena los requerimientos que calcula el sistema (crm.fn_requerimientos_caso_automaticos_calcular). Corre al entrar a
+    // la fase y en Reintentar. Si falla, se registra y el caso sigue: dentro de la transacción de quien llama, DB::transaction es
+    // un savepoint y no la deja abortada.
+    public function calcularRequerimientosAutomaticos(int $casoId): void
+    {
+        $log = new Funciones();
+
+        try {
+            $u = auth('api')->user();
+            $payload = json_encode([
+                'caso_id' => $casoId,
+                'auditoria' => [
+                    'usuario_id' => $u->id ?? null,
+                    'usuario_login' => $u->usu_alias ?? null,
+                    'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                    'request_id' => (string) Str::uuid(),
+                ],
+            ], JSON_UNESCAPED_UNICODE);
+
+            $fila = DB::transaction(fn () => DB::selectOne('SELECT crm.fn_requerimientos_caso_automaticos_calcular(?::jsonb) AS resultado', [$payload]));
+
+            foreach (json_decode($fila->resultado, true)['errores'] ?? [] as $error) {
+                $log->logError(CasoController::class, 'No se pudo calcular el requerimiento "' . $error['titulo'] . '" del caso #' . $casoId . ': ' . $error['mensaje']);
+            }
+        } catch (\Throwable $e) {
+            $log->logError(CasoController::class, 'No se pudieron calcular los requerimientos automáticos del caso #' . $casoId, $e);
         }
     }
 
@@ -1730,7 +1870,9 @@ class CasoController extends Controller
 
                 $log->logInfo(CasoController::class, 'Se creo con exito el caso desde la App');
 
-                return $this->add($request);
+                // DESACTIVADO 07-nov: return $this->add($request);
+                // 07-nov: alta interna: el creador es el empleado del pedido (o el de la fórmula), no el usuario del token
+                return $this->addInterno($request);
             } else {
                 $log->logError(CasoController::class, 'No se creo el caso, porque falta la configuracion de destino del caso o el OPM');
                 return null;
@@ -1797,7 +1939,10 @@ class CasoController extends Controller
         $log = new Funciones();
 
         try {
-            $casoData = $request->all();
+            // DESACTIVADO 07-nov: $casoData = $request->all();
+            // 07-nov: Reasignar caso manda el caso entero; solo se acepta el usuario asignado que eligió. Creador, agencia,
+            // zona, estado, fase y lo demás ya no se toman del body (la copia del front puede estar vieja).
+            $casoData = $request->only(['user_id']);
 
             if (!$casoId) {
                 $log->logError(CasoController::class, 'El caso #' . $casoId . ' no existe' . $casoId);
@@ -1808,6 +1953,13 @@ class CasoController extends Controller
             $caso = Caso::find($casoId);
 
             if ($caso) {
+                // 07-nov (revisión): foto del caso en la base ANTES del cambio, para la auditoría. La Bitácora del caso arma
+                // "Reasignó el caso de X a Y" con old_values.user y old_values.fase.tablero (lee old_values.user.name sin "?."):
+                // antes old_values era el caso entero que mandaba el front; ahora el front manda solo user_id y, sin esta foto,
+                // la Bitácora de ese caso fallaba en el navegador.
+                $casoAntes = Caso::with(['user', 'fase.tablero', 'estadodos'])->find($casoId);
+                // 07-nov: el anterior es el asignado que tiene el caso en la base, no el que manda el front
+                $casoData['user_anterior_id'] = $caso->user_id;
                 $caso->update($casoData);
                 $tipo = 1;
                 $this->calcularTiemposCaso(
@@ -1827,7 +1979,8 @@ class CasoController extends Controller
                 // START Bloque de código que genera un registro de auditoría manualmente
                 $audit = new Audits();
                 // Obtener el old_values (valor antiguo)
-                $valorAntiguo = $casoData;
+                // DESACTIVADO 07-nov (revisión): $valorAntiguo = $casoData; (ahora $casoData es solo user_id y user_anterior_id)
+                $valorAntiguo = $casoAntes; // 07-nov (revisión): el caso de la base antes del cambio, con user y fase.tablero
                 $audit->old_values = json_encode($valorAntiguo); // json_encode para convertir en string ese array
 
                 $audit->user_id = Auth::id();
@@ -2038,6 +2191,12 @@ class CasoController extends Controller
             // $tabId = 230; // esta variable tengo que revisar que hace
 
             $data = Caso::where('identificacion', $identificacion)
+                // 07-nov: el front elige esta ruta o la de usuario común según el usu_tipo de su sesión; el back no le
+                // cree: si el usuario del token es tipo 4 (leído de la base), solo ve los casos públicos, como en
+                // listUsuarioComunCasosPendienteByCliente.
+                ->when($this->esUsuarioComunActor(), function ($query) {
+                    $query->where('acc_publico', false);
+                })
                 // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
                 ->with([
                     // 'user',
@@ -2082,6 +2241,10 @@ class CasoController extends Controller
             // $tabId = 230; // esta variable tengo que revisar que hace
 
             $data = Caso::where('identificacion', $identificacion)
+                // 07-nov: igual que en listCasosPendientesByCliente: el tipo 4 (de la base) solo ve los casos públicos
+                ->when($this->esUsuarioComunActor(), function ($query) {
+                    $query->where('acc_publico', false);
+                })
                 // ->selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
                 ->with([
                     // 'user',
@@ -2276,6 +2439,10 @@ class CasoController extends Controller
     {
         try {
             //    $tabId = 230; // esta variable tengo que revisar que hace
+
+            // 07-nov: "mis pendientes" (Lista de pendientes de clientes): el usuario sale del token; el {user_id} de la
+            // URL se ignora (la pantalla siempre manda el suyo y ninguna pantalla de administrador la usa para otro).
+            $user_id = auth('api')->id();
 
             $data = Caso::where('user_id', $user_id)
                 ->whereHas('tipocaso', function ($q) {
@@ -2501,6 +2668,15 @@ class CasoController extends Controller
         $formId2 = $request->input('form_id2');
 
         try {
+            // 07-nov: con usuario autenticado (Nuevo caso del tablero; formulario externo abierto con sesión), el creador,
+            // el anterior, el departamento, la agencia y la zona salen de la base y se ignora lo que mande el front
+            // (ver contextoCreadorCaso). Sin usuario autenticado (formulario externo sin sesión) queda como hoy.
+            // Va dentro del try para que, si falla, el catch borre el formulario dinámico que ya se guardó.
+            $actor = auth('api')->user();
+            if ($actor) {
+                $casoInput = array_merge($casoInput, $this->contextoCreadorCaso($actor));
+            }
+
             $casoCreado = DB::transaction(function () use ($casoInput, $miembros, $request) {
 
                 $caso = new Caso($casoInput);
@@ -2512,7 +2688,9 @@ class CasoController extends Controller
                 //--------------------
                 $caso->estado_2 = $estadoInicial->id;
                 $caso->nombre = 'CASO # ' . $caso->id;
-                $caso->user_creador_id = $request->user_creador_id;
+                // DESACTIVADO 07-nov: $caso->user_creador_id = $request->user_creador_id;
+                // 07-nov: de $casoInput: el de la base con usuario autenticado; sin él, el del body como hoy
+                $caso->user_creador_id = $casoInput['user_creador_id'] ?? null;
 
                 // cliente/entidad por defecto (este flujo no maneja solicitud de crédito)
                 $caso->cliente_id = 29; // ID del cliente default del crm

@@ -25,7 +25,9 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // DESACTIVADO 07-nov: 'exposed_headers' => [],
+    // 07-nov: el front (otro origen) lee el usuario actual de esta cabecera en cada respuesta (middleware CabeceraSesionUsuario)
+    'exposed_headers' => ['X-Sesion-Usuario'],
 
     'max_age' => 0,
 
