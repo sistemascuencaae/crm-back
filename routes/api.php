@@ -169,7 +169,7 @@ use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\ParametrosCotizadorController;
-use App\Http\Controllers\ventas\ParametrosTipoCalificacionClienteController;
+use App\Http\Controllers\ventas\cotizador\ComportamientoClienteParametrosController;
 use App\Http\Controllers\ventas\ParametrosTipoClienteController;
 use App\Http\Controllers\ventas\MargenCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
@@ -2088,11 +2088,11 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::get('/listarBancosDynamo', [BancosEmisoresController::class, 'listarBancosDynamo']);
     Route::post('/guardarBancoDynamo', [BancosEmisoresController::class, 'guardarBancoDynamo']);
 
-    Route::get('/listParametrosTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'listParametrosTipoCalificacionCliente']);
-    Route::get('/listEstadosCreditoTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'listEstadosCreditoTipoCalificacionCliente']);
-    Route::post('/guardarParametrosTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'guardarParametrosTipoCalificacionCliente']);
-    Route::delete('/deleteParametroTipoCalificacionCliente/{id}', [ParametrosTipoCalificacionClienteController::class, 'deleteParametroTipoCalificacionCliente']);
-    Route::get('/parametroTipoCalificacionClienteAuditoria', [ParametrosTipoCalificacionClienteController::class, 'parametroTipoCalificacionClienteAuditoria']);
+    Route::get('/listComportamientoClienteParametros', [ComportamientoClienteParametrosController::class, 'listComportamientoClienteParametros']);
+    Route::get('/listEstadosCreditoComportamientoClienteParametros', [ComportamientoClienteParametrosController::class, 'listEstadosCreditoComportamientoClienteParametros']);
+    Route::post('/guardarComportamientoClienteParametros', [ComportamientoClienteParametrosController::class, 'guardarComportamientoClienteParametros']);
+    Route::delete('/deleteComportamientoClienteParametro/{id}', [ComportamientoClienteParametrosController::class, 'deleteComportamientoClienteParametro']);
+    Route::get('/comportamientoClienteParametroAuditoria', [ComportamientoClienteParametrosController::class, 'comportamientoClienteParametroAuditoria']);
 
     Route::get('/listParametrosTipoCliente', [ParametrosTipoClienteController::class, 'listParametrosTipoCliente']);
     Route::get('/listTiposParametroTipoCliente', [ParametrosTipoClienteController::class, 'listTiposParametroTipoCliente']);
