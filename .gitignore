@@ -24,3 +24,7 @@ Homestead.json
 ConfigInitBD.sql
 
 /storage/app/firebase/
+
+/database
+
+/.claude

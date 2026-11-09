@@ -181,6 +181,7 @@ use App\Http\Controllers\ventas\BancosEmisoresController;
 use App\Http\Controllers\inventarios\CaracterísticasProductoController;
 use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\inventarios\TipoProducto;
+use App\Http\Controllers\ecommerce\HeaderController;
 use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
 use App\Http\Controllers\formulario\EmpresaController;
@@ -2142,6 +2143,20 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::get('/arbolTipoProducto', [TipoProducto::class, 'arbolTipoProducto']);
     Route::get('/auditoriaTipoProducto', [TipoProducto::class, 'auditoriaTipoProducto']);
 });
+
+// ECOMMERCE: administración de la tienda desde el CRM con el estándar de Clientes. Reemplaza al grupo pagina-web.
+Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+    Route::get('/listHeaders', [HeaderController::class, 'listar']);
+    Route::get('/getHeader/{id}', [HeaderController::class, 'buscar'])->whereNumber('id');
+    Route::post('/crearHeader', [HeaderController::class, 'crear']);
+    Route::post('/editarHeader/{id}', [HeaderController::class, 'editar'])->whereNumber('id');
+    Route::post('/editarHeaderParte/{id}/{parte}', [HeaderController::class, 'editarParte'])
+        ->whereNumber('id')->where('parte', 'texto_promo|boton_promo|logo|buscador|cuenta|carrito|categorias|enlaces|credito');
+    Route::post('/ordenarHeaderPartes/{id}', [HeaderController::class, 'ordenarPartes'])->whereNumber('id');
+    Route::post('/subirHeaderImagen', [HeaderController::class, 'subirImagen']);
+});
+// Imágenes de los headers (el logo): públicas, las pide la tienda.
+Route::get('public/headers/imagenes/{nombre}', [HeaderController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
 
 // PÁGINA WEB: administración del encabezado, pie de página y contenido de la tienda desde el CRM
 Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
