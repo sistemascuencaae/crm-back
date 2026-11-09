@@ -2112,6 +2112,9 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::post('/editarProducto/{id}', [ProductoController::class, 'editarProducto']);
     Route::post('/clonarProducto/{id}', [ProductoController::class, 'clonarProducto'])->whereNumber('id');
     Route::get('/productoAuditoria', [ProductoController::class, 'productoAuditoria']);
+    Route::post('/eliminarProducto/{id}', [ProductoController::class, 'eliminarProducto'])->whereNumber('id');
+    Route::post('/restaurarProducto/{id}', [ProductoController::class, 'restaurarProducto'])->whereNumber('id');
+    Route::get('/papeleraProductos', [ProductoController::class, 'papeleraProductos']);
     // Características: la plantilla de cada categoría de tercer nivel y sus valores en cada producto.
     Route::get('/arbolTiposCaracteristicas', [CaracterísticasProductoController::class, 'arbolTiposProducto']);
     Route::get('/listCaracteristicas', [CaracterísticasProductoController::class, 'listCaracteristicas']);
@@ -2119,6 +2122,7 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::get('/getCaracteristica/{id}', [CaracterísticasProductoController::class, 'getCaracteristica'])->whereNumber('id');
     Route::post('/crearCaracteristica', [CaracterísticasProductoController::class, 'crearCaracteristica']);
     Route::post('/editarCaracteristica/{id}', [CaracterísticasProductoController::class, 'editarCaracteristica'])->whereNumber('id');
+    Route::post('/clonarCaracteristica/{id}', [CaracterísticasProductoController::class, 'clonarCaracteristica'])->whereNumber('id');
     Route::post('/ordenarCaracteristicas', [CaracterísticasProductoController::class, 'ordenarCaracteristicas']);
     Route::post('/eliminarCaracteristica/{id}', [CaracterísticasProductoController::class, 'eliminarCaracteristica'])->whereNumber('id');
     Route::post('/restaurarCaracteristica/{id}', [CaracterísticasProductoController::class, 'restaurarCaracteristica'])->whereNumber('id');

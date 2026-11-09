@@ -179,6 +179,27 @@ class CaracterísticasProductoController extends Controller
         }
     }
 
+    // Crea una característica nueva a partir de otra: los campos del formulario llegan aquí y la función valida el
+    // origen y aplica las mismas reglas del alta. La categoría no viaja: la pone la función, siempre la del origen.
+    public function clonarCaracteristica(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), self::REGLAS_COMUNES);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
+        }
+
+        $payload = $request->only(self::CAMPOS_EDITAR) + ['car_id_origen' => $id];
+
+        try {
+            $resultado = DB::selectOne('SELECT inventarios.fn_caracteristica_clonar(?::jsonb) AS car_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Característica clonada con éxito', ['car_id' => $resultado->car_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al clonar la característica');
+        }
+    }
+
     public function editarCaracteristica(Request $request, $id)
     {
         $validator = Validator::make($request->all(), self::REGLAS_COMUNES);

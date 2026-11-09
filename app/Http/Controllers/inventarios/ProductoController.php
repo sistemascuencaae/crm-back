@@ -42,6 +42,13 @@ class ProductoController extends Controller
         'PRODUCTO_CON_STOCK' => 'No se puede inactivar: el producto todavía tiene stock.',
         'PRODUCTO_BLOQUEADO' => 'El producto está abierto en edición en Dynamo. Intente de nuevo en unos minutos.',
         'PRODUCTO_NO_EXISTE' => 'El producto no existe.',
+        'PAPELERA_PRODUCTO_ACTIVO' => 'No se puede eliminar porque está activo: inactívelo primero.',
+        'PAPELERA_CON_STOCK' => 'No se puede eliminar: el producto todavía tiene stock.',
+        'PAPELERA_EN_PEDIDOS' => 'No se puede eliminar: el producto está en pedidos pendientes.',
+        'PAPELERA_EN_PROFORMAS' => 'No se puede eliminar: el producto está en proformas de pedido pendientes.',
+        'PAPELERA_EN_ORDENES_COMPRA' => 'No se puede eliminar: el producto está en órdenes de compra que todavía no llegan a bodega.',
+        'PAPELERA_EN_FAMILIA' => 'No se puede eliminar: el producto pertenece a una familia. Quítelo de la familia primero.',
+        'PAPELERA_TIPO_EN_PAPELERA' => 'No se puede restaurar porque su tipo de producto está en la papelera: restáurelo primero.',
         'OBSERVACION_FACTURA_NO_VALIDA' => 'Elija qué datos pide la factura (MOTOS o GENERAL).',
         'USUARIO_SIN_DYNAMO' => 'Su usuario del CRM no tiene un usuario en Dynamo: no se puede registrar la bitácora.',
         'CAMPO_LARGO:pro_codigo2' => 'El código 2 no puede tener más de 15 caracteres.',
@@ -297,6 +304,54 @@ class ProductoController extends Controller
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del producto', $th->getMessage()));
+        }
+    }
+
+    // A la papelera: borrado lógico. No se puede vaciar.
+    public function eliminarProducto(Request $request, int $id)
+    {
+        try {
+            $resultado = DB::selectOne('SELECT crm.fn_producto_papelera(?::jsonb) AS pro_id', [json_encode(['pro_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            ProductoTiendaService::limpiarCacheTienda();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Producto enviado a la papelera', ['pro_id' => $resultado->pro_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al eliminar el producto');
+        }
+    }
+
+    public function restaurarProducto(Request $request, int $id)
+    {
+        try {
+            $resultado = DB::selectOne('SELECT crm.fn_producto_restaurar(?::jsonb) AS pro_id', [json_encode(['pro_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            ProductoTiendaService::limpiarCacheTienda();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Producto restaurado con éxito', ['pro_id' => $resultado->pro_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al restaurar el producto');
+        }
+    }
+
+    public function papeleraProductos(Request $request)
+    {
+        try {
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = min(max((int) $request->query('tamanio', 20), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            $registros = DB::select('SELECT * FROM crm.fn_producto_papelera_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+            $total = $registros[0]->total_registros ?? 0;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Papelera cargada con éxito', [
+                'registros' => $registros,
+                'total' => (int) $total,
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la papelera', $th->getMessage()));
         }
     }
 
