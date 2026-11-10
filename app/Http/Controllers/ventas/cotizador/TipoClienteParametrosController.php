@@ -1,30 +1,25 @@
 <?php
 
-namespace App\Http\Controllers\ventas;
+namespace App\Http\Controllers\ventas\cotizador;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Http\Traits\AuditoriaForenseTrait;
+use App\Models\ventas\cotizador\TipoClienteParametro;
 use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
-// Tipos de cliente por rango de score (ventas.parametros_tipo_cliente), pestaña de Parámetros tipo calificación cliente.
-// El negocio vive en ventas.fn_parametros_tipo_cliente_* (PLANES/COTIZADOR): este controller arma el jsonb con 'auditoria'
-// y traduce el código que levanta la función.
-class ParametrosTipoClienteController extends Controller
+// Cotizador > Parámetros tipo calificación cliente, pestaña Tipo de cliente (ventas.tipo_cliente_parametros): el rango de
+// score de cada tipo. El negocio vive en ventas.fn_tipo_cliente_parametros_* (PLANES/COTIZADOR/produccion_tipo_cliente_parametros.sql):
+// este controller arma el jsonb con los campos del modelo y el bloque 'auditoria', y traduce el código que levanta la función.
+class TipoClienteParametrosController extends Controller
 {
-    private const CAMPOS_FILA = [
-        'id',
-        'nombre',
-        'tipo',
-        'score_minimo',
-        'score_maximo'
-    ];
+    use AuditoriaForenseTrait;
 
-    // Mensaje amigable para cada código que levantan las funciones.
+    // Mensaje para cada código que levantan las funciones.
     private const MENSAJES_ERROR = [
         'REQUIERE_NOMBRE' => 'El nombre es obligatorio.',
         'NOMBRE_MUY_LARGO' => 'El nombre no puede pasar de 60 caracteres.',
@@ -43,15 +38,15 @@ class ParametrosTipoClienteController extends Controller
     }
 
     // Version 1.0
-    // GET /api/ventas/listParametrosTipoCliente?pagina&tamanio&busqueda — el grid de la pestaña.
-    public function listParametrosTipoCliente(Request $request)
+    // GET /api/ventas/listTipoClienteParametros?pagina&tamanio&busqueda — la grilla de la pestaña.
+    public function listTipoClienteParametros(Request $request)
     {
         try {
             $pagina = max((int) $request->query('pagina', 1), 1);
             $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = trim((string) $request->query('busqueda', ''));
 
-            $registros = DB::select('SELECT * FROM ventas.fn_parametros_tipo_cliente_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+            $registros = DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 'registros' => $registros,
@@ -65,11 +60,12 @@ class ParametrosTipoClienteController extends Controller
     }
 
     // Version 1.0
-    // GET /api/ventas/listTiposParametroTipoCliente — el combo Tipo (codigo, nombre), una sola fuente con la validación de la función.
-    public function listTiposParametroTipoCliente()
+    // GET /api/ventas/listTiposTipoClienteParametros — el combo Tipo (codigo, nombre), una sola fuente con la validación
+    // de la función.
+    public function listTiposTipoClienteParametros()
     {
         try {
-            $data = DB::select('SELECT * FROM ventas.fn_parametros_tipo_cliente_tipos_listar()');
+            $data = DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_tipos_listar()');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
         } catch (Exception $e) {
@@ -78,14 +74,16 @@ class ParametrosTipoClienteController extends Controller
     }
 
     // Version 1.0
-    // POST /api/ventas/guardarParametrosTipoCliente — las filas nuevas (sin id) y las editadas, todo o nada.
-    public function guardarParametrosTipoCliente(Request $request)
+    // POST /api/ventas/guardarTipoClienteParametros — las filas nuevas (sin id) y las editadas, todo o nada.
+    // De cada fila pasan solo el id y los campos del modelo.
+    public function guardarTipoClienteParametros(Request $request)
     {
         try {
-            $filas = array_map(fn($fila) => Arr::only((array) $fila, self::CAMPOS_FILA), (array) $request->input('filas', []));
+            $campos = array_merge(['id'], (new TipoClienteParametro())->getFillable());
+            $filas = array_map(fn ($fila) => Arr::only((array) $fila, $campos), (array) $request->input('filas', []));
             $payload = ['filas' => $filas, 'auditoria' => $this->contextoAuditoriaForense($request)];
 
-            $resultado = DB::selectOne('SELECT ventas.fn_parametros_tipo_cliente_guardar_lote(?::jsonb) AS cantidad', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
+            $resultado = DB::selectOne('SELECT ventas.fn_tipo_cliente_parametros_guardar_lote(?::jsonb) AS cantidad', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado->cantidad));
         } catch (QueryException $e) {
@@ -96,14 +94,14 @@ class ParametrosTipoClienteController extends Controller
     }
 
     // Version 1.0
-    // DELETE /api/ventas/deleteParametroTipoCliente/{id}
-    public function deleteParametroTipoCliente(Request $request, $id)
+    // DELETE /api/ventas/deleteTipoClienteParametro/{id}
+    public function deleteTipoClienteParametro(Request $request, $id)
     {
         try {
-            DB::selectOne('SELECT ventas.fn_parametros_tipo_cliente_eliminar(?::jsonb) AS id', [json_encode([
+            DB::selectOne('SELECT ventas.fn_tipo_cliente_parametros_eliminar(?::jsonb) AS id', [json_encode([
                 'id' => (int) $id,
                 'auditoria' => $this->contextoAuditoriaForense($request),
-            ])]);
+            ], JSON_UNESCAPED_UNICODE)]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', null));
         } catch (QueryException $e) {
@@ -114,9 +112,9 @@ class ParametrosTipoClienteController extends Controller
     }
 
     // Version 1.0
-    // GET /api/ventas/parametroTipoClienteAuditoria?id&pagina&tamanio&busqueda — resumen + historial paginado de UNA fila
+    // GET /api/ventas/tipoClienteParametroAuditoria?id&pagina&tamanio&busqueda — resumen + historial paginado de UNA fila
     // (auditoria.logs_cambios).
-    public function parametroTipoClienteAuditoria(Request $request)
+    public function tipoClienteParametroAuditoria(Request $request)
     {
         try {
             $id = (int) $request->query('id', 0);
@@ -128,8 +126,8 @@ class ParametrosTipoClienteController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Parámetro no válido', null));
             }
 
-            $resumen = DB::selectOne('SELECT * FROM ventas.fn_parametros_tipo_cliente_auditoria_resumen(?)', [$id]);
-            $eventos = DB::select('SELECT * FROM ventas.fn_parametros_tipo_cliente_auditoria_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_tipo_cliente_parametros_auditoria_resumen(?)', [$id]);
+            $eventos = DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_auditoria_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
                 'resumen' => $resumen,
@@ -158,20 +156,5 @@ class ParametrosTipoClienteController extends Controller
         }
 
         return response()->json(RespuestaApi::returnResultado('error', $generico, $e->getMessage()));
-    }
-
-    // Contexto forense que las funciones guardan en auditoria.logs_cambios.
-    private function contextoAuditoriaForense(Request $request): array
-    {
-        $u = auth('api')->user();
-
-        return [
-            'usuario_id' => $u->id ?? null,
-            'usuario_login' => $u->usu_alias ?? null,
-            'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'request_id' => (string) Str::uuid(),
-        ];
     }
 }

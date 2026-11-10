@@ -170,7 +170,7 @@ use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\ParametrosCotizadorController;
 use App\Http\Controllers\ventas\cotizador\ComportamientoClienteParametrosController;
-use App\Http\Controllers\ventas\ParametrosTipoClienteController;
+use App\Http\Controllers\ventas\cotizador\TipoClienteParametrosController;
 use App\Http\Controllers\ventas\MargenCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
 use App\Http\Controllers\ventas\CotizarController;
@@ -2094,11 +2094,11 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::delete('/deleteComportamientoClienteParametro/{id}', [ComportamientoClienteParametrosController::class, 'deleteComportamientoClienteParametro']);
     Route::get('/comportamientoClienteParametroAuditoria', [ComportamientoClienteParametrosController::class, 'comportamientoClienteParametroAuditoria']);
 
-    Route::get('/listParametrosTipoCliente', [ParametrosTipoClienteController::class, 'listParametrosTipoCliente']);
-    Route::get('/listTiposParametroTipoCliente', [ParametrosTipoClienteController::class, 'listTiposParametroTipoCliente']);
-    Route::post('/guardarParametrosTipoCliente', [ParametrosTipoClienteController::class, 'guardarParametrosTipoCliente']);
-    Route::delete('/deleteParametroTipoCliente/{id}', [ParametrosTipoClienteController::class, 'deleteParametroTipoCliente']);
-    Route::get('/parametroTipoClienteAuditoria', [ParametrosTipoClienteController::class, 'parametroTipoClienteAuditoria']);
+    Route::get('/listTipoClienteParametros', [TipoClienteParametrosController::class, 'listTipoClienteParametros']);
+    Route::get('/listTiposTipoClienteParametros', [TipoClienteParametrosController::class, 'listTiposTipoClienteParametros']);
+    Route::post('/guardarTipoClienteParametros', [TipoClienteParametrosController::class, 'guardarTipoClienteParametros']);
+    Route::delete('/deleteTipoClienteParametro/{id}', [TipoClienteParametrosController::class, 'deleteTipoClienteParametro']);
+    Route::get('/tipoClienteParametroAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametroAuditoria']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).
