@@ -35,6 +35,7 @@ class GrupoProductosController extends Controller
         'PRODUCTO_NO_EXISTE' => 'Uno de los productos elegidos no existe.',
         'PRODUCTO_NO_DISPONIBLE' => 'Uno de los productos elegidos ya no está activo o se quedó sin stock. Vuelva a cargar la lista.',
         'GRUPO_NO_EXISTE' => 'El grupo no existe o está en la papelera.',
+        'PAPELERA_GRUPO_ACTIVO' => 'No se puede eliminar porque está activo: inactívelo primero.',
         'GRUPO_NO_EN_PAPELERA' => 'El grupo no está en la papelera (puede que otro usuario ya lo restauró).',
     ];
 
@@ -62,6 +63,52 @@ class GrupoProductosController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api');
+    }
+
+    // Grupos (fuera de la papelera), paginados -> ecommerce.fn_grupo_producto_listar_paginacion. GET ?pagina=&tamanio=&busqueda=
+    public function listar(Request $request)
+    {
+        try {
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = min(max((int) $request->query('tamanio', 20), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            $registros = DB::select('SELECT * FROM ecommerce.fn_grupo_producto_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Grupos listados con éxito', [
+                'registros' => $registros,
+                'total' => (int) ($registros[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los grupos', $th->getMessage()));
+        }
+    }
+
+    // Un grupo con sus productos en orden (cada uno con su stock y si sigue disponible), para verlo, editarlo o clonarlo.
+    public function ver(int $id)
+    {
+        try {
+            $grupo = DB::selectOne(
+                'SELECT g.gpr_id, g.gpr_nombre, g.gpr_descripcion, g.gpr_activo, g.gpr_eliminado_en
+                   FROM ecommerce.grupos_productos g WHERE g.gpr_id = ?',
+                [$id]
+            );
+
+            if (!$grupo) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El grupo no existe.', null));
+            }
+
+            $productos = DB::select('SELECT * FROM ecommerce.fn_grupo_producto_productos(?)', [$id]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Grupo cargado con éxito', [
+                'grupo' => $grupo,
+                'productos' => $productos,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el grupo', $th->getMessage()));
+        }
     }
 
     // Todos los productos disponibles (activos y con stock), sin filtrar por tipo ni marca. GET ?pagina=&tamanio=&busqueda=

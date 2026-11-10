@@ -2159,7 +2159,9 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::get('/papeleraHeaders', [HeaderController::class, 'papelera']);
     Route::get('/headerAuditoria', [HeaderController::class, 'auditoria']);
     // Grupos de productos: productos disponibles (activos y con stock), paginados, por tipo o por marca.
-    Route::get('/grupoProductosDisponibles', [GrupoProductosController::class, 'productosDisponibles']);
+    Route::get('/listGruposProductos', [GrupoProductosController::class, 'listar']);
+    Route::get('/grupoProductos/{id}', [GrupoProductosController::class, 'ver'])->whereNumber('id');
+    Route::get('/grupoProductosDisponibles',[GrupoProductosController::class, 'productosDisponibles']);
     Route::get('/grupoProductosPorTipo',[GrupoProductosController::class, 'productosPorTipo']);
     Route::get('/grupoProductosPorMarca', [GrupoProductosController::class, 'productosPorMarca']);
     Route::post('/crearGrupoProductos', [GrupoProductosController::class, 'crear']);
