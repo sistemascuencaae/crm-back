@@ -61,7 +61,7 @@ class FormalInformalParametrosController extends Controller
 
     // Version 1.0
     // GET /api/ventas/listCombosFormalInformalParametros — los combos de la grilla en una sola llamada (codigo, nombre):
-    // la Línea (hoy ELECTRO, MOTOS y TECNOLOGIA). Una sola fuente con la validación de la función y el requerimiento 'formal informal'.
+    // la Línea (hoy ELECTRO, MOTO y TECNOLOGIA). Una sola fuente con la validación de la función y el requerimiento 'formal informal'.
     public function listCombosFormalInformalParametros()
     {
         try {

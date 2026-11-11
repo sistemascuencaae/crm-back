@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\ventas;
+namespace App\Http\Traits;
 
 use App\Models\Access;
 
 // Permisos del cotizador que aplica el servidor: el superusuario (usu_tipo 3) ve todas las cotizaciones
 // y el resto solo las suyas; costos, aportes, CAME y margenes solo con "Ver costos" (ver_costos) en
 // PROFORMAS (21-oct: antes era report, que en Perfiles se llama Imprimir y ahora queda solo para el Excel).
+// 11-nov-2026 (Fase 9 del cotizador): viene de app/Http/Controllers/ventas/PermisosCotizacionTrait.php, igual (el de antes se borró
+// en la limpieza de la F12). Lo usan ventas/cotizador/CproformaController y ventas/cotizador/CotizarController.
 trait PermisosCotizacionTrait
 {
     private function esSuperusuario(): bool
@@ -35,7 +37,7 @@ trait PermisosCotizacionTrait
         return [
             'costo', 'origen_costo', 'aportes', 'total_aportes', 'came', 'margen',
             'margen_financiero', 'margen_financiero_general', 'incremento',
-            'pcotizador_id', 'concepto_margen', 'origen_margen', 'cmargen_id', 'cabecera_margen',
+            'cotizador_parametros_id', 'concepto_margen', 'origen_margen', 'cmargen_id', 'cabecera_margen',
             'dmargen_id', 'orden_margen', 'vigencia_inicio_margen', 'vigencia_fin_margen',
             'valor_margen', 'valor_margen_lista', 'minimo_negociacion', 'maximo_negociacion',
             // 25-oct: la comision del banco (tarjeta) es un costo de la tienda.
