@@ -23,13 +23,20 @@ class TipoClienteParametrosController extends Controller
     private const MENSAJES_ERROR = [
         'REQUIERE_NOMBRE' => 'El nombre es obligatorio.',
         'NOMBRE_MUY_LARGO' => 'El nombre no puede pasar de 60 caracteres.',
-        'REQUIERE_TIPO' => 'El tipo es obligatorio.',
-        'TIPO_INVALIDO' => 'El tipo no es válido.',
         'SCORE_INVALIDO' => 'El score mínimo y el máximo deben ser números enteros.',
         'SCORE_RANGO_INVERTIDO' => 'El score mínimo no puede ser mayor que el máximo.',
         'TIPO_CLIENTE_DUPLICADO' => 'Ya existe una fila con ese nombre.',
         'TIPO_CLIENTE_NO_EXISTE' => 'La fila ya no existe.',
         'PARAMETRO_NO_CONFIGURADO' => 'Faltan los límites del score en crm.parametro.',
+        'EDAD_INVALIDA' => 'La edad mínima y la máxima deben ser números enteros.',
+        'EDAD_RANGO_INVERTIDO' => 'La edad mínima no puede ser mayor que la máxima.',
+        'ANTIGUEDAD_INVALIDA' => 'La antigüedad mínima y la máxima deben ser meses enteros.',
+        'ANTIGUEDAD_RANGO_INVERTIDO' => 'La antigüedad mínima no puede ser mayor que la máxima.',
+        'CONDICION_INVALIDA' => 'Acreedores, NN y TC solo aceptan SI o NO; vacío = no importa.',
+        'REQUIERE_PERFIL' => 'El perfil de riesgo es obligatorio.',
+        'PERFIL_INVALIDO' => 'El perfil de riesgo no es válido.',
+        'REQUIERE_TIPO_CLIENTE' => 'El tipo de cliente (NUEVO o REITERATIVO) es obligatorio.',
+        'TIPO_CLIENTE_INVALIDO' => 'El tipo de cliente debe ser NUEVO o REITERATIVO.',
     ];
 
     public function __construct()
@@ -59,17 +66,20 @@ class TipoClienteParametrosController extends Controller
         }
     }
 
-    // Version 1.0
-    // GET /api/ventas/listTiposTipoClienteParametros — el combo Tipo (codigo, nombre), una sola fuente con la validación
-    // de la función.
-    public function listTiposTipoClienteParametros()
+    // Version 1.1
+    // GET /api/ventas/listCombosTipoClienteParametros — los combos de la grilla en una sola llamada (codigo, nombre):
+    // Perfil de riesgo y SI/NO de las condiciones. Una sola fuente con la validación de la función.
+    // 10-nov noche: + Tipo Cliente (NUEVO o REITERATIVO).
+    public function listCombosTipoClienteParametros()
     {
         try {
-            $data = DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_tipos_listar()');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', $data));
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
+                'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_tipos_cliente_listar()'),
+                'perfiles' => DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_perfiles_listar()'),
+                'condiciones' => DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_condiciones_listar()'),
+            ]));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los tipos', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los combos', $e->getMessage()));
         }
     }
 
@@ -149,8 +159,9 @@ class TipoClienteParametrosController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $texto[1], null));
         }
 
+        // El código se busca como palabra entera: EDAD_INVALIDA está dentro de ANTIGUEDAD_INVALIDA.
         foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-            if (strpos($e->getMessage(), $codigo) !== false) {
+            if (preg_match('/\b' . preg_quote($codigo, '/') . '\b/', $e->getMessage())) {
                 return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
             }
         }

@@ -171,6 +171,8 @@ use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\ParametrosCotizadorController;
 use App\Http\Controllers\ventas\cotizador\ComportamientoClienteParametrosController;
 use App\Http\Controllers\ventas\cotizador\TipoClienteParametrosController;
+use App\Http\Controllers\ventas\cotizador\FormalInformalParametrosController;
+use App\Http\Controllers\ventas\cotizador\PerformanceCreditoController;
 use App\Http\Controllers\ventas\MargenCotizadorController;
 use App\Http\Controllers\ventas\AporteCotizadorController;
 use App\Http\Controllers\ventas\CotizarController;
@@ -2095,10 +2097,22 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::get('/comportamientoClienteParametroAuditoria', [ComportamientoClienteParametrosController::class, 'comportamientoClienteParametroAuditoria']);
 
     Route::get('/listTipoClienteParametros', [TipoClienteParametrosController::class, 'listTipoClienteParametros']);
-    Route::get('/listTiposTipoClienteParametros', [TipoClienteParametrosController::class, 'listTiposTipoClienteParametros']);
+    Route::get('/listCombosTipoClienteParametros', [TipoClienteParametrosController::class, 'listCombosTipoClienteParametros']);
     Route::post('/guardarTipoClienteParametros', [TipoClienteParametrosController::class, 'guardarTipoClienteParametros']);
     Route::delete('/deleteTipoClienteParametro/{id}', [TipoClienteParametrosController::class, 'deleteTipoClienteParametro']);
     Route::get('/tipoClienteParametroAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametroAuditoria']);
+
+    Route::get('/listFormalInformalParametros', [FormalInformalParametrosController::class, 'listFormalInformalParametros']);
+    Route::get('/listCombosFormalInformalParametros', [FormalInformalParametrosController::class, 'listCombosFormalInformalParametros']);
+    Route::post('/guardarFormalInformalParametros', [FormalInformalParametrosController::class, 'guardarFormalInformalParametros']);
+    Route::delete('/deleteFormalInformalParametro/{id}', [FormalInformalParametrosController::class, 'deleteFormalInformalParametro']);
+    Route::get('/formalInformalParametroAuditoria', [FormalInformalParametrosController::class, 'formalInformalParametroAuditoria']);
+
+    Route::get('/listPerformanceCredito', [PerformanceCreditoController::class, 'listPerformanceCredito']);
+    Route::get('/listCombosPerformanceCredito', [PerformanceCreditoController::class, 'listCombosPerformanceCredito']);
+    Route::post('/guardarPerformanceCredito', [PerformanceCreditoController::class, 'guardarPerformanceCredito']);
+    Route::delete('/deletePerformanceCredito/{id}', [PerformanceCreditoController::class, 'deletePerformanceCredito']);
+    Route::get('/performanceCreditoAuditoria', [PerformanceCreditoController::class, 'performanceCreditoAuditoria']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).

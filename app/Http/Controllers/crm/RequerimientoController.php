@@ -307,16 +307,18 @@ class RequerimientoController extends Controller
         }
     }
 
-    // Version 1.4
+    // Version 1.6
     // GET /api/crm/listOpcionesRequerimientosAutomaticos — 06-nov: qué se puede elegir al configurar los tipos que llena el sistema:
-    // las filas de Comportamiento y los tipos de la pestaña Tipo de cliente (codigo, nombre). Fase 3: y los cinco datos para el
-    // cotizador (codigo, nombre).
+    // las filas de Comportamiento (codigo, nombre). Fase 3: y los cinco datos para el cotizador (codigo, nombre).
+    // 10-nov: 'tipo cliente' ya no se configura (usa todas sus reglas): sale 'tipos_cliente'.
+    // 10-nov: + las líneas del requerimiento 'formal informal' (vacío = cualquier línea).
     public function listOpcionesRequerimientosAutomaticos()
     {
         try {
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 'comportamiento' => DB::select('SELECT * FROM ventas.fn_comportamiento_cliente_parametros_opciones_listar()'),
-                'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_tipos_listar()'),
+                // QUITADO 10-nov: 'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_tipos_listar()'),
+                'lineas_formal_informal' => DB::select('SELECT * FROM ventas.fn_formal_informal_parametros_lineas_listar()'),
                 'datos_cotizador' => DB::select('SELECT codigo, nombre FROM crm.fn_requerimientos_predefinidos_datos_cotizador_listar()'),
             ]));
         } catch (Exception $e) {
