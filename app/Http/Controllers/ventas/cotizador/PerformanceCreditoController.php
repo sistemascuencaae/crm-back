@@ -14,9 +14,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 // Cotizador > Parámetros tipo calificación cliente, pestaña Performance crédito (ventas.performance_credito): la hoja "Actual"
-// del Excel de Scoring 2026 hecha parámetro. Una sola fila por línea (ELECTRO o MOTO) y tipo de cliente (las N, NN y R de
-// ventas.tipo_cliente, sin DESCONOCIDO): si aplica crédito (SI o NO) y, para Formal e Informal, la capacidad de pago, la
+// del Excel de Scoring 2026 hecha parámetro. Una sola fila por línea (ELECTRO o MOTO) y tipo de cliente (QUITADO 12-nov-2026
+// (tipo cliente de la 2): las N, NN y R de ventas.tipo_cliente, sin DESCONOCIDO; 12-nov-2026: una regla de la pestaña 2 Tipo de
+// cliente, ventas.tipo_cliente_parametros): si aplica crédito (SI o NO) y, para Formal e Informal, la capacidad de pago, la
 // inicial (en % o en $ según inicial_tipo), el plazo en meses y la inspección (DIFERIDA o PREVIA).
+// 12-nov-2026 (tipo cliente de la 2; el usuario: "lo que estamos configurando son parámetros para una precalificación de un
+// cliente y esto lo va a leer otra persona"): tipo_cliente_id es el id de la REGLA de la pestaña 2 y tipo_cliente su nombre (las
+// respuestas conservan esos dos campos); el combo ofrece las reglas ACTIVAS de la 2 y la función rechaza (TIPO_CLIENTE_INVALIDO) una
+// regla inactiva o inexistente en una fila nueva o que cambia de tipo. Quien lee las condiciones las busca por el nombre de la regla.
 // QUITADO 12-nov-2026 (performance sin bloqueos): Con aplica = NO la función deja vacíos todos esos valores.
 // 12-nov-2026 (performance sin bloqueos): con aplica SI o NO esos valores son opcionales y se guardan tal como llegan (la
 // función solo revisa el formato). Quien consume estas condiciones las lee con ventas.fn_performance_credito_condiciones_buscar
@@ -28,6 +33,10 @@ use Illuminate\Support\Facades\Validator;
 // 11-nov-2026 (activo, patrón de la pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo y el Guardar de
 // siempre; una fila inactiva no la devuelve fn_performance_credito_condiciones_buscar y Clonar copia solo las activas):
 // deletePerformanceCredito quedó comentado. La auditoría de toda la línea (cabecera) ya muestra lo desactivado.
+// 12-nov-2026 (booleanos; decisión del usuario): aplica es boolean (en la grilla, un check como Activo). El Validator revisa que
+// sea verdadero o falso (el mismo mensaje de la función); sin la clave, la fila nueva nace sin marcar y la que existe no cambia.
+// El listado devuelve aplica true / false y los combos ya no traen el de Aplica (SI / NO). Quien lee las condiciones
+// (fn_performance_credito_condiciones_buscar) sigue recibiendo aplica 'SI' / 'NO'.
 class PerformanceCreditoController extends Controller
 {
     use AuditoriaForenseTrait;
@@ -39,9 +48,15 @@ class PerformanceCreditoController extends Controller
         'LINEA_INVALIDA' => 'La línea no es válida.',
         'LINEA_INACTIVA' => 'La línea está inactiva: elija una línea activa.',
         'REQUIERE_TIPO_CLIENTE' => 'El tipo de cliente es obligatorio.',
+        // 12-nov-2026 (tipo cliente de la 2): también sale cuando la regla elegida no existe en la pestaña 2 o está inactiva y la fila
+        // es nueva o cambia de tipo (el mensaje no cambia).
         'TIPO_CLIENTE_INVALIDO' => 'El tipo de cliente no es válido.',
-        'REQUIERE_APLICA' => 'Indique si aplica crédito (SI o NO).',
-        'APLICA_INVALIDA' => 'Aplica solo acepta SI o NO.',
+        // QUITADO 12-nov-2026 (booleanos): aplica ya no es obligatoria (sin la clave, la fila nueva nace sin marcar y la que existe
+        // no cambia): la función ya no levanta REQUIERE_APLICA.
+        // 'REQUIERE_APLICA' => 'Indique si aplica crédito (SI o NO).',
+        // QUITADO 12-nov-2026 (booleanos): 'APLICA_INVALIDA' => 'Aplica solo acepta SI o NO.',
+        // 12-nov-2026 (booleanos): aplica es verdadero o falso (el check de la grilla), como activo.
+        'APLICA_INVALIDA' => 'Aplica solo acepta sí o no.',
         // QUITADO 11-nov-2026 (activo): 'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea y ese tipo de cliente.',
         'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea y ese tipo de cliente (activa o inactiva): edítela o reactívela.',
         // QUITADO 12-nov-2026 (performance sin bloqueos): los valores de Formal e Informal ya no son obligatorios (con aplica SI
@@ -92,9 +107,13 @@ class PerformanceCreditoController extends Controller
         $this->middleware('auth:api');
     }
 
-    // Version 1.0
+    // QUITADO 12-nov-2026 (booleanos): // Version 1.0
+    // Version 1.1
+    // 12-nov-2026 (booleanos): cada registro trae aplica true / false (antes 'SI' / 'NO').
     // GET /api/ventas/listPerformanceCredito?linea_id&pagina&tamanio&busqueda — la grilla de la pestaña, con el nombre del tipo
     // de cliente. La función la ordena por línea y, dentro de cada una, las N y NN antes que las R; busca por línea o por tipo.
+    // 12-nov-2026 (tipo cliente de la 2): el orden de la grilla es el de la pestaña 2 y el del combo (tipo de cliente NUEVO o
+    // REITERATIVO, nombre, id); el nombre del tipo de cliente es el de su regla.
     // 11-nov-2026 (líneas): solo las filas de UNA línea (linea_id, obligatoria: la elegida en el panel izquierdo); la búsqueda
     // es por tipo de cliente.
     // 11-nov-2026 (activo): trae también las filas inactivas (se reactivan en la grilla), con activo.
@@ -124,19 +143,28 @@ class PerformanceCreditoController extends Controller
         }
     }
 
-    // Version 1.0
+    // QUITADO 12-nov-2026 (tipo cliente de la 2): // Version 1.0
+    // QUITADO 12-nov-2026 (booleanos): // Version 1.1
+    // Version 1.2
+    // 12-nov-2026 (booleanos): ya sin 'aplica' (Aplica es un check en la grilla; ventas.fn_performance_credito_aplica_listar queda
+    // en la base, sin uso).
     // GET /api/ventas/listCombosPerformanceCredito — los combos de la grilla en una sola llamada (codigo, nombre): la Línea
     // (ELECTRO y MOTO), Aplica (SI o NO), el tipo de inicial (PORCENTAJE se ve "%" y MONTO "$") y la Inspección (DIFERIDA o
-    // PREVIA); el Tipo de cliente va con (id, nombre): las N, NN y R activas de ventas.tipo_cliente, sin DESCONOCIDO.
+    // PREVIA); el Tipo de cliente va con (id, nombre): QUITADO 12-nov-2026 (tipo cliente de la 2): las N, NN y R activas de
+    // ventas.tipo_cliente, sin DESCONOCIDO.
     // Una sola fuente con la validación de la función.
     // 11-nov-2026 (líneas): ya sin la Línea (la grilla es de la línea elegida en el panel izquierdo; el catálogo es LineaController).
+    // 12-nov-2026 (tipo cliente de la 2): el Tipo de cliente (id, nombre) son las reglas ACTIVAS de la pestaña 2
+    // (ventas.tipo_cliente_parametros), en el orden de su grilla (tipo de cliente, nombre, id). La respuesta tiene la misma forma. La
+    // pantalla vuelve a pedir estos combos cada vez que se vuelve a mostrar la pestaña (se pudo agregar, activar, desactivar o renombrar
+    // una regla en la 2).
     public function listCombosPerformanceCredito()
     {
         try {
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 // QUITADO 11-nov-2026 (líneas): 'lineas' => DB::select('SELECT * FROM ventas.fn_performance_credito_lineas_listar()'),
                 'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_performance_credito_tipos_cliente_listar()'),
-                'aplica' => DB::select('SELECT * FROM ventas.fn_performance_credito_aplica_listar()'),
+                // QUITADO 12-nov-2026 (booleanos): 'aplica' => DB::select('SELECT * FROM ventas.fn_performance_credito_aplica_listar()'),
                 'inicial_tipos' => DB::select('SELECT * FROM ventas.fn_performance_credito_inicial_tipos_listar()'),
                 'inspecciones' => DB::select('SELECT * FROM ventas.fn_performance_credito_inspecciones_listar()'),
             ]));
@@ -145,7 +173,10 @@ class PerformanceCreditoController extends Controller
         }
     }
 
-    // Version 1.1
+    // QUITADO 12-nov-2026 (booleanos): // Version 1.1
+    // Version 1.2
+    // 12-nov-2026 (booleanos): aplica va como verdadero o falso (el Validator lo revisa con el mensaje de la función); sin la
+    // clave, la fila nueva nace sin marcar y la que existe no cambia.
     // POST /api/ventas/guardarPerformanceCredito — las filas nuevas (sin id) y las editadas, todo o nada.
     // QUITADO 12-nov-2026 (performance sin bloqueos): De cada fila pasan solo el id y los campos del modelo; con aplica = NO la
     // función borra los demás valores.
@@ -156,12 +187,15 @@ class PerformanceCreditoController extends Controller
     public function guardarPerformanceCredito(Request $request)
     {
         try {
+            // 12-nov-2026 (booleanos): + filas.*.aplica (boolean, como activo).
             $validator = Validator::make($request->only('filas'), [
                 'filas' => 'array',
                 'filas.*.activo' => 'boolean',
+                'filas.*.aplica' => 'boolean',
             ], [
                 'filas.array' => 'Las filas no tienen un formato válido.',
                 'filas.*.activo.boolean' => self::MENSAJES_ERROR['ACTIVO_INVALIDO'],
+                'filas.*.aplica.boolean' => self::MENSAJES_ERROR['APLICA_INVALIDA'],
             ]);
             if ($validator->fails()) {
                 return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));

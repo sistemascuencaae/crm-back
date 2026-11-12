@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\Validator;
 // 11-nov-2026 (pestaña 2): acreedores en 3 cortes (mínimo y máximo), las fechas del Excel y activo. Lo guardado ya no se borra
 // (se desactiva con el check Activo y el Guardar de siempre): deleteTipoClienteParametro quedó comentado. Nueva la auditoría
 // de TODA la pestaña (tipoClienteParametrosAuditoria), además de la de una fila.
+// 12-nov-2026 (booleanos): NN y TC son checks (verdadero o falso); salen los 3 cortes de acreedores y las 4 fechas (y sus
+// códigos de error, que ya no salen de la función).
 class TipoClienteParametrosController extends Controller
 {
     use AuditoriaForenseTrait;
@@ -37,38 +39,48 @@ class TipoClienteParametrosController extends Controller
         'ANTIGUEDAD_INVALIDA' => 'La antigüedad mínima y la máxima deben ser meses enteros.',
         'ANTIGUEDAD_RANGO_INVERTIDO' => 'La antigüedad mínima no puede ser mayor que la máxima.',
         // QUITADO 11-nov-2026 (pestaña 2): 'CONDICION_INVALIDA' => 'Acreedores, NN y TC solo aceptan SI o NO; vacío = no importa.',
-        'CONDICION_INVALIDA' => 'NN y TC solo aceptan SI o NO; vacío = no importa.',
+        // QUITADO 12-nov-2026 (booleanos): 'CONDICION_INVALIDA' => 'NN y TC solo aceptan SI o NO; vacío = no importa.',
+        'CONDICION_INVALIDA' => 'NN y TC solo aceptan sí o no.',
         'REQUIERE_PERFIL' => 'El perfil de riesgo es obligatorio.',
         'PERFIL_INVALIDO' => 'El perfil de riesgo no es válido.',
         'REQUIERE_TIPO_CLIENTE' => 'El tipo de cliente (NUEVO o REITERATIVO) es obligatorio.',
         'TIPO_CLIENTE_INVALIDO' => 'El tipo de cliente debe ser NUEVO o REITERATIVO.',
         // 11-nov-2026 (pestaña 2): los acreedores de los 3 cortes, las 4 fechas y activo.
-        'ACREEDORES_INVALIDO' => 'Los acreedores (Actual, -6 Meses y -12 Meses) deben ser números enteros de 0 en adelante.',
-        'ACREEDORES_ACTUAL_RANGO_INVERTIDO' => 'Acreedores Actual: el mínimo no puede ser mayor que el máximo.',
-        'ACREEDORES_6_MESES_RANGO_INVERTIDO' => 'Acreedores -6 Meses: el mínimo no puede ser mayor que el máximo.',
-        'ACREEDORES_12_MESES_RANGO_INVERTIDO' => 'Acreedores -12 Meses: el mínimo no puede ser mayor que el máximo.',
-        'FECHA_APERTURA_SBS_INVALIDA' => 'La fecha de apertura SBS no es una fecha válida.',
-        'FECHA_APERTURA_RFR_INVALIDA' => 'La fecha de apertura RFR no es una fecha válida.',
-        'FECHA_APERTURA_SICOM_INVALIDA' => 'La fecha de apertura SICOM no es una fecha válida.',
-        'FECHA_CONSULTA_INVALIDA' => 'La fecha de consulta no es una fecha válida.',
+        // QUITADO 12-nov-2026 (booleanos): los acreedores y las 4 fechas salieron (la función ya no levanta estos códigos):
+        // 'ACREEDORES_INVALIDO' => 'Los acreedores (Actual, -6 Meses y -12 Meses) deben ser números enteros de 0 en adelante.',
+        // 'ACREEDORES_ACTUAL_RANGO_INVERTIDO' => 'Acreedores Actual: el mínimo no puede ser mayor que el máximo.',
+        // 'ACREEDORES_6_MESES_RANGO_INVERTIDO' => 'Acreedores -6 Meses: el mínimo no puede ser mayor que el máximo.',
+        // 'ACREEDORES_12_MESES_RANGO_INVERTIDO' => 'Acreedores -12 Meses: el mínimo no puede ser mayor que el máximo.',
+        // 'FECHA_APERTURA_SBS_INVALIDA' => 'La fecha de apertura SBS no es una fecha válida.',
+        // 'FECHA_APERTURA_RFR_INVALIDA' => 'La fecha de apertura RFR no es una fecha válida.',
+        // 'FECHA_APERTURA_SICOM_INVALIDA' => 'La fecha de apertura SICOM no es una fecha válida.',
+        // 'FECHA_CONSULTA_INVALIDA' => 'La fecha de consulta no es una fecha válida.',
         'ACTIVO_INVALIDO' => 'Activo solo acepta sí o no.',
     ];
 
-    // 11-nov-2026 (pestaña 2): los campos que revisa el Validator antes de la función, y el código de cada fecha.
-    private const CAMPOS_ACREEDORES = [
-        'acreedores_actual_minimo',
-        'acreedores_actual_maximo',
-        'acreedores_6_meses_minimo',
-        'acreedores_6_meses_maximo',
-        'acreedores_12_meses_minimo',
-        'acreedores_12_meses_maximo',
-    ];
+    // QUITADO 12-nov-2026 (booleanos): los campos de acreedores y de fecha que revisaba el Validator (salieron de la tabla).
+    // // 11-nov-2026 (pestaña 2): los campos que revisa el Validator antes de la función, y el código de cada fecha.
+    // private const CAMPOS_ACREEDORES = [
+    //     'acreedores_actual_minimo',
+    //     'acreedores_actual_maximo',
+    //     'acreedores_6_meses_minimo',
+    //     'acreedores_6_meses_maximo',
+    //     'acreedores_12_meses_minimo',
+    //     'acreedores_12_meses_maximo',
+    // ];
+    //
+    // private const CAMPOS_FECHA = [
+    //     'fecha_apertura_sbs' => 'FECHA_APERTURA_SBS_INVALIDA',
+    //     'fecha_apertura_rfr' => 'FECHA_APERTURA_RFR_INVALIDA',
+    //     'fecha_apertura_sicom' => 'FECHA_APERTURA_SICOM_INVALIDA',
+    //     'fecha_consulta' => 'FECHA_CONSULTA_INVALIDA',
+    // ];
 
-    private const CAMPOS_FECHA = [
-        'fecha_apertura_sbs' => 'FECHA_APERTURA_SBS_INVALIDA',
-        'fecha_apertura_rfr' => 'FECHA_APERTURA_RFR_INVALIDA',
-        'fecha_apertura_sicom' => 'FECHA_APERTURA_SICOM_INVALIDA',
-        'fecha_consulta' => 'FECHA_CONSULTA_INVALIDA',
+    // 12-nov-2026 (booleanos): los checks de cada fila que revisa el Validator (verdadero o falso) y el código de su mensaje.
+    private const CAMPOS_BOOLEANOS = [
+        'garancheck_nn' => 'CONDICION_INVALIDA',
+        'garancheck_tc' => 'CONDICION_INVALIDA',
+        'activo' => 'ACTIVO_INVALIDO',
     ];
 
     public function __construct()
@@ -104,6 +116,7 @@ class TipoClienteParametrosController extends Controller
     // Perfil de riesgo y SI/NO de las condiciones. Una sola fuente con la validación de la función.
     // 10-nov noche: + Tipo Cliente (NUEVO o REITERATIVO).
     // 11-nov-2026 (pestaña 2): SI/NO ya es solo de NN y TC (los acreedores son números).
+    // 12-nov-2026 (booleanos): NN y TC son checks: la grilla ya no usa 'condiciones' (la clave y la función se quedan).
     public function listCombosTipoClienteParametros()
     {
         try {
@@ -117,12 +130,13 @@ class TipoClienteParametrosController extends Controller
         }
     }
 
-    // Version 1.1
+    // Version 1.2
     // POST /api/ventas/guardarTipoClienteParametros — las filas nuevas (sin id) y las editadas, todo o nada.
     // De cada fila pasan solo el id y los campos del modelo.
     // 11-nov-2026 (pestaña 2): antes, el Validator revisa la forma de los campos nuevos (acreedores enteros de 0 en adelante,
     // fechas y activo verdadero o falso) con los mismos mensajes de la función; lo demás (mínimo contra máximo, fechas
     // AAAA-MM-DD, cruces) lo valida la función. Desactivar o reactivar una fila = guardarla con activo en false o true.
+    // 12-nov-2026 (booleanos): el Validator revisa que NN, TC y activo sean verdadero o falso (sin acreedores ni fechas).
     public function guardarTipoClienteParametros(Request $request)
     {
         try {
@@ -223,16 +237,21 @@ class TipoClienteParametrosController extends Controller
 
     // 11-nov-2026 (pestaña 2): la forma de los campos nuevos de cada fila (vacío = no importa / sin fecha). Lo demás lo valida
     // la función.
+    // 12-nov-2026 (booleanos): NN, TC y activo verdadero o falso.
     private function reglasFilas(): array
     {
         $reglas = ['filas' => 'array'];
-        foreach (self::CAMPOS_ACREEDORES as $campo) {
-            $reglas["filas.*.{$campo}"] = 'integer|min:0|nullable';
+        // QUITADO 12-nov-2026 (booleanos): los acreedores ('integer|min:0|nullable') y las fechas ('date|nullable'):
+        // foreach (self::CAMPOS_ACREEDORES as $campo) {
+        //     $reglas["filas.*.{$campo}"] = 'integer|min:0|nullable';
+        // }
+        // foreach (array_keys(self::CAMPOS_FECHA) as $campo) {
+        //     $reglas["filas.*.{$campo}"] = 'date|nullable';
+        // }
+        // QUITADO 12-nov-2026 (booleanos): $reglas['filas.*.activo'] = 'boolean'; (va con NN y TC en CAMPOS_BOOLEANOS)
+        foreach (array_keys(self::CAMPOS_BOOLEANOS) as $campo) {
+            $reglas["filas.*.{$campo}"] = 'boolean';
         }
-        foreach (array_keys(self::CAMPOS_FECHA) as $campo) {
-            $reglas["filas.*.{$campo}"] = 'date|nullable';
-        }
-        $reglas['filas.*.activo'] = 'boolean';
 
         return $reglas;
     }
@@ -241,14 +260,18 @@ class TipoClienteParametrosController extends Controller
     private function mensajesFilas(): array
     {
         $mensajes = ['filas.array' => 'Las filas no tienen un formato válido.'];
-        foreach (self::CAMPOS_ACREEDORES as $campo) {
-            $mensajes["filas.*.{$campo}.integer"] = self::MENSAJES_ERROR['ACREEDORES_INVALIDO'];
-            $mensajes["filas.*.{$campo}.min"] = self::MENSAJES_ERROR['ACREEDORES_INVALIDO'];
+        // QUITADO 12-nov-2026 (booleanos): los mensajes de los acreedores y de las fechas:
+        // foreach (self::CAMPOS_ACREEDORES as $campo) {
+        //     $mensajes["filas.*.{$campo}.integer"] = self::MENSAJES_ERROR['ACREEDORES_INVALIDO'];
+        //     $mensajes["filas.*.{$campo}.min"] = self::MENSAJES_ERROR['ACREEDORES_INVALIDO'];
+        // }
+        // foreach (self::CAMPOS_FECHA as $campo => $codigo) {
+        //     $mensajes["filas.*.{$campo}.date"] = self::MENSAJES_ERROR[$codigo];
+        // }
+        // QUITADO 12-nov-2026 (booleanos): $mensajes['filas.*.activo.boolean'] = self::MENSAJES_ERROR['ACTIVO_INVALIDO'];
+        foreach (self::CAMPOS_BOOLEANOS as $campo => $codigo) {
+            $mensajes["filas.*.{$campo}.boolean"] = self::MENSAJES_ERROR[$codigo];
         }
-        foreach (self::CAMPOS_FECHA as $campo => $codigo) {
-            $mensajes["filas.*.{$campo}.date"] = self::MENSAJES_ERROR[$codigo];
-        }
-        $mensajes['filas.*.activo.boolean'] = self::MENSAJES_ERROR['ACTIVO_INVALIDO'];
 
         return $mensajes;
     }
