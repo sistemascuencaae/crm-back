@@ -173,6 +173,8 @@ use App\Http\Controllers\ventas\cotizador\ComportamientoClienteParametrosControl
 use App\Http\Controllers\ventas\cotizador\TipoClienteParametrosController;
 use App\Http\Controllers\ventas\cotizador\FormalInformalParametrosController;
 use App\Http\Controllers\ventas\cotizador\PerformanceCreditoController;
+// 11-nov-2026 (líneas): el catálogo de líneas (panel izquierdo de Performance crédito).
+use App\Http\Controllers\ventas\cotizador\LineaController;
 // 11-nov-2026 (Fase 4): Parámetros de calificación (V05) salió de openceo\PoliticaController.
 use App\Http\Controllers\ventas\cotizador\CalificacionClienteParametrosController;
 use App\Http\Controllers\ventas\cotizador\CmargenController;
@@ -2104,26 +2106,46 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::get('/listComportamientoClienteParametros', [ComportamientoClienteParametrosController::class, 'listComportamientoClienteParametros']);
     Route::get('/listEstadosCreditoComportamientoClienteParametros', [ComportamientoClienteParametrosController::class, 'listEstadosCreditoComportamientoClienteParametros']);
     Route::post('/guardarComportamientoClienteParametros', [ComportamientoClienteParametrosController::class, 'guardarComportamientoClienteParametros']);
-    Route::delete('/deleteComportamientoClienteParametro/{id}', [ComportamientoClienteParametrosController::class, 'deleteComportamientoClienteParametro']);
+    // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
+    // Route::delete('/deleteComportamientoClienteParametro/{id}', [ComportamientoClienteParametrosController::class, 'deleteComportamientoClienteParametro']);
     Route::get('/comportamientoClienteParametroAuditoria', [ComportamientoClienteParametrosController::class, 'comportamientoClienteParametroAuditoria']);
+    // 11-nov-2026 (activo): la auditoría de TODA la pestaña Comportamiento (el botón Auditoría de la cabecera).
+    Route::get('/comportamientoClienteParametrosAuditoria', [ComportamientoClienteParametrosController::class, 'comportamientoClienteParametrosAuditoria']);
 
     Route::get('/listTipoClienteParametros', [TipoClienteParametrosController::class, 'listTipoClienteParametros']);
     Route::get('/listCombosTipoClienteParametros', [TipoClienteParametrosController::class, 'listCombosTipoClienteParametros']);
     Route::post('/guardarTipoClienteParametros', [TipoClienteParametrosController::class, 'guardarTipoClienteParametros']);
-    Route::delete('/deleteTipoClienteParametro/{id}', [TipoClienteParametrosController::class, 'deleteTipoClienteParametro']);
+    // QUITADO 11-nov-2026 (pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
+    // Route::delete('/deleteTipoClienteParametro/{id}', [TipoClienteParametrosController::class, 'deleteTipoClienteParametro']);
     Route::get('/tipoClienteParametroAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametroAuditoria']);
+    // 11-nov-2026 (pestaña 2): la auditoría de TODA la pestaña Tipo de cliente (el botón Auditoría de la cabecera).
+    Route::get('/tipoClienteParametrosAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametrosAuditoria']);
 
     Route::get('/listFormalInformalParametros', [FormalInformalParametrosController::class, 'listFormalInformalParametros']);
     Route::get('/listCombosFormalInformalParametros', [FormalInformalParametrosController::class, 'listCombosFormalInformalParametros']);
     Route::post('/guardarFormalInformalParametros', [FormalInformalParametrosController::class, 'guardarFormalInformalParametros']);
-    Route::delete('/deleteFormalInformalParametro/{id}', [FormalInformalParametrosController::class, 'deleteFormalInformalParametro']);
+    // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
+    // Route::delete('/deleteFormalInformalParametro/{id}', [FormalInformalParametrosController::class, 'deleteFormalInformalParametro']);
     Route::get('/formalInformalParametroAuditoria', [FormalInformalParametrosController::class, 'formalInformalParametroAuditoria']);
+    // 11-nov-2026 (activo): la auditoría de TODA la pestaña Formal / Informal (el botón Auditoría de la cabecera).
+    Route::get('/formalInformalParametrosAuditoria', [FormalInformalParametrosController::class, 'formalInformalParametrosAuditoria']);
 
     Route::get('/listPerformanceCredito', [PerformanceCreditoController::class, 'listPerformanceCredito']);
     Route::get('/listCombosPerformanceCredito', [PerformanceCreditoController::class, 'listCombosPerformanceCredito']);
     Route::post('/guardarPerformanceCredito', [PerformanceCreditoController::class, 'guardarPerformanceCredito']);
-    Route::delete('/deletePerformanceCredito/{id}', [PerformanceCreditoController::class, 'deletePerformanceCredito']);
+    // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
+    // Route::delete('/deletePerformanceCredito/{id}', [PerformanceCreditoController::class, 'deletePerformanceCredito']);
     Route::get('/performanceCreditoAuditoria', [PerformanceCreditoController::class, 'performanceCreditoAuditoria']);
+    // 11-nov-2026 (líneas): Clonar los tipos de cliente de una línea a otras (vista previa y clonado).
+    Route::post('/clonarPerformanceCreditoVistaPrevia', [PerformanceCreditoController::class, 'clonarPerformanceCreditoVistaPrevia']);
+    Route::post('/clonarPerformanceCredito', [PerformanceCreditoController::class, 'clonarPerformanceCredito']);
+    // 11-nov-2026 (líneas): el catálogo de líneas (ventas.linea) del panel izquierdo; lo comparten Formal / Informal y el
+    // requerimiento 'formal informal'.
+    Route::get('/listLinea', [LineaController::class, 'listLinea']);
+    Route::get('/listCombosLinea', [LineaController::class, 'listCombosLinea']);
+    Route::post('/addLinea', [LineaController::class, 'addLinea']);
+    Route::post('/editLinea/{id}', [LineaController::class, 'editLinea']);
+    Route::get('/lineaAuditoria', [LineaController::class, 'lineaAuditoria']);
 
     // 11-nov-2026 (Fase 4): Parámetros de calificación (V05) al estándar: CalificacionClienteParametrosController (antes en
     // api/crm, PoliticaController). La ficha (getPolitica) y la auditoría (politicaAuditoria) siguen en api/crm (Dynamo).

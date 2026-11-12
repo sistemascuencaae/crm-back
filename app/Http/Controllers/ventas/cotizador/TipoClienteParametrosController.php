@@ -11,10 +11,14 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 // Cotizador > Parámetros tipo calificación cliente, pestaña Tipo de cliente (ventas.tipo_cliente_parametros): el rango de
 // score de cada tipo. El negocio vive en ventas.fn_tipo_cliente_parametros_* (PLANES/COTIZADOR/produccion_tipo_cliente_parametros.sql):
 // este controller arma el jsonb con los campos del modelo y el bloque 'auditoria', y traduce el código que levanta la función.
+// 11-nov-2026 (pestaña 2): acreedores en 3 cortes (mínimo y máximo), las fechas del Excel y activo. Lo guardado ya no se borra
+// (se desactiva con el check Activo y el Guardar de siempre): deleteTipoClienteParametro quedó comentado. Nueva la auditoría
+// de TODA la pestaña (tipoClienteParametrosAuditoria), además de la de una fila.
 class TipoClienteParametrosController extends Controller
 {
     use AuditoriaForenseTrait;
@@ -32,11 +36,39 @@ class TipoClienteParametrosController extends Controller
         'EDAD_RANGO_INVERTIDO' => 'La edad mínima no puede ser mayor que la máxima.',
         'ANTIGUEDAD_INVALIDA' => 'La antigüedad mínima y la máxima deben ser meses enteros.',
         'ANTIGUEDAD_RANGO_INVERTIDO' => 'La antigüedad mínima no puede ser mayor que la máxima.',
-        'CONDICION_INVALIDA' => 'Acreedores, NN y TC solo aceptan SI o NO; vacío = no importa.',
+        // QUITADO 11-nov-2026 (pestaña 2): 'CONDICION_INVALIDA' => 'Acreedores, NN y TC solo aceptan SI o NO; vacío = no importa.',
+        'CONDICION_INVALIDA' => 'NN y TC solo aceptan SI o NO; vacío = no importa.',
         'REQUIERE_PERFIL' => 'El perfil de riesgo es obligatorio.',
         'PERFIL_INVALIDO' => 'El perfil de riesgo no es válido.',
         'REQUIERE_TIPO_CLIENTE' => 'El tipo de cliente (NUEVO o REITERATIVO) es obligatorio.',
         'TIPO_CLIENTE_INVALIDO' => 'El tipo de cliente debe ser NUEVO o REITERATIVO.',
+        // 11-nov-2026 (pestaña 2): los acreedores de los 3 cortes, las 4 fechas y activo.
+        'ACREEDORES_INVALIDO' => 'Los acreedores (Actual, -6 Meses y -12 Meses) deben ser números enteros de 0 en adelante.',
+        'ACREEDORES_ACTUAL_RANGO_INVERTIDO' => 'Acreedores Actual: el mínimo no puede ser mayor que el máximo.',
+        'ACREEDORES_6_MESES_RANGO_INVERTIDO' => 'Acreedores -6 Meses: el mínimo no puede ser mayor que el máximo.',
+        'ACREEDORES_12_MESES_RANGO_INVERTIDO' => 'Acreedores -12 Meses: el mínimo no puede ser mayor que el máximo.',
+        'FECHA_APERTURA_SBS_INVALIDA' => 'La fecha de apertura SBS no es una fecha válida.',
+        'FECHA_APERTURA_RFR_INVALIDA' => 'La fecha de apertura RFR no es una fecha válida.',
+        'FECHA_APERTURA_SICOM_INVALIDA' => 'La fecha de apertura SICOM no es una fecha válida.',
+        'FECHA_CONSULTA_INVALIDA' => 'La fecha de consulta no es una fecha válida.',
+        'ACTIVO_INVALIDO' => 'Activo solo acepta sí o no.',
+    ];
+
+    // 11-nov-2026 (pestaña 2): los campos que revisa el Validator antes de la función, y el código de cada fecha.
+    private const CAMPOS_ACREEDORES = [
+        'acreedores_actual_minimo',
+        'acreedores_actual_maximo',
+        'acreedores_6_meses_minimo',
+        'acreedores_6_meses_maximo',
+        'acreedores_12_meses_minimo',
+        'acreedores_12_meses_maximo',
+    ];
+
+    private const CAMPOS_FECHA = [
+        'fecha_apertura_sbs' => 'FECHA_APERTURA_SBS_INVALIDA',
+        'fecha_apertura_rfr' => 'FECHA_APERTURA_RFR_INVALIDA',
+        'fecha_apertura_sicom' => 'FECHA_APERTURA_SICOM_INVALIDA',
+        'fecha_consulta' => 'FECHA_CONSULTA_INVALIDA',
     ];
 
     public function __construct()
@@ -46,6 +78,7 @@ class TipoClienteParametrosController extends Controller
 
     // Version 1.0
     // GET /api/ventas/listTipoClienteParametros?pagina&tamanio&busqueda — la grilla de la pestaña.
+    // 11-nov-2026 (pestaña 2): trae también las filas inactivas (se reactivan en la grilla), con los campos nuevos.
     public function listTipoClienteParametros(Request $request)
     {
         try {
@@ -70,6 +103,7 @@ class TipoClienteParametrosController extends Controller
     // GET /api/ventas/listCombosTipoClienteParametros — los combos de la grilla en una sola llamada (codigo, nombre):
     // Perfil de riesgo y SI/NO de las condiciones. Una sola fuente con la validación de la función.
     // 10-nov noche: + Tipo Cliente (NUEVO o REITERATIVO).
+    // 11-nov-2026 (pestaña 2): SI/NO ya es solo de NN y TC (los acreedores son números).
     public function listCombosTipoClienteParametros()
     {
         try {
@@ -83,12 +117,20 @@ class TipoClienteParametrosController extends Controller
         }
     }
 
-    // Version 1.0
+    // Version 1.1
     // POST /api/ventas/guardarTipoClienteParametros — las filas nuevas (sin id) y las editadas, todo o nada.
     // De cada fila pasan solo el id y los campos del modelo.
+    // 11-nov-2026 (pestaña 2): antes, el Validator revisa la forma de los campos nuevos (acreedores enteros de 0 en adelante,
+    // fechas y activo verdadero o falso) con los mismos mensajes de la función; lo demás (mínimo contra máximo, fechas
+    // AAAA-MM-DD, cruces) lo valida la función. Desactivar o reactivar una fila = guardarla con activo en false o true.
     public function guardarTipoClienteParametros(Request $request)
     {
         try {
+            $validator = Validator::make($request->only('filas'), $this->reglasFilas(), $this->mensajesFilas());
+            if ($validator->fails()) {
+                return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
+            }
+
             $campos = array_merge(['id'], (new TipoClienteParametro())->getFillable());
             $filas = array_map(fn ($fila) => Arr::only((array) $fila, $campos), (array) $request->input('filas', []));
             $payload = ['filas' => $filas, 'auditoria' => $this->contextoAuditoriaForense($request)];
@@ -103,23 +145,25 @@ class TipoClienteParametrosController extends Controller
         }
     }
 
-    // Version 1.0
-    // DELETE /api/ventas/deleteTipoClienteParametro/{id}
-    public function deleteTipoClienteParametro(Request $request, $id)
-    {
-        try {
-            DB::selectOne('SELECT ventas.fn_tipo_cliente_parametros_eliminar(?::jsonb) AS id', [json_encode([
-                'id' => (int) $id,
-                'auditoria' => $this->contextoAuditoriaForense($request),
-            ], JSON_UNESCAPED_UNICODE)]);
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', null));
-        } catch (QueryException $e) {
-            return $this->respuestaError($e, 'Error al eliminar el tipo de cliente');
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al eliminar el tipo de cliente', $e->getMessage()));
-        }
-    }
+    // QUITADO 11-nov-2026 (pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo); su ruta quedó comentada y
+    // ventas.fn_tipo_cliente_parametros_eliminar se queda en la base, sin uso. Reactivar = descomentar este método y su ruta.
+    // // Version 1.0
+    // // DELETE /api/ventas/deleteTipoClienteParametro/{id}
+    // public function deleteTipoClienteParametro(Request $request, $id)
+    // {
+    //     try {
+    //         DB::selectOne('SELECT ventas.fn_tipo_cliente_parametros_eliminar(?::jsonb) AS id', [json_encode([
+    //             'id' => (int) $id,
+    //             'auditoria' => $this->contextoAuditoriaForense($request),
+    //         ], JSON_UNESCAPED_UNICODE)]);
+    //
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se elimino con éxito', null));
+    //     } catch (QueryException $e) {
+    //         return $this->respuestaError($e, 'Error al eliminar el tipo de cliente');
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'Error al eliminar el tipo de cliente', $e->getMessage()));
+    //     }
+    // }
 
     // Version 1.0
     // GET /api/ventas/tipoClienteParametroAuditoria?id&pagina&tamanio&busqueda — resumen + historial paginado de UNA fila
@@ -149,6 +193,64 @@ class TipoClienteParametrosController extends Controller
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del tipo de cliente', $e->getMessage()));
         }
+    }
+
+    // Version 1.0
+    // GET /api/ventas/tipoClienteParametrosAuditoria?pagina&tamanio&busqueda — 11-nov-2026 (pestaña 2): la auditoría de TODA la
+    // pestaña (el botón Auditoría de la cabecera): resumen + historial paginado de todas las filas, también las borradas antes
+    // y las desactivadas (auditoria.logs_cambios). La búsqueda también encuentra el nombre de la regla (N1, R2...).
+    public function tipoClienteParametrosAuditoria(Request $request)
+    {
+        try {
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_tipo_cliente_parametros_auditoria_tabla_resumen()');
+            $eventos = DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_auditoria_tabla_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de los tipos de cliente', $e->getMessage()));
+        }
+    }
+
+    // 11-nov-2026 (pestaña 2): la forma de los campos nuevos de cada fila (vacío = no importa / sin fecha). Lo demás lo valida
+    // la función.
+    private function reglasFilas(): array
+    {
+        $reglas = ['filas' => 'array'];
+        foreach (self::CAMPOS_ACREEDORES as $campo) {
+            $reglas["filas.*.{$campo}"] = 'integer|min:0|nullable';
+        }
+        foreach (array_keys(self::CAMPOS_FECHA) as $campo) {
+            $reglas["filas.*.{$campo}"] = 'date|nullable';
+        }
+        $reglas['filas.*.activo'] = 'boolean';
+
+        return $reglas;
+    }
+
+    // 11-nov-2026 (pestaña 2): los mismos mensajes de los códigos de la función.
+    private function mensajesFilas(): array
+    {
+        $mensajes = ['filas.array' => 'Las filas no tienen un formato válido.'];
+        foreach (self::CAMPOS_ACREEDORES as $campo) {
+            $mensajes["filas.*.{$campo}.integer"] = self::MENSAJES_ERROR['ACREEDORES_INVALIDO'];
+            $mensajes["filas.*.{$campo}.min"] = self::MENSAJES_ERROR['ACREEDORES_INVALIDO'];
+        }
+        foreach (self::CAMPOS_FECHA as $campo => $codigo) {
+            $mensajes["filas.*.{$campo}.date"] = self::MENSAJES_ERROR[$codigo];
+        }
+        $mensajes['filas.*.activo.boolean'] = self::MENSAJES_ERROR['ACTIVO_INVALIDO'];
+
+        return $mensajes;
     }
 
     // El código corto que levantó la función, traducido con MENSAJES_ERROR; si no es uno conocido, el genérico con el
