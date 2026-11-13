@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 // 11-nov-2026 (pestaña 2): sale acreedores (SI/NO); van los 3 cortes de acreedores (Actual, -6 Meses y -12 Meses, cada uno con
 // mínimo y máximo), las 4 fechas del Excel (apertura SBS, RFR y SICOM, y consulta) y activo.
 // 12-nov-2026 (booleanos): garancheck_nn y garancheck_tc son boolean (checks); salen los 3 cortes de acreedores y las 4 fechas.
+// 13-nov-2026 (antiguedad): una sola antiguedad numérica. 13-nov-2026 (nn texto): garancheck_nn es texto en MAYÚSCULAS o null.
 // Guardar, validar y auditar lo hacen las funciones ventas.fn_tipo_cliente_parametros_*: el modelo es la fuente de los
 // campos.
 class TipoClienteParametro extends Model
@@ -35,8 +36,10 @@ class TipoClienteParametro extends Model
         // QUITADO 12-nov-2026 (booleanos): 'fecha_apertura_rfr',
         // QUITADO 12-nov-2026 (booleanos): 'fecha_apertura_sicom',
         // QUITADO 12-nov-2026 (booleanos): 'fecha_consulta',
-        'antiguedad_minima',
-        'antiguedad_maxima',
+        // QUITADO 13-nov-2026 (antiguedad): 'antiguedad_minima',
+        // QUITADO 13-nov-2026 (antiguedad): 'antiguedad_maxima',
+        // 13-nov-2026 (antiguedad): una sola columna numérica (solo el parámetro; quien la lee decide cómo compararla).
+        'antiguedad',
         'perfil_riesgo',
         'activo',
     ];

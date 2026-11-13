@@ -36,11 +36,15 @@ class TipoClienteParametrosController extends Controller
         'PARAMETRO_NO_CONFIGURADO' => 'Faltan los límites del score en crm.parametro.',
         'EDAD_INVALIDA' => 'La edad mínima y la máxima deben ser números enteros.',
         'EDAD_RANGO_INVERTIDO' => 'La edad mínima no puede ser mayor que la máxima.',
-        'ANTIGUEDAD_INVALIDA' => 'La antigüedad mínima y la máxima deben ser meses enteros.',
-        'ANTIGUEDAD_RANGO_INVERTIDO' => 'La antigüedad mínima no puede ser mayor que la máxima.',
+        // QUITADO 13-nov-2026 (antiguedad): 'ANTIGUEDAD_INVALIDA' => 'La antigüedad mínima y la máxima deben ser meses enteros.',
+        // QUITADO 13-nov-2026 (antiguedad): 'ANTIGUEDAD_RANGO_INVERTIDO' => 'La antigüedad mínima no puede ser mayor que la máxima.',
+        // 13-nov-2026 (antiguedad): una sola antigüedad; la función ya no levanta ANTIGUEDAD_RANGO_INVERTIDO.
+        'ANTIGUEDAD_INVALIDA' => 'La antigüedad debe ser un número de 0 en adelante.',
         // QUITADO 11-nov-2026 (pestaña 2): 'CONDICION_INVALIDA' => 'Acreedores, NN y TC solo aceptan SI o NO; vacío = no importa.',
         // QUITADO 12-nov-2026 (booleanos): 'CONDICION_INVALIDA' => 'NN y TC solo aceptan SI o NO; vacío = no importa.',
-        'CONDICION_INVALIDA' => 'NN y TC solo aceptan sí o no.',
+        // QUITADO 13-nov-2026 (nn texto): 'CONDICION_INVALIDA' => 'NN y TC solo aceptan sí o no.',
+        // 13-nov-2026 (nn texto): NN es texto (MAYÚSCULAS o vacío); solo TC sigue siendo sí o no.
+        'CONDICION_INVALIDA' => 'TC solo acepta sí o no.',
         'REQUIERE_PERFIL' => 'El perfil de riesgo es obligatorio.',
         'PERFIL_INVALIDO' => 'El perfil de riesgo no es válido.',
         'REQUIERE_TIPO_CLIENTE' => 'El tipo de cliente (NUEVO o REITERATIVO) es obligatorio.',
@@ -77,8 +81,9 @@ class TipoClienteParametrosController extends Controller
     // ];
 
     // 12-nov-2026 (booleanos): los checks de cada fila que revisa el Validator (verdadero o falso) y el código de su mensaje.
+    // 13-nov-2026 (nn texto): NN sale de aquí: es texto (la función lo deja en MAYÚSCULAS y vacío = null).
     private const CAMPOS_BOOLEANOS = [
-        'garancheck_nn' => 'CONDICION_INVALIDA',
+        // QUITADO 13-nov-2026 (nn texto): 'garancheck_nn' => 'CONDICION_INVALIDA',
         'garancheck_tc' => 'CONDICION_INVALIDA',
         'activo' => 'ACTIVO_INVALIDO',
     ];
@@ -137,6 +142,7 @@ class TipoClienteParametrosController extends Controller
     // fechas y activo verdadero o falso) con los mismos mensajes de la función; lo demás (mínimo contra máximo, fechas
     // AAAA-MM-DD, cruces) lo valida la función. Desactivar o reactivar una fila = guardarla con activo en false o true.
     // 12-nov-2026 (booleanos): el Validator revisa que NN, TC y activo sean verdadero o falso (sin acreedores ni fechas).
+    // 13-nov-2026 (nn texto): NN ya no pasa por el Validator (es texto); solo TC y activo.
     public function guardarTipoClienteParametros(Request $request)
     {
         try {
