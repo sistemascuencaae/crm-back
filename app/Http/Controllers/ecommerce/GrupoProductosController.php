@@ -36,6 +36,7 @@ class GrupoProductosController extends Controller
         'PRODUCTO_NO_DISPONIBLE' => 'Uno de los productos elegidos ya no está activo o se quedó sin stock. Vuelva a cargar la lista.',
         'GRUPO_NO_EXISTE' => 'El grupo no existe o está en la papelera.',
         'PAPELERA_GRUPO_ACTIVO' => 'No se puede eliminar porque está activo: inactívelo primero.',
+        'PAPELERA_GRUPO_EN_USO' => 'No se puede eliminar porque lo usa una sección (sus productos o un enlace): quítelo de esa sección o elimine la sección primero.',
         'GRUPO_NO_EN_PAPELERA' => 'El grupo no está en la papelera (puede que otro usuario ya lo restauró).',
     ];
 
@@ -145,15 +146,16 @@ class GrupoProductosController extends Controller
         return $this->listarDisponibles($request, null, (int) $request->query('mar_id'));
     }
 
-    // Crea un grupo con los productos elegidos, en ese orden -> ecommerce.fn_grupo_producto_add.
-    // Body: { gpr_nombre, gpr_descripcion?, gpr_activo?, productos: [pro_id, ...] }
+    // Crea un grupo -> ecommerce.fn_grupo_producto_add. Desde "Agregar" llegan solo el nombre y la descripción: los
+    // productos se eligen después en el menú lateral (se guardan con editar). Si vienen, entran en ese orden.
+    // Body: { gpr_nombre, gpr_descripcion?, gpr_activo?, productos?: [pro_id, ...] }
     public function crear(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'gpr_nombre' => 'required|string|max:80',
             'gpr_descripcion' => 'nullable|string|max:250',
             'gpr_activo' => 'nullable|boolean',
-            'productos' => 'required|array|min:1',
+            'productos' => 'sometimes|array',
             'productos.*' => 'required|integer|min:1',
         ], self::MENSAJES_FORMULARIO);
 
@@ -183,7 +185,7 @@ class GrupoProductosController extends Controller
             'gpr_nombre' => 'required|string|max:80',
             'gpr_descripcion' => 'nullable|string|max:250',
             'gpr_activo' => 'sometimes|boolean',
-            'productos' => 'required|array|min:1',
+            'productos' => 'present|array',
             'productos.*' => 'required|integer|min:1',
         ], self::MENSAJES_FORMULARIO);
 
@@ -313,10 +315,13 @@ class GrupoProductosController extends Controller
             $pagina = max((int) $request->query('pagina', 1), 1);
             $tamanio = min(max((int) $request->query('tamanio', 10), 1), 100);
             $busqueda = trim((string) $request->query('busqueda', ''));
+            // Stock mínimo / máximo (incluidos); vacío = sin ese límite. 0 y 0 = los que no tienen stock.
+            $stockMin = is_numeric($request->query('stock_min')) ? (float) $request->query('stock_min') : null;
+            $stockMax = is_numeric($request->query('stock_max')) ? (float) $request->query('stock_max') : null;
 
             $registros = DB::select(
-                'SELECT * FROM ecommerce.fn_grupo_productos_listar_paginacion(?, ?, ?, ?, ?)',
-                [$pagina, $tamanio, $busqueda, $tprId, $marId]
+                'SELECT * FROM ecommerce.fn_grupo_productos_listar_paginacion(?, ?, ?, ?, ?, ?, ?)',
+                [$pagina, $tamanio, $busqueda, $tprId, $marId, $stockMin, $stockMax]
             );
 
             return response()->json(RespuestaApi::returnResultado('success', 'Productos listados con éxito', [
@@ -337,6 +342,11 @@ class GrupoProductosController extends Controller
 
         foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
             if (strpos($texto, $codigo) !== false) {
+                // "En uso": la base manda en el DETAIL dónde ("Página" → "Sección"); se agrega al mensaje.
+                if (str_ends_with($codigo, '_EN_USO') && preg_match('/DETAIL:\s*(.+)/', $texto, $m)) {
+                    $mensaje .= ' Lo usa: ' . trim($m[1]) . '.';
+                }
+
                 return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
             }
         }

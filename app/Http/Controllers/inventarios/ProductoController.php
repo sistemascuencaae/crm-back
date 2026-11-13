@@ -55,6 +55,9 @@ class ProductoController extends Controller
         'CAMPO_LARGO:pro_codigo3' => 'El código 3 no puede tener más de 15 caracteres.',
         'CAMPO_LARGO:pro_codbarras' => 'El código de barras no puede tener más de 200 caracteres.',
         'CAMPO_LARGO:pro_observacion' => 'La descripción no puede tener más de 500 caracteres.',
+        'MARCA_NO_VALIDA' => 'Desde la lista solo se puede cambiar si el producto es visible en la web.',
+        'VALOR_NO_VALIDO' => 'El valor tiene que ser sí o no.',
+        'REQUIERE_USUARIO' => 'No se pudo identificar al usuario del CRM.',
     ];
 
     private const CAMPOS_CREAR = [
@@ -72,10 +75,12 @@ class ProductoController extends Controller
         'pro_codigo2',
         'pro_codigo3',
         'pro_codbarras',
+        'pro_visible_web',
     ];
 
     // El código y la unidad no se cambian al editar (igual que en Dynamo); el peso y las medidas tampoco.
-    // pro_codigo2, pro_codigo3, pro_codbarras y pro_observacion son opcionales: si no vienen, conservan su valor.
+    // pro_codigo2, pro_codigo3, pro_codbarras, pro_observacion y pro_visible_web son opcionales: si no vienen, conservan
+    // su valor.
     private const CAMPOS_EDITAR = [
         'pro_nombre',
         'tpr_id',
@@ -90,6 +95,7 @@ class ProductoController extends Controller
         'pro_codigo2',
         'pro_codigo3',
         'pro_codbarras',
+        'pro_visible_web',
     ];
 
     private const REGLAS_COMUNES = [
@@ -107,6 +113,8 @@ class ProductoController extends Controller
         'pro_codbarras' => 'nullable|string|max:200',
         // La descripción del producto; vacía = sin descripción.
         'pro_observacion' => 'nullable|string|max:500',
+        // Sale en la web (tienda). Opcional: al crear, si no viene, nace visible; al clonar, el del origen.
+        'pro_visible_web' => 'sometimes|boolean',
     ];
 
     // Árbol de tipos (niveles 1, 2 y 3) con los productos de cada rama; con búsqueda, solo las ramas que coinciden.
@@ -279,6 +287,38 @@ class ProductoController extends Controller
     }
 
     // Auditoría de UN producto: resumen (quién creó / última modificación) + eventos paginados de auditoria.logs_cambios.
+    // Marca web del producto desde la lista (check "Web" de la grilla): por ahora solo visible en la web.
+    // Cambia solo esa marca (crm.fn_producto_web_marcar), sin la edición completa del producto.
+    // Body: { campo: pro_visible_web, valor: true | false }
+    public function marcarProductoWeb(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), [
+            // pro_visible_web: check "Web" de la lista; pro_oferta / pro_destacado: botones del editor de secciones.
+            'campo' => 'required|in:pro_visible_web,pro_oferta,pro_destacado',
+            'valor' => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
+        }
+
+        try {
+            DB::selectOne('SELECT crm.fn_producto_web_marcar(?::jsonb) AS pro_id', [json_encode([
+                'pro_id' => $id,
+                'campo' => $request->input('campo'),
+                'valor' => filter_var($request->input('valor'), FILTER_VALIDATE_BOOLEAN),
+                'auditoria' => $this->contextoAuditoriaForense($request),
+            ])]);
+
+            // La tienda cachea qué productos salen.
+            ProductoTiendaService::limpiarCacheTienda();
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Producto actualizado', ['pro_id' => $id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'No se pudo cambiar la marca web del producto');
+        }
+    }
+
     public function productoAuditoria(Request $request)
     {
         try {

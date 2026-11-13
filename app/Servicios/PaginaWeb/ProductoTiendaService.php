@@ -94,7 +94,7 @@ class ProductoTiendaService
      * Productos activos paginados (con tpr_id, toda la rama). Con $incompletos, solo a los que les falta contenido;
      * con $ofertaSemana / $destacado, solo los marcados así para el inicio.
      * Cada fila lleva cuántas imágenes tiene por sección, cuánto de su ficha está lleno, imagen (primera carátula o
-     * del detalle, o null), completo, pro_nombre_web (o null), pro_oferta_semana, pro_destacado (bool) y, de la caché,
+     * del detalle, o null), completo, pro_nombre_web (o null), pro_oferta, pro_destacado (bool) y, de la caché,
      * publicado / precio / precio_anterior / stock. La búsqueda también mira el nombre web.
      *   {registros, total, pagina, tamanio, publicados_actualizado}
      */
@@ -130,7 +130,7 @@ class ProductoTiendaService
 
     /**
      * Todo lo que necesita el editor de un producto, o null si no existe o está inactivo:
-     *   {producto: {…, pro_nombre_web, pro_oferta_semana, pro_destacado, publicado, precio, precio_anterior, stock}, ficha: [...], imagenes: [...],
+     *   {producto: {…, pro_nombre_web, pro_oferta, pro_destacado, publicado, precio, precio_anterior, stock}, ficha: [...], imagenes: [...],
      *    papelera_imagenes: {registros, total} (la 1.ª página; las demás, con papeleraImagenes)}
      */
     public function buscar(int $proId): ?array
@@ -179,7 +179,7 @@ class ProductoTiendaService
     }
 
     /**
-     * $datos: solo lo que cambia (pro_nombre_web, pro_observacion, pro_oferta_semana, pro_destacado) + usu_id.
+     * $datos: solo lo que cambia (pro_nombre_web, pro_observacion, pro_oferta, pro_destacado) + usu_id.
      * pro_nombre_web vacío = vuelve al nombre del ERP; pro_observacion es la descripción (la del ERP; vacía = sin descripción).
      */
     public function modificar(int $proId, array $datos): void
@@ -279,6 +279,52 @@ class ProductoTiendaService
 
             return $this->tarjeta($f, $datos);
         }, $filas);
+    }
+
+    /**
+     * Las tarjetas de UNOS productos, en el orden pedido: las de las SECCIONES de las páginas (los productos de un
+     * grupo, los afiches, el 360). Misma forma que tarjetas().
+     *
+     * Salen de la vista de la web ecommerce.v_productos_web (copia modificada de la del ERP; database/sql/
+     * vista_productos_web.sql): producto activo, visible en la web, fuera de la papelera, que no sea servicio ni
+     * promocional, con categoría de tercer nivel y sin los códigos que excluye la _api. Stock = el VENDIBLE (la suma de
+     * las bodegas que venden, sin saldos, servicio técnico, consignación...): solo salen los que tienen stock mayor a 0.
+     * El precio también sale de ahí (la fórmula de la _api); si no tiene, la tarjeta sale sin precio.
+     * Cada producto es su propia tarjeta (las familias no se juntan: en un afiche va el producto elegido).
+     * $cantidad: como máximo cuántas.
+     */
+    public function tarjetasDe(array $proIds, int $cantidad = 24): array
+    {
+        $proIds = array_values(array_unique(array_filter(array_map('intval', $proIds))));
+        if (!$proIds) {
+            return [];
+        }
+
+        // La vista filtrada por los productos (así se calcula solo para ellos).
+        $filas = DB::select(
+            "SELECT v.pro_id, v.pro_codigo, v.nombre_tienda AS pro_nombre, v.marca, v.tpr_id, c.nombre AS categoria,
+                    inventarios.fn_producto_imagenes_tarjeta(v.pro_id) AS imagenes, v.pro_destacado AS destacado, v.pro_oferta AS oferta,
+                    NULL::text AS familia, v.stock, v.descripcion, v.precio, v.precio_anterior
+               FROM ecommerce.v_productos_web v
+               LEFT JOIN ecommerce.fn_categoria_web_en_tienda() c ON c.tpr_id = v.tpr_id
+              WHERE v.pro_id = ANY (?::integer[])
+                AND v.stock > 0",
+            [$this->arreglo($proIds)]
+        );
+        if (!$filas) {
+            return [];
+        }
+
+        $posicion = array_flip($proIds);
+        usort($filas, fn ($a, $b) => $posicion[(int) $a->pro_id] <=> $posicion[(int) $b->pro_id]);
+
+        $tarjetas = array_map(fn ($f) => $this->tarjeta($f, [
+            'precio'          => $f->precio !== null ? (float) $f->precio : null,
+            'precio_anterior' => $f->precio_anterior !== null ? (float) $f->precio_anterior : null,
+            'stock'           => (float) $f->stock,
+        ]), $filas);
+
+        return array_slice($tarjetas, 0, $cantidad);
     }
 
     /**
@@ -572,11 +618,15 @@ class ProductoTiendaService
             'categoria'       => $f->categoria,
             'imagenes'        => json_decode($f->imagenes ?? '[]', true) ?? [],
             'destacado'       => (bool) $f->destacado,
+            // En oferta (producto.pro_oferta): solo lo traen las tarjetas de las secciones (etiqueta Oferta).
+            'oferta'          => (bool) ($f->oferta ?? false),
             'precio'          => $datos['precio'] ?? null,
             'precio_anterior' => $datos['precio_anterior'] ?? null,
             'stock'           => $datos['stock'] ?? null,
             'familia'         => $f->familia ?? null,
             'variantes'       => $datos['variantes'] ?? null,
+            // La descripción del producto (solo la traen las tarjetas de las secciones; el 360 la muestra).
+            'descripcion'     => $f->descripcion ?? null,
         ];
     }
 
@@ -601,10 +651,10 @@ class ProductoTiendaService
         $fila->stock           = $publicado['stock'] ?? null;
     }
 
-    /** pro_oferta_semana y pro_destacado siempre como bool */
+    /** pro_oferta y pro_destacado siempre como bool */
     private function marcasInicio(object $fila): void
     {
-        $fila->pro_oferta_semana = (bool) $fila->pro_oferta_semana;
+        $fila->pro_oferta = (bool) $fila->pro_oferta;
         $fila->pro_destacado     = (bool) $fila->pro_destacado;
     }
 
