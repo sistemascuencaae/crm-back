@@ -1,21 +1,27 @@
 <?php
 
-namespace App\Http\Controllers\ventas;
+namespace App\Http\Controllers\ventas\cotizador;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Http\Traits\PermisosCotizacionTrait;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-// Proformas (ae/ventas/PROFORMAS): el historial de las proformas de los casos y una proforma completa (27-oct: y las
-// versiones de la proforma de un caso, para el ojito del requerimiento Proformar).
-// El negocio vive en ventas.fn_cproforma_* (PLANES/COTIZADOR/produccion_cotizaciones.sql): este
-// controller solo valida la forma y traduce la respuesta. Solo lectura.
-// Como Todos los casos: el superusuario ve todas; el resto, las de los tipos de caso de su perfil.
-// Costos, solo con Ver costos (ver_costos) en PROFORMAS; el Excel sigue con report (Imprimir). 27-oct: la comision del
-// banco de la proforma con tarjeta (comision_banco y valor_comision) tambien es un costo: Ver, Proformas y el historial.
-class CotizacionesController extends Controller
+// Version 1.0
+// Cotizador > Proformas (V04, ae/ventas/PROFORMAS): el historial de las proformas de los casos (ventas.cproforma), una proforma
+// completa con sus productos (ventas.dproforma) y sus aportes (ventas.dproforma_aporte), y las versiones de la proforma de un caso
+// (el ojito del requerimiento Proformar). Solo lectura: la proforma es una foto inmutable, la escribe
+// ventas/cotizador/CotizarController@guardarCotizacion con ventas.fn_cproforma_registrar, y sus tablas no llevan trigger de auditoría
+// (excepción del 26-oct). Los modelos Cproforma, Dproforma y DproformaAporte documentan sus columnas: no hay payload que armar.
+// El negocio vive en ventas.fn_cproforma_* (PLANES/COTIZADOR/produccion_cotizaciones.sql): este controller solo valida la forma y
+// traduce la respuesta. Como Todos los casos: el superusuario ve todas; el resto, las de los tipos de caso de su perfil.
+// Costos, solo con Ver costos (ver_costos) en PROFORMAS; el Excel sigue con report (Imprimir). 27-oct: la comision del banco de
+// la proforma con tarjeta (comision_banco y valor_comision) tambien es un costo: Ver, Proformas y el historial.
+// Viene de ventas/CotizacionesController (Fase 9 del plan del cotizador, 11-nov-2026): mismos endpoints (familia de Proformar,
+// excepción de D2), mismas funciones SQL y mismos mensajes; el trait de permisos pasó a app/Http/Traits.
+class CproformaController extends Controller
 {
     use PermisosCotizacionTrait;
 
@@ -27,8 +33,9 @@ class CotizacionesController extends Controller
         $this->middleware('auth:api');
     }
 
-    // Historial: todas las versiones, paginado en el servidor (pagina, tamanio y busqueda). Perfil sin tipos de
-    // caso: no ve nada y la pantalla lo avisa. tamanio 0 = el Excel (hasta 10.000). Sin costos en las filas.
+    // Version 1.0
+    // GET /api/ventas/listProformas?pagina&tamanio&busqueda — todas las versiones, paginado en el servidor. Perfil sin tipos
+    // de caso: no ve nada y la pantalla lo avisa (sin_tipos). tamanio 0 = el Excel (hasta 10.000). Sin costos en las filas.
     public function listProformas(Request $request)
     {
         try {
@@ -65,7 +72,9 @@ class CotizacionesController extends Controller
         }
     }
 
-    // La cotizacion completa: cabecera, productos y aportes de cada producto.
+    // Version 1.0
+    // GET /api/ventas/getCotizacion/{id} — la proforma completa: cabecera, productos y aportes de cada producto (la abre
+    // Cotizar para verla o editarla). Conserva el nombre de antes (familia de Proformar).
     public function getCotizacion($id)
     {
         try {
@@ -93,9 +102,11 @@ class CotizacionesController extends Controller
         }
     }
 
-    // 27-oct: el historial de la proforma de un caso (el ojito Ver del requerimiento Proformar): todas sus versiones,
-    // la mas nueva primero y con la vigente marcada (ventas.fn_cproforma_caso_listar). Como Ver (getCotizacion), la
-    // proforma de un caso la ve quien trabaja el caso: sin filtro de perfil. Sin costos en las filas.
+    // Version 1.0
+    // GET /api/ventas/listProformasCaso/{casoId} — 27-oct: el historial de la proforma de un caso (el ojito Ver del
+    // requerimiento Proformar): todas sus versiones, la mas nueva primero y con la vigente marcada
+    // (ventas.fn_cproforma_caso_listar). Como getCotizacion, la proforma de un caso la ve quien trabaja el caso: sin filtro de
+    // perfil. Sin costos en las filas.
     public function listProformasCaso($casoId)
     {
         try {

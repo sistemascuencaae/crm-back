@@ -168,16 +168,30 @@ use App\Http\Controllers\gestionClientes\CSemaforoController;
 use App\Http\Controllers\gestionClientes\DSemaforoController;
 use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
-use App\Http\Controllers\ventas\ParametrosCotizadorController;
-use App\Http\Controllers\ventas\ParametrosTipoCalificacionClienteController;
-use App\Http\Controllers\ventas\ParametrosTipoClienteController;
-use App\Http\Controllers\ventas\MargenCotizadorController;
-use App\Http\Controllers\ventas\AporteCotizadorController;
-use App\Http\Controllers\ventas\CotizarController;
-use App\Http\Controllers\ventas\CotizacionesController;
-use App\Http\Controllers\ventas\TarjetasContadoController;
-use App\Http\Controllers\ventas\TarjetasController;
-use App\Http\Controllers\ventas\BancosEmisoresController;
+use App\Http\Controllers\ventas\cotizador\CotizadorParametrosController;
+use App\Http\Controllers\ventas\cotizador\ComportamientoClienteParametrosController;
+use App\Http\Controllers\ventas\cotizador\TipoClienteParametrosController;
+use App\Http\Controllers\ventas\cotizador\FormalInformalParametrosController;
+use App\Http\Controllers\ventas\cotizador\PerformanceCreditoController;
+// 11-nov-2026 (líneas): el catálogo de líneas (panel izquierdo de Performance crédito).
+use App\Http\Controllers\ventas\cotizador\LineaController;
+// 11-nov-2026 (Fase 4): Parámetros de calificación (V05) salió de openceo\PoliticaController.
+use App\Http\Controllers\ventas\cotizador\CalificacionClienteParametrosController;
+use App\Http\Controllers\ventas\cotizador\CmargenController;
+use App\Http\Controllers\ventas\cotizador\RegionController;
+use App\Http\Controllers\ventas\cotizador\CaporteController;
+use App\Http\Controllers\ventas\cotizador\CotizarController;
+use App\Http\Controllers\ventas\cotizador\CproformaController;
+use App\Http\Controllers\ventas\cotizador\ContadoParametrosController;
+// 11-nov-2026 (Fase 7): Tarjetas y comisiones (V08) al estándar.
+use App\Http\Controllers\ventas\cotizador\TarjetaBancoController;
+// 11-nov-2026 (Fase 8): Descuentos de plazos (V09) al estándar.
+use App\Http\Controllers\ventas\cotizador\TarjetaPlazoDescuentoController;
+// 11-nov-2026 (reestructura de Contabilidad): Emisores, Sistemas de liquidación y Bancos al estándar, en su grupo
+// /api/contabilidad.
+use App\Http\Controllers\contabilidad\BancoController;
+use App\Http\Controllers\contabilidad\EmisorController;
+use App\Http\Controllers\contabilidad\SistemaLiquidacionController;
 use App\Http\Controllers\inventarios\CaracterísticasProductoController;
 use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\inventarios\TipoProducto;
@@ -378,16 +392,11 @@ Route::get('/crm/api-client/descargar/{token}', [ApiProxyController::class, 'des
 Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
     // ? START POLITICAS
     Route::get('/listPoliticasPaginado', [PoliticaController::class, 'listPoliticasPaginado']);
-    Route::get('/listPoliticasActivasClientes', [PoliticaController::class, 'listPoliticasActivasClientes']);
     Route::get('/getPolitica/{id}', [PoliticaController::class, 'getPolitica']);
+    // 13-nov-2026 (financiamiento 148): el % que toman las políticas de cliente a crédito (solo para mostrarlo).
+    Route::get('/getFinanciamientoPolitica', [PoliticaController::class, 'getFinanciamientoPolitica']);
     Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
     Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);
-    Route::post('/guardarParametrosPolitica/{id}', [PoliticaController::class, 'guardarParametrosPolitica']);
-    // Combos de la grilla de Parametros de calificacion: tipo de cliente, actividad y comportamiento.
-    Route::get('/catalogosParametrosCalificacion', [PoliticaController::class, 'catalogosParametrosCalificacion']);
-    // Clonar parametros: vista previa (solo lectura) y clonado a varias politicas.
-    Route::post('/vistaPreviaClonarParametrosPolitica/{id}', [PoliticaController::class, 'vistaPreviaClonarParametrosPolitica']);
-    Route::post('/clonarParametrosPolitica/{id}', [PoliticaController::class, 'clonarParametrosPolitica']);
     Route::post('/cambiarEstadoPolitica/{id}', [PoliticaController::class, 'cambiarEstadoPolitica']);
     Route::get('/politicaAuditoria', [PoliticaController::class, 'politicaAuditoria']);
     // ? END POLITICAS
@@ -2036,73 +2045,138 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
 });
 
-// VENTAS > COTIZADOR: configuracion (pestanas 1 Parametros, 2 Margen y 3 Aportes) y Cotizar.
+// VENTAS > COTIZADOR: Parámetros cotizador (V02), Margen y aportes (V01), Cotizar (V06), Proformas (V04), Contado (V07), Tarjetas y
+// comisiones (V08), Descuentos de plazos (V09), Parámetros tipo calificación cliente (V10) y Parámetros de calificación (V05).
 Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
-    Route::get('/listParametrosCotizador', [ParametrosCotizadorController::class, 'listParametrosCotizador']);
-    Route::get('/listTiposParametrosCotizador', [ParametrosCotizadorController::class, 'listTiposParametrosCotizador']);
-    Route::get('/listTiposTarjetaCotizador', [ParametrosCotizadorController::class, 'listTiposTarjetaCotizador']);
-    Route::post('/addParametroCotizador', [ParametrosCotizadorController::class, 'addParametroCotizador']);
-    Route::post('/editParametroCotizador/{id}', [ParametrosCotizadorController::class, 'editParametroCotizador']);
-    Route::get('/parametroCotizadorAuditoria', [ParametrosCotizadorController::class, 'parametroCotizadorAuditoria']);
-    // Pestana 2: margen (cabecera + detalles) y su asignacion a productos.
-    Route::get('/listMargenCotizador', [MargenCotizadorController::class, 'listMargenCotizador']);
-    Route::get('/combosMargenCotizador', [MargenCotizadorController::class, 'combosMargenCotizador']);
-    Route::get('/listPuntosVentaByRegionId/{reg_id}', [MargenCotizadorController::class, 'listPuntosVentaByRegionId']); // 28-oct: el ojito de Región (Margen y Aporte)
-    Route::get('/getMargenCotizador/{id}', [MargenCotizadorController::class, 'getMargenCotizador']);
-    Route::post('/addMargenCotizador', [MargenCotizadorController::class, 'addMargenCotizador']);
-    Route::post('/editMargenCotizador/{id}', [MargenCotizadorController::class, 'editMargenCotizador']);
-    Route::get('/catalogoProductosMargenCotizador', [MargenCotizadorController::class, 'catalogoProductosMargenCotizador']);
-    Route::get('/margenCotizadorAuditoria', [MargenCotizadorController::class, 'margenCotizadorAuditoria']);
-    // Pestana 3: aportes (cabecera + detalles, en dolares) y su asignacion a productos.
-    Route::get('/listAporteCotizador', [AporteCotizadorController::class, 'listAporteCotizador']);
-    Route::get('/combosAporteCotizador', [AporteCotizadorController::class, 'combosAporteCotizador']);
-    Route::get('/getAporteCotizador/{id}', [AporteCotizadorController::class, 'getAporteCotizador']);
-    Route::post('/addAporteCotizador', [AporteCotizadorController::class, 'addAporteCotizador']);
-    Route::post('/editAporteCotizador/{id}', [AporteCotizadorController::class, 'editAporteCotizador']);
-    Route::get('/catalogoProductosAporteCotizador', [AporteCotizadorController::class, 'catalogoProductosAporteCotizador']);
-    Route::get('/aporteCotizadorAuditoria', [AporteCotizadorController::class, 'aporteCotizadorAuditoria']);
+    // 10-nov-2026 (Fase 1): Parámetros cotizador (V02) al estándar: CotizadorParametrosController, un endpoint por método.
+    Route::get('/listCotizadorParametros', [CotizadorParametrosController::class, 'listCotizadorParametros']);
+    Route::get('/listCombosCotizadorParametros', [CotizadorParametrosController::class, 'listCombosCotizadorParametros']);
+    Route::post('/addCotizadorParametro', [CotizadorParametrosController::class, 'addCotizadorParametro']);
+    Route::post('/editCotizadorParametro/{id}', [CotizadorParametrosController::class, 'editCotizadorParametro']);
+    Route::get('/cotizadorParametroAuditoria', [CotizadorParametrosController::class, 'cotizadorParametroAuditoria']);
+    // 11-nov-2026 (Fase 2): Margen (V01, pestaña 1) al estándar: CmargenController, un endpoint por método.
+    Route::get('/listCmargen', [CmargenController::class, 'listCmargen']);
+    Route::get('/listCombosCmargen', [CmargenController::class, 'listCombosCmargen']);
+    Route::get('/getCmargen/{id}', [CmargenController::class, 'getCmargen']);
+    Route::post('/addCmargen', [CmargenController::class, 'addCmargen']);
+    Route::post('/editCmargen/{id}', [CmargenController::class, 'editCmargen']);
+    Route::get('/listProductosCmargen', [CmargenController::class, 'listProductosCmargen']);
+    Route::get('/cmargenAuditoria', [CmargenController::class, 'cmargenAuditoria']);
+    // 11-nov-2026 (Fase 2): el ojito de Región de Margen y Aporte (RegionController).
+    Route::get('/listPuntosVentaRegion/{reg_id}', [RegionController::class, 'listPuntosVentaRegion']);
+    // 11-nov-2026 (Fase 3): Aportes (V01, pestaña 2) al estándar: CaporteController, un endpoint por método.
+    Route::get('/listCaporte', [CaporteController::class, 'listCaporte']);
+    Route::get('/listCombosCaporte', [CaporteController::class, 'listCombosCaporte']);
+    Route::get('/getCaporte/{id}', [CaporteController::class, 'getCaporte']);
+    Route::post('/addCaporte', [CaporteController::class, 'addCaporte']);
+    Route::post('/editCaporte/{id}', [CaporteController::class, 'editCaporte']);
+    Route::get('/listProductosCaporte', [CaporteController::class, 'listProductosCaporte']);
+    Route::get('/caporteAuditoria', [CaporteController::class, 'caporteAuditoria']);
     // Cotizar: contado o credito con N productos (calcular = vista previa; guardar = la proforma del caso).
+    // 11-nov-2026 (Fase 10): CotizarController es ahora ventas\cotizador\CotizarController (ver el use), con los mismos 5
+    // endpoints (familia de Proformar).
     Route::get('/combosCotizar', [CotizarController::class, 'combosCotizar']);
     Route::get('/listarProductosCotizar', [CotizarController::class, 'listarProductosCotizar']);
     Route::get('/calificacionesPoliticaCotizar/{pol_id}', [CotizarController::class, 'calificacionesPoliticaCotizar']);
     Route::post('/calcularCotizacion', [CotizarController::class, 'calcularCotizacion']);
     Route::post('/guardarCotizacion', [CotizarController::class, 'guardarCotizacion']);
     // Proformas: el historial paginado y una proforma completa (solo lectura).
-    Route::get('/listProformas', [CotizacionesController::class, 'listProformas']);
-    Route::get('/getCotizacion/{id}', [CotizacionesController::class, 'getCotizacion']);
-    // 27-oct: las versiones de la proforma de un caso (el ojito del requerimiento Proformar), con la vigente marcada.
-    Route::get('/listProformasCaso/{casoId}', [CotizacionesController::class, 'listProformasCaso']);
-    // Contado: las formas de pago de contado con sus reglas (25-oct: las tarjetas pasaron a TarjetasController).
-    Route::get('/getFormasPagoContado', [TarjetasContadoController::class, 'getFormasPagoContado']);
-    Route::post('/guardarFormasPagoContado', [TarjetasContadoController::class, 'guardarFormasPagoContado']);
+    // 11-nov-2026 (Fase 9): Proformas (V04) al estándar: CproformaController (el historial, una proforma completa y las
+    // versiones de la proforma de un caso, con la vigente marcada).
+    Route::get('/listProformas', [CproformaController::class, 'listProformas']);
+    Route::get('/getCotizacion/{id}', [CproformaController::class, 'getCotizacion']);
+    Route::get('/listProformasCaso/{casoId}', [CproformaController::class, 'listProformasCaso']);
+    // Contado: las formas de pago de contado con sus reglas (25-oct: las tarjetas pasaron a Tarjetas y comisiones).
+    // 11-nov-2026 (Fase 6): Contado (V07) al estándar: ContadoParametrosController (las formas de pago con sus reglas, que
+    // se guardan juntas con un solo Guardar).
+    Route::get('/listContadoParametros', [ContadoParametrosController::class, 'listContadoParametros']);
+    Route::post('/guardarContadoParametros', [ContadoParametrosController::class, 'guardarContadoParametros']);
     // Tarjetas y comisiones y Descuentos de plazos (25-oct): bancos y cuentas de public.banco (26-oct), tarjetas,
     // plazos y descuentos.
-    Route::get('/listarBancosTarjetas', [TarjetasController::class, 'listarBancosTarjetas']);
-    Route::get('/catalogosTarjetas', [TarjetasController::class, 'catalogosTarjetas']);
-    Route::get('/getBancoTarjetas/{ban_id}', [TarjetasController::class, 'getBancoTarjetas']);
-    Route::post('/guardarBancoTarjetas/{ban_id}', [TarjetasController::class, 'guardarBancoTarjetas']);
-    Route::get('/getDescuentosPlazos/{ban_id}', [TarjetasController::class, 'getDescuentosPlazos']);
-    Route::post('/guardarDescuentosPlazos/{ban_id}', [TarjetasController::class, 'guardarDescuentosPlazos']);
-    Route::get('/tarjetasAuditoria', [TarjetasController::class, 'tarjetasAuditoria']);
-    // 27-oct: bancos y emisores de Dynamo y sistemas de liquidacion (el emisor de las tarjetas; antes, adquirentes).
-    Route::get('/listarSistemasLiquidacion', [BancosEmisoresController::class, 'listarSistemasLiquidacion']);
-    Route::post('/guardarSistemaLiquidacion', [BancosEmisoresController::class, 'guardarSistemaLiquidacion']);
-    Route::get('/listarEmisores', [BancosEmisoresController::class, 'listarEmisores']);
-    Route::post('/guardarEmisor', [BancosEmisoresController::class, 'guardarEmisor']);
-    Route::get('/listarBancosDynamo', [BancosEmisoresController::class, 'listarBancosDynamo']);
-    Route::post('/guardarBancoDynamo', [BancosEmisoresController::class, 'guardarBancoDynamo']);
+    // 11-nov-2026 (Fase 7): Tarjetas y comisiones (V08) al estándar: TarjetaBancoController (la lista de bancos, que comparte
+    // Descuentos de plazos; los combos de tipos y emisores; el banco con sus tarjetas y plazos, que se guardan juntos; y su
+    // auditoría por ban_id).
+    Route::get('/listTarjetaBanco', [TarjetaBancoController::class, 'listTarjetaBanco']);
+    Route::get('/listTiposTarjetaBanco', [TarjetaBancoController::class, 'listTiposTarjetaBanco']);
+    Route::get('/listEmisoresTarjetaBanco', [TarjetaBancoController::class, 'listEmisoresTarjetaBanco']);
+    Route::get('/getTarjetaBanco/{ban_id}', [TarjetaBancoController::class, 'getTarjetaBanco']);
+    Route::post('/guardarTarjetaBanco/{ban_id}', [TarjetaBancoController::class, 'guardarTarjetaBanco']);
+    Route::get('/tarjetaBancoAuditoria', [TarjetaBancoController::class, 'tarjetaBancoAuditoria']);
+    // 11-nov-2026 (Fase 8): Descuentos de plazos (V09) al estándar: TarjetaPlazoDescuentoController (las tarjetas del banco con
+    // los descuentos de sus plazos, el guardado de los plazos cambiados de todo el banco y su auditoría por ban_id). La lista de
+    // bancos es listTarjetaBanco (arriba).
+    Route::get('/listTarjetaPlazoDescuento/{ban_id}', [TarjetaPlazoDescuentoController::class, 'listTarjetaPlazoDescuento']);
+    Route::post('/guardarTarjetaPlazoDescuento/{ban_id}', [TarjetaPlazoDescuentoController::class, 'guardarTarjetaPlazoDescuento']);
+    Route::get('/tarjetaPlazoDescuentoAuditoria', [TarjetaPlazoDescuentoController::class, 'tarjetaPlazoDescuentoAuditoria']);
 
-    Route::get('/listParametrosTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'listParametrosTipoCalificacionCliente']);
-    Route::get('/listEstadosCreditoTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'listEstadosCreditoTipoCalificacionCliente']);
-    Route::post('/guardarParametrosTipoCalificacionCliente', [ParametrosTipoCalificacionClienteController::class, 'guardarParametrosTipoCalificacionCliente']);
-    Route::delete('/deleteParametroTipoCalificacionCliente/{id}', [ParametrosTipoCalificacionClienteController::class, 'deleteParametroTipoCalificacionCliente']);
-    Route::get('/parametroTipoCalificacionClienteAuditoria', [ParametrosTipoCalificacionClienteController::class, 'parametroTipoCalificacionClienteAuditoria']);
+    Route::get('/listComportamientoClienteParametros', [ComportamientoClienteParametrosController::class, 'listComportamientoClienteParametros']);
+    Route::get('/listEstadosCreditoComportamientoClienteParametros', [ComportamientoClienteParametrosController::class, 'listEstadosCreditoComportamientoClienteParametros']);
+    Route::post('/guardarComportamientoClienteParametros', [ComportamientoClienteParametrosController::class, 'guardarComportamientoClienteParametros']);
+    // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
+    // Route::delete('/deleteComportamientoClienteParametro/{id}', [ComportamientoClienteParametrosController::class, 'deleteComportamientoClienteParametro']);
+    Route::get('/comportamientoClienteParametroAuditoria', [ComportamientoClienteParametrosController::class, 'comportamientoClienteParametroAuditoria']);
+    // 11-nov-2026 (activo): la auditoría de TODA la pestaña Comportamiento (el botón Auditoría de la cabecera).
+    Route::get('/comportamientoClienteParametrosAuditoria', [ComportamientoClienteParametrosController::class, 'comportamientoClienteParametrosAuditoria']);
 
-    Route::get('/listParametrosTipoCliente', [ParametrosTipoClienteController::class, 'listParametrosTipoCliente']);
-    Route::get('/listTiposParametroTipoCliente', [ParametrosTipoClienteController::class, 'listTiposParametroTipoCliente']);
-    Route::post('/guardarParametrosTipoCliente', [ParametrosTipoClienteController::class, 'guardarParametrosTipoCliente']);
-    Route::delete('/deleteParametroTipoCliente/{id}', [ParametrosTipoClienteController::class, 'deleteParametroTipoCliente']);
-    Route::get('/parametroTipoClienteAuditoria', [ParametrosTipoClienteController::class, 'parametroTipoClienteAuditoria']);
+    Route::get('/listTipoClienteParametros', [TipoClienteParametrosController::class, 'listTipoClienteParametros']);
+    Route::get('/listCombosTipoClienteParametros', [TipoClienteParametrosController::class, 'listCombosTipoClienteParametros']);
+    Route::post('/guardarTipoClienteParametros', [TipoClienteParametrosController::class, 'guardarTipoClienteParametros']);
+    // QUITADO 11-nov-2026 (pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
+    // Route::delete('/deleteTipoClienteParametro/{id}', [TipoClienteParametrosController::class, 'deleteTipoClienteParametro']);
+    Route::get('/tipoClienteParametroAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametroAuditoria']);
+    // 11-nov-2026 (pestaña 2): la auditoría de TODA la pestaña Tipo de cliente (el botón Auditoría de la cabecera).
+    Route::get('/tipoClienteParametrosAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametrosAuditoria']);
+
+    Route::get('/listFormalInformalParametros', [FormalInformalParametrosController::class, 'listFormalInformalParametros']);
+    Route::get('/listCombosFormalInformalParametros', [FormalInformalParametrosController::class, 'listCombosFormalInformalParametros']);
+    Route::post('/guardarFormalInformalParametros', [FormalInformalParametrosController::class, 'guardarFormalInformalParametros']);
+    // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
+    // Route::delete('/deleteFormalInformalParametro/{id}', [FormalInformalParametrosController::class, 'deleteFormalInformalParametro']);
+    Route::get('/formalInformalParametroAuditoria', [FormalInformalParametrosController::class, 'formalInformalParametroAuditoria']);
+    // 11-nov-2026 (activo): la auditoría de TODA la pestaña Formal / Informal (el botón Auditoría de la cabecera).
+    Route::get('/formalInformalParametrosAuditoria', [FormalInformalParametrosController::class, 'formalInformalParametrosAuditoria']);
+
+    Route::get('/listPerformanceCredito', [PerformanceCreditoController::class, 'listPerformanceCredito']);
+    Route::get('/listCombosPerformanceCredito', [PerformanceCreditoController::class, 'listCombosPerformanceCredito']);
+    Route::post('/guardarPerformanceCredito', [PerformanceCreditoController::class, 'guardarPerformanceCredito']);
+    // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
+    // Route::delete('/deletePerformanceCredito/{id}', [PerformanceCreditoController::class, 'deletePerformanceCredito']);
+    Route::get('/performanceCreditoAuditoria', [PerformanceCreditoController::class, 'performanceCreditoAuditoria']);
+    // 11-nov-2026 (líneas): Clonar los tipos de cliente de una línea a otras (vista previa y clonado).
+    Route::post('/clonarPerformanceCreditoVistaPrevia', [PerformanceCreditoController::class, 'clonarPerformanceCreditoVistaPrevia']);
+    Route::post('/clonarPerformanceCredito', [PerformanceCreditoController::class, 'clonarPerformanceCredito']);
+    // 11-nov-2026 (líneas): el catálogo de líneas (ventas.linea) del panel izquierdo; lo comparten Formal / Informal y el
+    // requerimiento 'formal informal'.
+    Route::get('/listLinea', [LineaController::class, 'listLinea']);
+    Route::get('/listCombosLinea', [LineaController::class, 'listCombosLinea']);
+    Route::post('/addLinea', [LineaController::class, 'addLinea']);
+    Route::post('/editLinea/{id}', [LineaController::class, 'editLinea']);
+    Route::get('/lineaAuditoria', [LineaController::class, 'lineaAuditoria']);
+
+    // 11-nov-2026 (Fase 4): Parámetros de calificación (V05) al estándar: CalificacionClienteParametrosController (antes en
+    // api/crm, PoliticaController). La ficha (getPolitica) y la auditoría (politicaAuditoria) siguen en api/crm (Dynamo).
+    Route::get('/listPoliticasCalificacionClienteParametros', [CalificacionClienteParametrosController::class, 'listPoliticasCalificacionClienteParametros']);
+    Route::get('/listCatalogosCalificacionClienteParametros', [CalificacionClienteParametrosController::class, 'listCatalogosCalificacionClienteParametros']);
+    Route::post('/guardarCalificacionClienteParametros/{pol_id}', [CalificacionClienteParametrosController::class, 'guardarCalificacionClienteParametros']);
+    Route::post('/vistaPreviaClonarCalificacionClienteParametros/{pol_id}', [CalificacionClienteParametrosController::class, 'vistaPreviaClonarCalificacionClienteParametros']);
+    Route::post('/clonarCalificacionClienteParametros/{pol_id}', [CalificacionClienteParametrosController::class, 'clonarCalificacionClienteParametros']);
+});
+
+// CONTABILIDAD (11-nov-2026, reestructura de Contabilidad): Emisores, Sistemas de liquidación y Bancos (menús EMISORES,
+// SISTEMAS-LIQUIDACION y BANCOS), un controller por tabla. Antes, en el grupo ventas (BancosEmisoresController): listarX y
+// guardarX pasaron a listX + listCombosX (la lista y su combo) y addX + editX/{id} (llaman a la misma ventas.fn_<tabla>_guardar).
+Route::group(["prefix" => "contabilidad", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+    Route::get('/listEmisor', [EmisorController::class, 'listEmisor']);
+    Route::get('/listCombosEmisor', [EmisorController::class, 'listCombosEmisor']);
+    Route::post('/addEmisor', [EmisorController::class, 'addEmisor']);
+    Route::post('/editEmisor/{emi_id}', [EmisorController::class, 'editEmisor']);
+    Route::get('/listSistemaLiquidacion', [SistemaLiquidacionController::class, 'listSistemaLiquidacion']);
+    Route::post('/addSistemaLiquidacion', [SistemaLiquidacionController::class, 'addSistemaLiquidacion']);
+    Route::post('/editSistemaLiquidacion/{sli_id}', [SistemaLiquidacionController::class, 'editSistemaLiquidacion']);
+    Route::get('/listBanco', [BancoController::class, 'listBanco']);
+    Route::get('/listCombosBanco', [BancoController::class, 'listCombosBanco']);
+    Route::post('/addBanco', [BancoController::class, 'addBanco']);
+    Route::post('/editBanco/{ban_id}', [BancoController::class, 'editBanco']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).

@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\ventas;
+namespace App\Http\Controllers\ventas\cotizador;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Http\Traits\PermisosCotizacionTrait;
 use App\Models\crm\Audits;
 use App\Models\crm\RequerimientoCaso;
 use App\Models\User;
@@ -12,15 +13,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
+// Version 1.0
 // Cotizar (modal de Ventas > Cotizaciones, sin menu propio): una cotizacion de contado o de credito con N productos.
-// 23-oct: la vista previa tambien acepta TARJETA y, en contado, la forma de pago (parametros_contado_id). 25-oct: la
+// 23-oct: la vista previa tambien acepta TARJETA y, en contado, la forma de pago (contado_parametros_id). 25-oct: la
 // tarjeta es el banco (ban_id, public.banco desde el 26-oct) y el plazo de una de sus tarjetas (tarjeta_plazo_id) o, en
-// un banco sin tarjetas, un plazo de la PREDETERMINADA (plazo_default_id = el concepto TARJETA de parametros_cotizador).
+// un banco sin tarjetas, un plazo de la PREDETERMINADA (plazo_default_id = el concepto TARJETA de cotizador_parametros).
 // 27-oct: guardar tambien (las 3 proformas: la de TARJETA y la de CONTADO con su forma de pago guardan la foto del pago).
 // El negocio vive en ventas.fn_cotizar_* y fn_cproforma_registrar (PLANES/COTIZADOR): este
 // controller solo valida la forma, arma el jsonb y traduce la respuesta. Calcular es la vista
 // previa (no guarda); Guardar recalcula en el servidor y guarda la foto completa.
 // Sin "Ver costos" (ver_costos) en PROFORMAS las respuestas van sin costos, aportes, CAME ni margenes.
+// Viene de ventas/CotizarController (Fase 10 del plan del cotizador, 11-nov-2026): Cotizador > Cotizar (V06) y Proformar del caso.
+// Mismos endpoints (familia de Proformar, excepcion de D2), mismas reglas del Validator, mismos mensajes y mismas funciones SQL;
+// el trait de permisos es el de app/Http/Traits. guardarCotizacion se queda aqui (D8: comparte validacion y payload con
+// calcularCotizacion). La bitacora del caso (crm.audits) se sigue armando a mano en guardarProforma, como antes: la proforma no
+// pasa por la auditoria forense (foto inmutable, excepcion del 26-oct). El viejo se borró en la limpieza de la F12 (11-nov-2026).
 class CotizarController extends Controller
 {
     use PermisosCotizacionTrait;
@@ -30,6 +37,8 @@ class CotizarController extends Controller
         $this->middleware('auth:api');
     }
 
+    // Version 1.0
+    // GET /api/ventas/combosCotizar?caso_id
     // Punto de venta y region del usuario de la sesion (solo informativos), politicas de
     // credito de clientes y valores por defecto (tasa e IVA). Con caso_id (la proforma del caso) el
     // servidor dice si el caso puede proformar (mensaje_caso) y da solo las politicas de hasta su Plazo.
@@ -45,6 +54,8 @@ class CotizarController extends Controller
         }
     }
 
+    // Version 1.0
+    // GET /api/ventas/listarProductosCotizar?pagina&tamanio&busqueda
     // Modal "Buscar producto" de Cotizar: productos activos paginados, igual que el listado de clientes.
     // Sin busqueda -> ventas.fn_producto_cotizar_listar_paginacion | con busqueda -> _buscar_paginacion
     public function listarProductosCotizar(Request $request)
@@ -73,6 +84,8 @@ class CotizarController extends Controller
         }
     }
 
+    // Version 1.0
+    // GET /api/ventas/calificacionesPoliticaCotizar/{pol_id}
     // Calificaciones activas de la politica, la predeterminada primero (el margen, solo con Ver costos).
     public function calificacionesPoliticaCotizar($polId)
     {
@@ -97,6 +110,8 @@ class CotizarController extends Controller
         }
     }
 
+    // Version 1.0
+    // POST /api/ventas/calcularCotizacion
     // Vista previa: precio de cada producto (una llamada por producto) y totales. No guarda.
     // Un producto con error queda marcado en su linea y no corta los demas.
     public function calcularCotizacion(Request $request)
@@ -121,6 +136,8 @@ class CotizarController extends Controller
         }
     }
 
+    // Version 1.0
+    // POST /api/ventas/guardarCotizacion
     // Guardar cotizacion: el servidor recalcula con lo vigente y guarda la foto completa
     // (data.ccotizacion_id y data.cliente). Los productos con error no se guardan.
     public function guardarCotizacion(Request $request)
@@ -231,7 +248,7 @@ class CotizarController extends Controller
             'ban_id'           => 'nullable|integer',
             'tarjeta_plazo_id' => 'nullable|integer',
             'plazo_default_id' => 'nullable|integer',
-            'parametros_contado_id' => 'nullable|integer',
+            'contado_parametros_id' => 'nullable|integer',
         ];
     }
 
@@ -263,7 +280,7 @@ class CotizarController extends Controller
             'ban_id.integer'           => 'El banco no existe.',
             'tarjeta_plazo_id.integer' => 'El plazo de la tarjeta no existe.',
             'plazo_default_id.integer' => 'El plazo de la tarjeta no existe.',
-            'parametros_contado_id.integer' => 'La forma de pago no existe.',
+            'contado_parametros_id.integer' => 'La forma de pago no existe.',
         ];
     }
 
@@ -291,7 +308,7 @@ class CotizarController extends Controller
             'ban_id'           => $this->enteroONulo($request->input('ban_id')),
             'tarjeta_plazo_id' => $this->enteroONulo($request->input('tarjeta_plazo_id')),
             'plazo_default_id' => $this->enteroONulo($request->input('plazo_default_id')),
-            'parametros_contado_id' => $this->enteroONulo($request->input('parametros_contado_id')),
+            'contado_parametros_id' => $this->enteroONulo($request->input('contado_parametros_id')),
         ];
 
         return $payload;
