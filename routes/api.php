@@ -195,11 +195,15 @@ use App\Http\Controllers\contabilidad\SistemaLiquidacionController;
 use App\Http\Controllers\inventarios\CaracterísticasProductoController;
 use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\inventarios\TipoProducto;
+use App\Http\Controllers\ecommerce\HeaderController;
+use App\Http\Controllers\ecommerce\GrupoProductosController;
+use App\Http\Controllers\ecommerce\PaginasController;
+use App\Http\Controllers\ecommerce\SeccionesController;
+use App\Http\Controllers\ecommerce\DocumentosController;
 use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
 use App\Http\Controllers\formulario\EmpresaController;
 use App\Http\Controllers\formulario\SolicitudesCreditosWebController;
-use App\Http\Controllers\paginaWeb\EncabezadoController;
 use App\Http\Controllers\paginaWeb\PiePaginaController;
 use App\Http\Controllers\paginaWeb\EncabezadoPiePublicoController;
 use App\Http\Controllers\paginaWeb\SucursalCiudadController;
@@ -308,7 +312,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
 });
 
-// PÁGINA WEB (tienda): encabezado, pie de página y contenido visible, sin login
+// PÁGINA WEB (tienda): pie de página y contenido visible, sin login (el header está en public/headers/tienda)
 Route::get('public/pagina-web/secciones', [EncabezadoPiePublicoController::class, 'listar']);
 Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
 Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
@@ -2184,8 +2188,12 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::get('/stockBodegasProducto/{id}', [ProductoController::class, 'stockBodegasProducto']);
     Route::post('/crearProducto', [ProductoController::class, 'crearProducto']);
     Route::post('/editarProducto/{id}', [ProductoController::class, 'editarProducto']);
+    Route::post('/marcarProductoWeb/{id}', [ProductoController::class, 'marcarProductoWeb'])->whereNumber('id');
     Route::post('/clonarProducto/{id}', [ProductoController::class, 'clonarProducto'])->whereNumber('id');
     Route::get('/productoAuditoria', [ProductoController::class, 'productoAuditoria']);
+    Route::post('/eliminarProducto/{id}', [ProductoController::class, 'eliminarProducto'])->whereNumber('id');
+    Route::post('/restaurarProducto/{id}', [ProductoController::class, 'restaurarProducto'])->whereNumber('id');
+    Route::get('/papeleraProductos', [ProductoController::class, 'papeleraProductos']);
     // Características: la plantilla de cada categoría de tercer nivel y sus valores en cada producto.
     Route::get('/arbolTiposCaracteristicas', [CaracterísticasProductoController::class, 'arbolTiposProducto']);
     Route::get('/listCaracteristicas', [CaracterísticasProductoController::class, 'listCaracteristicas']);
@@ -2193,6 +2201,7 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::get('/getCaracteristica/{id}', [CaracterísticasProductoController::class, 'getCaracteristica'])->whereNumber('id');
     Route::post('/crearCaracteristica', [CaracterísticasProductoController::class, 'crearCaracteristica']);
     Route::post('/editarCaracteristica/{id}', [CaracterísticasProductoController::class, 'editarCaracteristica'])->whereNumber('id');
+    Route::post('/clonarCaracteristica/{id}', [CaracterísticasProductoController::class, 'clonarCaracteristica'])->whereNumber('id');
     Route::post('/ordenarCaracteristicas', [CaracterísticasProductoController::class, 'ordenarCaracteristicas']);
     Route::post('/eliminarCaracteristica/{id}', [CaracterísticasProductoController::class, 'eliminarCaracteristica'])->whereNumber('id');
     Route::post('/restaurarCaracteristica/{id}', [CaracterísticasProductoController::class, 'restaurarCaracteristica'])->whereNumber('id');
@@ -2213,18 +2222,88 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::get('/auditoriaTipoProducto', [TipoProducto::class, 'auditoriaTipoProducto']);
 });
 
-// PÁGINA WEB: administración del encabezado, pie de página y contenido de la tienda desde el CRM
+// ECOMMERCE: administración de la tienda desde el CRM con el estándar de Clientes. Reemplaza al grupo pagina-web.
+Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function () {
+    Route::get('/listHeaders', [HeaderController::class, 'listar']);
+    Route::get('/getHeader/{id}', [HeaderController::class, 'buscar'])->whereNumber('id');
+    Route::post('/crearHeader', [HeaderController::class, 'crear']);
+    Route::post('/editarHeader/{id}', [HeaderController::class, 'editar'])->whereNumber('id');
+    Route::post('/editarHeaderParte/{id}/{parte}', [HeaderController::class, 'editarParte'])
+        ->whereNumber('id')->where('parte', 'texto_promo|boton_promo|logo|buscador|cuenta|carrito|categorias|enlaces|credito');
+    Route::post('/ordenarHeaderPartes/{id}', [HeaderController::class, 'ordenarPartes'])->whereNumber('id');
+    Route::post('/subirHeaderImagen', [HeaderController::class, 'subirImagen']);
+    Route::post('/eliminarHeader/{id}', [HeaderController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarHeader/{id}', [HeaderController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraHeaders', [HeaderController::class, 'papelera']);
+    Route::get('/headerAuditoria', [HeaderController::class, 'auditoria']);
+    // Grupos de productos: productos disponibles (activos y con stock), paginados, por tipo o por marca.
+    Route::get('/listGruposProductos', [GrupoProductosController::class, 'listar']);
+    Route::get('/grupoProductos/{id}', [GrupoProductosController::class, 'ver'])->whereNumber('id');
+    Route::get('/grupoProductosDisponibles',[GrupoProductosController::class, 'productosDisponibles']);
+    Route::get('/grupoProductosPorTipo',[GrupoProductosController::class, 'productosPorTipo']);
+    Route::get('/grupoProductosPorMarca', [GrupoProductosController::class, 'productosPorMarca']);
+    Route::post('/crearGrupoProductos', [GrupoProductosController::class, 'crear']);
+    Route::post('/editarGrupoProductos/{id}', [GrupoProductosController::class, 'editar'])->whereNumber('id');
+    Route::post('/clonarGrupoProductos/{id}', [GrupoProductosController::class, 'clonar'])->whereNumber('id');
+    Route::post('/eliminarGrupoProductos/{id}', [GrupoProductosController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarGrupoProductos/{id}', [GrupoProductosController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraGrupoProductos', [GrupoProductosController::class, 'papelera']);
+    Route::get('/grupoProductosAuditoria', [GrupoProductosController::class, 'auditoria']);
+    // Páginas de la tienda (el cuerpo) y sus secciones (plantillas con valores).
+    Route::get('/listPaginas', [PaginasController::class, 'listar']);
+    Route::get('/pagina/{id}', [PaginasController::class, 'ver'])->whereNumber('id');
+    Route::post('/crearPagina', [PaginasController::class, 'crear']);
+    Route::post('/editarPagina/{id}', [PaginasController::class, 'editar'])->whereNumber('id');
+    Route::post('/clonarPagina/{id}', [PaginasController::class, 'clonar'])->whereNumber('id');
+    Route::post('/eliminarPagina/{id}', [PaginasController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarPagina/{id}', [PaginasController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraPaginas', [PaginasController::class, 'papelera']);
+    Route::get('/paginaAuditoria', [PaginasController::class, 'auditoria']);
+    Route::get('/plantillasSeccion', [SeccionesController::class, 'plantillas']);
+    Route::get('/plantillaSeccion/{id}', [SeccionesController::class, 'plantilla'])->whereNumber('id');
+    Route::get('/seccion/{id}', [SeccionesController::class, 'ver'])->whereNumber('id');
+    Route::post('/crearSeccion', [SeccionesController::class, 'crear']);
+    Route::post('/editarSeccion/{id}', [SeccionesController::class, 'editar'])->whereNumber('id');
+    Route::post('/ordenarSecciones/{pagId}', [SeccionesController::class, 'ordenar'])->whereNumber('pagId');
+    Route::post('/eliminarSeccion/{id}', [SeccionesController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarSeccion/{id}', [SeccionesController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraSecciones', [SeccionesController::class, 'papelera']);
+    Route::get('/seccionAuditoria', [SeccionesController::class, 'auditoria']);
+    Route::post('/subirSeccionImagen', [SeccionesController::class, 'subirImagen']);
+    Route::get('/seccionProductos', [SeccionesController::class, 'productos']);
+    Route::get('/seccionProductosMarcas', [SeccionesController::class, 'marcasProductos']);
+    // Documentos de la tienda (términos, políticas, garantías...) y sus carpetas.
+    Route::get('/listDocumentos', [DocumentosController::class, 'listar']);
+    Route::get('/documento/{id}', [DocumentosController::class, 'ver'])->whereNumber('id');
+    Route::post('/crearDocumento', [DocumentosController::class, 'crear']);
+    Route::post('/editarDocumento/{id}', [DocumentosController::class, 'editar'])->whereNumber('id');
+    Route::post('/ordenarDocumentos', [DocumentosController::class, 'ordenar']);
+    Route::post('/eliminarDocumento/{id}', [DocumentosController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarDocumento/{id}', [DocumentosController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraDocumentos', [DocumentosController::class, 'papelera']);
+    Route::get('/documentoAuditoria', [DocumentosController::class, 'auditoria']);
+    Route::get('/carpetasDocumentos', [DocumentosController::class, 'carpetas']);
+    Route::post('/crearCarpetaDocumentos', [DocumentosController::class, 'crearCarpeta']);
+    Route::post('/editarCarpetaDocumentos/{id}', [DocumentosController::class, 'editarCarpeta'])->whereNumber('id');
+    Route::post('/eliminarCarpetaDocumentos/{id}', [DocumentosController::class, 'eliminarCarpeta'])->whereNumber('id');
+    Route::post('/restaurarCarpetaDocumentos/{id}', [DocumentosController::class, 'restaurarCarpeta'])->whereNumber('id');
+    Route::post('/ordenarCarpetasDocumentos', [DocumentosController::class, 'ordenarCarpetas']);
+    Route::post('/subirDocumentoImagen', [DocumentosController::class, 'subirImagen']);
+    Route::post('/subirDocumentoPdf', [DocumentosController::class, 'subirPdf']);
+});
+// Header de la tienda e imágenes de los headers (el logo): públicas, las pide la tienda.
+Route::get('public/headers/tienda', [HeaderController::class, 'tienda']);
+Route::get('public/headers/imagenes/{nombre}', [HeaderController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
+// Imágenes de las secciones de las páginas: públicas, las pide la tienda (y el CRM para mostrarlas).
+Route::get('public/secciones/imagenes/{nombre}', [SeccionesController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
+// Documentos: los activos (por su dirección o todos) y sus imágenes y PDF. Públicos, los pide la tienda.
+Route::get('public/documentos', [DocumentosController::class, 'publicos']);
+Route::get('public/documentos/imagenes/{nombre}', [DocumentosController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
+Route::get('public/documentos/pdf/{nombre}', [DocumentosController::class, 'verPdf'])->where('nombre', '[A-Za-z0-9]{40}\.pdf');
+Route::get('public/documentos/{ruta}', [DocumentosController::class, 'publico'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
+
+// PÁGINA WEB: administración del pie de página y contenido de la tienda desde el CRM (el header está en ECOMMERCE)
 Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
-    // Encabezado (header)
-    Route::get('encabezado', [EncabezadoController::class, 'buscar']);
-    Route::put('encabezado', [EncabezadoController::class, 'modificar']);
-    Route::post('encabezado/enlaces', [EncabezadoController::class, 'crearEnlace']);
-    Route::put('encabezado/enlaces-orden', [EncabezadoController::class, 'ordenarEnlaces']);
-    Route::get('encabezado-enlaces-papelera', [EncabezadoController::class, 'papelera']);
-    Route::delete('encabezado-enlaces-papelera', [EncabezadoController::class, 'vaciar']);
-    Route::put('encabezado/enlaces/{eenId}/restaurar', [EncabezadoController::class, 'restaurarEnlace'])->whereNumber('eenId');
-    Route::put('encabezado/enlaces/{eenId}', [EncabezadoController::class, 'modificarEnlace'])->whereNumber('eenId');
-    Route::delete('encabezado/enlaces/{eenId}', [EncabezadoController::class, 'eliminarEnlace'])->whereNumber('eenId');
 
     // Pie de página (footer)
     Route::get('pie-pagina', [PiePaginaController::class, 'buscar']);
