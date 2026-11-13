@@ -389,6 +389,8 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // ? START POLITICAS
     Route::get('/listPoliticasPaginado', [PoliticaController::class, 'listPoliticasPaginado']);
     Route::get('/getPolitica/{id}', [PoliticaController::class, 'getPolitica']);
+    // 13-nov-2026 (financiamiento 148): el % que toman las políticas de cliente a crédito (solo para mostrarlo).
+    Route::get('/getFinanciamientoPolitica', [PoliticaController::class, 'getFinanciamientoPolitica']);
     Route::post('/addPolitica', [PoliticaController::class, 'addPolitica']);
     Route::post('/editPolitica/{id}', [PoliticaController::class, 'editPolitica']);
     Route::post('/cambiarEstadoPolitica/{id}', [PoliticaController::class, 'cambiarEstadoPolitica']);

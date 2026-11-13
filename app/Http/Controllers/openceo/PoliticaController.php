@@ -69,6 +69,22 @@ class PoliticaController extends Controller
         }
     }
 
+    // Version 1.0
+    // GET getFinanciamientoPolitica — 13-nov-2026 (financiamiento 148): el % de Financiamiento que toman las políticas de
+    // CLIENTE a crédito (el parámetro 148 de Dynamo, crm.fn_politica_financiamiento_buscar). Solo para mostrarlo en el campo
+    // bloqueado de los modales: al guardar lo pone crm.fn_politica_normalizar, venga lo que venga. null si el parámetro no existe.
+    public function getFinanciamientoPolitica()
+    {
+        try {
+            $fila = DB::selectOne('SELECT crm.fn_politica_financiamiento_buscar() AS valor');
+            $valor = ($fila && $fila->valor !== null) ? (float) $fila->valor : null;
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se obtuvo con éxito', ['valor' => $valor]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo obtener el financiamiento (parámetro 148)', $e->getMessage()));
+        }
+    }
+
     public function addPolitica(Request $request)
     {
         try {
