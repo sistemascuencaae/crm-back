@@ -219,11 +219,8 @@ use App\Http\Controllers\paginaWeb\GaleriaPublicaController;
 use App\Http\Controllers\paginaWeb\ArchivoPaginaWebController;
 use App\Http\Controllers\paginaWeb\CategoriaWebController;
 use App\Http\Controllers\paginaWeb\CategoriaWebPublicaController;
-use App\Http\Controllers\paginaWeb\InicioSeccionController;
 use App\Http\Controllers\paginaWeb\PaginaMarcaController;
 use App\Http\Controllers\paginaWeb\PaginaMarcaPublicaController;
-use App\Http\Controllers\paginaWeb\BloqueProductoController;
-use App\Http\Controllers\paginaWeb\InicioPublicoController;
 use App\Http\Controllers\paginaWeb\EspanaMotosController;
 use App\Http\Controllers\paginaWeb\EspanaMotosPublicoController;
 use App\Http\Controllers\paginaWeb\ProductoTiendaController;
@@ -321,7 +318,6 @@ Route::get('public/pagina-web/categorias-menu', [CategoriaWebPublicaController::
 Route::get('public/pagina-web/marcas/{direccion}', [PaginaMarcaPublicaController::class, 'buscar']);
 Route::get('public/pagina-web/marcas/{direccion}/productos', [PaginaMarcaPublicaController::class, 'productos']);
 Route::get('public/pagina-web/espana-motos', [EspanaMotosPublicoController::class, 'buscar']);
-Route::get('public/pagina-web/inicio', [InicioPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/productos', [ProductoTiendaPublicoController::class, 'buscar']);
 Route::get('public/pagina-web/productos/{proId}', [ProductoTiendaPublicoController::class, 'detalle'])->whereNumber('proId');
 
@@ -2395,15 +2391,10 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
 
     // Categorías destacadas en la página web
     Route::get('categorias-web', [CategoriaWebController::class, 'listar']);
-    Route::put('categorias-web-orden', [CategoriaWebController::class, 'ordenar']);
-    Route::put('categorias-web-mosaico-orden', [CategoriaWebController::class, 'ordenarMosaico']);
     Route::put('categorias-web/{tprId}', [CategoriaWebController::class, 'modificar'])->whereNumber('tprId');
     Route::get('categorias-web/{tprId}/impacto', [CategoriaWebController::class, 'impacto'])->whereNumber('tprId');
 
     // Secciones de la página de inicio
-    Route::get('inicio-secciones', [InicioSeccionController::class, 'listar']);
-    Route::put('inicio-secciones/{clave}', [InicioSeccionController::class, 'modificar'])->where('clave', '[a-z_]+');
-    Route::put('inicio-secciones-orden', [InicioSeccionController::class, 'ordenar']);
 
     // Páginas de marca
     Route::get('paginas-marca-marcas-erp', [PaginaMarcaController::class, 'marcasErp']);
@@ -2436,14 +2427,6 @@ Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.ac
     Route::delete('espana-motos-marcas/{emmId}', [EspanaMotosController::class, 'eliminarMarca'])->whereNumber('emmId');
 
     // Bloques destacados del inicio
-    Route::get('bloques-productos', [BloqueProductoController::class, 'listar']);
-    Route::post('bloques-productos', [BloqueProductoController::class, 'crear']);
-    Route::put('bloques-productos-orden', [BloqueProductoController::class, 'ordenar']);
-    Route::get('bloques-productos-papelera', [BloqueProductoController::class, 'papelera']);
-    Route::delete('bloques-productos-papelera', [BloqueProductoController::class, 'vaciar']);
-    Route::put('bloques-productos/{bprId}/restaurar', [BloqueProductoController::class, 'restaurar'])->whereNumber('bprId');
-    Route::put('bloques-productos/{bprId}', [BloqueProductoController::class, 'modificar']);
-    Route::delete('bloques-productos/{bprId}', [BloqueProductoController::class, 'eliminar']);
 
     // Productos de la tienda: ficha técnica e imágenes
     Route::get('productos-tienda-arbol', [ProductoTiendaController::class, 'arbol']);

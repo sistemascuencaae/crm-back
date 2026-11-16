@@ -240,7 +240,7 @@ class ProductoTiendaService
     }
 
     // -----------------------------------------------------------------
-    // Tienda (lo usan InicioSeccionService, BloqueProductoService y PaginaMarcaService, que ya tienen su caché)
+    // Tienda (lo usa PaginaMarcaService, que ya tiene su caché)
     // -----------------------------------------------------------------
 
     /**
@@ -518,10 +518,9 @@ class ProductoTiendaService
         ], $filas);
     }
 
-    /** El inicio y las páginas de marca muestran productos: tras marcar uno o cambiar sus fotos, deben verlo. */
+    /** Las páginas de marca muestran productos: tras marcar uno o cambiar sus fotos, deben verlo. */
     public static function limpiarCacheTienda(): void
     {
-        InicioSeccionService::limpiarCache();
         PaginaMarcaService::limpiarCache();
     }
 

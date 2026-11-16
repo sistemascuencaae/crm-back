@@ -8,10 +8,9 @@ use Illuminate\Support\Facades\DB;
 /**
  * Categorías de la tienda. Las categorías vienen del ERP (public.tipo_producto, solo lectura);
  * aquí se maneja lo que decide marketing: qué departamentos salen en la tienda, qué categorías
- * se ocultan, cuáles son destacadas, su imagen redonda, un nombre visible y su orden.
+ * se ocultan y un nombre visible.
  * La regla de "qué está en la tienda" está en la base (fn_categoria_web_en_tienda).
- * Llama a las funciones ecommerce.fn_categoria_web_*. La tienda lee el menú con caché;
- * las destacadas van dentro del inicio (InicioSeccionService::publica).
+ * Llama a las funciones ecommerce.fn_categoria_web_*. La tienda lee el menú con caché.
  */
 class CategoriaWebService
 {
@@ -45,11 +44,8 @@ class CategoriaWebService
     {
         Cache::forget(self::CACHE_MENU);
 
-        // Las destacadas y los bloques van dentro del inicio, y las tarjetas de producto (inicio y páginas de marca)
-        // solo muestran productos de categorías visibles en la tienda
-        InicioSeccionService::limpiarCache();
+        // Las tarjetas de producto de las páginas de marca solo muestran productos de categorías visibles en la tienda
         PaginaMarcaService::limpiarCache();
-
         // Las pestañas de España Motos solo muestran categorías visibles en la tienda
         EspanaMotosService::limpiarCache();
     }
@@ -74,20 +70,6 @@ class CategoriaWebService
     public function modificar(int $tprId, array $datos): void
     {
         DB::statement('SELECT ecommerce.fn_categoria_web_modificar(?, ?::jsonb)', [$tprId, $this->json($datos)]);
-        self::limpiarCache();
-    }
-
-    /** $datos: {ids: [tpr_id…] (todas las destacadas, en el nuevo orden), usu_id} */
-    public function ordenar(array $datos): void
-    {
-        DB::statement('SELECT ecommerce.fn_categoria_web_ordenar(?::jsonb)', [$this->json($datos)]);
-        self::limpiarCache();
-    }
-
-    /** $datos: {ids: [tpr_id…] (todas las del mosaico, en el nuevo orden), usu_id} */
-    public function ordenarMosaico(array $datos): void
-    {
-        DB::statement('SELECT ecommerce.fn_categoria_web_ordenar_mosaico(?::jsonb)', [$this->json($datos)]);
         self::limpiarCache();
     }
 

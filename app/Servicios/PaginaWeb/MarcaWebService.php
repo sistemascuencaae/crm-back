@@ -33,7 +33,6 @@ class MarcaWebService
      */
     public static function limpiarCacheNuestrasMarcas(): void
     {
-        InicioSeccionService::limpiarCache();
         PaginaInformativaService::limpiarCacheMarcas();
     }
 

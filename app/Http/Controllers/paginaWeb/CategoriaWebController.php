@@ -56,30 +56,6 @@ class CategoriaWebController extends Controller
         }
     }
 
-    // PUT pagina-web/categorias-web-orden   {ids: [212, 228, 301]} (todas las destacadas, en el nuevo orden)
-    public function ordenar(Request $request)
-    {
-        try {
-            $this->servicio->ordenar(['ids' => $request->input('ids'), 'usu_id' => auth()->id()]);
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
-        } catch (QueryException $e) {
-            return $this->error($e, 'Error al guardar el orden');
-        }
-    }
-
-    // PUT pagina-web/categorias-web-mosaico-orden   {ids: [212, 228, 301]} (todas las del mosaico, en el nuevo orden)
-    public function ordenarMosaico(Request $request)
-    {
-        try {
-            $this->servicio->ordenarMosaico(['ids' => $request->input('ids'), 'usu_id' => auth()->id()]);
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', null));
-        } catch (QueryException $e) {
-            return $this->error($e, 'Error al guardar el orden');
-        }
-    }
-
     // -----------------------------------------------------------------
 
     /** Código conocido → su mensaje (arriba, como siempre). Desconocido → mensaje genérico; el detalle queda en el log. */
