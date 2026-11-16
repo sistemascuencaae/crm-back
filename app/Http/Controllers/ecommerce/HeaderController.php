@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\EnlacesService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -35,7 +36,8 @@ class HeaderController extends Controller
     private const CACHE_TIENDA = 'ecommerce.header_tienda';
     private const SEGUNDOS_CACHE_TIENDA = 60;
 
-    // Solo esto sale a la tienda (sin usuarios, fechas de auditoría ni papelera).
+    // Solo esto sale a la tienda (sin usuarios, fechas de auditoría ni papelera). hbl_enlace y hen_enlace son la dirección
+    // ya armada a partir del destino elegido (hbl_destino / hen_destino): la tienda no cambia.
     private const TIENDA_HEADER = ['hea_fuente', 'hea_fijo', 'hea_superior_visible', 'hea_superior_fondo', 'hea_superior_borde',
         'hea_media_fondo', 'hea_inferior_visible', 'hea_inferior_fondo', 'hea_inferior_contorno'];
     private const TIENDA_BLOQUE = ['hbl_tipo', 'hbl_franja', 'hbl_orden', 'hbl_imagen', 'hbl_imagen_alt', 'hbl_ancho', 'hbl_enlace',
@@ -71,7 +73,9 @@ class HeaderController extends Controller
         'REDONDEO_INVALIDO' => 'El redondeo debe estar entre 0 y 50 px.',
         'ANCHO_INVALIDO' => 'El ancho del logo debe estar entre 40 y 400 px.',
         'SEGUNDOS_INVALIDOS' => 'Las frases del buscador deben cambiar cada 2 a 30 segundos.',
-        'ENLACE_INVALIDO' => 'El destino debe ser una ruta de la tienda (empieza con /) o una dirección http(s), de hasta 250 caracteres.',
+        'DESTINO_INVALIDO' => 'Uno de los destinos no es válido: elíjalo de la lista (las direcciones web empiezan con https://).',
+        'DESTINO_NO_EXISTE' => 'Uno de los destinos ya no existe o está en la papelera: elija otro.',
+        'CARPETA_NO_PRINCIPAL' => 'Solo se pueden enlazar carpetas de primer nivel.',
         'ICONO_INVALIDO' => 'El ícono no es válido.',
         'TEXTOS_INVALIDOS' => 'Los textos enviados no son válidos.',
         'TEXTO_CLAVE_INVALIDA' => 'Uno de los textos no corresponde a esta parte del header.',
@@ -86,7 +90,7 @@ class HeaderController extends Controller
         'SUBLINKS_NIVEL' => 'Los sublinks no pueden tener sublinks.',
         'ENLACE_NO_EXISTE' => 'Uno de los links no existe o ya no pertenece a esta barra.',
         'ENLACE_REPETIDO' => 'Un link se envió dos veces.',
-        'REQUIERE_ENLACE' => 'Cada sublink, y cada link sin sublinks, necesita un destino.',
+        'REQUIERE_ENLACE' => 'Cada sublink, y cada link sin sublinks, necesita un destino (a dónde lleva).',
         'FRANJA_INVALIDA' => 'La franja no es válida.',
         'ORDEN_INVALIDO' => 'El orden debe traer exactamente las partes de esa franja, sin repetir.',
         'ux_headers_nombre' => 'Ya existe un header con ese nombre.',
@@ -132,7 +136,7 @@ class HeaderController extends Controller
         'hbl_imagen',
         'hbl_imagen_alt',
         'hbl_ancho',
-        'hbl_enlace',
+        'hbl_destino',
         'hbl_nueva_pestana',
         'hbl_color_fondo',
         'hbl_color_contorno',
@@ -192,13 +196,7 @@ class HeaderController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Header creado con éxito', ['hea_id' => $resultado->hea_id]));
         } catch (QueryException $e) {
-            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-                if (strpos($e->getMessage(), $codigo) !== false) {
-                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
-                }
-            }
-
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear el header', $e->getMessage()));
+            return $this->errorTraducido($e, 'Error al crear el header');
         }
     }
 
@@ -241,13 +239,7 @@ class HeaderController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Header modificado con éxito', ['hea_id' => $resultado->hea_id]));
         } catch (QueryException $e) {
-            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-                if (strpos($e->getMessage(), $codigo) !== false) {
-                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
-                }
-            }
-
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al modificar el header', $e->getMessage()));
+            return $this->errorTraducido($e, 'Error al modificar el header');
         }
     }
 
@@ -271,6 +263,9 @@ class HeaderController extends Controller
             'hbl_ancho' => 'nullable|integer',
             'hbl_redondeo' => 'nullable|integer',
             'hbl_segundos' => 'nullable|integer',
+            'hbl_destino' => 'nullable|array',
+            'enlaces.*.hen_destino' => 'nullable|array',
+            'enlaces.*.sublinks.*.hen_destino' => 'nullable|array',
             'textos' => 'sometimes|array',
             'textos.*.htx_clave' => 'required|string|max:15',
             'enlaces' => 'sometimes|array|max:8',
@@ -323,7 +318,6 @@ class HeaderController extends Controller
         }
     }
 
-    // Mensaje de MENSAJES_ERROR para el código que lanzó la función PG; si no hay, el genérico con el detalle.
     // Sube una imagen del header (el logo): solo WebP de verdad (mimetypes mira el contenido, no la extensión: un PNG
     // renombrado a .webp no pasa) y hasta 2 MB. Devuelve la dirección para ponerla en hbl_imagen; se publica al guardar.
     public function subirImagen(Request $request)
@@ -377,8 +371,26 @@ class HeaderController extends Controller
 
     private function headerParaTienda(array $h): array
     {
+        // Las direcciones de todos los destinos (partes y links) con una sola consulta.
+        $destinos = [];
+        foreach ($h['bloques'] ?? [] as $i => $b) {
+            $destinos["b$i"] = $b['hbl_destino'] ?? null;
+            foreach ($b['enlaces'] ?? [] as $j => $e) {
+                $destinos["b$i-e$j"] = $e['hen_destino'] ?? null;
+            }
+        }
+        $rutas = array_combine(array_keys($destinos), app(EnlacesService::class)->rutas(array_values($destinos)) ?: []) ?: [];
+        foreach ($h['bloques'] ?? [] as $i => $b) {
+            $h['bloques'][$i]['hbl_enlace'] = $rutas["b$i"] ?? null;
+            foreach ($b['enlaces'] ?? [] as $j => $e) {
+                $h['bloques'][$i]['enlaces'][$j]['hen_enlace'] = $rutas["b$i-e$j"] ?? null;
+                // Un destino que hoy no lleva a ningún lado (inactivo o en la papelera): el link no sale.
+                $h['bloques'][$i]['enlaces'][$j]['sin_salida'] = !empty($e['hen_destino']) && ($rutas["b$i-e$j"] ?? null) === null;
+            }
+        }
+
         $ahora = now();
-        $vigente = fn(array $e) => !empty($e['hen_activo'])
+        $vigente = fn(array $e) => !empty($e['hen_activo']) && empty($e['sin_salida'])
             && (empty($e['hen_vigente_desde'])
                 || ($ahora->gte(\Carbon\Carbon::parse($e['hen_vigente_desde'])) && $ahora->lt(\Carbon\Carbon::parse($e['hen_vigente_hasta']))));
         $porOrden = fn(string $campo) => fn($a, $b) => ($a[$campo] ?? 0) <=> ($b[$campo] ?? 0);
@@ -434,10 +446,15 @@ class HeaderController extends Controller
         ]);
     }
 
+    // Mensaje de MENSAJES_ERROR para el código que lanzó la función PG; si no hay, el genérico con el detalle. Se busca
+    // solo en la primera línea del error de PG: el resto trae el CONTEXT (el código de la función, con otros códigos
+    // escritos adentro) y el SQL con el payload.
     private function errorTraducido(QueryException $e, string $mensajeGenerico)
     {
+        $primera = strtok((string) ($e->errorInfo[2] ?? $e->getMessage()), "\n");
+
         foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-            if (strpos($e->getMessage(), $codigo) !== false) {
+            if (strpos($primera, $codigo) !== false) {
                 return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
             }
         }

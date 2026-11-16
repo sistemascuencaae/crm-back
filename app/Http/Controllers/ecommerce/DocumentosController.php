@@ -65,6 +65,12 @@ class DocumentosController extends Controller
         'CARPETA_CON_DOCUMENTOS' => 'La carpeta tiene documentos: muévalos a otra carpeta o elimínelos antes.',
         'REQUIERE_CARPETAS' => 'Envíe el nuevo orden de las carpetas.',
         'CARPETAS_NO_COINCIDEN' => 'Las carpetas cambiaron mientras las ordenaba. Vuelva a cargarlas.',
+        // Enlaces: lo que se usa como destino (header, footer o sección) no se borra ni deja de ser de primer nivel.
+        'DOCUMENTO_ENLAZADO' => 'No se puede eliminar porque es el destino de un enlace: cámbielo primero.',
+        'CARPETA_ENLAZADA' => 'No se puede porque la carpeta es el destino de un enlace (solo se enlazan carpetas de primer nivel): cámbielo primero.',
+        'CARPETA_DIRECCION_INVALIDA' => 'La dirección de la carpeta solo puede tener letras minúsculas, números y guiones (hasta 60). Ejemplo: proteccion-de-datos.',
+        'CARPETA_DIRECCION_DUPLICADA' => 'Ya hay otra carpeta con esa dirección.',
+        'ux_documentos_carpetas_ruta' => 'Ya hay otra carpeta con esa dirección.',
     ];
 
     private const MENSAJES_FORMULARIO = [
@@ -92,7 +98,7 @@ class DocumentosController extends Controller
 
     public function __construct(private LimpiadorDocumento $limpiador)
     {
-        $this->middleware('auth:api')->except(['publico', 'publicos', 'verImagen', 'verPdf']);
+        $this->middleware('auth:api')->except(['publico', 'publicos', 'carpetaPublica', 'verImagen', 'verPdf']);
     }
 
     // ================= Documentos =================
@@ -262,6 +268,35 @@ class DocumentosController extends Controller
 
     // ================= Carpetas =================
 
+    // Auditoría de UNA carpeta (también de las de la papelera). GET ?dca_id=&pagina=&tamanio=&busqueda=
+    public function carpetaAuditoria(Request $request)
+    {
+        try {
+            $dcaId = (int) $request->query('dca_id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = min(max((int) $request->query('tamanio', 10), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($dcaId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Carpeta no válida', null));
+            }
+
+            $resumen = DB::selectOne('SELECT * FROM ecommerce.fn_documento_carpeta_auditoria_resumen(?)', [$dcaId]);
+            $eventos = DB::select('SELECT * FROM ecommerce.fn_documento_carpeta_auditoria_listar_paginacion(?, ?, ?, ?)', [$dcaId, $pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de la carpeta', $th->getMessage()));
+        }
+    }
+
+
     // Las carpetas en su orden con cuántos documentos tienen (?papelera=1: las de la papelera).
     public function carpetas(Request $request)
     {
@@ -274,16 +309,17 @@ class DocumentosController extends Controller
         }
     }
 
-    // Body: { dca_nombre, dca_padre_id? } (sin padre = primer nivel; hasta tres niveles).
+    // Body: { dca_nombre, dca_padre_id?, dca_ruta? } (sin padre = primer nivel; hasta tres niveles). dca_ruta: la dirección
+    // de una carpeta de primer nivel (vacía = se arma con el nombre).
     public function crearCarpeta(Request $request)
     {
-        $validator = Validator::make($request->all(), ['dca_nombre' => 'required|string|max:80', 'dca_padre_id' => 'nullable|integer|min:1'], self::MENSAJES_FORMULARIO);
+        $validator = Validator::make($request->all(), ['dca_nombre' => 'required|string|max:80', 'dca_padre_id' => 'nullable|integer|min:1', 'dca_ruta' => 'nullable|string|max:60'], self::MENSAJES_FORMULARIO);
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
         }
 
         try {
-            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_add(?::jsonb) AS dca_id', [json_encode($request->only(['dca_nombre', 'dca_padre_id']) + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_add(?::jsonb) AS dca_id', [json_encode($request->only(['dca_nombre', 'dca_padre_id', 'dca_ruta']) + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Carpeta creada con éxito', ['dca_id' => $resultado->dca_id]));
         } catch (QueryException $e) {
@@ -291,16 +327,17 @@ class DocumentosController extends Controller
         }
     }
 
-    // Body: { dca_nombre, dca_padre_id? } — si viene dca_padre_id, la carpeta se mueve allí (null = primer nivel).
+    // Body: { dca_nombre, dca_padre_id?, dca_ruta? } — si viene dca_padre_id, la carpeta se mueve allí (null = primer
+    // nivel). Una carpeta enlazada no se mete en otra.
     public function editarCarpeta(Request $request, int $id)
     {
-        $validator = Validator::make($request->all(), ['dca_nombre' => 'required|string|max:80', 'dca_padre_id' => 'sometimes|nullable|integer|min:1'], self::MENSAJES_FORMULARIO);
+        $validator = Validator::make($request->all(), ['dca_nombre' => 'required|string|max:80', 'dca_padre_id' => 'sometimes|nullable|integer|min:1', 'dca_ruta' => 'sometimes|nullable|string|max:60'], self::MENSAJES_FORMULARIO);
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
         }
 
         try {
-            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_edit(?::jsonb) AS dca_id', [json_encode($request->only(['dca_nombre', 'dca_padre_id']) + ['dca_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
+            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_edit(?::jsonb) AS dca_id', [json_encode($request->only(['dca_nombre', 'dca_padre_id', 'dca_ruta']) + ['dca_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Carpeta guardada con éxito', ['dca_id' => $resultado->dca_id]));
         } catch (QueryException $e) {
@@ -430,6 +467,36 @@ class DocumentosController extends Controller
         }
     }
 
+    // La pantalla de una carpeta de primer nivel (/documentos/carpeta/<ruta> en la tienda): su nombre y sus documentos
+    // activos agrupados por subcarpeta ("" = directo en la carpeta). 404 si no existe o no tiene documentos activos.
+    // GET public/documentos/carpetas/{ruta}
+    public function carpetaPublica(string $ruta)
+    {
+        try {
+            $filas = DB::select('SELECT * FROM ecommerce.fn_documento_carpeta_publica(?)', [$ruta]);
+            if (!$filas) {
+                return response()->json(RespuestaApi::returnResultado('error', 'La carpeta no existe.', null), 404);
+            }
+
+            $grupos = [];
+            foreach ($filas as $f) {
+                $grupos[$f->subcarpeta][] = [
+                    'doc_titulo' => $f->doc_titulo,
+                    'doc_ruta' => $f->doc_ruta,
+                    'doc_pdf_url' => $f->doc_pdf ? url('api/public/documentos/pdf/' . $f->doc_pdf) : null,
+                    'doc_pdf_etiqueta' => $f->doc_pdf_etiqueta,
+                ];
+            }
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Carpeta', [
+                'carpeta' => $filas[0]->carpeta,
+                'grupos' => array_map(fn($nombre, $docs) => ['subcarpeta' => $nombre, 'documentos' => $docs], array_keys($grupos), $grupos),
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la carpeta', null));
+        }
+    }
+
     // Los documentos activos por carpeta (para el pie de página o un índice). GET public/documentos
     public function publicos()
     {
@@ -532,6 +599,10 @@ class DocumentosController extends Controller
 
         foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
             if (strpos($texto, $codigo) !== false) {
+                // "Enlazado": la base manda en el DETAIL dónde se usa; se agrega al mensaje.
+                if (preg_match('/_ENLAZAD[AO]$/', $codigo) && preg_match('/DETAIL:\s*(.+)/', $texto, $m)) {
+                    $mensaje .= ' Lo usa: ' . trim($m[1]) . '.';
+                }
                 return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
             }
         }

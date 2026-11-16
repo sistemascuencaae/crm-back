@@ -31,7 +31,7 @@ class LimpiadorDocumento
     public const FUENTES = ['Inter', 'Poppins', 'Barlow Condensed', 'Roboto', 'Montserrat', 'Open Sans'];
 
     private const PERMITIDAS = [
-        'p', 'br', 'hr', 'h2', 'h3', 'h4', 'blockquote', 'ul', 'ol', 'li',
+        'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'ul', 'ol', 'li',
         'strong', 'b', 'em', 'i', 'u', 's', 'sub', 'sup', 'span', 'mark', 'a', 'img',
         'table', 'thead', 'tbody', 'tr', 'th', 'td',
     ];
@@ -46,6 +46,7 @@ class LimpiadorDocumento
     // Qué estilos acepta cada etiqueta.
     private const ESTILOS = [
         'p'    => ['text-align'],
+        'h1'   => ['text-align'],
         'h2'   => ['text-align'],
         'h3'   => ['text-align'],
         'h4'   => ['text-align'],
@@ -107,12 +108,6 @@ class LimpiadorDocumento
                 }
 
                 $this->limpiarHijos($hijo);
-
-                // El título del documento lo pone la tienda: un <h1> pasa a subtítulo.
-                if ($etiqueta === 'h1') {
-                    $hijo = $this->renombrar($nodo, $hijo, 'h2');
-                    $etiqueta = 'h2';
-                }
 
                 if (!in_array($etiqueta, self::PERMITIDAS, true)) {
                     $this->quitarEtiqueta($nodo, $hijo);
@@ -272,16 +267,6 @@ class LimpiadorDocumento
             }
         }
         return null;
-    }
-
-    private function renombrar(DOMNode $padre, DOMElement $elemento, string $nueva): DOMElement
-    {
-        $reemplazo = $elemento->ownerDocument->createElement($nueva);
-        while ($elemento->firstChild) {
-            $reemplazo->appendChild($elemento->firstChild);
-        }
-        $padre->replaceChild($reemplazo, $elemento);
-        return $reemplazo;
     }
 
     private function quitarEtiqueta(DOMNode $padre, DOMElement $elemento): void

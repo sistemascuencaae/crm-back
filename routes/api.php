@@ -182,6 +182,8 @@ use App\Http\Controllers\inventarios\CaracterísticasProductoController;
 use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\inventarios\TipoProducto;
 use App\Http\Controllers\ecommerce\HeaderController;
+use App\Http\Controllers\ecommerce\FooterController;
+use App\Http\Controllers\ecommerce\EnlacesController;
 use App\Http\Controllers\ecommerce\GrupoProductosController;
 use App\Http\Controllers\ecommerce\PaginasController;
 use App\Http\Controllers\ecommerce\SeccionesController;
@@ -2162,6 +2164,22 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::post('/restaurarHeader/{id}', [HeaderController::class, 'restaurar'])->whereNumber('id');
     Route::get('/papeleraHeaders', [HeaderController::class, 'papelera']);
     Route::get('/headerAuditoria', [HeaderController::class, 'auditoria']);
+    // Footers: datos generales, columnas, elementos (enlace, imagen, párrafo, íconos), papelera y auditoría.
+    Route::get('/listFooters', [FooterController::class, 'listar']);
+    Route::get('/getFooter/{id}', [FooterController::class, 'buscar'])->whereNumber('id');
+    Route::post('/crearFooter', [FooterController::class, 'crear']);
+    Route::post('/editarFooter/{id}', [FooterController::class, 'editar'])->whereNumber('id');
+    Route::post('/guardarFooterColumna/{id}', [FooterController::class, 'guardarColumna'])->whereNumber('id');
+    Route::post('/eliminarFooterColumna/{id}/{fco}', [FooterController::class, 'eliminarColumna'])->whereNumber(['id', 'fco']);
+    Route::post('/ordenarFooterColumnas/{id}', [FooterController::class, 'ordenarColumnas'])->whereNumber('id');
+    Route::post('/guardarFooterElemento/{id}', [FooterController::class, 'guardarElemento'])->whereNumber('id');
+    Route::post('/eliminarFooterElemento/{id}/{fel}', [FooterController::class, 'eliminarElemento'])->whereNumber(['id', 'fel']);
+    Route::post('/ordenarFooterElementos/{id}', [FooterController::class, 'ordenarElementos'])->whereNumber('id');
+    Route::post('/subirFooterImagen', [FooterController::class, 'subirImagen']);
+    Route::post('/eliminarFooter/{id}', [FooterController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarFooter/{id}', [FooterController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraFooters', [FooterController::class, 'papelera']);
+    Route::get('/footerAuditoria', [FooterController::class, 'auditoria']);
     // Grupos de productos: productos disponibles (activos y con stock), paginados, por tipo o por marca.
     Route::get('/listGruposProductos', [GrupoProductosController::class, 'listar']);
     Route::get('/grupoProductos/{id}', [GrupoProductosController::class, 'ver'])->whereNumber('id');
@@ -2183,6 +2201,10 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::post('/clonarPagina/{id}', [PaginasController::class, 'clonar'])->whereNumber('id');
     Route::post('/eliminarPagina/{id}', [PaginasController::class, 'eliminar'])->whereNumber('id');
     Route::post('/restaurarPagina/{id}', [PaginasController::class, 'restaurar'])->whereNumber('id');
+    Route::post('/inicioPagina/{id}', [PaginasController::class, 'marcarInicio'])->whereNumber('id');
+    // Selector de enlace (headers, footers, secciones): qué se puede elegir y cómo se llama cada destino.
+    Route::get('/enlacesCatalogo', [EnlacesController::class, 'catalogo']);
+    Route::post('/enlacesDescribir', [EnlacesController::class, 'describir']);
     Route::get('/papeleraPaginas', [PaginasController::class, 'papelera']);
     Route::get('/paginaAuditoria', [PaginasController::class, 'auditoria']);
     Route::get('/plantillasSeccion', [SeccionesController::class, 'plantillas']);
@@ -2209,6 +2231,7 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::get('/papeleraDocumentos', [DocumentosController::class, 'papelera']);
     Route::get('/documentoAuditoria', [DocumentosController::class, 'auditoria']);
     Route::get('/carpetasDocumentos', [DocumentosController::class, 'carpetas']);
+    Route::get('/carpetaDocumentosAuditoria', [DocumentosController::class, 'carpetaAuditoria']);
     Route::post('/crearCarpetaDocumentos', [DocumentosController::class, 'crearCarpeta']);
     Route::post('/editarCarpetaDocumentos/{id}', [DocumentosController::class, 'editarCarpeta'])->whereNumber('id');
     Route::post('/eliminarCarpetaDocumentos/{id}', [DocumentosController::class, 'eliminarCarpeta'])->whereNumber('id');
@@ -2220,10 +2243,14 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
 // Header de la tienda e imágenes de los headers (el logo): públicas, las pide la tienda.
 Route::get('public/headers/tienda', [HeaderController::class, 'tienda']);
 Route::get('public/headers/imagenes/{nombre}', [HeaderController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
+// Footer de la tienda e imágenes de los footers (logo, logos de bancos): públicas, las pide la tienda.
+Route::get('public/footers/tienda', [FooterController::class, 'tienda']);
+Route::get('public/footers/imagenes/{nombre}', [FooterController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
 // Imágenes de las secciones de las páginas: públicas, las pide la tienda (y el CRM para mostrarlas).
 Route::get('public/secciones/imagenes/{nombre}', [SeccionesController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
 // Documentos: los activos (por su dirección o todos) y sus imágenes y PDF. Públicos, los pide la tienda.
 Route::get('public/documentos', [DocumentosController::class, 'publicos']);
+Route::get('public/documentos/carpetas/{ruta}', [DocumentosController::class, 'carpetaPublica'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
 Route::get('public/documentos/imagenes/{nombre}', [DocumentosController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
 Route::get('public/documentos/pdf/{nombre}', [DocumentosController::class, 'verPdf'])->where('nombre', '[A-Za-z0-9]{40}\.pdf');
 Route::get('public/documentos/{ruta}', [DocumentosController::class, 'publico'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
