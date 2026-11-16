@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class PreciosController extends Controller
 {
-    public function alm_precios_()
+    public function alm_precios()
     {
         try {
             $data = DB::connection('pgsql_espejo')
