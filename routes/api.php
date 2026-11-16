@@ -198,6 +198,7 @@ use App\Http\Controllers\inventarios\TipoProducto;
 use App\Http\Controllers\ecommerce\HeaderController;
 use App\Http\Controllers\ecommerce\FooterController;
 use App\Http\Controllers\ecommerce\EnlacesController;
+use App\Http\Controllers\ecommerce\PaginaTiendaController;
 use App\Http\Controllers\ecommerce\GrupoProductosController;
 use App\Http\Controllers\ecommerce\PaginasController;
 use App\Http\Controllers\ecommerce\SeccionesController;
@@ -206,8 +207,6 @@ use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\paginaWeb\CreditoController;
 use App\Http\Controllers\formulario\EmpresaController;
 use App\Http\Controllers\formulario\SolicitudesCreditosWebController;
-use App\Http\Controllers\paginaWeb\PiePaginaController;
-use App\Http\Controllers\paginaWeb\EncabezadoPiePublicoController;
 use App\Http\Controllers\paginaWeb\SucursalCiudadController;
 use App\Http\Controllers\paginaWeb\SucursalController;
 use App\Http\Controllers\paginaWeb\SucursalPublicaController;
@@ -314,8 +313,7 @@ Route::group(["prefix" => "formulario"], function ($router) {
 
 });
 
-// PÁGINA WEB (tienda): pie de página y contenido visible, sin login (el header está en public/headers/tienda)
-Route::get('public/pagina-web/secciones', [EncabezadoPiePublicoController::class, 'listar']);
+// PÁGINA WEB (tienda): contenido visible, sin login (el header y el footer están en public/headers y public/footers)
 Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
 Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
 Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
@@ -2319,6 +2317,9 @@ Route::get('public/headers/tienda', [HeaderController::class, 'tienda']);
 Route::get('public/headers/imagenes/{nombre}', [HeaderController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
 // Footer de la tienda e imágenes de los footers (logo, logos de bancos): públicas, las pide la tienda.
 Route::get('public/footers/tienda', [FooterController::class, 'tienda']);
+// Páginas del CRM para la tienda: la de inicio y cada una por su dirección (públicas).
+Route::get('public/paginas/inicio', [PaginaTiendaController::class, 'inicio']);
+Route::get('public/paginas/{ruta}', [PaginaTiendaController::class, 'ver'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
 Route::get('public/footers/imagenes/{nombre}', [FooterController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
 // Imágenes de las secciones de las páginas: públicas, las pide la tienda (y el CRM para mostrarlas).
 Route::get('public/secciones/imagenes/{nombre}', [SeccionesController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
@@ -2329,24 +2330,8 @@ Route::get('public/documentos/imagenes/{nombre}', [DocumentosController::class, 
 Route::get('public/documentos/pdf/{nombre}', [DocumentosController::class, 'verPdf'])->where('nombre', '[A-Za-z0-9]{40}\.pdf');
 Route::get('public/documentos/{ruta}', [DocumentosController::class, 'publico'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
 
-// PÁGINA WEB: administración del pie de página y contenido de la tienda desde el CRM (el header está en ECOMMERCE)
+// PÁGINA WEB: administración del contenido de la tienda desde el CRM (el header y el footer están en ECOMMERCE)
 Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
-
-    // Pie de página (footer)
-    Route::get('pie-pagina', [PiePaginaController::class, 'buscar']);
-    Route::put('pie-pagina', [PiePaginaController::class, 'modificar']);
-    Route::post('pie-pagina/columnas', [PiePaginaController::class, 'crearColumna']);
-    Route::put('pie-pagina/columnas-orden', [PiePaginaController::class, 'ordenarColumnas']);
-    Route::get('pie-papelera', [PiePaginaController::class, 'papelera']);
-    Route::delete('pie-papelera', [PiePaginaController::class, 'vaciar']);
-    Route::put('pie-pagina/columnas/{pcoId}/restaurar', [PiePaginaController::class, 'restaurarColumna'])->whereNumber('pcoId');
-    Route::put('pie-pagina/enlaces/{penId}/restaurar', [PiePaginaController::class, 'restaurarEnlace'])->whereNumber('penId');
-    Route::put('pie-pagina/columnas/{pcoId}', [PiePaginaController::class, 'modificarColumna'])->whereNumber('pcoId');
-    Route::delete('pie-pagina/columnas/{pcoId}', [PiePaginaController::class, 'eliminarColumna'])->whereNumber('pcoId');
-    Route::post('pie-pagina/columnas/{pcoId}/enlaces', [PiePaginaController::class, 'crearEnlace'])->whereNumber('pcoId');
-    Route::put('pie-pagina/columnas/{pcoId}/enlaces-orden', [PiePaginaController::class, 'ordenarEnlaces'])->whereNumber('pcoId');
-    Route::put('pie-pagina/enlaces/{penId}', [PiePaginaController::class, 'modificarEnlace'])->whereNumber('penId');
-    Route::delete('pie-pagina/enlaces/{penId}', [PiePaginaController::class, 'eliminarEnlace'])->whereNumber('penId');
 
     // Nuestras tiendas: ciudades
     Route::post('sucursales/ciudades', [SucursalCiudadController::class, 'crear']);

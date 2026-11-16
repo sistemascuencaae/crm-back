@@ -22,7 +22,7 @@ class ProductoTiendaService
     private const TAMANIOS          = [10, 20, 30, 50, 100];   // los mismos que acepta fn_producto_web_listar
 
     // Lo único que se pasa a la búsqueda del shop: los mismos nombres que la dirección de /shop
-    public const FILTROS_SHOP = ['search', 'categoria', 'marca', 'price_min', 'price_max', 'in_stock', 'motos', 'sort', 'page', 'per_page'];
+    public const FILTROS_SHOP = ['search', 'categoria', 'marca', 'grupo', 'price_min', 'price_max', 'in_stock', 'motos', 'sort', 'page', 'per_page'];
 
     // Códigos propios (los CAMPO_*, CAMPO_FECHA, FECHAS_RANGO y ORDEN_* comunes están en ErroresPaginaWeb)
     public const MENSAJES_ERROR = [
@@ -333,7 +333,7 @@ class ProductoTiendaService
      * La cuadrícula de la página de marca la usa con {marcas, sort: 'nombre', destacados?, page, per_page} y sin opciones
      * (PaginaMarcaService::productosPublicos).
      * Una familia sale en una sola tarjeta (familia, variantes y precio "Desde" ya vienen de la base).
-     *   {productos: [tarjetas], total, pagina, por_pagina, ultima_pagina,
+     *   {productos: [tarjetas], total, pagina, por_pagina, ultima_pagina, grupo (solo con filtro grupo): {gpr_id, nombre} | null,
      *    opciones (solo con $conOpciones): {categorias: [{tpr_id, nombre, cantidad}], marcas: [{mar_id, nombre, cantidad}], precio: {min, max} | null}}
      */
     public function buscarTienda(array $filtros, bool $conOpciones = true): array
@@ -358,6 +358,16 @@ class ProductoTiendaService
 
         if ($conOpciones) {
             $resultado['opciones'] = $this->opcionesTienda($publicados, $json);
+        }
+
+        // Con filtro de grupo: su nombre (para el chip de /shop), o null si no existe o no está activo (la tienda quita
+        // el filtro). Los enlaces a un "Grupo" del CRM llevan a /shop?grupo=N.
+        if (preg_match('/^\d{1,9}$/', (string) ($filtros['grupo'] ?? ''))) {
+            $grupo = DB::selectOne(
+                'SELECT gpr_id, gpr_nombre FROM ecommerce.grupos_productos WHERE gpr_id = ? AND gpr_activo AND gpr_eliminado_en IS NULL',
+                [(int) $filtros['grupo']]
+            );
+            $resultado['grupo'] = $grupo ? ['gpr_id' => (int) $grupo->gpr_id, 'nombre' => $grupo->gpr_nombre] : null;
         }
 
         return $resultado;
