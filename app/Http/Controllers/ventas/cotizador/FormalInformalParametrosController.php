@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Validator;
 
 // Cotizador > Parámetros tipo calificación cliente, pestaña Formal / Informal (ventas.formal_informal_parametros): las reglas
 // para ser FORMAL (rango de edad y meses mínimos en la afiliación activa al IESS); quien no cumple ninguna es INFORMAL.
-// El negocio vive en ventas.fn_formal_informal_parametros_* (PLANES/COTIZADOR/produccion_formal_informal_parametros.sql):
+// El negocio vive en ventas.fn_actividad_cliente_parametros_* (PLANES/COTIZADOR/produccion_formal_informal_parametros.sql):
 // este controller arma el jsonb con los campos del modelo y el bloque 'auditoria', y traduce el código que levanta la función.
 // 16-nov-2026 (sin línea): la regla ya no tiene línea: salen sus mensajes y el endpoint de combos (la pestaña no tiene combos).
 // 11-nov-2026 (activo, patrón de la pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo y el Guardar de
@@ -37,7 +37,8 @@ class FormalInformalParametrosController extends Controller
         'EDAD_RANGO_INVERTIDO' => 'La edad mínima no puede ser mayor que la máxima.',
         'REQUIERE_ESTABILIDAD' => 'La estabilidad mínima es obligatoria.',
         'ESTABILIDAD_INVALIDA' => 'La estabilidad mínima debe ser meses enteros.',
-        'FORMAL_INFORMAL_NO_EXISTE' => 'La fila ya no existe.',
+        // QUITADO 17-nov-2026 (actividad cliente): 'FORMAL_INFORMAL_NO_EXISTE' => 'La fila ya no existe.',
+        'ACTIVIDAD_CLIENTE_NO_EXISTE' => 'La fila ya no existe.',
         // 11-nov-2026 (activo).
         'ACTIVO_INVALIDO' => 'Activo solo acepta sí o no.',
     ];
@@ -57,7 +58,7 @@ class FormalInformalParametrosController extends Controller
             $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = trim((string) $request->query('busqueda', ''));
 
-            $registros = DB::select('SELECT * FROM ventas.fn_formal_informal_parametros_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+            $registros = DB::select('SELECT * FROM ventas.fn_actividad_cliente_parametros_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 'registros' => $registros,
@@ -80,7 +81,7 @@ class FormalInformalParametrosController extends Controller
     // {
     //     try {
     //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
-    //             // QUITADO 11-nov-2026 (líneas): 'lineas' => DB::select('SELECT * FROM ventas.fn_formal_informal_parametros_lineas_listar()'),
+    //             // QUITADO 11-nov-2026 (líneas): 'lineas' => DB::select('SELECT * FROM ventas.fn_actividad_cliente_parametros_lineas_listar()'),
     //             'lineas' => DB::select('SELECT * FROM ventas.fn_linea_activas_listar()'),
     //         ]));
     //     } catch (Exception $e) {
@@ -111,7 +112,7 @@ class FormalInformalParametrosController extends Controller
             $filas = array_map(fn ($fila) => Arr::only((array) $fila, $campos), (array) $request->input('filas', []));
             $payload = ['filas' => $filas, 'auditoria' => $this->contextoAuditoriaForense($request)];
 
-            $resultado = DB::selectOne('SELECT ventas.fn_formal_informal_parametros_guardar_lote(?::jsonb) AS cantidad', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
+            $resultado = DB::selectOne('SELECT ventas.fn_actividad_cliente_parametros_guardar_lote(?::jsonb) AS cantidad', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado->cantidad));
         } catch (QueryException $e) {
@@ -122,13 +123,13 @@ class FormalInformalParametrosController extends Controller
     }
 
     // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo); su ruta quedó comentada y
-    // ventas.fn_formal_informal_parametros_eliminar se queda en la base, sin uso. Reactivar = descomentar este método y su ruta.
+    // ventas.fn_actividad_cliente_parametros_eliminar se queda en la base, sin uso. Reactivar = descomentar este método y su ruta.
     // // Version 1.0
     // // DELETE /api/ventas/deleteFormalInformalParametro/{id}
     // public function deleteFormalInformalParametro(Request $request, $id)
     // {
     //     try {
-    //         DB::selectOne('SELECT ventas.fn_formal_informal_parametros_eliminar(?::jsonb) AS id', [json_encode([
+    //         DB::selectOne('SELECT ventas.fn_actividad_cliente_parametros_eliminar(?::jsonb) AS id', [json_encode([
     //             'id' => (int) $id,
     //             'auditoria' => $this->contextoAuditoriaForense($request),
     //         ], JSON_UNESCAPED_UNICODE)]);
@@ -157,8 +158,8 @@ class FormalInformalParametrosController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Parámetro no válido', null));
             }
 
-            $resumen = DB::selectOne('SELECT * FROM ventas.fn_formal_informal_parametros_auditoria_resumen(?)', [$id]);
-            $eventos = DB::select('SELECT * FROM ventas.fn_formal_informal_parametros_auditoria_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_actividad_cliente_parametros_auditoria_resumen(?)', [$id]);
+            $eventos = DB::select('SELECT * FROM ventas.fn_actividad_cliente_parametros_auditoria_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
                 'resumen' => $resumen,
@@ -184,8 +185,8 @@ class FormalInformalParametrosController extends Controller
             $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = trim((string) $request->query('busqueda', ''));
 
-            $resumen = DB::selectOne('SELECT * FROM ventas.fn_formal_informal_parametros_auditoria_tabla_resumen()');
-            $eventos = DB::select('SELECT * FROM ventas.fn_formal_informal_parametros_auditoria_tabla_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_actividad_cliente_parametros_auditoria_tabla_resumen()');
+            $eventos = DB::select('SELECT * FROM ventas.fn_actividad_cliente_parametros_auditoria_tabla_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
                 'resumen' => $resumen,

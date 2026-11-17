@@ -14,7 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 // campos.
 class TipoClienteParametro extends Model
 {
-    protected $table = 'ventas.tipo_cliente_parametros';
+    // QUITADO 17-nov-2026 (perfil cliente): protected $table = 'ventas.tipo_cliente_parametros';
+    protected $table = 'ventas.perfil_cliente_parametros';
 
     protected $fillable = [
         'nombre',

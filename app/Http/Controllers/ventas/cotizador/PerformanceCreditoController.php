@@ -52,10 +52,12 @@ class PerformanceCreditoController extends Controller
         // QUITADO 11-nov-2026 (líneas): 'LINEA_INVALIDA' => 'La línea debe ser ELECTRO o MOTO.',
         'LINEA_INVALIDA' => 'La línea no es válida.',
         'LINEA_INACTIVA' => 'La línea está inactiva: elija una línea activa.',
-        'REQUIERE_TIPO_CLIENTE' => 'El tipo de cliente es obligatorio.',
+        // QUITADO 17-nov-2026 (perfil cliente): 'REQUIERE_TIPO_CLIENTE' => 'El tipo de cliente es obligatorio.',
+        'REQUIERE_PERFIL_CLIENTE' => 'El perfil cliente es obligatorio.',
         // 12-nov-2026 (tipo cliente de la 2): también sale cuando la regla elegida no existe en la pestaña 2 o está inactiva y la fila
         // es nueva o cambia de tipo (el mensaje no cambia).
-        'TIPO_CLIENTE_INVALIDO' => 'El tipo de cliente no es válido.',
+        // QUITADO 17-nov-2026 (perfil cliente): 'TIPO_CLIENTE_INVALIDO' => 'El tipo de cliente no es válido.',
+        'PERFIL_CLIENTE_INVALIDO' => 'El perfil cliente no es válido.',
         // QUITADO 12-nov-2026 (booleanos): aplica ya no es obligatoria (sin la clave, la fila nueva nace sin marcar y la que existe
         // no cambia): la función ya no levanta REQUIERE_APLICA.
         // 'REQUIERE_APLICA' => 'Indique si aplica crédito (SI o NO).',
@@ -65,10 +67,12 @@ class PerformanceCreditoController extends Controller
         // 'APLICA_INVALIDA' => 'Aplica solo acepta sí o no.',
         // QUITADO 11-nov-2026 (activo): 'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea y ese tipo de cliente.',
         // QUITADO 16-nov-2026 (performance hacia abajo): 'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea y ese tipo de cliente (activa o inactiva): edítela o reactívela.',
-        'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea, tipo de cliente, actividad y comportamiento (activa o inactiva): edítela o reactívela.',
+        // QUITADO 17-nov-2026 (perfil cliente): 'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea, tipo de cliente, actividad y comportamiento (activa o inactiva): edítela o reactívela.',
+        'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea, perfil cliente, actividad cliente y comportamiento cliente (activa o inactiva): edítela o reactívela.',
         // 16-nov-2026 (performance hacia abajo): la actividad (FORMAL / INFORMAL) es obligatoria; el comportamiento, no (vacío = NA).
         'REQUIERE_ACTIVIDAD' => 'Elija si la fila es FORMAL o INFORMAL.',
-        'ACTIVIDAD_INVALIDA' => 'La actividad (Formal / Informal) no es válida.',
+        // QUITADO 17-nov-2026 (actividad cliente): 'ACTIVIDAD_INVALIDA' => 'La actividad (Formal / Informal) no es válida.',
+        'ACTIVIDAD_INVALIDA' => 'La actividad cliente no es válida.',
         'COMPORTAMIENTO_INVALIDO' => 'El comportamiento no es válido.',
         'DISPONIBLE_INVALIDO' => 'El % disponible debe ser un número de 0 a 100, con hasta 2 decimales.',
         'CUPO_INVALIDO' => 'El cupo máximo debe ser un número de 0 en adelante, con hasta 2 decimales.',
@@ -100,7 +104,8 @@ class PerformanceCreditoController extends Controller
         'REQUIERE_LINEA_ORIGEN' => 'No se recibió la línea origen.',
         'LINEA_ORIGEN_INVALIDA' => 'La línea origen no existe.',
         // QUITADO 11-nov-2026 (activo): 'ORIGEN_SIN_PARAMETROS' => 'La línea origen no tiene tipos de cliente para clonar.',
-        'ORIGEN_SIN_PARAMETROS' => 'La línea origen no tiene tipos de cliente activos para clonar.',
+        // QUITADO 17-nov-2026 (perfil cliente): 'ORIGEN_SIN_PARAMETROS' => 'La línea origen no tiene tipos de cliente activos para clonar.',
+        'ORIGEN_SIN_PARAMETROS' => 'La línea origen no tiene filas activas para clonar.',
         'REQUIERE_LINEA_DESTINO' => 'Elija al menos una línea destino.',
         'LINEA_DESTINO_INVALIDA' => 'Una de las líneas destino no existe.',
         'LINEA_DESTINO_INACTIVA' => 'Una de las líneas destino está inactiva.',
@@ -181,7 +186,8 @@ class PerformanceCreditoController extends Controller
         try {
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 // QUITADO 11-nov-2026 (líneas): 'lineas' => DB::select('SELECT * FROM ventas.fn_performance_credito_lineas_listar()'),
-                'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_performance_credito_tipos_cliente_listar()'),
+                // QUITADO 17-nov-2026 (perfil cliente): 'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_performance_credito_tipos_cliente_listar()'),
+                'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_performance_credito_perfiles_cliente_listar()'),
                 // QUITADO 12-nov-2026 (booleanos): 'aplica' => DB::select('SELECT * FROM ventas.fn_performance_credito_aplica_listar()'),
                 // QUITADO 16-nov-2026 (performance hacia abajo): salen el tipo de inicial y la inspección (sus funciones ya no están).
                 // 'inicial_tipos' => DB::select('SELECT * FROM ventas.fn_performance_credito_inicial_tipos_listar()'),

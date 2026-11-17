@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 // Cotizador > Parámetros tipo calificación cliente, pestaña Tipo de cliente (ventas.tipo_cliente_parametros): el rango de
-// score de cada tipo. El negocio vive en ventas.fn_tipo_cliente_parametros_* (PLANES/COTIZADOR/produccion_tipo_cliente_parametros.sql):
+// score de cada tipo. El negocio vive en ventas.fn_perfil_cliente_parametros_* (PLANES/COTIZADOR/produccion_tipo_cliente_parametros.sql):
 // este controller arma el jsonb con los campos del modelo y el bloque 'auditoria', y traduce el código que levanta la función.
 // 11-nov-2026 (pestaña 2): acreedores en 3 cortes (mínimo y máximo), las fechas del Excel y activo. Lo guardado ya no se borra
 // (se desactiva con el check Activo y el Guardar de siempre): deleteTipoClienteParametro quedó comentado. Nueva la auditoría
@@ -31,8 +31,10 @@ class TipoClienteParametrosController extends Controller
         'NOMBRE_MUY_LARGO' => 'El nombre no puede pasar de 60 caracteres.',
         'SCORE_INVALIDO' => 'El score mínimo y el máximo deben ser números enteros.',
         'SCORE_RANGO_INVERTIDO' => 'El score mínimo no puede ser mayor que el máximo.',
-        'TIPO_CLIENTE_DUPLICADO' => 'Ya existe una fila con ese nombre.',
-        'TIPO_CLIENTE_NO_EXISTE' => 'La fila ya no existe.',
+        // QUITADO 17-nov-2026 (perfil cliente): 'TIPO_CLIENTE_DUPLICADO' => 'Ya existe una fila con ese nombre.',
+        'PERFIL_CLIENTE_DUPLICADO' => 'Ya existe una fila con ese nombre.',
+        // QUITADO 17-nov-2026 (perfil cliente): 'TIPO_CLIENTE_NO_EXISTE' => 'La fila ya no existe.',
+        'PERFIL_CLIENTE_NO_EXISTE' => 'La fila ya no existe.',
         'PARAMETRO_NO_CONFIGURADO' => 'Faltan los límites del score en crm.parametro.',
         'EDAD_INVALIDA' => 'La edad mínima y la máxima deben ser números enteros.',
         'EDAD_RANGO_INVERTIDO' => 'La edad mínima no puede ser mayor que la máxima.',
@@ -103,7 +105,7 @@ class TipoClienteParametrosController extends Controller
             $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = trim((string) $request->query('busqueda', ''));
 
-            $registros = DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+            $registros = DB::select('SELECT * FROM ventas.fn_perfil_cliente_parametros_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 'registros' => $registros,
@@ -112,7 +114,7 @@ class TipoClienteParametrosController extends Controller
                 'tamanio' => $tamanio,
             ]));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los tipos de cliente', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los perfiles cliente', $e->getMessage()));
         }
     }
 
@@ -126,9 +128,9 @@ class TipoClienteParametrosController extends Controller
     {
         try {
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
-                'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_tipos_cliente_listar()'),
-                'perfiles' => DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_perfiles_listar()'),
-                'condiciones' => DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_condiciones_listar()'),
+                'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_perfil_cliente_parametros_tipos_cliente_listar()'),
+                'perfiles' => DB::select('SELECT * FROM ventas.fn_perfil_cliente_parametros_perfiles_listar()'),
+                'condiciones' => DB::select('SELECT * FROM ventas.fn_perfil_cliente_parametros_condiciones_listar()'),
             ]));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los combos', $e->getMessage()));
@@ -155,24 +157,24 @@ class TipoClienteParametrosController extends Controller
             $filas = array_map(fn ($fila) => Arr::only((array) $fila, $campos), (array) $request->input('filas', []));
             $payload = ['filas' => $filas, 'auditoria' => $this->contextoAuditoriaForense($request)];
 
-            $resultado = DB::selectOne('SELECT ventas.fn_tipo_cliente_parametros_guardar_lote(?::jsonb) AS cantidad', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
+            $resultado = DB::selectOne('SELECT ventas.fn_perfil_cliente_parametros_guardar_lote(?::jsonb) AS cantidad', [json_encode($payload, JSON_UNESCAPED_UNICODE)]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $resultado->cantidad));
         } catch (QueryException $e) {
-            return $this->respuestaError($e, 'Error al guardar los tipos de cliente');
+            return $this->respuestaError($e, 'Error al guardar los perfiles cliente');
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar los tipos de cliente', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'Error al guardar los perfiles cliente', $e->getMessage()));
         }
     }
 
     // QUITADO 11-nov-2026 (pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo); su ruta quedó comentada y
-    // ventas.fn_tipo_cliente_parametros_eliminar se queda en la base, sin uso. Reactivar = descomentar este método y su ruta.
+    // ventas.fn_perfil_cliente_parametros_eliminar se queda en la base, sin uso. Reactivar = descomentar este método y su ruta.
     // // Version 1.0
     // // DELETE /api/ventas/deleteTipoClienteParametro/{id}
     // public function deleteTipoClienteParametro(Request $request, $id)
     // {
     //     try {
-    //         DB::selectOne('SELECT ventas.fn_tipo_cliente_parametros_eliminar(?::jsonb) AS id', [json_encode([
+    //         DB::selectOne('SELECT ventas.fn_perfil_cliente_parametros_eliminar(?::jsonb) AS id', [json_encode([
     //             'id' => (int) $id,
     //             'auditoria' => $this->contextoAuditoriaForense($request),
     //         ], JSON_UNESCAPED_UNICODE)]);
@@ -200,8 +202,8 @@ class TipoClienteParametrosController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Parámetro no válido', null));
             }
 
-            $resumen = DB::selectOne('SELECT * FROM ventas.fn_tipo_cliente_parametros_auditoria_resumen(?)', [$id]);
-            $eventos = DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_auditoria_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_perfil_cliente_parametros_auditoria_resumen(?)', [$id]);
+            $eventos = DB::select('SELECT * FROM ventas.fn_perfil_cliente_parametros_auditoria_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
                 'resumen' => $resumen,
@@ -211,7 +213,7 @@ class TipoClienteParametrosController extends Controller
                 'tamanio' => $tamanio,
             ]));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del tipo de cliente', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del perfil cliente', $e->getMessage()));
         }
     }
 
@@ -226,8 +228,8 @@ class TipoClienteParametrosController extends Controller
             $tamanio = max((int) $request->query('tamanio', 10), 1);
             $busqueda = trim((string) $request->query('busqueda', ''));
 
-            $resumen = DB::selectOne('SELECT * FROM ventas.fn_tipo_cliente_parametros_auditoria_tabla_resumen()');
-            $eventos = DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_auditoria_tabla_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_perfil_cliente_parametros_auditoria_tabla_resumen()');
+            $eventos = DB::select('SELECT * FROM ventas.fn_perfil_cliente_parametros_auditoria_tabla_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
                 'resumen' => $resumen,
@@ -237,7 +239,7 @@ class TipoClienteParametrosController extends Controller
                 'tamanio' => $tamanio,
             ]));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de los tipos de cliente', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de los perfiles cliente', $e->getMessage()));
         }
     }
 

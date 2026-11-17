@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 // 16-nov-2026 (sin línea): la regla ya no tiene línea (la columna linea_id salió de la tabla).
 class FormalInformalParametro extends Model
 {
-    protected $table = 'ventas.formal_informal_parametros';
+    // QUITADO 17-nov-2026 (actividad cliente): protected $table = 'ventas.formal_informal_parametros';
+    protected $table = 'ventas.actividad_cliente_parametros';
 
     protected $fillable = [
         // QUITADO 11-nov-2026 (líneas): 'linea',

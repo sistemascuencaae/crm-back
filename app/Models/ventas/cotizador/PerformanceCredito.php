@@ -25,7 +25,8 @@ class PerformanceCredito extends Model
     protected $fillable = [
         // QUITADO 11-nov-2026 (líneas): 'linea',
         'linea_id',
-        'tipo_cliente_id',
+        // QUITADO 17-nov-2026 (perfil cliente): 'tipo_cliente_id',
+        'perfil_cliente_id',
         // QUITADO 16-nov-2026 (performance hacia abajo): Formal e Informal ya no van lado a lado.
         // 'aplica',
         // 'capacidad_pago_formal',
