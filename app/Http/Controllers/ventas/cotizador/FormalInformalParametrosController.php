@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 // Cotizador > Parámetros tipo calificación cliente, pestaña Formal / Informal (ventas.formal_informal_parametros): las reglas
-// para ser FORMAL (línea, rango de edad y meses mínimos en la afiliación activa al IESS); quien no cumple ninguna es INFORMAL.
+// para ser FORMAL (rango de edad y meses mínimos en la afiliación activa al IESS); quien no cumple ninguna es INFORMAL.
 // El negocio vive en ventas.fn_formal_informal_parametros_* (PLANES/COTIZADOR/produccion_formal_informal_parametros.sql):
 // este controller arma el jsonb con los campos del modelo y el bloque 'auditoria', y traduce el código que levanta la función.
-// 11-nov-2026 (líneas): la línea es linea_id (catálogo ventas.linea, compartido con Performance crédito); la grilla muestra su nombre.
+// 16-nov-2026 (sin línea): la regla ya no tiene línea: salen sus mensajes y el endpoint de combos (la pestaña no tiene combos).
 // 11-nov-2026 (activo, patrón de la pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo y el Guardar de
 // siempre; una regla inactiva no cuenta en el cálculo ni choca): deleteFormalInformalParametro quedó comentado. Nueva la
 // auditoría de TODA la pestaña (formalInformalParametrosAuditoria), además de la de una fila.
@@ -27,10 +27,11 @@ class FormalInformalParametrosController extends Controller
 
     // Mensaje para cada código que levantan las funciones.
     private const MENSAJES_ERROR = [
-        'REQUIERE_LINEA' => 'La línea es obligatoria.',
-        'LINEA_INVALIDA' => 'La línea no es válida.',
-        // 11-nov-2026 (líneas): una fila nueva (o que cambia de línea) no puede usar una línea inactiva.
-        'LINEA_INACTIVA' => 'La línea está inactiva: elija una línea activa.',
+        // QUITADO 16-nov-2026 (sin línea): la regla ya no tiene línea.
+        // 'REQUIERE_LINEA' => 'La línea es obligatoria.',
+        // 'LINEA_INVALIDA' => 'La línea no es válida.',
+        // // 11-nov-2026 (líneas): una fila nueva (o que cambia de línea) no puede usar una línea inactiva.
+        // 'LINEA_INACTIVA' => 'La línea está inactiva: elija una línea activa.',
         'REQUIERE_EDAD' => 'La edad mínima y la máxima son obligatorias.',
         'EDAD_INVALIDA' => 'La edad mínima y la máxima deben ser números enteros.',
         'EDAD_RANGO_INVERTIDO' => 'La edad mínima no puede ser mayor que la máxima.',
@@ -69,21 +70,23 @@ class FormalInformalParametrosController extends Controller
         }
     }
 
-    // Version 1.0
-    // GET /api/ventas/listCombosFormalInformalParametros — los combos de la grilla en una sola llamada (codigo, nombre):
-    // la Línea (hoy ELECTRO, MOTO y TECNOLOGIA). Una sola fuente con la validación de la función y el requerimiento 'formal informal'.
-    // 11-nov-2026 (líneas): las líneas ACTIVAS del catálogo ventas.linea (codigo = el id como texto, nombre).
-    public function listCombosFormalInformalParametros()
-    {
-        try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
-                // QUITADO 11-nov-2026 (líneas): 'lineas' => DB::select('SELECT * FROM ventas.fn_formal_informal_parametros_lineas_listar()'),
-                'lineas' => DB::select('SELECT * FROM ventas.fn_linea_activas_listar()'),
-            ]));
-        } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los combos', $e->getMessage()));
-        }
-    }
+    // QUITADO 16-nov-2026 (sin línea): la pestaña ya no tiene combos (el único era la Línea); su ruta quedó comentada.
+    // Reactivar = descomentar este método y su ruta.
+    // // Version 1.0
+    // // GET /api/ventas/listCombosFormalInformalParametros — los combos de la grilla en una sola llamada (codigo, nombre):
+    // // la Línea (hoy ELECTRO, MOTO y TECNOLOGIA). Una sola fuente con la validación de la función y el requerimiento 'formal informal'.
+    // // 11-nov-2026 (líneas): las líneas ACTIVAS del catálogo ventas.linea (codigo = el id como texto, nombre).
+    // public function listCombosFormalInformalParametros()
+    // {
+    //     try {
+    //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
+    //             // QUITADO 11-nov-2026 (líneas): 'lineas' => DB::select('SELECT * FROM ventas.fn_formal_informal_parametros_lineas_listar()'),
+    //             'lineas' => DB::select('SELECT * FROM ventas.fn_linea_activas_listar()'),
+    //         ]));
+    //     } catch (Exception $e) {
+    //         return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los combos', $e->getMessage()));
+    //     }
+    // }
 
     // Version 1.1
     // POST /api/ventas/guardarFormalInformalParametros — las filas nuevas (sin id) y las editadas, todo o nada.
@@ -140,7 +143,8 @@ class FormalInformalParametrosController extends Controller
 
     // Version 1.0
     // GET /api/ventas/formalInformalParametroAuditoria?id&pagina&tamanio&busqueda — resumen + historial paginado de UNA fila
-    // (auditoria.logs_cambios). Sin columna nombre: el resumen lo arma la función con la línea y las edades (ELECTRO 21-65).
+    // (auditoria.logs_cambios). Sin columna nombre: el resumen lo arma la función con las edades y la estabilidad
+    // (16-nov-2026: Edad 21-65 · 3 meses; antes con la línea).
     public function formalInformalParametroAuditoria(Request $request)
     {
         try {
@@ -171,7 +175,8 @@ class FormalInformalParametrosController extends Controller
     // Version 1.0
     // GET /api/ventas/formalInformalParametrosAuditoria?pagina&tamanio&busqueda — 11-nov-2026 (activo): la auditoría de TODA la
     // pestaña (el botón Auditoría de la cabecera): resumen + historial paginado de todas las reglas, también las borradas antes
-    // y las desactivadas (auditoria.logs_cambios). La búsqueda también encuentra la línea de la regla.
+    // y las desactivadas (auditoria.logs_cambios). La búsqueda también encuentra las reglas por una edad de su rango
+    // (16-nov-2026; antes, por la línea).
     public function formalInformalParametrosAuditoria(Request $request)
     {
         try {
@@ -195,7 +200,7 @@ class FormalInformalParametrosController extends Controller
     }
 
     // El código corto que levantó la función, traducido con MENSAJES_ERROR; si no es uno conocido, el genérico con el
-    // detalle técnico. Las edades que se cruzan en una misma línea solo las conoce la función: ella arma ese texto.
+    // detalle técnico. Las edades que se cruzan solo las conoce la función: ella arma ese texto.
     private function respuestaError(QueryException $e, string $generico)
     {
         if (preg_match('/RANGO_CRUZADO: (.+?)\s*(?:\R|\(SQL:|$)/', $e->getMessage(), $texto)) {

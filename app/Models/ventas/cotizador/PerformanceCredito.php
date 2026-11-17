@@ -14,6 +14,10 @@ use Illuminate\Database\Eloquent\Model;
 // 11-nov-2026 (activo): + activo (lo guardado ya no se borra: se desactiva; una fila inactiva no la devuelve
 // fn_performance_credito_condiciones_buscar).
 // 12-nov-2026 (booleanos): aplica es boolean (antes el texto 'SI' / 'NO'); el campo no cambia de nombre.
+// 16-nov-2026 (performance hacia abajo, Excel Esquema_TablaPerfomance2026): una fila por línea, tipo de cliente, actividad
+// (ventas.actividad_cliente: FORMAL / INFORMAL) y comportamiento (ventas.comportamiento_cliente; vacío = NA), con % disponible,
+// máx. plazo, cupo máx., cuota performance, % extracupo y % inicial. Máx. cuota, extracupo y total cuota final los calcula la
+// base (columnas calculadas): no van en el modelo.
 class PerformanceCredito extends Model
 {
     protected $table = 'ventas.performance_credito';
@@ -22,16 +26,25 @@ class PerformanceCredito extends Model
         // QUITADO 11-nov-2026 (líneas): 'linea',
         'linea_id',
         'tipo_cliente_id',
-        'aplica',
-        'capacidad_pago_formal',
-        'capacidad_pago_informal',
-        'inicial_tipo',
-        'inicial_formal',
-        'inicial_informal',
-        'plazo_formal',
-        'plazo_informal',
-        'inspeccion_formal',
-        'inspeccion_informal',
+        // QUITADO 16-nov-2026 (performance hacia abajo): Formal e Informal ya no van lado a lado.
+        // 'aplica',
+        // 'capacidad_pago_formal',
+        // 'capacidad_pago_informal',
+        // 'inicial_tipo',
+        // 'inicial_formal',
+        // 'inicial_informal',
+        // 'plazo_formal',
+        // 'plazo_informal',
+        // 'inspeccion_formal',
+        // 'inspeccion_informal',
+        'actividad_cliente_id',
+        'comportamiento_cliente_id',
+        'porcentaje_disponible',
+        'plazo_maximo',
+        'cupo_maximo',
+        'cuota_performance',
+        'porcentaje_extracupo',
+        'porcentaje_inicial',
         'activo',
     ];
 }

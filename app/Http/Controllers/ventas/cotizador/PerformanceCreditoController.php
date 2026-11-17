@@ -37,6 +37,11 @@ use Illuminate\Support\Facades\Validator;
 // sea verdadero o falso (el mismo mensaje de la función); sin la clave, la fila nueva nace sin marcar y la que existe no cambia.
 // El listado devuelve aplica true / false y los combos ya no traen el de Aplica (SI / NO). Quien lee las condiciones
 // (fn_performance_credito_condiciones_buscar) sigue recibiendo aplica 'SI' / 'NO'.
+// 16-nov-2026 (performance hacia abajo, Excel Esquema_TablaPerfomance2026): una fila por línea, tipo de cliente, actividad
+// (FORMAL / INFORMAL, ventas.actividad_cliente) y comportamiento (ventas.comportamiento_cliente; vacío = NA), con % disponible,
+// máx. plazo, cupo máx., cuota performance, % extracupo y % inicial; máx. cuota, extracupo y total cuota final los calcula la base.
+// Salen aplica, capacidad de pago, inicial con su tipo, plazo e inspección; los combos traen actividades y comportamientos.
+// condiciones_buscar pide además el comportamiento y devuelve las columnas nuevas.
 class PerformanceCreditoController extends Controller
 {
     use AuditoriaForenseTrait;
@@ -56,25 +61,38 @@ class PerformanceCreditoController extends Controller
         // 'REQUIERE_APLICA' => 'Indique si aplica crédito (SI o NO).',
         // QUITADO 12-nov-2026 (booleanos): 'APLICA_INVALIDA' => 'Aplica solo acepta SI o NO.',
         // 12-nov-2026 (booleanos): aplica es verdadero o falso (el check de la grilla), como activo.
-        'APLICA_INVALIDA' => 'Aplica solo acepta sí o no.',
+        // QUITADO 16-nov-2026 (performance hacia abajo): ya no hay aplica.
+        // 'APLICA_INVALIDA' => 'Aplica solo acepta sí o no.',
         // QUITADO 11-nov-2026 (activo): 'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea y ese tipo de cliente.',
-        'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea y ese tipo de cliente (activa o inactiva): edítela o reactívela.',
+        // QUITADO 16-nov-2026 (performance hacia abajo): 'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea y ese tipo de cliente (activa o inactiva): edítela o reactívela.',
+        'PERFORMANCE_DUPLICADO' => 'Ya existe una fila para esa línea, tipo de cliente, actividad y comportamiento (activa o inactiva): edítela o reactívela.',
+        // 16-nov-2026 (performance hacia abajo): la actividad (FORMAL / INFORMAL) es obligatoria; el comportamiento, no (vacío = NA).
+        'REQUIERE_ACTIVIDAD' => 'Elija si la fila es FORMAL o INFORMAL.',
+        'ACTIVIDAD_INVALIDA' => 'La actividad (Formal / Informal) no es válida.',
+        'COMPORTAMIENTO_INVALIDO' => 'El comportamiento no es válido.',
+        'DISPONIBLE_INVALIDO' => 'El % disponible debe ser un número de 0 a 100, con hasta 2 decimales.',
+        'CUPO_INVALIDO' => 'El cupo máximo debe ser un número de 0 en adelante, con hasta 2 decimales.',
+        'CUOTA_INVALIDA' => 'La cuota performance debe ser un número de 0 en adelante, con hasta 2 decimales.',
+        'EXTRACUPO_INVALIDO' => 'El % extracupo debe ser un número de 0 a 100, con hasta 2 decimales.',
         // QUITADO 12-nov-2026 (performance sin bloqueos): los valores de Formal e Informal ya no son obligatorios (con aplica SI
         // o NO): la función ya no levanta REQUIERE_CAPACIDAD, REQUIERE_INICIAL_TIPO, REQUIERE_INICIAL, REQUIERE_PLAZO ni
         // REQUIERE_INSPECCION.
         // 'REQUIERE_CAPACIDAD' => 'La capacidad de pago Formal e Informal es obligatoria.',
-        'CAPACIDAD_INVALIDA' => 'La capacidad de pago debe ser un número de 0 en adelante, con hasta 2 decimales.',
+        // QUITADO 16-nov-2026 (performance hacia abajo): salen la capacidad de pago, el tipo de inicial y la inspección.
+        // 'CAPACIDAD_INVALIDA' => 'La capacidad de pago debe ser un número de 0 en adelante, con hasta 2 decimales.',
         // 'REQUIERE_INICIAL_TIPO' => 'Elija si la inicial es porcentaje (%) o monto ($).',
-        'INICIAL_TIPO_INVALIDO' => 'El tipo de inicial debe ser % o $.',
+        // 'INICIAL_TIPO_INVALIDO' => 'El tipo de inicial debe ser % o $.',
         // 'REQUIERE_INICIAL' => 'La inicial Formal e Informal es obligatoria.',
-        'INICIAL_INVALIDA' => 'La inicial debe ser un número de 0 en adelante, con hasta 2 decimales.',
-        'INICIAL_PORCENTAJE_INVALIDO' => 'Una inicial en porcentaje no puede pasar de 100.',
+        // QUITADO 16-nov-2026 (performance hacia abajo): 'INICIAL_INVALIDA' => 'La inicial debe ser un número de 0 en adelante, con hasta 2 decimales.',
+        'INICIAL_INVALIDA' => 'La % inicial debe ser un número de 0 a 100, con hasta 2 decimales.',
+        // QUITADO 16-nov-2026 (performance hacia abajo): 'INICIAL_PORCENTAJE_INVALIDO' => 'Una inicial en porcentaje no puede pasar de 100.',
         // 'REQUIERE_PLAZO' => 'El plazo Formal e Informal es obligatorio.',
         // QUITADO 12-nov-2026 (performance sin bloqueos, plazo 0; el usuario: que el plazo acepte 0):
         // 'PLAZO_INVALIDO' => 'El plazo debe ser meses enteros, de 1 en adelante.',
-        'PLAZO_INVALIDO' => 'El plazo debe ser meses enteros, de 0 en adelante.',
+        // QUITADO 16-nov-2026 (performance hacia abajo): 'PLAZO_INVALIDO' => 'El plazo debe ser meses enteros, de 0 en adelante.',
+        'PLAZO_INVALIDO' => 'El máximo plazo debe ser meses enteros, de 0 en adelante.',
         // 'REQUIERE_INSPECCION' => 'La inspección Formal e Informal es obligatoria.',
-        'INSPECCION_INVALIDA' => 'La inspección debe ser DIFERIDA o PREVIA.',
+        // QUITADO 16-nov-2026 (performance hacia abajo): 'INSPECCION_INVALIDA' => 'La inspección debe ser DIFERIDA o PREVIA.',
         'PERFORMANCE_NO_EXISTE' => 'La fila ya no existe.',
         // 11-nov-2026 (activo).
         'ACTIVO_INVALIDO' => 'Activo solo acepta sí o no.',
@@ -165,8 +183,13 @@ class PerformanceCreditoController extends Controller
                 // QUITADO 11-nov-2026 (líneas): 'lineas' => DB::select('SELECT * FROM ventas.fn_performance_credito_lineas_listar()'),
                 'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_performance_credito_tipos_cliente_listar()'),
                 // QUITADO 12-nov-2026 (booleanos): 'aplica' => DB::select('SELECT * FROM ventas.fn_performance_credito_aplica_listar()'),
-                'inicial_tipos' => DB::select('SELECT * FROM ventas.fn_performance_credito_inicial_tipos_listar()'),
-                'inspecciones' => DB::select('SELECT * FROM ventas.fn_performance_credito_inspecciones_listar()'),
+                // QUITADO 16-nov-2026 (performance hacia abajo): salen el tipo de inicial y la inspección (sus funciones ya no están).
+                // 'inicial_tipos' => DB::select('SELECT * FROM ventas.fn_performance_credito_inicial_tipos_listar()'),
+                // 'inspecciones' => DB::select('SELECT * FROM ventas.fn_performance_credito_inspecciones_listar()'),
+                // 16-nov-2026 (performance hacia abajo): (id, nombre) de los catálogos activos ventas.actividad_cliente y
+                // ventas.comportamiento_cliente.
+                'actividades' => DB::select('SELECT * FROM ventas.fn_performance_credito_actividades_listar()'),
+                'comportamientos' => DB::select('SELECT * FROM ventas.fn_performance_credito_comportamientos_listar()'),
             ]));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los combos', $e->getMessage()));
@@ -188,14 +211,13 @@ class PerformanceCreditoController extends Controller
     {
         try {
             // 12-nov-2026 (booleanos): + filas.*.aplica (boolean, como activo).
+            // QUITADO 16-nov-2026 (performance hacia abajo): ya no hay aplica ('filas.*.aplica' => 'boolean' y su mensaje).
             $validator = Validator::make($request->only('filas'), [
                 'filas' => 'array',
                 'filas.*.activo' => 'boolean',
-                'filas.*.aplica' => 'boolean',
             ], [
                 'filas.array' => 'Las filas no tienen un formato válido.',
                 'filas.*.activo.boolean' => self::MENSAJES_ERROR['ACTIVO_INVALIDO'],
-                'filas.*.aplica.boolean' => self::MENSAJES_ERROR['APLICA_INVALIDA'],
             ]);
             if ($validator->fails()) {
                 return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));

@@ -2128,7 +2128,8 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::get('/tipoClienteParametrosAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametrosAuditoria']);
 
     Route::get('/listFormalInformalParametros', [FormalInformalParametrosController::class, 'listFormalInformalParametros']);
-    Route::get('/listCombosFormalInformalParametros', [FormalInformalParametrosController::class, 'listCombosFormalInformalParametros']);
+    // QUITADO 16-nov-2026 (sin línea): la pestaña Formal / Informal ya no tiene combos (el único era la Línea).
+    // Route::get('/listCombosFormalInformalParametros', [FormalInformalParametrosController::class, 'listCombosFormalInformalParametros']);
     Route::post('/guardarFormalInformalParametros', [FormalInformalParametrosController::class, 'guardarFormalInformalParametros']);
     // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
     // Route::delete('/deleteFormalInformalParametro/{id}', [FormalInformalParametrosController::class, 'deleteFormalInformalParametro']);
