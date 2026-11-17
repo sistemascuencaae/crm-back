@@ -5,7 +5,7 @@ namespace App\Http\Controllers\ventas\cotizador;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Traits\AuditoriaForenseTrait;
-use App\Models\ventas\cotizador\FormalInformalParametro;
+use App\Models\ventas\cotizador\ActividadClienteParametro;
 use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -19,9 +19,9 @@ use Illuminate\Support\Facades\Validator;
 // este controller arma el jsonb con los campos del modelo y el bloque 'auditoria', y traduce el código que levanta la función.
 // 16-nov-2026 (sin línea): la regla ya no tiene línea: salen sus mensajes y el endpoint de combos (la pestaña no tiene combos).
 // 11-nov-2026 (activo, patrón de la pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo y el Guardar de
-// siempre; una regla inactiva no cuenta en el cálculo ni choca): deleteFormalInformalParametro quedó comentado. Nueva la
-// auditoría de TODA la pestaña (formalInformalParametrosAuditoria), además de la de una fila.
-class FormalInformalParametrosController extends Controller
+// siempre; una regla inactiva no cuenta en el cálculo ni choca): deleteActividadClienteParametro quedó comentado. Nueva la
+// auditoría de TODA la pestaña (actividadClienteParametrosAuditoria), además de la de una fila.
+class ActividadClienteParametrosController extends Controller
 {
     use AuditoriaForenseTrait;
 
@@ -49,9 +49,9 @@ class FormalInformalParametrosController extends Controller
     }
 
     // Version 1.0
-    // GET /api/ventas/listFormalInformalParametros?pagina&tamanio&busqueda — la grilla de la pestaña.
+    // GET /api/ventas/listActividadClienteParametros?pagina&tamanio&busqueda — la grilla de la pestaña.
     // 11-nov-2026 (activo): trae también las reglas inactivas (se reactivan en la grilla), con activo.
-    public function listFormalInformalParametros(Request $request)
+    public function listActividadClienteParametros(Request $request)
     {
         try {
             $pagina = max((int) $request->query('pagina', 1), 1);
@@ -74,10 +74,10 @@ class FormalInformalParametrosController extends Controller
     // QUITADO 16-nov-2026 (sin línea): la pestaña ya no tiene combos (el único era la Línea); su ruta quedó comentada.
     // Reactivar = descomentar este método y su ruta.
     // // Version 1.0
-    // // GET /api/ventas/listCombosFormalInformalParametros — los combos de la grilla en una sola llamada (codigo, nombre):
+    // // GET /api/ventas/listCombosActividadClienteParametros — los combos de la grilla en una sola llamada (codigo, nombre):
     // // la Línea (hoy ELECTRO, MOTO y TECNOLOGIA). Una sola fuente con la validación de la función y el requerimiento 'formal informal'.
     // // 11-nov-2026 (líneas): las líneas ACTIVAS del catálogo ventas.linea (codigo = el id como texto, nombre).
-    // public function listCombosFormalInformalParametros()
+    // public function listCombosActividadClienteParametros()
     // {
     //     try {
     //         return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
@@ -90,11 +90,11 @@ class FormalInformalParametrosController extends Controller
     // }
 
     // Version 1.1
-    // POST /api/ventas/guardarFormalInformalParametros — las filas nuevas (sin id) y las editadas, todo o nada.
+    // POST /api/ventas/guardarActividadClienteParametros — las filas nuevas (sin id) y las editadas, todo o nada.
     // De cada fila pasan solo el id y los campos del modelo.
     // 11-nov-2026 (activo): antes, el Validator revisa que activo sea verdadero o falso (el mismo mensaje de la función).
     // Desactivar o reactivar una regla = guardarla con activo en false o true.
-    public function guardarFormalInformalParametros(Request $request)
+    public function guardarActividadClienteParametros(Request $request)
     {
         try {
             $validator = Validator::make($request->only('filas'), [
@@ -108,7 +108,7 @@ class FormalInformalParametrosController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), $validator->errors()));
             }
 
-            $campos = array_merge(['id'], (new FormalInformalParametro())->getFillable());
+            $campos = array_merge(['id'], (new ActividadClienteParametro())->getFillable());
             $filas = array_map(fn ($fila) => Arr::only((array) $fila, $campos), (array) $request->input('filas', []));
             $payload = ['filas' => $filas, 'auditoria' => $this->contextoAuditoriaForense($request)];
 
@@ -125,8 +125,8 @@ class FormalInformalParametrosController extends Controller
     // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo); su ruta quedó comentada y
     // ventas.fn_actividad_cliente_parametros_eliminar se queda en la base, sin uso. Reactivar = descomentar este método y su ruta.
     // // Version 1.0
-    // // DELETE /api/ventas/deleteFormalInformalParametro/{id}
-    // public function deleteFormalInformalParametro(Request $request, $id)
+    // // DELETE /api/ventas/deleteActividadClienteParametro/{id}
+    // public function deleteActividadClienteParametro(Request $request, $id)
     // {
     //     try {
     //         DB::selectOne('SELECT ventas.fn_actividad_cliente_parametros_eliminar(?::jsonb) AS id', [json_encode([
@@ -143,10 +143,10 @@ class FormalInformalParametrosController extends Controller
     // }
 
     // Version 1.0
-    // GET /api/ventas/formalInformalParametroAuditoria?id&pagina&tamanio&busqueda — resumen + historial paginado de UNA fila
+    // GET /api/ventas/actividadClienteParametroAuditoria?id&pagina&tamanio&busqueda — resumen + historial paginado de UNA fila
     // (auditoria.logs_cambios). Sin columna nombre: el resumen lo arma la función con las edades y la estabilidad
     // (16-nov-2026: Edad 21-65 · 3 meses; antes con la línea).
-    public function formalInformalParametroAuditoria(Request $request)
+    public function actividadClienteParametroAuditoria(Request $request)
     {
         try {
             $id = (int) $request->query('id', 0);
@@ -174,11 +174,11 @@ class FormalInformalParametrosController extends Controller
     }
 
     // Version 1.0
-    // GET /api/ventas/formalInformalParametrosAuditoria?pagina&tamanio&busqueda — 11-nov-2026 (activo): la auditoría de TODA la
+    // GET /api/ventas/actividadClienteParametrosAuditoria?pagina&tamanio&busqueda — 11-nov-2026 (activo): la auditoría de TODA la
     // pestaña (el botón Auditoría de la cabecera): resumen + historial paginado de todas las reglas, también las borradas antes
     // y las desactivadas (auditoria.logs_cambios). La búsqueda también encuentra las reglas por una edad de su rango
     // (16-nov-2026; antes, por la línea).
-    public function formalInformalParametrosAuditoria(Request $request)
+    public function actividadClienteParametrosAuditoria(Request $request)
     {
         try {
             $pagina = max((int) $request->query('pagina', 1), 1);

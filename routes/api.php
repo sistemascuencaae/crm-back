@@ -170,8 +170,8 @@ use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\cotizador\CotizadorParametrosController;
 use App\Http\Controllers\ventas\cotizador\ComportamientoClienteParametrosController;
-use App\Http\Controllers\ventas\cotizador\TipoClienteParametrosController;
-use App\Http\Controllers\ventas\cotizador\FormalInformalParametrosController;
+use App\Http\Controllers\ventas\cotizador\PerfilClienteParametrosController;
+use App\Http\Controllers\ventas\cotizador\ActividadClienteParametrosController;
 use App\Http\Controllers\ventas\cotizador\PerformanceCreditoController;
 // 11-nov-2026 (líneas): el catálogo de líneas (panel izquierdo de Performance crédito).
 use App\Http\Controllers\ventas\cotizador\LineaController;
@@ -2118,24 +2118,24 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     // 11-nov-2026 (activo): la auditoría de TODA la pestaña Comportamiento (el botón Auditoría de la cabecera).
     Route::get('/comportamientoClienteParametrosAuditoria', [ComportamientoClienteParametrosController::class, 'comportamientoClienteParametrosAuditoria']);
 
-    Route::get('/listTipoClienteParametros', [TipoClienteParametrosController::class, 'listTipoClienteParametros']);
-    Route::get('/listCombosTipoClienteParametros', [TipoClienteParametrosController::class, 'listCombosTipoClienteParametros']);
-    Route::post('/guardarTipoClienteParametros', [TipoClienteParametrosController::class, 'guardarTipoClienteParametros']);
+    Route::get('/listPerfilClienteParametros', [PerfilClienteParametrosController::class, 'listPerfilClienteParametros']);
+    Route::get('/listCombosPerfilClienteParametros', [PerfilClienteParametrosController::class, 'listCombosPerfilClienteParametros']);
+    Route::post('/guardarPerfilClienteParametros', [PerfilClienteParametrosController::class, 'guardarPerfilClienteParametros']);
     // QUITADO 11-nov-2026 (pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
-    // Route::delete('/deleteTipoClienteParametro/{id}', [TipoClienteParametrosController::class, 'deleteTipoClienteParametro']);
-    Route::get('/tipoClienteParametroAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametroAuditoria']);
+    // Route::delete('/deletePerfilClienteParametro/{id}', [PerfilClienteParametrosController::class, 'deletePerfilClienteParametro']);
+    Route::get('/perfilClienteParametroAuditoria', [PerfilClienteParametrosController::class, 'perfilClienteParametroAuditoria']);
     // 11-nov-2026 (pestaña 2): la auditoría de TODA la pestaña Tipo de cliente (el botón Auditoría de la cabecera).
-    Route::get('/tipoClienteParametrosAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametrosAuditoria']);
+    Route::get('/perfilClienteParametrosAuditoria', [PerfilClienteParametrosController::class, 'perfilClienteParametrosAuditoria']);
 
-    Route::get('/listFormalInformalParametros', [FormalInformalParametrosController::class, 'listFormalInformalParametros']);
+    Route::get('/listActividadClienteParametros', [ActividadClienteParametrosController::class, 'listActividadClienteParametros']);
     // QUITADO 16-nov-2026 (sin línea): la pestaña Formal / Informal ya no tiene combos (el único era la Línea).
-    // Route::get('/listCombosFormalInformalParametros', [FormalInformalParametrosController::class, 'listCombosFormalInformalParametros']);
-    Route::post('/guardarFormalInformalParametros', [FormalInformalParametrosController::class, 'guardarFormalInformalParametros']);
+    // Route::get('/listCombosActividadClienteParametros', [ActividadClienteParametrosController::class, 'listCombosActividadClienteParametros']);
+    Route::post('/guardarActividadClienteParametros', [ActividadClienteParametrosController::class, 'guardarActividadClienteParametros']);
     // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
-    // Route::delete('/deleteFormalInformalParametro/{id}', [FormalInformalParametrosController::class, 'deleteFormalInformalParametro']);
-    Route::get('/formalInformalParametroAuditoria', [FormalInformalParametrosController::class, 'formalInformalParametroAuditoria']);
+    // Route::delete('/deleteActividadClienteParametro/{id}', [ActividadClienteParametrosController::class, 'deleteActividadClienteParametro']);
+    Route::get('/actividadClienteParametroAuditoria', [ActividadClienteParametrosController::class, 'actividadClienteParametroAuditoria']);
     // 11-nov-2026 (activo): la auditoría de TODA la pestaña Formal / Informal (el botón Auditoría de la cabecera).
-    Route::get('/formalInformalParametrosAuditoria', [FormalInformalParametrosController::class, 'formalInformalParametrosAuditoria']);
+    Route::get('/actividadClienteParametrosAuditoria', [ActividadClienteParametrosController::class, 'actividadClienteParametrosAuditoria']);
 
     Route::get('/listPerformanceCredito', [PerformanceCreditoController::class, 'listPerformanceCredito']);
     Route::get('/listCombosPerformanceCredito', [PerformanceCreditoController::class, 'listCombosPerformanceCredito']);

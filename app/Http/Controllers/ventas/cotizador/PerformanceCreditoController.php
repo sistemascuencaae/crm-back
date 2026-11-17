@@ -187,7 +187,7 @@ class PerformanceCreditoController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 // QUITADO 11-nov-2026 (líneas): 'lineas' => DB::select('SELECT * FROM ventas.fn_performance_credito_lineas_listar()'),
                 // QUITADO 17-nov-2026 (perfil cliente): 'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_performance_credito_tipos_cliente_listar()'),
-                'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_performance_credito_perfiles_cliente_listar()'),
+                'perfiles_cliente' => DB::select('SELECT * FROM ventas.fn_performance_credito_perfiles_cliente_listar()'),
                 // QUITADO 12-nov-2026 (booleanos): 'aplica' => DB::select('SELECT * FROM ventas.fn_performance_credito_aplica_listar()'),
                 // QUITADO 16-nov-2026 (performance hacia abajo): salen el tipo de inicial y la inspección (sus funciones ya no están).
                 // 'inicial_tipos' => DB::select('SELECT * FROM ventas.fn_performance_credito_inicial_tipos_listar()'),

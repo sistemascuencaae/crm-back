@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 // 13-nov-2026 (antiguedad): una sola antiguedad numérica. 13-nov-2026 (nn texto): garancheck_nn es texto en MAYÚSCULAS o null.
 // Guardar, validar y auditar lo hacen las funciones ventas.fn_tipo_cliente_parametros_*: el modelo es la fuente de los
 // campos.
-class TipoClienteParametro extends Model
+class PerfilClienteParametro extends Model
 {
     // QUITADO 17-nov-2026 (perfil cliente): protected $table = 'ventas.tipo_cliente_parametros';
     protected $table = 'ventas.perfil_cliente_parametros';
