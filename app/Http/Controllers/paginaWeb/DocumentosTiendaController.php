@@ -25,9 +25,10 @@ class DocumentosTiendaController extends Controller
     {
         try {
             $documento = DB::selectOne('SELECT * FROM ecommerce.fn_documento_buscar_publico(?)', [$ruta]);
-            // 404 (como las páginas informativas): la tienda muestra "no disponible".
+            // No existe o está inactivo: code 404 en el cuerpo (HTTP 200, estándar); la tienda muestra "no disponible".
+            // RespuestaApi no deja elegir el código del error (siempre 500): se reemplaza solo el code
             if (!$documento) {
-                return response()->json(RespuestaApi::returnResultado('error', 'El documento no existe.', null), 404);
+                return response()->json(['code' => 404] + RespuestaApi::returnResultado('error', 'El documento no existe.', null));
             }
 
             $documento->doc_contenido = $this->conImagenesCompletas($documento->doc_contenido);
@@ -41,14 +42,14 @@ class DocumentosTiendaController extends Controller
     }
 
     // La pantalla de una carpeta de primer nivel (/documentos/carpeta/<ruta> en la tienda): su nombre y sus documentos
-    // activos agrupados por subcarpeta ("" = directo en la carpeta). 404 si no existe o no tiene documentos activos.
+    // activos agrupados por subcarpeta ("" = directo en la carpeta). code 404 si no existe o no tiene documentos activos.
     // GET public/documentos/carpetas/{ruta}
     public function carpetaPublica(string $ruta)
     {
         try {
             $filas = DB::select('SELECT * FROM ecommerce.fn_documento_carpeta_publica(?)', [$ruta]);
             if (!$filas) {
-                return response()->json(RespuestaApi::returnResultado('error', 'La carpeta no existe.', null), 404);
+                return response()->json(['code' => 404] + RespuestaApi::returnResultado('error', 'La carpeta no existe.', null));
             }
 
             $grupos = [];

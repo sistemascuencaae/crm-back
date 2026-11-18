@@ -85,12 +85,7 @@ class SeccionesController extends Controller
     public function plantillas()
     {
         try {
-            $registros = DB::select(
-                "SELECT pla_id, pla_codigo, pla_nombre, pla_descripcion, pla_miniatura, pla_tarjeta_id IS NOT NULL AS tiene_tarjeta
-                   FROM ecommerce.plantillas
-                  WHERE pla_alcance = 'seccion' AND pla_activo
-                  ORDER BY pla_orden, pla_id"
-            );
+            $registros = DB::select('SELECT * FROM ecommerce.fn_plantilla_listar_seccion()');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Plantillas listadas con éxito', ['registros' => $registros]));
         } catch (\Throwable $th) {
@@ -181,7 +176,7 @@ class SeccionesController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Sección modificada con éxito', ['sec_id' => $resultado->sec_id]));
         } catch (QueryException $e) {
-            $plaId = DB::selectOne('SELECT pla_id FROM ecommerce.secciones WHERE sec_id = ?', [$id])->pla_id ?? null;
+            $plaId = DB::selectOne('SELECT ecommerce.fn_seccion_plantilla(?) AS pla_id', [$id])->pla_id ?? null;
 
             return $this->errorTraducido($e, 'Error al modificar la sección', $plaId);
         }
@@ -239,7 +234,7 @@ class SeccionesController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Sección restaurada con éxito', ['sec_id' => $resultado->sec_id]));
         } catch (QueryException $e) {
-            $plaId = DB::selectOne('SELECT pla_id FROM ecommerce.secciones WHERE sec_id = ?', [$id])->pla_id ?? null;
+            $plaId = DB::selectOne('SELECT ecommerce.fn_seccion_plantilla(?) AS pla_id', [$id])->pla_id ?? null;
 
             return $this->errorTraducido($e, 'Error al restaurar la sección', $plaId);
         }
@@ -308,17 +303,16 @@ class SeccionesController extends Controller
     {
         try {
             $gprId = (int) $request->query('gpr_id', 0);
-            if ($gprId > 0) {
-                $proIds = array_column(DB::select(
-                    'SELECT pro_id FROM ecommerce.grupo_productos_detalles WHERE gpr_id = ? ORDER BY gpd_orden', [$gprId]
-                ), 'pro_id');
-            } else {
-                $proIds = array_filter(array_map('intval', explode(',', (string) $request->query('pro_ids', ''))));
-            }
+            $proIds = array_values(array_filter(array_map('intval', explode(',', (string) $request->query('pro_ids', ''))), fn ($id) => $id > 0));
+
+            // Todas: los afiches no tienen límite. La base elige y ordena (ecommerce.fn_seccion_vista_previa_tarjetas)
+            $filas = DB::select(
+                'SELECT * FROM ecommerce.fn_seccion_vista_previa_tarjetas(?, ?::integer[])',
+                [$gprId, $this->arreglo($proIds)]
+            );
 
             return response()->json(RespuestaApi::returnResultado('success', 'Productos de la vista previa', [
-                // Todas las del grupo: los afiches no tienen límite (tarjetasDe corta en 24 si no se le dice cuántas).
-                'tarjetas' => $proIds ? $this->tarjetasDe($proIds, count($proIds)) : [],
+                'tarjetas' => array_map(fn ($f) => $this->tarjeta($f), $filas),
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los productos de la vista previa', $th->getMessage()));
@@ -333,8 +327,7 @@ class SeccionesController extends Controller
         try {
             $proIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string) $request->query('pro_ids', ''))))));
             $marcas = $proIds ? DB::select(
-                'SELECT pro_id, COALESCE(pro_oferta, false) AS oferta, COALESCE(pro_destacado, false) AS destacado
-                   FROM public.producto WHERE pro_id = ANY (?::integer[])',
+                'SELECT * FROM ecommerce.fn_producto_marcas_web(?::integer[])',
                 ['{' . implode(',', array_slice($proIds, 0, 200)) . '}']
             ) : [];
 
@@ -350,11 +343,7 @@ class SeccionesController extends Controller
     // Body (multipart): imagen, pco_id
     public function subirImagen(Request $request)
     {
-        $contenido = DB::selectOne(
-            "SELECT pco_id, pco_etiqueta, pco_peso_maximo_kb FROM ecommerce.plantilla_contenidos
-              WHERE pco_id = ? AND pco_tipo IN ('imagen', 'pieza')",
-            [(int) $request->input('pco_id')]
-        );
+        $contenido = DB::selectOne('SELECT * FROM ecommerce.fn_plantilla_contenido_imagen(?)', [(int) $request->input('pco_id')]);
 
         if (!$contenido) {
             return response()->json(RespuestaApi::returnResultado('error', 'La lista de imágenes no es válida.', null));
@@ -421,16 +410,12 @@ class SeccionesController extends Controller
         // La lista (si la ruta habla de una) y el campo.
         $lista = null;
         if (!$esTarjeta && ($posicion !== '' || $claveElemento !== '' || !self::buscarCampo($plaId, null, $primero))) {
-            $lista = DB::selectOne(
-                'SELECT pco_id, pco_etiqueta, pco_minimo, pco_maximo FROM ecommerce.plantilla_contenidos
-                  WHERE pco_clave = ? AND (?::integer IS NULL OR pla_id = ?) ORDER BY pco_id LIMIT 1',
-                [$primero, $plaId, $plaId]
-            );
+            $lista = DB::selectOne('SELECT * FROM ecommerce.fn_plantilla_contenido_por_clave(?, ?)', [$primero, $plaId]);
         }
 
         $campo = null;
         if ($esTarjeta) {
-            $tarjetaId = $plaId ? (DB::selectOne('SELECT pla_tarjeta_id FROM ecommerce.plantillas WHERE pla_id = ?', [$plaId])->pla_tarjeta_id ?? null) : null;
+            $tarjetaId = $plaId ? (DB::selectOne('SELECT ecommerce.fn_plantilla_tarjeta(?) AS pla_tarjeta_id', [$plaId])->pla_tarjeta_id ?? null) : null;
             $campo = self::buscarCampo($tarjetaId, null, $primero, true);
         } elseif ($lista && $claveElemento !== '') {
             $campo = self::buscarCampo(null, $lista->pco_id, $claveElemento);
@@ -465,18 +450,9 @@ class SeccionesController extends Controller
     // Un campo por clave: de una plantilla (pco_id vacío) o de una lista. Sin plantilla conocida, el primero con esa clave.
     private static function buscarCampo(?int $plaId, ?int $pcoId, string $clave, bool $deComponente = false)
     {
-        if ($pcoId !== null) {
-            return DB::selectOne('SELECT pca_etiqueta, pca_minimo, pca_maximo, pca_largo_maximo FROM ecommerce.plantilla_campos
-                                   WHERE pco_id = ? AND pca_clave = ? LIMIT 1', [$pcoId, $clave]);
-        }
-
         return DB::selectOne(
-            "SELECT c.pca_etiqueta, c.pca_minimo, c.pca_maximo, c.pca_largo_maximo
-               FROM ecommerce.plantilla_campos c JOIN ecommerce.plantillas p ON p.pla_id = c.pla_id
-              WHERE c.pco_id IS NULL AND c.pca_clave = ? AND (?::integer IS NULL OR c.pla_id = ?)
-                AND p.pla_alcance = ?
-              ORDER BY c.pca_id LIMIT 1",
-            [$clave, $plaId, $plaId, $deComponente ? 'componente' : 'seccion']
+            'SELECT * FROM ecommerce.fn_plantilla_campo_buscar(?, ?, ?, ?)',
+            [$plaId, $pcoId, $clave, $deComponente]
         );
     }
 
@@ -566,27 +542,7 @@ class SeccionesController extends Controller
         ];
     }
 
-    // ================= Tarjetas de la vista previa =================
-
-    /**
-     * Las tarjetas de UNOS productos, en el orden pedido y como máximo $cantidad (ecommerce.fn_producto_tienda_tarjetas):
-     * las de las SECCIONES de las páginas (los productos de un grupo, los afiches, el 360). Misma forma que las del
-     * listado de /shop, más la descripción (el 360 la muestra):
-     *   [{pro_id, codigo, nombre, marca, tpr_id, categoria, imagenes: [url…], destacado, oferta, precio, precio_anterior,
-     *     stock, descripcion, es_moto}]
-     */
-    private function tarjetasDe(array $proIds, int $cantidad = 24): array
-    {
-        $proIds = array_values(array_filter(array_map('intval', $proIds), fn ($id) => $id > 0));
-        if (!$proIds) {
-            return [];
-        }
-
-        return array_map(
-            fn ($f) => $this->tarjeta($f),
-            DB::select('SELECT * FROM ecommerce.fn_producto_tienda_tarjetas(?::integer[], ?)', [$this->arreglo($proIds), $cantidad])
-        );
-    }
+    // ================= Tarjetas de la vista previa (filas de ecommerce.fn_seccion_vista_previa_tarjetas) =================
 
     /**
      * La tarjeta de producto de todo el sitio, de una fila de las funciones de la tienda (traen precio, stock y es_moto).

@@ -54,9 +54,9 @@ class SucursalesTiendaController extends Controller
         } catch (\Throwable $th) {
             Log::error('No se pudieron listar las sucursales de la tienda', ['error' => $th->getMessage()]);
 
-            // HTTP 500 a propósito: la tienda trata la falla como error y el navegador no la guarda.
+            // HTTP 200 como todo el estándar: la tienda ve status 'error'; no-store para que el navegador no la guarde.
             return response()
-                ->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar las tiendas', null), 500)
+                ->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar las tiendas', null))
                 ->header('Cache-Control', 'no-store');
         }
     }

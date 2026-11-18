@@ -16,7 +16,7 @@ class ArchivosTiendaController extends Controller
     // Nombre que genera Laravel (aleatorio) + extensión permitida. Evita pedir otros archivos (../.env)
     private const IMAGEN_VALIDA = '/^[A-Za-z0-9]+\.(jpg|jpeg|png|webp)$/';
     private const PDF_VALIDO    = '/^[A-Za-z0-9]+\.pdf$/';
-    private const WEBP_VALIDO   = '/^[A-Za-z0-9]+\.webp$/';     // imágenes de productos de la tienda
+    private const WEBP_VALIDO   = '/^[A-Za-z0-9]+\.webp$/';     
 
     // GET public/pagina-web/imagenes/{nombre}
     public function verImagen(string $nombre)

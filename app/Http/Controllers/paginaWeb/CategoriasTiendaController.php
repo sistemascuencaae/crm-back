@@ -56,7 +56,7 @@ class CategoriasTiendaController extends Controller
             Log::error('No se pudo cargar el menú de categorías', ['error' => $th->getMessage()]);
 
             return response()
-                ->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el menú de categorías', null), 500)
+                ->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el menú de categorías', null))
                 ->header('Cache-Control', 'no-store');
         }
     }
