@@ -14,7 +14,8 @@ class CalificacionClienteParametro extends Model
 
     protected $fillable = [
         'pol_id',
-        'tipo_cliente_id',
+        // QUITADO 17-nov-2026 (perfil cliente): 'tipo_cliente_id',
+        'perfil_cliente_id',
         'actividad_cliente_id',
         'comportamiento_cliente_id',
         'predeterminado',

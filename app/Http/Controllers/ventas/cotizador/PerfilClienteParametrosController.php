@@ -62,6 +62,8 @@ class PerfilClienteParametrosController extends Controller
         // 'FECHA_APERTURA_SICOM_INVALIDA' => 'La fecha de apertura SICOM no es una fecha válida.',
         // 'FECHA_CONSULTA_INVALIDA' => 'La fecha de consulta no es una fecha válida.',
         'ACTIVO_INVALIDO' => 'Activo solo acepta sí o no.',
+        // 17-nov-2026 (prioridad): la repetida (PRIORIDAD_REPETIDA) la arma la función con los nombres de las dos reglas.
+        'PRIORIDAD_INVALIDA' => 'La prioridad debe ser un número entero de 1 en adelante.',
     ];
 
     // QUITADO 12-nov-2026 (booleanos): los campos de acreedores y de fecha que revisaba el Validator (salieron de la tabla).
@@ -112,6 +114,8 @@ class PerfilClienteParametrosController extends Controller
                 'total' => (int) ($registros[0]->total_registros ?? 0),
                 'pagina' => $pagina,
                 'tamanio' => $tamanio,
+                // 17-nov-2026 (prioridad): la siguiente prioridad de cada tipo, para las filas nuevas de la grilla.
+                'prioridades_siguientes' => DB::select('SELECT * FROM ventas.fn_perfil_cliente_parametros_prioridades_siguientes()'),
             ]));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los perfiles cliente', $e->getMessage()));
@@ -288,7 +292,9 @@ class PerfilClienteParametrosController extends Controller
     // detalle técnico. Los límites del score y los rangos que chocan solo los conoce la función: ella arma ese texto.
     private function respuestaError(QueryException $e, string $generico)
     {
-        if (preg_match('/(?:SCORE_FUERA_DE_LIMITES|RANGO_CRUZADO): (.+?)\s*(?:\R|\(SQL:|$)/', $e->getMessage(), $texto)) {
+        // QUITADO 17-nov-2026 (prioridad): if (preg_match('/(?:SCORE_FUERA_DE_LIMITES|RANGO_CRUZADO): (.+?)\s*(?:\R|\(SQL:|$)/', $e->getMessage(), $texto)) {
+        // 17-nov-2026 (prioridad): + PRIORIDAD_REPETIDA (la función dice qué dos reglas tienen la misma prioridad).
+        if (preg_match('/(?:SCORE_FUERA_DE_LIMITES|RANGO_CRUZADO|PRIORIDAD_REPETIDA): (.+?)\s*(?:\R|\(SQL:|$)/', $e->getMessage(), $texto)) {
             return response()->json(RespuestaApi::returnResultado('error', $texto[1], null));
         }
 

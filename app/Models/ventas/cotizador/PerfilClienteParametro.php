@@ -43,5 +43,7 @@ class PerfilClienteParametro extends Model
         'antiguedad',
         'perfil_riesgo',
         'activo',
+        // 17-nov-2026 (prioridad): el orden del perfil dentro de su tipo; vacío = la siguiente (la pone la función).
+        'prioridad',
     ];
 }
