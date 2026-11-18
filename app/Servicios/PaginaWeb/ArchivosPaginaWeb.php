@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Archivos que sube Página Web (ArchivoPaginaWebController): se guardan en storage/app/pagina-web (carpeta privada)
+ * Archivos que sube Página Web (paginaWeb/ArchivosTiendaController): se guardan en storage/app/pagina-web (carpeta privada)
  * y la tienda los pide por api/public/pagina-web/imagenes/…. Aquí está la única regla para subir una imagen y aquí
  * se borran los archivos al vaciar una papelera.
  */

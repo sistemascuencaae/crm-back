@@ -29,13 +29,13 @@ class CaracterísticasProductoController extends Controller
         'CARACTERISTICA_REPETIDA' => 'Ya hay una característica activa con ese nombre en esta categoría.',
         'CARACTERISTICAS_MAXIMO' => 'Una categoría puede tener como máximo 30 características.',
         'CARACTERISTICA_TIPO_EN_USO' => 'Ya hay productos con este dato lleno: el tipo no se puede cambiar.',
-        'CARACTERISTICA_EN_FAMILIA' => 'Una familia usa esta característica. Cámbiela en la familia antes de eliminarla.',
         'ORDEN_INVALIDO' => 'El nuevo orden no es válido.',
         'ORDEN_DESACTUALIZADO' => 'La lista cambió mientras la ordenaba. Vuelva a abrirla e inténtelo de nuevo.',
         'CAMPO_REQUERIDO:car_nombre' => 'Debe ingresar el nombre de la característica.',
         'CAMPO_LARGO:car_nombre' => 'El nombre no puede tener más de 60 caracteres.',
         'CAMPO_LARGO:car_unidad' => 'La unidad no puede tener más de 15 caracteres.',
         'CAMPO_INVALIDO:car_tipo' => 'El tipo debe ser texto o número.',
+        'CAMPO_INVALIDO:car_filtro_tienda' => 'El valor de "Filtro en la tienda" no es válido.',
         // Valores de la ficha (inventarios.fn_producto_ficha_guardar)
         'PRODUCTO_NO_EXISTE' => 'El producto no existe o está inactivo.',
         'FICHA_INVALIDA' => 'Los datos de la ficha no tienen un formato válido.',
@@ -54,14 +54,16 @@ class CaracterísticasProductoController extends Controller
         'tpr_id',
         'car_nombre', 
         'car_tipo', 
-        'car_unidad'
+        'car_unidad',
+        'car_filtro_tienda'
     ];
 
     // La categoría no se cambia al editar.
     private const CAMPOS_EDITAR = [
         'car_nombre', 
         'car_tipo', 
-        'car_unidad'
+        'car_unidad',
+        'car_filtro_tienda'
     ];
 
     private const CAMPOS_FICHA = [
@@ -74,6 +76,7 @@ class CaracterísticasProductoController extends Controller
         'car_nombre' => 'required|string|max:60',
         'car_tipo' => 'required|in:texto,numero',
         'car_unidad' => 'nullable|string|max:15',
+        'car_filtro_tienda' => 'sometimes|boolean',
     ];
 
     // Árbol de tipos (el mismo de Productos): transaccional = categoría de tercer nivel, la única que lleva características.

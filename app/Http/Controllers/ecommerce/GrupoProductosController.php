@@ -315,7 +315,7 @@ class GrupoProductosController extends Controller
             $pagina = max((int) $request->query('pagina', 1), 1);
             $tamanio = min(max((int) $request->query('tamanio', 10), 1), 100);
             $busqueda = trim((string) $request->query('busqueda', ''));
-            // Stock mínimo / máximo (incluidos); vacío = sin ese límite. 0 y 0 = los que no tienen stock.
+            // Stock mínimo / máximo (incluidos); vacío = sin ese límite. La función ya deja solo los de stock vendible > 0.
             $stockMin = is_numeric($request->query('stock_min')) ? (float) $request->query('stock_min') : null;
             $stockMax = is_numeric($request->query('stock_max')) ? (float) $request->query('stock_max') : null;
 

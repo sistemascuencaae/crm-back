@@ -24,8 +24,6 @@ class DocumentosController extends Controller
     // Imágenes y PDF: carpeta privada storage/app/documentos; se piden por api/public/documentos/imagenes|pdf/{nombre}.
     private const CARPETA_IMAGENES = 'documentos/imagenes';
     private const CARPETA_PDF = 'documentos/pdf';
-    private const NOMBRE_IMAGEN = '/^[A-Za-z0-9]{40}\.(webp|jpg|png)$/';
-    private const NOMBRE_PDF = '/^[A-Za-z0-9]{40}\.pdf$/';
     private const TIPOS_IMAGEN = ['webp' => 'image/webp', 'jpg' => 'image/jpeg', 'png' => 'image/png'];
     private const IMAGEN_MAXIMO_KB = 2048;
     private const PDF_MAXIMO_KB = 10240;
@@ -51,7 +49,7 @@ class DocumentosController extends Controller
         'DOCUMENTO_NO_EN_PAPELERA' => 'El documento no está en la papelera (puede que otro usuario ya lo restauró).',
         'PAPELERA_DOCUMENTO_ACTIVO' => 'No se puede eliminar porque está activo: inactívelo primero.',
         'REQUIERE_DOCUMENTOS' => 'Envíe el nuevo orden de los documentos.',
-        'DOCUMENTOS_NO_COINCIDEN' => 'La carpeta cambió mientras la ordenaba (se agregó, movió o eliminó un documento). Vuelva a cargarla.',
+        'DOCUMENTOS_NO_COINCIDEN' => 'Los documentos de la carpeta cambiaron mientras trabajaba (se agregó, movió o eliminó uno). Vuelva a cargarla.',
         'REQUIERE_NOMBRE_CARPETA' => 'Debe ingresar el nombre de la carpeta.',
         'NOMBRE_CARPETA_LARGO' => 'El nombre de la carpeta no puede tener más de 80 caracteres.',
         'CARPETA_DUPLICADA' => 'Ya existe una carpeta con ese nombre en el mismo lugar.',
@@ -98,7 +96,8 @@ class DocumentosController extends Controller
 
     public function __construct(private LimpiadorDocumento $limpiador)
     {
-        $this->middleware('auth:api')->except(['publico', 'publicos', 'carpetaPublica', 'verImagen', 'verPdf']);
+        // Lo público (documentos de la tienda, sus imágenes y PDF) está en paginaWeb/DocumentosTiendaController.
+        $this->middleware('auth:api');
     }
 
     // ================= Documentos =================
@@ -204,6 +203,25 @@ class DocumentosController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado', null));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al ordenar los documentos');
+        }
+    }
+
+    // Crea un documento nuevo a partir de otro -> ecommerce.fn_documento_clonar. Body: el mismo del formulario (título y
+    // dirección obligatorios); lo que no viene (contenido, PDF, carpeta, activo) se copia del origen.
+    public function clonar(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), $this->reglas(false), self::MENSAJES_FORMULARIO);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
+        }
+
+        try {
+            $payload = $this->payload($request) + ['doc_id_origen' => $id];
+            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_clonar(?::jsonb) AS doc_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Documento clonado con éxito', ['doc_id' => $resultado->doc_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al clonar el documento');
         }
     }
 
@@ -345,6 +363,36 @@ class DocumentosController extends Controller
         }
     }
 
+    // Crea una carpeta nueva con copia de sus documentos -> ecommerce.fn_documento_carpeta_clonar. Va en el mismo lugar que
+    // la de origen salvo que venga dca_padre_id. Los documentos copiados quedan inactivos, con título "_CLON" y dirección "-clon".
+    // Body: { dca_nombre, dca_padre_id?, dca_ruta?, documentos?: [doc_id, ...] } (documentos = los que se copian, en su
+    // orden; si no viene, todos los de la carpeta, sin sus subcarpetas; [] = ninguno).
+    public function clonarCarpeta(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'dca_nombre' => 'required|string|max:80',
+            'dca_padre_id' => 'sometimes|nullable|integer|min:1',
+            'dca_ruta' => 'nullable|string|max:60',
+            'documentos' => 'sometimes|array',
+            'documentos.*' => 'integer|min:1',
+        ], self::MENSAJES_FORMULARIO);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
+        }
+
+        try {
+            $payload = $request->only(['dca_nombre', 'dca_padre_id', 'dca_ruta']) + ['dca_id_origen' => $id];
+            if ($request->has('documentos')) {
+                $payload['documentos'] = array_values($request->input('documentos', []));
+            }
+            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_clonar(?::jsonb) AS dca_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Carpeta clonada con éxito', ['dca_id' => $resultado->dca_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al clonar la carpeta');
+        }
+    }
+
     public function eliminarCarpeta(Request $request, int $id)
     {
         return $this->accion('fn_documento_carpeta_papelera', ['dca_id' => $id], $request, 'Carpeta enviada a la papelera', 'Error al eliminar la carpeta');
@@ -443,99 +491,6 @@ class DocumentosController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir el PDF.', null));
         }
-    }
-
-    // ================= Tienda (públicos) =================
-
-    // Un documento activo por su dirección, para la tienda. GET public/documentos/{ruta}
-    public function publico(string $ruta)
-    {
-        try {
-            $documento = DB::selectOne('SELECT * FROM ecommerce.fn_documento_buscar_publico(?)', [$ruta]);
-            // 404 (como las páginas informativas): la tienda muestra "no disponible".
-            if (!$documento) {
-                return response()->json(RespuestaApi::returnResultado('error', 'El documento no existe.', null), 404);
-            }
-
-            $documento->doc_contenido = $this->conImagenesCompletas($documento->doc_contenido);
-            $documento->doc_pdf_url = $documento->doc_pdf ? url('api/public/documentos/pdf/' . $documento->doc_pdf) : null;
-            unset($documento->doc_pdf);
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Documento', ['documento' => $documento]));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el documento', null));
-        }
-    }
-
-    // La pantalla de una carpeta de primer nivel (/documentos/carpeta/<ruta> en la tienda): su nombre y sus documentos
-    // activos agrupados por subcarpeta ("" = directo en la carpeta). 404 si no existe o no tiene documentos activos.
-    // GET public/documentos/carpetas/{ruta}
-    public function carpetaPublica(string $ruta)
-    {
-        try {
-            $filas = DB::select('SELECT * FROM ecommerce.fn_documento_carpeta_publica(?)', [$ruta]);
-            if (!$filas) {
-                return response()->json(RespuestaApi::returnResultado('error', 'La carpeta no existe.', null), 404);
-            }
-
-            $grupos = [];
-            foreach ($filas as $f) {
-                $grupos[$f->subcarpeta][] = [
-                    'doc_titulo' => $f->doc_titulo,
-                    'doc_ruta' => $f->doc_ruta,
-                    'doc_pdf_url' => $f->doc_pdf ? url('api/public/documentos/pdf/' . $f->doc_pdf) : null,
-                    'doc_pdf_etiqueta' => $f->doc_pdf_etiqueta,
-                ];
-            }
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Carpeta', [
-                'carpeta' => $filas[0]->carpeta,
-                'grupos' => array_map(fn($nombre, $docs) => ['subcarpeta' => $nombre, 'documentos' => $docs], array_keys($grupos), $grupos),
-            ]));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la carpeta', null));
-        }
-    }
-
-    // Los documentos activos por carpeta (para el pie de página o un índice). GET public/documentos
-    public function publicos()
-    {
-        try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Documentos', [
-                'documentos' => DB::select('SELECT * FROM ecommerce.fn_documento_listar_publicos()'),
-            ]));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los documentos', null));
-        }
-    }
-
-    public function verImagen(string $nombre)
-    {
-        $ruta = self::CARPETA_IMAGENES . '/' . $nombre;
-        if (!preg_match(self::NOMBRE_IMAGEN, $nombre, $m) || !Storage::disk('local')->exists($ruta)) {
-            abort(404);
-        }
-
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => self::TIPOS_IMAGEN[$m[1]],
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
-    }
-
-    public function verPdf(string $nombre)
-    {
-        $ruta = self::CARPETA_PDF . '/' . $nombre;
-        if (!preg_match(self::NOMBRE_PDF, $nombre) || !Storage::disk('local')->exists($ruta)) {
-            abort(404);
-        }
-
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="documento.pdf"',
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
     }
 
     // ================= Ayudas =================

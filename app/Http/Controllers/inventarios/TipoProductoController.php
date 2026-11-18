@@ -4,6 +4,7 @@ namespace App\Http\Controllers\inventarios;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Http\Controllers\paginaWeb\CategoriasTiendaController;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,7 @@ use Illuminate\Support\Str;
 
 // Tipos de producto: reemplaza a la pantalla de Dynamo (MntTipoProductoController).
 // Las reglas y la auditoría (auditoria.logs_cambios) viven en las funciones inventarios.fn_tipo_producto_*.
-class TipoProducto extends Controller
+class TipoProductoController extends Controller
 {
     public function __construct()
     {
@@ -31,6 +32,7 @@ class TipoProducto extends Controller
         'CAMPO_INVALIDO:tpr_movimiento' => 'El valor de Movimiento no es válido.',
         'CAMPO_INVALIDO:tpr_pordefecto' => 'El valor de Principal no es válido.',
         'CAMPO_INVALIDO:tpr_activo' => 'El valor de Activo no es válido.',
+        'CAMPO_INVALIDO:tpr_web_visible' => 'El valor de En la web no es válido.',
         'CAMPO_INVALIDO:tpr_reporta' => 'La categoría padre no es válida.',
         'CAMPO_INVALIDO:tpr_id' => 'El tipo de producto no es válido.',
         'TIPO_NO_EXISTE' => 'El tipo de producto no existe.',
@@ -41,7 +43,6 @@ class TipoProducto extends Controller
         'TIPO_CON_SUBCATEGORIAS' => 'No se puede eliminar porque tiene subcategorías.',
         'TIPO_EN_USO_SERIES' => 'No se puede eliminar porque tiene series registradas.',
         'TIPO_EN_USO_GEX' => 'No se puede eliminar porque está relacionada con una línea de garantía extendida.',
-        'TIPO_EN_USO_FAMILIAS' => 'No se puede eliminar porque tiene familias de productos.',
         'TIPO_EN_USO_TIENDA' => 'No se puede eliminar porque se usa en un bloque de la tienda.',
         'TIPO_EN_USO_PARAMETROS' => 'No se puede eliminar porque tiene parámetros configurados.',
         'CAMPO_INVALIDO:cco_id' => 'Una de las cuentas contables no es válida.',
@@ -109,15 +110,19 @@ class TipoProducto extends Controller
 
     // Igual que Dynamo: al editar solo cambian estos campos.
     private const CAMPOS_EDITAR = [
+        'tpr_nombre',
         'tpr_porc_utilidad',
         'tpr_pordefecto',
         'tpr_activo',
+        'tpr_web_visible',
     ];
 
     private const REGLAS_EDITAR = [
+        'tpr_nombre' => 'sometimes|required|string|max:200',
         'tpr_porc_utilidad' => 'nullable|numeric|min:0',
         'tpr_pordefecto' => 'nullable|boolean',
         'tpr_activo' => 'nullable|boolean',
+        'tpr_web_visible' => 'nullable|boolean',
     ];
 
     public function crearTipoProducto(Request $request)
@@ -185,7 +190,7 @@ class TipoProducto extends Controller
         $payload = $request->only(self::CAMPOS_EDITAR);
 
         // La regla acepta 1/0 y "1"/"0", pero la función solo recibe true o false.
-        foreach (['tpr_pordefecto', 'tpr_activo'] as $campo) {
+        foreach (['tpr_pordefecto', 'tpr_activo', 'tpr_web_visible'] as $campo) {
             if (isset($payload[$campo])) {
                 $payload[$campo] = filter_var($payload[$campo], FILTER_VALIDATE_BOOLEAN);
             }
@@ -193,6 +198,11 @@ class TipoProducto extends Controller
 
         try {
             $resultado = DB::selectOne('SELECT inventarios.fn_tipo_producto_edit(?::jsonb) AS tpr_id', [json_encode($payload + ['tpr_id' => (int) $tprId, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            // "En la web", el estado o el nombre cambian lo que sale en la tienda (menú y catálogo)
+            if (array_key_exists('tpr_web_visible', $payload) || array_key_exists('tpr_activo', $payload) || array_key_exists('tpr_nombre', $payload)) {
+                CategoriasTiendaController::limpiarCache();
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Tipo de producto modificado con éxito', ['tpr_id' => $resultado->tpr_id]));
         } catch (QueryException $e) {

@@ -59,8 +59,15 @@ class LimpiadorDocumento
     private const ANCHOS_IMAGEN = ['25', '50', '75', '100'];
     private const POSICIONES_IMAGEN = ['izquierda', 'centro', 'derecha'];
 
-    public function limpiar(string $html): string
+    // De dónde se aceptan las imágenes (relativa, termina en /). Por defecto las de los documentos.
+    private string $rutaImagenes = self::RUTA_IMAGENES;
+
+    // $rutaImagenes: otra carpeta de imágenes, ej. la descripción de un producto
+    // (/api/public/pagina-web/imagenes/productos/15/descripcion/). Las imágenes de otro lado se borran.
+    public function limpiar(string $html, ?string $rutaImagenes = null): string
     {
+        $this->rutaImagenes = $rutaImagenes ?? self::RUTA_IMAGENES;
+
         if (trim($html) === '') {
             return '';
         }
@@ -177,11 +184,11 @@ class LimpiadorDocumento
         }
 
         if ($etiqueta === 'img') {
-            $nombre = self::nombreImagen($leidos['src']);
+            $nombre = self::nombreImagen($leidos['src'], $this->rutaImagenes);
             if ($nombre === null) {
                 return 'borrar';
             }
-            $el->setAttribute('src', self::RUTA_IMAGENES . $nombre);
+            $el->setAttribute('src', $this->rutaImagenes . $nombre);
             $el->setAttribute('alt', mb_substr($leidos['alt'], 0, 200));
             $ancho = in_array($leidos['data-ancho'], self::ANCHOS_IMAGEN, true) ? $leidos['data-ancho'] : '100';
             $posicion = in_array($leidos['data-alinear'], self::POSICIONES_IMAGEN, true) ? $leidos['data-alinear'] : 'centro';
@@ -194,10 +201,11 @@ class LimpiadorDocumento
         return 'ok';
     }
 
-    // El nombre de una imagen de documentos a partir de su dirección (completa o relativa); null si no es nuestra.
-    public static function nombreImagen(string $src): ?string
+    // El nombre de una imagen a partir de su dirección (completa o relativa); null si no es de esa carpeta
+    // ($ruta: la relativa, por defecto la de los documentos).
+    public static function nombreImagen(string $src, string $ruta = self::RUTA_IMAGENES): ?string
     {
-        return preg_match('#^(?:https?://[^/\s]+)?/api/public/documentos/imagenes/([A-Za-z0-9]{40}\.(?:webp|jpg|png))$#', $src, $m)
+        return preg_match('#^(?:https?://[^/\s]+)?' . preg_quote($ruta, '#') . '([A-Za-z0-9]{40}\.(?:webp|jpg|png))$#', $src, $m)
             ? $m[1] : null;
     }
 

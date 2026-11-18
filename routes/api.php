@@ -194,43 +194,30 @@ use App\Http\Controllers\contabilidad\EmisorController;
 use App\Http\Controllers\contabilidad\SistemaLiquidacionController;
 use App\Http\Controllers\inventarios\CaracterísticasProductoController;
 use App\Http\Controllers\inventarios\ProductoController;
-use App\Http\Controllers\inventarios\TipoProducto;
+use App\Http\Controllers\inventarios\ProductoImagenesController;
+use App\Http\Controllers\inventarios\ProductoDescripcionController;
+use App\Http\Controllers\inventarios\TipoProductoController;
+use App\Http\Controllers\inventarios\MarcaController;
 use App\Http\Controllers\ecommerce\HeaderController;
 use App\Http\Controllers\ecommerce\FooterController;
 use App\Http\Controllers\ecommerce\EnlacesController;
-use App\Http\Controllers\ecommerce\PaginaTiendaController;
 use App\Http\Controllers\ecommerce\GrupoProductosController;
 use App\Http\Controllers\ecommerce\PaginasController;
 use App\Http\Controllers\ecommerce\SeccionesController;
 use App\Http\Controllers\ecommerce\DocumentosController;
+use App\Http\Controllers\ecommerce\SucursalesController;
 use App\Http\Controllers\ServidorController;
-use App\Http\Controllers\paginaWeb\CreditoController;
 use App\Http\Controllers\formulario\EmpresaController;
-use App\Http\Controllers\formulario\SolicitudesCreditosWebController;
-use App\Http\Controllers\paginaWeb\SucursalCiudadController;
-use App\Http\Controllers\paginaWeb\SucursalController;
-use App\Http\Controllers\paginaWeb\SucursalPublicaController;
-use App\Http\Controllers\paginaWeb\PaginaInformativaController;
-use App\Http\Controllers\paginaWeb\PaginaInformativaPublicaController;
-use App\Http\Controllers\paginaWeb\PaginaInformativaGrupoController;
-// Alias: ya existe crm\credito\GaleriaController
-use App\Http\Controllers\paginaWeb\GaleriaController as GaleriaPaginaWebController;
-use App\Http\Controllers\paginaWeb\GaleriaPublicaController;
-use App\Http\Controllers\paginaWeb\ArchivoPaginaWebController;
-use App\Http\Controllers\paginaWeb\CategoriaWebController;
-use App\Http\Controllers\paginaWeb\CategoriaWebPublicaController;
-use App\Http\Controllers\paginaWeb\PaginaMarcaController;
-use App\Http\Controllers\paginaWeb\PaginaMarcaPublicaController;
-use App\Http\Controllers\paginaWeb\EspanaMotosController;
-use App\Http\Controllers\paginaWeb\EspanaMotosPublicoController;
-use App\Http\Controllers\paginaWeb\ProductoTiendaController;
-use App\Http\Controllers\paginaWeb\MarcaWebController;
-use App\Http\Controllers\paginaWeb\ProductoTiendaPublicoController;
-use App\Http\Controllers\paginaWeb\FranjaDetalleController;
-use App\Http\Controllers\paginaWeb\ClienteWebPublicoController;
-use App\Http\Controllers\paginaWeb\ClienteWebCuentaController;
-use App\Http\Controllers\paginaWeb\ClienteWebController;
-use App\Http\Controllers\paginaWeb\FamiliaController;
+use App\Http\Controllers\ecommerce\ClientesWebController;
+use App\Http\Controllers\paginaWeb\ArchivosTiendaController;
+use App\Http\Controllers\paginaWeb\CategoriasTiendaController;
+use App\Http\Controllers\paginaWeb\ClientesTiendaController;
+use App\Http\Controllers\paginaWeb\DocumentosTiendaController;
+use App\Http\Controllers\paginaWeb\FooterTiendaController;
+use App\Http\Controllers\paginaWeb\HeaderTiendaController;
+use App\Http\Controllers\paginaWeb\PaginasTiendaController;
+use App\Http\Controllers\paginaWeb\ProductosTiendaController;
+use App\Http\Controllers\paginaWeb\SucursalesTiendaController;
 use App\Http\Controllers\ItemPruebaFlutterController;
 use Illuminate\Support\Facades\Route;
 
@@ -292,14 +279,6 @@ Route::group(["prefix" => "crm"], function ($router) {
     Route::get('/listAllEmpresas', [EmpresaController::class, 'listAllEmpresas'])->middleware('throttle:60,1,formulario');
 });
 
-// FORMULARIO INSTITUCIONAL (/formulario), migrado de ecommerce-back con las mismas rutas.
-// Mismo límite que tenía allá (60/min por IP); el prefijo evita compartir el contador con el STS.
-Route::group(["prefix" => "ecommerce", "middleware" => "throttle:60,1,formulario"], function ($router) {
-    // La lupa consulta Ecuador Legal / SRI: 10 por minuto por IP
-    Route::post('/buscarCliente', [CreditoController::class, 'buscarCliente'])->middleware('throttle:10,1,formulario-lupa');
-    Route::post('/enviarCliente', [CreditoController::class, 'enviarCliente']); // antes crearCaso: ya no crea caso
-    Route::get('/autorizarTratamientoDatos/{empresa}/{id}', [SolicitudesCreditosWebController::class, 'autorizarTratamientoDatos']); // link del correo
-});
 
 Route::group(["prefix" => "formulario"], function ($router) {
     Route::post('/addCDFormulario', [Formulario2Controller::class, 'addCDFormulario']);
@@ -311,45 +290,38 @@ Route::group(["prefix" => "formulario"], function ($router) {
 });
 
 // PÁGINA WEB (tienda): contenido visible, sin login (el header y el footer están en public/headers y public/footers)
-Route::get('public/pagina-web/sucursales', [SucursalPublicaController::class, 'listar']);
-Route::get('public/pagina-web/paginas/{clave}', [PaginaInformativaPublicaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
-Route::get('public/pagina-web/documentos', [PaginaInformativaPublicaController::class, 'documentos']);
-Route::get('public/pagina-web/categorias-menu', [CategoriaWebPublicaController::class, 'menu']);
-Route::get('public/pagina-web/marcas/{direccion}', [PaginaMarcaPublicaController::class, 'buscar']);
-Route::get('public/pagina-web/marcas/{direccion}/productos', [PaginaMarcaPublicaController::class, 'productos']);
-Route::get('public/pagina-web/espana-motos', [EspanaMotosPublicoController::class, 'buscar']);
-Route::get('public/pagina-web/productos', [ProductoTiendaPublicoController::class, 'buscar']);
-Route::get('public/pagina-web/productos/{proId}', [ProductoTiendaPublicoController::class, 'detalle'])->whereNumber('proId');
+Route::get('public/pagina-web/categorias-menu', [CategoriasTiendaController::class, 'menu']);
 
 // PÁGINA WEB (tienda): clientes. Cada ruta con su throttle propio (el general de 10000 por minuto no protege nada).
 // Sus tokens son del guard 'cliente': no sirven en el CRM ni los del CRM aquí (AutenticarJwtCrm y cliente.sesion)
 Route::prefix('public/pagina-web/clientes')->group(function () {
-    Route::post('registro', [ClienteWebPublicoController::class, 'registro'])->middleware('throttle:5,1,clientes-registro');
-    Route::post('ingresar', [ClienteWebPublicoController::class, 'ingresar'])->middleware('throttle:10,1,clientes-ingresar');
-    Route::post('olvide-contrasena', [ClienteWebPublicoController::class, 'olvideContrasena'])->middleware('throttle:3,1,clientes-olvide');
-    Route::post('restablecer-contrasena', [ClienteWebPublicoController::class, 'restablecerContrasena'])->middleware('throttle:10,1,clientes-restablecer');
-    Route::post('restablecer-contrasena/verificar', [ClienteWebPublicoController::class, 'verificarEnlaceRestablecer'])->middleware('throttle:10,1,clientes-restablecer');
-    Route::post('confirmar-correo', [ClienteWebPublicoController::class, 'confirmarCorreo'])->middleware('throttle:10,1,clientes-confirmar');
-    Route::post('confirmar-cambio-correo', [ClienteWebPublicoController::class, 'confirmarCambioCorreo'])->middleware('throttle:10,1,clientes-cambio-correo');
+    Route::post('registro', [ClientesTiendaController::class, 'registro'])->middleware('throttle:5,1,clientes-registro');
+    Route::post('ingresar', [ClientesTiendaController::class, 'ingresar'])->middleware('throttle:10,1,clientes-ingresar');
+    Route::post('olvide-contrasena', [ClientesTiendaController::class, 'olvideContrasena'])->middleware('throttle:3,1,clientes-olvide');
+    Route::post('restablecer-contrasena', [ClientesTiendaController::class, 'restablecerContrasena'])->middleware('throttle:10,1,clientes-restablecer');
+    Route::post('restablecer-contrasena/verificar', [ClientesTiendaController::class, 'verificarEnlaceRestablecer'])->middleware('throttle:10,1,clientes-restablecer');
+    Route::post('confirmar-correo', [ClientesTiendaController::class, 'confirmarCorreo'])->middleware('throttle:10,1,clientes-confirmar');
+    Route::post('confirmar-cambio-correo', [ClientesTiendaController::class, 'confirmarCambioCorreo'])->middleware('throttle:10,1,clientes-cambio-correo');
 
     // Con sesión de cliente (sin usuario.activo ni verificar.version: son del CRM)
     Route::prefix('cuenta')->middleware(['cliente.sesion', 'throttle:60,1,clientes-cuenta'])->group(function () {
-        Route::get('/', [ClienteWebCuentaController::class, 'perfil']);
-        Route::put('/', [ClienteWebCuentaController::class, 'modificar']);
-        Route::put('contrasena', [ClienteWebCuentaController::class, 'cambiarContrasena']);
-        Route::post('reenviar-confirmacion', [ClienteWebCuentaController::class, 'reenviarConfirmacion']);
-        Route::post('cambiar-correo', [ClienteWebCuentaController::class, 'cambiarCorreo']);
-        Route::post('salir', [ClienteWebCuentaController::class, 'salir']);
+        Route::get('/', [ClientesTiendaController::class, 'perfil']);
+        Route::put('/', [ClientesTiendaController::class, 'modificar']);
+        Route::put('contrasena', [ClientesTiendaController::class, 'cambiarContrasena']);
+        Route::post('reenviar-confirmacion', [ClientesTiendaController::class, 'reenviarConfirmacion']);
+        Route::post('cambiar-correo', [ClientesTiendaController::class, 'cambiarCorreo']);
+        Route::post('salir', [ClientesTiendaController::class, 'salir']);
     });
 });
-Route::get('public/pagina-web/galerias/{clave}', [GaleriaPublicaController::class, 'listar'])->where('clave', '[a-z_]+');
-Route::get('public/pagina-web/imagenes/{nombre}', [ArchivoPaginaWebController::class, 'verImagen'])
+Route::get('public/pagina-web/imagenes/{nombre}', [ArchivosTiendaController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
-Route::get('public/pagina-web/imagenes/productos/{proId}/{nombre}', [ArchivoPaginaWebController::class, 'verImagenProducto'])
+Route::get('public/pagina-web/imagenes/productos/{proId}/{nombre}', [ArchivosTiendaController::class, 'verImagenProducto'])
     ->whereNumber('proId')->where('nombre', '[A-Za-z0-9]+\.webp');
-Route::get('public/pagina-web/imagenes/marcas/{nombre}', [ArchivoPaginaWebController::class, 'verImagenMarca'])
+Route::get('public/pagina-web/imagenes/productos/{proId}/descripcion/{nombre}', [ArchivosTiendaController::class, 'verImagenDescripcionProducto'])
+    ->whereNumber('proId')->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
+Route::get('public/pagina-web/imagenes/marcas/{nombre}', [ArchivosTiendaController::class, 'verImagenMarca'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
-Route::get('public/pagina-web/documentos/{nombre}', [ArchivoPaginaWebController::class, 'verPdf'])
+Route::get('public/pagina-web/documentos/{nombre}', [ArchivosTiendaController::class, 'verPdf'])
     ->where('nombre', '[A-Za-z0-9]+\.pdf');
 
 // ==================== PRUEBA FLUTTER (temporal) ====================
@@ -2190,6 +2162,20 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::post('/eliminarProducto/{id}', [ProductoController::class, 'eliminarProducto'])->whereNumber('id');
     Route::post('/restaurarProducto/{id}', [ProductoController::class, 'restaurarProducto'])->whereNumber('id');
     Route::get('/papeleraProductos', [ProductoController::class, 'papeleraProductos']);
+    // Imágenes del producto: una sola lista de hasta 10 (la tarjeta de la tienda muestra la 1.ª y la 2.ª; el detalle, todas).
+    Route::get('/productoImagenes', [ProductoImagenesController::class, 'listar']);
+    Route::post('/subirProductoImagen', [ProductoImagenesController::class, 'subir']);
+    Route::post('/editarProductoImagen/{id}', [ProductoImagenesController::class, 'editar'])->whereNumber('id');
+    Route::post('/ordenarProductoImagenes', [ProductoImagenesController::class, 'ordenar']);
+    Route::post('/eliminarProductoImagen/{id}', [ProductoImagenesController::class, 'eliminar'])->whereNumber('id');
+    Route::get('/productoImagenesAuditoria', [ProductoImagenesController::class, 'auditoria']);
+    // Descripción completa del producto (documento para el detalle de la tienda).
+    Route::get('/productoDescripcion/{id}', [ProductoDescripcionController::class, 'ver'])->whereNumber('id');
+    Route::post('/crearProductoDescripcion/{id}', [ProductoDescripcionController::class, 'crear'])->whereNumber('id');
+    Route::post('/editarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'editar'])->whereNumber('id');
+    Route::post('/eliminarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/subirProductoDescripcionImagen/{id}', [ProductoDescripcionController::class, 'subirImagen'])->whereNumber('id');
+    Route::post('/copiarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'copiar'])->whereNumber('id');
     // Características: la plantilla de cada categoría de tercer nivel y sus valores en cada producto.
     Route::get('/arbolTiposCaracteristicas', [CaracterísticasProductoController::class, 'arbolTiposProducto']);
     Route::get('/listCaracteristicas', [CaracterísticasProductoController::class, 'listCaracteristicas']);
@@ -2206,16 +2192,27 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::get('/fichaProducto/{id}', [CaracterísticasProductoController::class, 'fichaProducto'])->whereNumber('id');
     Route::post('/fichaProducto/{id}', [CaracterísticasProductoController::class, 'guardarFichaProducto'])->whereNumber('id');
     // Tipos de producto: reemplaza a la pantalla de Dynamo.
-    Route::post('/crearTipoProducto', [TipoProducto::class, 'crearTipoProducto']);
-    Route::post('/clonarTipoProducto/{tprId}', [TipoProducto::class, 'clonarTipoProducto'])->whereNumber('tprId');
-    Route::post('/editarTipoProducto/{tprId}', [TipoProducto::class, 'editarTipoProducto'])->whereNumber('tprId');
-    Route::get('/buscarTipoProducto/{tprId}', [TipoProducto::class, 'buscarTipoProducto'])->whereNumber('tprId');
-    Route::post('/eliminarTipoProducto/{tprId}', [TipoProducto::class, 'eliminarTipoProducto'])->whereNumber('tprId');
-    Route::post('/restaurarTipoProducto/{tprId}', [TipoProducto::class, 'restaurarTipoProducto'])->whereNumber('tprId');
-    Route::get('/papeleraTipoProducto', [TipoProducto::class, 'papeleraTipoProducto']);
-    Route::get('/listarCuentasContables', [TipoProducto::class, 'listarCuentasContables']);
-    Route::get('/arbolTipoProducto', [TipoProducto::class, 'arbolTipoProducto']);
-    Route::get('/auditoriaTipoProducto', [TipoProducto::class, 'auditoriaTipoProducto']);
+    Route::post('/crearTipoProducto', [TipoProductoController::class, 'crearTipoProducto']);
+    Route::post('/clonarTipoProducto/{tprId}', [TipoProductoController::class, 'clonarTipoProducto'])->whereNumber('tprId');
+    Route::post('/editarTipoProducto/{tprId}', [TipoProductoController::class, 'editarTipoProducto'])->whereNumber('tprId');
+    Route::get('/buscarTipoProducto/{tprId}', [TipoProductoController::class, 'buscarTipoProducto'])->whereNumber('tprId');
+    Route::post('/eliminarTipoProducto/{tprId}', [TipoProductoController::class, 'eliminarTipoProducto'])->whereNumber('tprId');
+    Route::post('/restaurarTipoProducto/{tprId}', [TipoProductoController::class, 'restaurarTipoProducto'])->whereNumber('tprId');
+    Route::get('/papeleraTipoProducto', [TipoProductoController::class, 'papeleraTipoProducto']);
+    Route::get('/listarCuentasContables', [TipoProductoController::class, 'listarCuentasContables']);
+    Route::get('/arbolTipoProducto', [TipoProductoController::class, 'arbolTipoProducto']);
+    Route::get('/auditoriaTipoProducto', [TipoProductoController::class, 'auditoriaTipoProducto']);
+    // Marcas: reemplaza a la pantalla de Dynamo.
+    Route::get('/arbolMarca', [MarcaController::class, 'arbolMarca']);
+    Route::get('/buscarMarca/{marId}', [MarcaController::class, 'buscarMarca'])->whereNumber('marId');
+    Route::post('/crearMarca', [MarcaController::class, 'crearMarca']);
+    Route::post('/editarMarca/{marId}', [MarcaController::class, 'editarMarca'])->whereNumber('marId');
+    Route::post('/clonarMarca/{marId}', [MarcaController::class, 'clonarMarca'])->whereNumber('marId');
+    Route::post('/eliminarMarca/{marId}', [MarcaController::class, 'eliminarMarca'])->whereNumber('marId');
+    Route::post('/restaurarMarca/{marId}', [MarcaController::class, 'restaurarMarca'])->whereNumber('marId');
+    Route::get('/papeleraMarca', [MarcaController::class, 'papeleraMarca']);
+    Route::get('/auditoriaMarca', [MarcaController::class, 'auditoriaMarca']);
+    Route::post('/subirImagenMarca', [MarcaController::class, 'subirImagenMarca']);
 });
 
 // ECOMMERCE: administración de la tienda desde el CRM con el estándar de Clientes. Reemplaza al grupo pagina-web.
@@ -2293,6 +2290,7 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::get('/documento/{id}', [DocumentosController::class, 'ver'])->whereNumber('id');
     Route::post('/crearDocumento', [DocumentosController::class, 'crear']);
     Route::post('/editarDocumento/{id}', [DocumentosController::class, 'editar'])->whereNumber('id');
+    Route::post('/clonarDocumento/{id}', [DocumentosController::class, 'clonar'])->whereNumber('id');
     Route::post('/ordenarDocumentos', [DocumentosController::class, 'ordenar']);
     Route::post('/eliminarDocumento/{id}', [DocumentosController::class, 'eliminar'])->whereNumber('id');
     Route::post('/restaurarDocumento/{id}', [DocumentosController::class, 'restaurar'])->whereNumber('id');
@@ -2302,190 +2300,69 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::get('/carpetaDocumentosAuditoria', [DocumentosController::class, 'carpetaAuditoria']);
     Route::post('/crearCarpetaDocumentos', [DocumentosController::class, 'crearCarpeta']);
     Route::post('/editarCarpetaDocumentos/{id}', [DocumentosController::class, 'editarCarpeta'])->whereNumber('id');
+    Route::post('/clonarCarpetaDocumentos/{id}', [DocumentosController::class, 'clonarCarpeta'])->whereNumber('id');
     Route::post('/eliminarCarpetaDocumentos/{id}', [DocumentosController::class, 'eliminarCarpeta'])->whereNumber('id');
     Route::post('/restaurarCarpetaDocumentos/{id}', [DocumentosController::class, 'restaurarCarpeta'])->whereNumber('id');
     Route::post('/ordenarCarpetasDocumentos', [DocumentosController::class, 'ordenarCarpetas']);
     Route::post('/subirDocumentoImagen', [DocumentosController::class, 'subirImagen']);
     Route::post('/subirDocumentoPdf', [DocumentosController::class, 'subirPdf']);
+    // Nuestras tiendas: sucursales y sus ciudades.
+    Route::get('/listSucursales', [SucursalesController::class, 'listar']);
+    Route::post('/crearSucursal', [SucursalesController::class, 'crear']);
+    Route::post('/editarSucursal/{id}', [SucursalesController::class, 'editar'])->whereNumber('id');
+    Route::post('/clonarSucursal/{id}', [SucursalesController::class, 'clonar'])->whereNumber('id');
+    Route::post('/ordenarSucursales', [SucursalesController::class, 'ordenar']);
+    Route::post('/eliminarSucursal/{id}', [SucursalesController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarSucursal/{id}', [SucursalesController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraSucursales', [SucursalesController::class, 'papelera']);
+    Route::get('/sucursalAuditoria', [SucursalesController::class, 'auditoria']);
+    Route::get('/ciudadesSucursales', [SucursalesController::class, 'ciudades']);
+    Route::post('/crearCiudadSucursales', [SucursalesController::class, 'crearCiudad']);
+    Route::post('/editarCiudadSucursales/{id}', [SucursalesController::class, 'editarCiudad'])->whereNumber('id');
+    Route::post('/clonarCiudadSucursales/{id}', [SucursalesController::class, 'clonarCiudad'])->whereNumber('id');
+    Route::post('/eliminarCiudadSucursales/{id}', [SucursalesController::class, 'eliminarCiudad'])->whereNumber('id');
+    Route::post('/restaurarCiudadSucursales/{id}', [SucursalesController::class, 'restaurarCiudad'])->whereNumber('id');
+    Route::post('/ordenarCiudadesSucursales', [SucursalesController::class, 'ordenarCiudades']);
+    Route::get('/ciudadSucursalesAuditoria', [SucursalesController::class, 'ciudadAuditoria']);
 });
+// Productos de la tienda: listado de /shop (con el panel de filtros), sugerencias del buscador y detalle. Públicos.
+Route::get('public/productos', [ProductosTiendaController::class, 'listar']);
+Route::get('public/productos/sugerencias', [ProductosTiendaController::class, 'sugerencias']);
+Route::get('public/productos/{proId}', [ProductosTiendaController::class, 'detalle'])->whereNumber('proId');
+// Nuestras tiendas: ciudades y sucursales activas. Público, lo pide la tienda (/tiendas).
+Route::get('public/sucursales/tienda', [SucursalesTiendaController::class, 'tienda']);
 // Header de la tienda e imágenes de los headers (el logo): públicas, las pide la tienda.
-Route::get('public/headers/tienda', [HeaderController::class, 'tienda']);
-Route::get('public/headers/imagenes/{nombre}', [HeaderController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
+Route::get('public/headers/tienda', [HeaderTiendaController::class, 'tienda']);
+Route::get('public/headers/imagenes/{nombre}', [HeaderTiendaController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
 // Footer de la tienda e imágenes de los footers (logo, logos de bancos): públicas, las pide la tienda.
-Route::get('public/footers/tienda', [FooterController::class, 'tienda']);
+Route::get('public/footers/tienda', [FooterTiendaController::class, 'tienda']);
 // Páginas del CRM para la tienda: la de inicio y cada una por su dirección (públicas).
-Route::get('public/paginas/inicio', [PaginaTiendaController::class, 'inicio']);
-Route::get('public/paginas/{ruta}', [PaginaTiendaController::class, 'ver'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
-Route::get('public/footers/imagenes/{nombre}', [FooterController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
+Route::get('public/paginas/inicio', [PaginasTiendaController::class, 'inicio']);
+Route::get('public/paginas/{ruta}', [PaginasTiendaController::class, 'ver'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
+Route::get('public/footers/imagenes/{nombre}', [FooterTiendaController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
 // Imágenes de las secciones de las páginas: públicas, las pide la tienda (y el CRM para mostrarlas).
-Route::get('public/secciones/imagenes/{nombre}', [SeccionesController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
+Route::get('public/secciones/imagenes/{nombre}', [PaginasTiendaController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
 // Documentos: los activos (por su dirección o todos) y sus imágenes y PDF. Públicos, los pide la tienda.
-Route::get('public/documentos', [DocumentosController::class, 'publicos']);
-Route::get('public/documentos/carpetas/{ruta}', [DocumentosController::class, 'carpetaPublica'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
-Route::get('public/documentos/imagenes/{nombre}', [DocumentosController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
-Route::get('public/documentos/pdf/{nombre}', [DocumentosController::class, 'verPdf'])->where('nombre', '[A-Za-z0-9]{40}\.pdf');
-Route::get('public/documentos/{ruta}', [DocumentosController::class, 'publico'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
+Route::get('public/documentos', [DocumentosTiendaController::class, 'publicos']);
+Route::get('public/documentos/carpetas/{ruta}', [DocumentosTiendaController::class, 'carpetaPublica'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
+Route::get('public/documentos/imagenes/{nombre}', [DocumentosTiendaController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
+Route::get('public/documentos/pdf/{nombre}', [DocumentosTiendaController::class, 'verPdf'])->where('nombre', '[A-Za-z0-9]{40}\.pdf');
+Route::get('public/documentos/{ruta}', [DocumentosTiendaController::class, 'publico'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
 
 // PÁGINA WEB: administración del contenido de la tienda desde el CRM (el header y el footer están en ECOMMERCE)
 Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
 
-    // Nuestras tiendas: ciudades
-    Route::post('sucursales/ciudades', [SucursalCiudadController::class, 'crear']);
-    Route::put('sucursales/ciudades/orden', [SucursalCiudadController::class, 'ordenar']);
-    Route::put('sucursales/ciudades/{sciId}/restaurar', [SucursalCiudadController::class, 'restaurar'])->whereNumber('sciId');
-    Route::put('sucursales/ciudades/{sciId}', [SucursalCiudadController::class, 'modificar'])->whereNumber('sciId');
-    Route::delete('sucursales/ciudades/{sciId}', [SucursalCiudadController::class, 'eliminar'])->whereNumber('sciId');
-
-    // Nuestras tiendas: sucursales
-    Route::get('sucursales', [SucursalController::class, 'listar']);
-    Route::post('sucursales', [SucursalController::class, 'crear']);
-    Route::put('sucursales/orden', [SucursalController::class, 'ordenar']);
-    Route::get('sucursales-papelera', [SucursalController::class, 'papelera']);
-    Route::delete('sucursales-papelera', [SucursalController::class, 'vaciar']);
-    Route::put('sucursales/{sucId}/restaurar', [SucursalController::class, 'restaurar'])->whereNumber('sucId');
-    Route::put('sucursales/{sucId}', [SucursalController::class, 'modificar'])->whereNumber('sucId');
-    Route::delete('sucursales/{sucId}', [SucursalController::class, 'eliminar'])->whereNumber('sucId');
-
-    // Páginas informativas (Términos, Garantías, Conócenos…)
-    Route::get('paginas', [PaginaInformativaController::class, 'listar']);
-    Route::get('paginas/{clave}', [PaginaInformativaController::class, 'buscar'])->where('clave', '[a-z0-9_-]+');
-    Route::put('paginas/{clave}', [PaginaInformativaController::class, 'modificar'])->where('clave', '[a-z0-9_-]+');
-    Route::post('paginas', [PaginaInformativaController::class, 'crear']);
-    Route::put('paginas-orden', [PaginaInformativaController::class, 'ordenar']);
-    Route::get('paginas-informativas-papelera', [PaginaInformativaController::class, 'papelera']);
-    Route::delete('paginas-informativas-papelera', [PaginaInformativaController::class, 'vaciar']);
-    Route::put('paginas/{clave}/restaurar', [PaginaInformativaController::class, 'restaurar'])->where('clave', '[a-z0-9_-]+');
-    Route::delete('paginas/{clave}', [PaginaInformativaController::class, 'eliminar'])->where('clave', '[a-z0-9_-]+');
-
-    // Grupos de páginas informativas
-    Route::get('paginas-grupos', [PaginaInformativaGrupoController::class, 'listar']);
-    Route::post('paginas-grupos', [PaginaInformativaGrupoController::class, 'crear']);
-    Route::put('paginas-grupos/orden', [PaginaInformativaGrupoController::class, 'ordenar']);
-    Route::put('paginas-grupos/{pigId}/restaurar', [PaginaInformativaGrupoController::class, 'restaurar'])->whereNumber('pigId');
-    Route::put('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'modificar'])->whereNumber('pigId');
-    Route::delete('paginas-grupos/{pigId}', [PaginaInformativaGrupoController::class, 'eliminar'])->whereNumber('pigId');
-
-    // Galerías de imágenes
-    Route::get('galerias', [GaleriaPaginaWebController::class, 'listar']);
-    Route::get('galerias/{galId}/imagenes', [GaleriaPaginaWebController::class, 'listarImagenes'])->whereNumber('galId');
-    Route::post('galerias/{galId}/imagenes', [GaleriaPaginaWebController::class, 'crearImagen'])->whereNumber('galId');
-    Route::put('galerias/{galId}/imagenes-orden', [GaleriaPaginaWebController::class, 'ordenarImagenes'])->whereNumber('galId');
-    Route::get('galerias-imagenes-papelera', [GaleriaPaginaWebController::class, 'papeleraImagenes']);
-    Route::delete('galerias-imagenes-papelera', [GaleriaPaginaWebController::class, 'vaciarImagenes']);
-    Route::put('galerias-imagenes/{gimId}/restaurar', [GaleriaPaginaWebController::class, 'restaurarImagen'])->whereNumber('gimId');
-    Route::put('galerias-imagenes/{gimId}', [GaleriaPaginaWebController::class, 'modificarImagen'])->whereNumber('gimId');
-    Route::delete('galerias-imagenes/{gimId}', [GaleriaPaginaWebController::class, 'eliminarImagen'])->whereNumber('gimId');
-
-    // Grupos de los banners ("Siempre" y programados). Su papelera se vacía con DELETE galerias-imagenes-papelera
-    Route::get('galerias/{galId}/grupos', [GaleriaPaginaWebController::class, 'listarGrupos'])->whereNumber('galId');
-    Route::post('galerias/{galId}/grupos', [GaleriaPaginaWebController::class, 'crearGrupo'])->whereNumber('galId');
-    Route::put('galerias/{galId}/grupos-orden', [GaleriaPaginaWebController::class, 'ordenarGrupos'])->whereNumber('galId');
-    Route::get('galerias-grupos-papelera', [GaleriaPaginaWebController::class, 'papeleraGrupos']);
-    Route::put('galerias-grupos/{ggrId}/restaurar', [GaleriaPaginaWebController::class, 'restaurarGrupo'])->whereNumber('ggrId');
-    Route::put('galerias-grupos/{ggrId}', [GaleriaPaginaWebController::class, 'modificarGrupo'])->whereNumber('ggrId');
-    Route::delete('galerias-grupos/{ggrId}', [GaleriaPaginaWebController::class, 'eliminarGrupo'])->whereNumber('ggrId');
-
-    // Imágenes y PDF de las páginas informativas
-    Route::post('imagenes',   [ArchivoPaginaWebController::class, 'subirImagen']);
-    Route::post('documentos', [ArchivoPaginaWebController::class, 'subirPdf']);
-
     // Categorías destacadas en la página web
-    Route::get('categorias-web', [CategoriaWebController::class, 'listar']);
-    Route::put('categorias-web/{tprId}', [CategoriaWebController::class, 'modificar'])->whereNumber('tprId');
-    Route::get('categorias-web/{tprId}/impacto', [CategoriaWebController::class, 'impacto'])->whereNumber('tprId');
 
     // Secciones de la página de inicio
 
-    // Páginas de marca
-    Route::get('paginas-marca-marcas-erp', [PaginaMarcaController::class, 'marcasErp']);
-    Route::get('paginas-marca', [PaginaMarcaController::class, 'listar']);
-    Route::post('paginas-marca', [PaginaMarcaController::class, 'crear']);
-    Route::get('paginas-marca-papelera', [PaginaMarcaController::class, 'papelera']);
-    Route::delete('paginas-marca-papelera', [PaginaMarcaController::class, 'vaciar']);
-    Route::put('paginas-marca/{pmaId}/restaurar', [PaginaMarcaController::class, 'restaurar'])->whereNumber('pmaId');
-    Route::get('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'buscar']);
-    Route::put('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'modificar']);
-    Route::delete('paginas-marca/{pmaId}', [PaginaMarcaController::class, 'eliminar']);
-
-    // España Motos
-    Route::get('espana-motos', [EspanaMotosController::class, 'buscar']);
-    Route::put('espana-motos', [EspanaMotosController::class, 'modificar']);
-    Route::get('espana-motos-marcas-erp', [EspanaMotosController::class, 'marcasErp']);
-    Route::post('espana-motos-pestanas', [EspanaMotosController::class, 'crearPestana']);
-    Route::put('espana-motos-pestanas-orden', [EspanaMotosController::class, 'ordenarPestanas']);
-    Route::get('espana-motos-pestanas-papelera', [EspanaMotosController::class, 'papeleraPestanas']);
-    Route::delete('espana-motos-pestanas-papelera', [EspanaMotosController::class, 'vaciarPestanas']);
-    Route::put('espana-motos-pestanas/{empId}/restaurar', [EspanaMotosController::class, 'restaurarPestana'])->whereNumber('empId');
-    Route::put('espana-motos-pestanas/{empId}', [EspanaMotosController::class, 'modificarPestana'])->whereNumber('empId');
-    Route::delete('espana-motos-pestanas/{empId}', [EspanaMotosController::class, 'eliminarPestana'])->whereNumber('empId');
-    Route::post('espana-motos-marcas', [EspanaMotosController::class, 'crearMarca']);
-    Route::put('espana-motos-marcas-orden', [EspanaMotosController::class, 'ordenarMarcas']);
-    Route::get('espana-motos-marcas-papelera', [EspanaMotosController::class, 'papeleraMarcas']);
-    Route::delete('espana-motos-marcas-papelera', [EspanaMotosController::class, 'vaciarMarcas']);
-    Route::put('espana-motos-marcas/{emmId}/restaurar', [EspanaMotosController::class, 'restaurarMarca'])->whereNumber('emmId');
-    Route::put('espana-motos-marcas/{emmId}', [EspanaMotosController::class, 'modificarMarca'])->whereNumber('emmId');
-    Route::delete('espana-motos-marcas/{emmId}', [EspanaMotosController::class, 'eliminarMarca'])->whereNumber('emmId');
-
     // Bloques destacados del inicio
 
-    // Productos de la tienda: ficha técnica e imágenes
-    Route::get('productos-tienda-arbol', [ProductoTiendaController::class, 'arbol']);
-    Route::get('productos-tienda', [ProductoTiendaController::class, 'listar']);
-    Route::get('productos-tienda/{proId}', [ProductoTiendaController::class, 'buscar'])->whereNumber('proId');
-    Route::put('productos-tienda/{proId}/ficha', [ProductoTiendaController::class, 'guardarFicha'])->whereNumber('proId');
-    Route::put('productos-tienda/{proId}', [ProductoTiendaController::class, 'modificar'])->whereNumber('proId');
-    Route::post('productos-tienda-imagenes-archivo', [ProductoTiendaController::class, 'subirImagen']);
-    Route::post('productos-tienda-imagenes', [ProductoTiendaController::class, 'crearImagen']);
-    Route::put('productos-tienda-imagenes-orden', [ProductoTiendaController::class, 'ordenarImagenes']);
-    Route::get('productos-tienda-imagenes-papelera', [ProductoTiendaController::class, 'papeleraImagenes']);
-    Route::delete('productos-tienda-imagenes-papelera',[ProductoTiendaController::class, 'vaciarImagenes']);
-    Route::put('productos-tienda-imagenes/{pimId}/restaurar', [ProductoTiendaController::class, 'restaurarImagen'])->whereNumber('pimId');
-    Route::put('productos-tienda-imagenes/{pimId}', [ProductoTiendaController::class, 'modificarImagen'])->whereNumber('pimId');
-    Route::delete('productos-tienda-imagenes/{pimId}', [ProductoTiendaController::class, 'eliminarImagen'])->whereNumber('pimId');
-
-    // Familias de productos (variantes)
-    Route::get('productos-tienda-familias', [FamiliaController::class, 'listar']);
-    Route::post('productos-tienda-familias', [FamiliaController::class, 'crear']);
-    Route::get('productos-tienda-familias-papelera', [FamiliaController::class, 'papelera']);
-    Route::delete('productos-tienda-familias-papelera', [FamiliaController::class, 'vaciar']);
-    Route::get('productos-tienda-familias/{famId}', [FamiliaController::class, 'buscar'])->whereNumber('famId');
-    Route::put('productos-tienda-familias/{famId}', [FamiliaController::class, 'modificar'])->whereNumber('famId');
-    Route::delete('productos-tienda-familias/{famId}', [FamiliaController::class, 'eliminar'])->whereNumber('famId');
-    Route::put('productos-tienda-familias/{famId}/restaurar', [FamiliaController::class, 'restaurar'])->whereNumber('famId');
-    Route::get('productos-tienda-familias/{famId}/candidatos', [FamiliaController::class, 'candidatos'])->whereNumber('famId');
-    Route::post('productos-tienda-familias/{famId}/productos', [FamiliaController::class, 'agregarProducto'])->whereNumber('famId');
-    Route::delete('productos-tienda-familias/{famId}/productos/{proId}', [FamiliaController::class, 'quitarProducto'])->whereNumber(['famId', 'proId']);
-    Route::get('productos-tienda/{proId}/familia', [FamiliaController::class, 'deProducto'])->whereNumber('proId');
-
     // Clientes de la tienda (el CRM nunca ve ni cambia sus contraseñas)
-    Route::get('clientes-web', [ClienteWebController::class, 'listar']);
-    Route::get('clientes-web/{clwId}', [ClienteWebController::class, 'buscar'])->whereNumber('clwId');
-    Route::put('clientes-web/{clwId}/activo', [ClienteWebController::class, 'cambiarActivo'])->whereNumber('clwId');
-    Route::put('clientes-web/{clwId}/desbloquear', [ClienteWebController::class, 'desbloquear'])->whereNumber('clwId');
+    Route::get('clientes-web', [ClientesWebController::class, 'listar']);
+    Route::get('clientes-web/{clwId}', [ClientesWebController::class, 'buscar'])->whereNumber('clwId');
+    Route::put('clientes-web/{clwId}/activo', [ClientesWebController::class, 'cambiarActivo'])->whereNumber('clwId');
+    Route::put('clientes-web/{clwId}/desbloquear', [ClientesWebController::class, 'desbloquear'])->whereNumber('clwId');
 
-    // Franjas del detalle del producto
-    Route::get('franjas-detalle', [FranjaDetalleController::class, 'listar']);
-    Route::post('franjas-detalle', [FranjaDetalleController::class, 'crear']);
-    Route::put('franjas-detalle-orden', [FranjaDetalleController::class, 'ordenar']);
-    Route::get('franjas-detalle-papelera', [FranjaDetalleController::class, 'papelera']);
-    Route::delete('franjas-detalle-papelera', [FranjaDetalleController::class, 'vaciar']);
-    Route::put('franjas-detalle/{fdeId}/restaurar', [FranjaDetalleController::class, 'restaurar'])->whereNumber('fdeId');
-    Route::put('franjas-detalle/{fdeId}', [FranjaDetalleController::class, 'modificar'])->whereNumber('fdeId');
-    Route::delete('franjas-detalle/{fdeId}', [FranjaDetalleController::class, 'eliminar'])->whereNumber('fdeId');
 
-    // Marcas de la tienda: logo de cada marca y "Nuestras marcas"
-    Route::get('marcas-tienda', [MarcaWebController::class, 'listar']);
-    Route::put('marcas-tienda-orden', [MarcaWebController::class, 'ordenar']);
-    Route::put('marcas-tienda/{marId}', [MarcaWebController::class, 'modificar'])->whereNumber('marId');
-    Route::post('marcas-tienda-logo', [MarcaWebController::class, 'subirLogo']);
-
-    // Características: plantilla de la ficha técnica por categoría
-    Route::get('caracteristicas', [ProductoTiendaController::class, 'caracteristicas']);
-    Route::post('caracteristicas', [ProductoTiendaController::class, 'crearCaracteristica']);
-    Route::put('caracteristicas-orden', [ProductoTiendaController::class, 'ordenarCaracteristicas']);
-    Route::get('caracteristicas-papelera', [ProductoTiendaController::class, 'papeleraCaracteristicas']);
-    Route::delete('caracteristicas-papelera',[ProductoTiendaController::class, 'vaciarCaracteristicas']);
-    Route::put('caracteristicas/{carId}/restaurar', [ProductoTiendaController::class, 'restaurarCaracteristica'])->whereNumber('carId');
-    Route::put('caracteristicas/{carId}', [ProductoTiendaController::class, 'modificarCaracteristica'])->whereNumber('carId');
-    Route::delete('caracteristicas/{carId}', [ProductoTiendaController::class, 'eliminarCaracteristica'])->whereNumber('carId');
 });

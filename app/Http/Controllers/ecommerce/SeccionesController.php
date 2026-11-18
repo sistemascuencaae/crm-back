@@ -4,7 +4,6 @@ namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Servicios\PaginaWeb\ProductoTiendaService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +23,6 @@ class SeccionesController extends Controller
     // Imágenes de las secciones: carpeta privada storage/app/secciones; la tienda y el CRM las piden por
     // api/public/secciones/imagenes/{nombre}. En la base se guarda solo el nombre: 40 letras y números + .webp.
     private const CARPETA_IMAGENES = 'secciones';
-    private const NOMBRE_IMAGEN = '/^[A-Za-z0-9]{40}\.webp$/';
 
     // Códigos sin "dónde" -> mensaje para el usuario.
     private const MENSAJES_ERROR = [
@@ -67,6 +65,8 @@ class SeccionesController extends Controller
         'ELEMENTO_INVALIDO' => 'no es válido para esta lista.',
         'IMAGEN_INVALIDA' => 'la imagen no es válida: súbala de nuevo desde el CRM.',
         'IMAGEN_MOVIL_NO_APLICA' => 'esta lista no lleva imagen para celular.',
+        'PIEZA_VACIA' => 'escriba la frase o agregue al menos un ícono.',
+        'ICONOS_INVALIDOS' => 'los íconos no son válidos (hasta 5: imágenes subidas desde el CRM o íconos de la lista).',
         'GRUPO_NO_EXISTE' => 'el grupo de productos no existe o está en la papelera.',
         'PRODUCTO_NO_EXISTE' => 'el producto no existe o está en la papelera.',
         'GRUPO_REQUERIDO' => 'elija primero el grupo de productos y después, de ese grupo, el producto.',
@@ -77,7 +77,8 @@ class SeccionesController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' => ['verImagen']]);
+        // La imagen de las secciones (pública) está en paginaWeb/PaginasTiendaController.
+        $this->middleware('auth:api');
     }
 
     // Plantillas que se pueden elegir para una sección nueva (de sección y activas), en el orden del catálogo.
@@ -301,9 +302,9 @@ class SeccionesController extends Controller
 
     // Tarjetas REALES de productos para la vista previa del CRM (foto, marca, precio, precio anterior): las de un grupo
     // (en su orden) o las de unos productos. Regla de los grupos de productos: salen los activos con stock
-    // (ProductoTiendaService::tarjetasDe).
+    // (ecommerce.fn_producto_tienda_tarjetas, ver tarjetasDe).
     // GET ?gpr_id=  o  ?pro_ids=1,2,3
-    public function productos(Request $request, ProductoTiendaService $tienda)
+    public function productos(Request $request)
     {
         try {
             $gprId = (int) $request->query('gpr_id', 0);
@@ -317,7 +318,7 @@ class SeccionesController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Productos de la vista previa', [
                 // Todas las del grupo: los afiches no tienen límite (tarjetasDe corta en 24 si no se le dice cuántas).
-                'tarjetas' => $proIds ? $tienda->tarjetasDe($proIds, count($proIds)) : [],
+                'tarjetas' => $proIds ? $this->tarjetasDe($proIds, count($proIds)) : [],
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los productos de la vista previa', $th->getMessage()));
@@ -343,7 +344,7 @@ class SeccionesController extends Controller
         }
     }
 
-    // Sube una imagen para una lista de imágenes de una plantilla (pco_id): solo WebP de verdad (mimetypes mira el
+    // Sube una imagen para una lista de imágenes (o los íconos de los grupos de una lista de piezas) de una plantilla (pco_id): solo WebP de verdad (mimetypes mira el
     // contenido, no la extensión) y hasta el peso máximo de ESA lista (pco_peso_maximo_kb: banners 2 MB, tarjetas 500 KB,
     // logos y fotos del 360 200 KB). Devuelve el nombre (para guardarlo en la sección) y la dirección para verla.
     // Body (multipart): imagen, pco_id
@@ -351,7 +352,7 @@ class SeccionesController extends Controller
     {
         $contenido = DB::selectOne(
             "SELECT pco_id, pco_etiqueta, pco_peso_maximo_kb FROM ecommerce.plantilla_contenidos
-              WHERE pco_id = ? AND pco_tipo = 'imagen'",
+              WHERE pco_id = ? AND pco_tipo IN ('imagen', 'pieza')",
             [(int) $request->input('pco_id')]
         );
 
@@ -388,22 +389,6 @@ class SeccionesController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
         }
-    }
-
-    // Una imagen de las secciones (pública: la pide la tienda y el CRM). El nombre nunca cambia de contenido.
-    public function verImagen(string $nombre)
-    {
-        $ruta = self::CARPETA_IMAGENES . '/' . $nombre;
-
-        if (!preg_match(self::NOMBRE_IMAGEN, $nombre) || !Storage::disk('local')->exists($ruta)) {
-            abort(404);
-        }
-
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => 'image/webp',
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
     }
 
     // Traduce un error de sección con "dónde" (CODIGO:ruta). La usa también PaginasController al clonar.
@@ -579,5 +564,70 @@ class SeccionesController extends Controller
             'user_agent' => $request->userAgent(),
             'request_id' => (string) Str::uuid(),
         ];
+    }
+
+    // ================= Tarjetas de la vista previa =================
+
+    /**
+     * Las tarjetas de UNOS productos, en el orden pedido y como máximo $cantidad (ecommerce.fn_producto_tienda_tarjetas):
+     * las de las SECCIONES de las páginas (los productos de un grupo, los afiches, el 360). Misma forma que las del
+     * listado de /shop, más la descripción (el 360 la muestra):
+     *   [{pro_id, codigo, nombre, marca, tpr_id, categoria, imagenes: [url…], destacado, oferta, precio, precio_anterior,
+     *     stock, descripcion, es_moto}]
+     */
+    private function tarjetasDe(array $proIds, int $cantidad = 24): array
+    {
+        $proIds = array_values(array_filter(array_map('intval', $proIds), fn ($id) => $id > 0));
+        if (!$proIds) {
+            return [];
+        }
+
+        return array_map(
+            fn ($f) => $this->tarjeta($f),
+            DB::select('SELECT * FROM ecommerce.fn_producto_tienda_tarjetas(?::integer[], ?)', [$this->arreglo($proIds), $cantidad])
+        );
+    }
+
+    /**
+     * La tarjeta de producto de todo el sitio, de una fila de las funciones de la tienda (traen precio, stock y es_moto).
+     */
+    private function tarjeta(object $f): array
+    {
+        return [
+            'pro_id'          => (int) $f->pro_id,
+            'codigo'          => $f->pro_codigo,
+            'nombre'          => $f->pro_nombre,
+            'marca'           => $f->marca,
+            'tpr_id'          => (int) $f->tpr_id,
+            'categoria'       => $f->categoria,
+            'imagenes'        => $this->imagenes($f->imagenes),
+            'destacado'       => (bool) $f->destacado,
+            // En oferta (producto.pro_oferta): etiqueta Oferta.
+            'oferta'          => (bool) ($f->oferta ?? false),
+            'precio'          => $f->precio !== null ? (float) $f->precio : null,
+            'precio_anterior' => $f->precio_anterior !== null ? (float) $f->precio_anterior : null,
+            'stock'           => (float) $f->stock,
+            // La descripción del producto (solo la traen las tarjetas de las secciones; el 360 la muestra).
+            'descripcion'     => $f->descripcion ?? null,
+            // Su factura pide los datos de MOTOS (inventarios.fn_producto_es_moto)
+            'es_moto'         => (bool) ($f->es_moto ?? false),
+        ];
+    }
+
+    /**
+     * Las fotos que arma la base (inventarios.fn_producto_imagen_ruta: /api/public/pagina-web/imagenes/productos/…) con
+     * la dirección de este servidor, porque la tienda está en otro.
+     */
+    private function imagenes(?string $json): array
+    {
+        $rutas = json_decode($json ?? '[]', true);
+
+        return is_array($rutas) ? array_map(fn ($ruta) => url($ruta), $rutas) : [];
+    }
+
+    /** Lista de números como arreglo de Postgres: [1, 2, 3] → "{1,2,3}" */
+    private function arreglo(array $ids): string
+    {
+        return '{' . implode(',', array_map('intval', $ids)) . '}';
     }
 }
