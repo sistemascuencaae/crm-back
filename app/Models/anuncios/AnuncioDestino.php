@@ -15,13 +15,17 @@ class AnuncioDestino extends Model
     public const TIPO_DEPARTAMENTO = "departamento";
     public const TIPO_PERFIL = "perfil";
     public const TIPO_USUARIO = "usuario";
+    // 19-nov: un grupo de crm.cgrupo_anuncios; le llega a los usuarios cuya agencia esta en el grupo
+    public const TIPO_GRUPO = "grupo";
 
     public const TIPOS = [
         self::TIPO_DEPARTAMENTO,
         self::TIPO_PERFIL,
         self::TIPO_USUARIO,
+        self::TIPO_GRUPO,
     ];
 
+    // El grupo no va aqui: no es una columna de crm.users (se cruza por la agencia, alm_id)
     public const COLUMNA_USUARIO = [
         self::TIPO_DEPARTAMENTO => "dep_id",
         self::TIPO_PERFIL => "profile_id",
