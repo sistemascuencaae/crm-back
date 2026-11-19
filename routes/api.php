@@ -24,6 +24,7 @@ use App\Http\Controllers\configuracion\CalificacionColorController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\anuncios\AnunciosController;
 use App\Http\Controllers\anuncios\AnunciosUsuarioController;
+use App\Http\Controllers\anuncios\GrupoAnunciosController;
 use App\Http\Controllers\configuracion\CodigoQrController;
 use App\Http\Controllers\configuracion\HorarioController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
@@ -2043,6 +2044,13 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::get('/config', [AnunciosUsuarioController::class, 'config']);
     Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
+    // 19-nov: Grupo Anuncios (grupos de agencias para los destinos)
+    Route::get('/listGrupoAnuncios', [GrupoAnunciosController::class, 'listGrupoAnuncios']);
+    Route::get('/listAgenciasGrupoAnuncios', [GrupoAnunciosController::class, 'listAgenciasGrupoAnuncios']);
+    Route::get('/listGrupoAnunciosActivos', [GrupoAnunciosController::class, 'listGrupoAnunciosActivos']);
+    Route::post('/addGrupoAnuncios', [GrupoAnunciosController::class, 'addGrupoAnuncios']);
+    Route::put('/editGrupoAnuncios/{id}', [GrupoAnunciosController::class, 'editGrupoAnuncios']);
+    Route::get('/grupoAnunciosAuditoria/{id}', [GrupoAnunciosController::class, 'grupoAnunciosAuditoria']);
 });
 
 // VENTAS > COTIZADOR: Parámetros cotizador (V02), Margen y aportes (V01), Cotizar (V06), Proformas (V04), Contado (V07), Tarjetas y

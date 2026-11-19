@@ -25,6 +25,8 @@ class AnunciosController extends Controller
         'FECHAS_REQUERIDAS' => 'Las fechas de inicio y fin son obligatorias.',
         'FECHA_FIN_MENOR' => 'La fecha fin no puede ser anterior a la fecha inicio.',
         'TIPO_DESTINO_INVALIDO' => 'Tipo de destino no válido.',
+        // 19-nov: destino de tipo grupo (Grupo Anuncios)
+        'GRUPO_NO_EXISTE' => 'Uno de los grupos elegidos no existe.',
         'ANUNCIO_NO_ENCONTRADO' => 'No se encontró el anuncio.',
     ];
 
