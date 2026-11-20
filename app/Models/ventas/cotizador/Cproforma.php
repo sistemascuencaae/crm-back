@@ -71,5 +71,18 @@ class Cproforma extends Model
         'valor_comision',
         'actividad_cliente',
         'comportamiento_cliente',
+        // 19/20-nov: la precalifica, los datos del caso y las novedades (los escribe ventas.fn_cproforma_registrar)
+        'precalifica_id',
+        'plazo_caso',
+        'cuota_caso',
+        'tiene_inicial_caso',
+        'porcentaje_inicial_caso',
+        'tipo_credito_caso',
+        'entrada_minima',
+        'tiene_novedad',
+        'texto_novedad',
+        'novedad_plazo',
+        'novedad_cuota',
+        'novedad_entrada',
     ];
 }

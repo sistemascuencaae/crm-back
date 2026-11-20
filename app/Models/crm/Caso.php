@@ -89,6 +89,8 @@ class Caso extends Model
         'requiere_calificacion' => 'boolean',
         // 19-nov: copia del switch del tipo de caso; la escribe ventas.fn_precalifica_calcular (no va en $fillable).
         'requiere_precalifica' => 'boolean',
+        // 20-nov: la novedad de su última proforma; la escribe ventas.fn_cproforma_registrar (no va en $fillable).
+        'tiene_novedad' => 'boolean',
     ];
 
     public function userCreador()
