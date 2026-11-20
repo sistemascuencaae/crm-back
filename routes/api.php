@@ -212,6 +212,10 @@ use App\Http\Controllers\formulario\EmpresaController;
 use App\Http\Controllers\ecommerce\ClientesWebController;
 use App\Http\Controllers\ecommerce\DecoracionesController;
 use App\Http\Controllers\paginaWeb\DecoracionesTiendaController;
+use App\Http\Controllers\ecommerce\VentanasEmergentesController;
+use App\Http\Controllers\paginaWeb\VentanasEmergentesTiendaController;
+use App\Http\Controllers\ecommerce\VideosInicioController;
+use App\Http\Controllers\paginaWeb\VideosInicioTiendaController;
 use App\Http\Controllers\ecommerce\ConfiguracionController;
 use App\Http\Controllers\paginaWeb\ConfiguracionTiendaController;
 use App\Http\Controllers\paginaWeb\ArchivosTiendaController;
@@ -2345,6 +2349,26 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::get('/papeleraDecoraciones', [DecoracionesController::class, 'papelera']);
     Route::get('/decoracionAuditoria', [DecoracionesController::class, 'auditoria']);
 
+    // Ventanas emergentes del inicio de la tienda (imagen con fechas; una predeterminada opcional)
+    Route::get('/listVentanasEmergentes', [VentanasEmergentesController::class, 'listar']);
+    Route::post('/subirImagenVentanaEmergente', [VentanasEmergentesController::class, 'subirImagen']);
+    Route::post('/crearVentanaEmergente', [VentanasEmergentesController::class, 'crear']);
+    Route::post('/editarVentanaEmergente/{id}', [VentanasEmergentesController::class, 'editar'])->whereNumber('id');
+    Route::post('/eliminarVentanaEmergente/{id}', [VentanasEmergentesController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarVentanaEmergente/{id}', [VentanasEmergentesController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraVentanasEmergentes', [VentanasEmergentesController::class, 'papelera']);
+    Route::get('/ventanaEmergenteAuditoria', [VentanasEmergentesController::class, 'auditoria']);
+
+    // Video de inicio de la tienda (MP4 con fechas; uno predeterminado opcional)
+    Route::get('/listVideosInicio', [VideosInicioController::class, 'listar']);
+    Route::post('/subirVideoInicio', [VideosInicioController::class, 'subirVideo']);
+    Route::post('/crearVideoInicio', [VideosInicioController::class, 'crear']);
+    Route::post('/editarVideoInicio/{id}', [VideosInicioController::class, 'editar'])->whereNumber('id');
+    Route::post('/eliminarVideoInicio/{id}', [VideosInicioController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarVideoInicio/{id}', [VideosInicioController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraVideosInicio', [VideosInicioController::class, 'papelera']);
+    Route::get('/videoInicioAuditoria', [VideosInicioController::class, 'auditoria']);
+
     // Contenido de productos: imágenes, ficha y descripción completa de los productos con stock vendible (antes en
     // Inventarios > Productos)
     Route::get('/contenidoProductosFaltas', [ContenidoProductosController::class, 'faltas']);
@@ -2370,8 +2394,6 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     // Configuración de la tienda (una sola fila): número de WhatsApp
     Route::get('/configuracionTienda', [ConfiguracionController::class, 'ver']);
     Route::post('/editarConfiguracionTienda', [ConfiguracionController::class, 'editar']);
-    Route::post('/subirImagenVentanaTienda', [ConfiguracionController::class, 'subirImagenVentana']);
-    Route::post('/subirVideoIntroTienda', [ConfiguracionController::class, 'subirVideoIntro']);
     Route::get('/configuracionTiendaAuditoria', [ConfiguracionController::class, 'auditoria']);
 });
 // Productos de la tienda: listado de /shop (con el panel de filtros), sugerencias del buscador y detalle. Públicos.
@@ -2382,9 +2404,14 @@ Route::get('public/productos/{proId}', [ProductosTiendaController::class, 'detal
 Route::get('public/sucursales/tienda', [SucursalesTiendaController::class, 'tienda']);
 // Decoración de temporada que toca hoy en el inicio de la tienda (o null). Público.
 Route::get('public/decoraciones/hoy', [DecoracionesTiendaController::class, 'hoy']);
+// Ventana emergente que toca hoy en el inicio de la tienda (o null) y sus imágenes. Público.
+Route::get('public/ventanas-emergentes/hoy', [VentanasEmergentesTiendaController::class, 'hoy']);
+Route::get('public/ventanas-emergentes/imagenes/{nombre}', [VentanasEmergentesTiendaController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
+// Video de inicio que toca hoy en la tienda (o null) y sus archivos. Público.
+Route::get('public/videos-inicio/hoy', [VideosInicioTiendaController::class, 'hoy']);
+Route::get('public/videos-inicio/videos/{nombre}', [VideosInicioTiendaController::class, 'verVideo'])->where('nombre', '[A-Za-z0-9]{40}\.mp4');
 // Configuración de la tienda (número de WhatsApp). Público.
 Route::get('public/configuracion/tienda', [ConfiguracionTiendaController::class, 'tienda']);
-Route::get('public/configuracion/archivos/{nombre}', [ConfiguracionTiendaController::class, 'verArchivo'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png|mp4)');
 // Header de la tienda e imágenes de los headers (el logo): públicas, las pide la tienda.
 Route::get('public/headers/tienda', [HeaderTiendaController::class, 'tienda']);
 Route::get('public/headers/imagenes/{nombre}', [HeaderTiendaController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
