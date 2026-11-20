@@ -560,8 +560,6 @@ class SeccionesController extends Controller
             'precio'          => $f->precio !== null ? (float) $f->precio : null,
             'precio_anterior' => $f->precio_anterior !== null ? (float) $f->precio_anterior : null,
             'stock'           => (float) $f->stock,
-            // La descripción del producto (solo la traen las tarjetas de las secciones; el 360 la muestra).
-            'descripcion'     => $f->descripcion ?? null,
             // Su factura pide los datos de MOTOS (inventarios.fn_producto_es_moto)
             'es_moto'         => (bool) ($f->es_moto ?? false),
         ];
