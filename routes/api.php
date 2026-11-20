@@ -176,6 +176,8 @@ use App\Http\Controllers\ventas\cotizador\ActividadClienteParametrosController;
 use App\Http\Controllers\ventas\cotizador\PerformanceCreditoController;
 // 11-nov-2026 (líneas): el catálogo de líneas (panel izquierdo de Performance crédito).
 use App\Http\Controllers\ventas\cotizador\LineaController;
+// 19-nov-2026: precalifica del caso (pestaña Precalifica y su Reintentar).
+use App\Http\Controllers\ventas\cotizador\PrecalificaController;
 // 11-nov-2026 (Fase 4): Parámetros de calificación (V05) salió de openceo\PoliticaController.
 use App\Http\Controllers\ventas\cotizador\CalificacionClienteParametrosController;
 use App\Http\Controllers\ventas\cotizador\CmargenController;
@@ -1133,6 +1135,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/casoConsultaGarancheck/{caso_id}', [CasoConsultaGarancheckController::class, 'mostrar'])->where('caso_id', '[0-9]+');
     // 30-oct (fase 3b de Yupana): el botón Calificar / Reintentar del caso: consulta con la agencia del caso, casa la consulta y guarda la calificación.
     Route::post('/casoCalificar/{caso_id}', [CasoConsultaGarancheckController::class, 'calificar'])->where('caso_id', '[0-9]+')->middleware('throttle:20,1,caso-calificar');
+    // 19-nov-2026: la precalifica del caso (pestaña Precalifica) y su Reintentar (sale solo si falló).
+    Route::get('/listPrecalifica/{caso_id}', [PrecalificaController::class, 'listPrecalifica'])->where('caso_id', '[0-9]+');
+    Route::post('/reintentarPrecalifica/{caso_id}', [PrecalificaController::class, 'reintentarPrecalifica'])->where('caso_id', '[0-9]+');
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::post('/respuestaCasoMasivo', [CasoController::class, 'respuestaCasoMasivo']);

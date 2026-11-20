@@ -5,6 +5,7 @@ namespace App\Http\Controllers\crm;
 use App\Events\TableroEvent;
 use App\Http\Controllers\consultas\ConsultasController;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ventas\cotizador\PrecalificaController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\Consultas\GarancheckService;
@@ -92,6 +93,11 @@ class CasoConsultaGarancheckController extends Controller
 
             // 06-nov: con el score de la consulta se llenan los requerimientos automáticos que quedaron sin resultado.
             app(CasoController::class)->calcularRequerimientosAutomaticos($casoId);
+
+            // 19-nov: GaranCheck había fallado y ahora salió bien: se vuelve a precalificar si el TIPO CRÉDITO no se eligió.
+            if ($consultaOk) {
+                app(PrecalificaController::class)->calcular($casoId, false, true, $request);
+            }
 
             // 3. El caso completo: para la tarjeta de todos (TableroEvent) y para el navegador que apretó el botón.
             $casoCompleto = app(CasoController::class)->getCaso($casoId);

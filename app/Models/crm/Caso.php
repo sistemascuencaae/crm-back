@@ -87,6 +87,8 @@ class Caso extends Model
         'fecha_ingreso_fase' => 'datetime',
         // 30-oct: copia del switch del tipo de caso; la escribe crm.fn_caso_calificacion_iniciar (no va en $fillable).
         'requiere_calificacion' => 'boolean',
+        // 19-nov: copia del switch del tipo de caso; la escribe ventas.fn_precalifica_calcular (no va en $fillable).
+        'requiere_precalifica' => 'boolean',
     ];
 
     public function userCreador()

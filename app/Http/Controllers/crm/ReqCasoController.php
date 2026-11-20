@@ -4,10 +4,12 @@ namespace App\Http\Controllers\crm;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\credito\solicitudCreditoController;
+use App\Http\Controllers\ventas\cotizador\PrecalificaController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\crm\Archivo;
 use App\Models\crm\Audits;
+use App\Models\crm\Caso;
 use App\Models\crm\credito\SolicitudCredito;
 use App\Models\crm\Galeria;
 use App\Models\crm\RequerimientoCaso;
@@ -249,6 +251,12 @@ class ReqCasoController extends Controller
         try {
             $requerimiento = RequerimientoCaso::find($id);
 
+            // 19-nov: el TIPO CRÉDITO (marca TIPO_CREDITO) de un caso que pide precalifica elige la precalifica y llena los 6 marcados.
+            if ($requerimiento && $requerimiento->dato_cotizador === 'TIPO_CREDITO'
+                && Caso::where('id', $requerimiento->caso_id)->value('requiere_precalifica')) {
+                return $this->guardarTipoCredito($requerimiento, $request);
+            }
+
             if ($requerimiento) {
                 DB::transaction(function () use ($requerimiento, $request) {
                     if (($requerimiento->tipo_campo == 'archivo' || $requerimiento->tipo_campo == 'pegar imagen') && $requerimiento->galerias_id != null) {
@@ -305,6 +313,51 @@ class ReqCasoController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('error', $e->getMessage(), ''));
         }
+    }
+
+    // 19-nov: guarda el TIPO CRÉDITO con ventas.fn_precalifica_elegir (PrecalificaController::elegir), que también llena y bloquea
+    // los otros 6 requerimientos marcados del caso. Del requerimiento solo cambia además la descripción que escribe el usuario.
+    // Devuelve todos los requerimientos del caso, para que la pantalla refresque los 6.
+    private function guardarTipoCredito(RequerimientoCaso $requerimiento, Request $request)
+    {
+        $linea = $requerimiento->tipo_campo === 'lista agrupada' ? $request->input('valor_varchar_2') : $request->input('valor_varchar');
+        $error = null;
+
+        DB::transaction(function () use ($requerimiento, $request, $linea, &$error) {
+            $antes = json_encode($requerimiento);
+            $error = app(PrecalificaController::class)->elegir((int) $requerimiento->id, $linea, $request);
+            if ($error !== null) {
+                return;
+            }
+
+            $requerimiento->refresh();
+            if ($request->has('descripcion')) {
+                $requerimiento->update($request->only('descripcion'));
+            }
+
+            $audit = new Audits();
+            $audit->old_values = $antes;
+            $audit->new_values = json_encode($requerimiento);
+            $audit->user_id = Auth::id();
+            $audit->event = 'updated';
+            $audit->auditable_type = RequerimientoCaso::class;
+            $audit->auditable_id = $requerimiento->id;
+            $audit->user_type = User::class;
+            $audit->ip_address = $request->ip();
+            $audit->url = $request->fullUrl();
+            $audit->user_agent = $request->header('User-Agent');
+            $audit->accion = 'editRequerimientoTipoCredito';
+            $audit->caso_id = $requerimiento->caso_id;
+            $audit->save();
+        });
+
+        if ($error !== null) {
+            return response()->json(RespuestaApi::returnResultado('error', $error, ''));
+        }
+
+        $reqCaso = RequerimientoCaso::where('caso_id', $requerimiento->caso_id)->orderBy('id', 'asc')->get();
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Actualizado con exito', $reqCaso));
     }
 
     public function listAll($casoId)
