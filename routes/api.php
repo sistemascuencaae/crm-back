@@ -2284,6 +2284,7 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::get('/seccion/{id}', [SeccionesController::class, 'ver'])->whereNumber('id');
     Route::post('/crearSeccion', [SeccionesController::class, 'crear']);
     Route::post('/editarSeccion/{id}', [SeccionesController::class, 'editar'])->whereNumber('id');
+    Route::post('/visibleSeccion/{id}', [SeccionesController::class, 'visible'])->whereNumber('id');
     Route::post('/ordenarSecciones/{pagId}', [SeccionesController::class, 'ordenar'])->whereNumber('pagId');
     Route::post('/eliminarSeccion/{id}', [SeccionesController::class, 'eliminar'])->whereNumber('id');
     Route::post('/restaurarSeccion/{id}', [SeccionesController::class, 'restaurar'])->whereNumber('id');

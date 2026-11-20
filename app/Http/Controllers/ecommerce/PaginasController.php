@@ -34,8 +34,8 @@ class PaginasController extends Controller
         'ux_paginas_ruta' => 'Ya existe una página con esa ruta.',
         'VALOR_INVALIDO' => 'El valor de "Activo" no es válido.',
         'PAGINA_NO_EXISTE' => 'La página no existe o está en la papelera.',
-        'PAPELERA_PAGINA_ACTIVA' => 'No se puede eliminar porque está activa: inactívela primero.',
-        'PAPELERA_PAGINA_EN_USO' => 'No se puede eliminar porque es el destino de un enlace (header, footer o sección de otra página): cambie ese enlace primero.',
+        'PAPELERA_PAGINA_SECCIONES_VISIBLES' => 'Para eliminar la página, primero desactive todas sus secciones.',
+        'PAPELERA_PAGINA_ACTIVA' => 'Para eliminar la página, primero desactívela.',
         'PAGINA_NO_EN_PAPELERA' => 'La página no está en la papelera (puede que otro usuario ya la restauró).',
         'SECCIONES_NO_COINCIDEN' => 'Las secciones elegidas para clonar no son de la página de origen. Vuelva a cargarla.',
     ];

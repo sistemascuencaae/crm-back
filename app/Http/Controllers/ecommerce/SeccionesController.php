@@ -38,7 +38,7 @@ class SeccionesController extends Controller
         'ELEMENTOS_INVALIDOS' => 'El contenido de la sección no es válido.',
         'SECCION_NO_EXISTE' => 'La sección no existe o está en la papelera.',
         'SECCION_NO_EN_PAPELERA' => 'La sección no está en la papelera (puede que otro usuario ya la restauró).',
-        'PAPELERA_SECCION_VISIBLE' => 'No se puede eliminar porque está visible: ocúltela primero.',
+        'PAPELERA_SECCION_VISIBLE' => 'Para eliminar la sección, primero desactívela.',
         'REQUIERE_SECCIONES' => 'Envíe el nuevo orden de las secciones.',
         'SECCIONES_NO_COINCIDEN' => 'La página cambió mientras la ordenaba (se agregó o eliminó una sección). Vuelva a cargarla.',
     ];
@@ -210,6 +210,34 @@ class SeccionesController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', ['pag_id' => $pagId]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al ordenar las secciones');
+        }
+    }
+
+    // El interruptor de la lista: solo visible / oculta -> ecommerce.fn_seccion_visible. No revisa el contenido (eso se
+    // revisa al guardar los cambios de la sección). Body: { sec_visible: true|false }
+    public function visible(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'sec_visible' => 'required|boolean',
+        ], [
+            'sec_visible.required' => 'El valor de "Visible" no es válido.',
+            'sec_visible.boolean' => 'El valor de "Visible" no es válido.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+        }
+
+        try {
+            $visible = $request->boolean('sec_visible');
+            $resultado = DB::selectOne('SELECT ecommerce.fn_seccion_visible(?::jsonb) AS sec_id', [json_encode([
+                'sec_id' => $id,
+                'sec_visible' => $visible,
+                'auditoria' => $this->contextoAuditoriaForense($request),
+            ])]);
+
+            return response()->json(RespuestaApi::returnResultado('success', $visible ? 'Sección visible' : 'Sección desactivada', ['sec_id' => $resultado->sec_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al cambiar la sección');
         }
     }
 
