@@ -4,18 +4,18 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 // Header de la tienda (público, sin login): el header que se muestra ahora (ecommerce.fn_header_tienda_publico) y las
 // imágenes de los headers (el logo). El mantenimiento está en ecommerce/HeaderController (CRM), que borra la caché al guardar.
 class HeaderTiendaController extends Controller
 {
-    // Imágenes de los headers (el logo): carpeta privada storage/app/headers; se piden por
+    // Imágenes de los headers (el logo): carpeta ecommerce/headers (NAS o local); se piden por
     // api/public/headers/imagenes/{nombre}. Nombre aleatorio de 40 letras y números + .webp (nunca cambia de contenido).
-    private const CARPETA_IMAGENES = 'headers';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/headers';
     private const NOMBRE_IMAGEN = '/^[A-Za-z0-9]{40}\.webp$/';
 
     // Lo que lee la tienda (tienda()): se guarda 60 s; cada cambio guardado en el CRM lo borra (limpiarCache). Los 60 s
@@ -52,16 +52,11 @@ class HeaderTiendaController extends Controller
     // Pública: entrega una imagen de la carpeta de headers y nada más (el nombre se revisa antes de abrir el archivo).
     public function verImagen(string $nombre)
     {
-        $ruta = self::CARPETA_IMAGENES . '/' . $nombre;
-
-        if (!preg_match(self::NOMBRE_IMAGEN, $nombre) || !Storage::disk('local')->exists($ruta)) {
+        if (!preg_match(self::NOMBRE_IMAGEN, $nombre)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => 'image/webp',
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        // Del NAS o de local (ArchivosPaginaWeb::entregar).
+        return ArchivosPaginaWeb::entregar(self::CARPETA_IMAGENES . '/' . $nombre, 'image/webp');
     }
 }

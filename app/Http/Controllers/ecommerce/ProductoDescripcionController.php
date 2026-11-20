@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Servicios\PaginaWeb\LimpiadorDocumento;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -19,11 +20,11 @@ use Illuminate\Support\Str;
 // Las reglas viven en inventarios.fn_producto_descripcion_* (database/sql/producto_descripciones.sql,
 // producto_descripciones_sin_auditoria.sql y producto_descripciones_add_edit.sql). El HTML se limpia
 // aquí antes de guardarlo (LimpiadorDocumento, como Documentos) y las imágenes solo pueden ser de la carpeta del
-// producto: storage/app/pagina-web/productos/{pro_id}/descripcion/, entregadas por
+// producto: ecommerce/productos/{pro_id}/descripcion/ (NAS o local), entregadas por
 // api/public/pagina-web/imagenes/productos/{pro_id}/descripcion/{nombre} (paginaWeb/ArchivosTiendaController).
 class ProductoDescripcionController extends Controller
 {
-    private const CARPETA = 'pagina-web/productos';
+    private const CARPETA = ArchivosPaginaWeb::CARPETA . '/productos';
     private const TIPOS_IMAGEN = ['webp' => 'image/webp', 'jpg' => 'image/jpeg', 'png' => 'image/png'];
     private const IMAGEN_MAXIMO_KB = 2048;
     // Las imágenes subidas que no quedaron en la descripción se borran al guardar, si tienen más de este tiempo
@@ -140,7 +141,8 @@ class ProductoDescripcionController extends Controller
             if (!isset($copiadas[$m[1]])) {
                 $nuevo = Str::random(40) . '.' . $m[2];
                 try {
-                    if (!Storage::disk('local')->copy($this->carpeta($origen) . '/' . $m[1], $this->carpeta($id) . '/' . $nuevo)) {
+                    // La copia va al disco activo (NAS o local), venga de donde venga el original.
+                    if (!ArchivosPaginaWeb::copiar($this->carpeta($origen) . '/' . $m[1], $this->carpeta($id) . '/' . $nuevo)) {
                         return $m[0];   // no se pudo copiar: queda la del origen y el limpiador la quita
                     }
                 } catch (\Throwable $th) {
@@ -169,7 +171,7 @@ class ProductoDescripcionController extends Controller
         } catch (QueryException $e) {
             // No quedó en la base: las copias de las imágenes se borran.
             foreach ($copiadas as $nuevo) {
-                Storage::disk('local')->delete($this->carpeta($id) . '/' . $nuevo);
+                ArchivosPaginaWeb::borrarRuta($this->carpeta($id) . '/' . $nuevo);
             }
 
             return $this->errorTraducido($e, 'Error al copiar la descripción');
@@ -197,20 +199,17 @@ class ProductoDescripcionController extends Controller
             return $this->errorTraducido($e, 'No se pudo subir la imagen.');
         }
 
-        try {
-            $extension = array_search($request->file('imagen')->getMimeType(), self::TIPOS_IMAGEN, true) ?: 'webp';
-            $nombre = Str::random(40) . '.' . $extension;
-            $request->file('imagen')->storeAs($this->carpeta($id), $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
-                'nombre' => $nombre,
-                'url' => url(ltrim($this->rutaRelativa($id), '/') . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir la imagen de la descripción', ['pro_id' => $id, 'error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $extension = array_search($request->file('imagen')->getMimeType(), self::TIPOS_IMAGEN, true) ?: 'webp';
+        $nombre = Str::random(40) . '.' . $extension;
+        if (!ArchivosPaginaWeb::guardar($request->file('imagen'), $this->carpeta($id), $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
         }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
+            'nombre' => $nombre,
+            'url' => url(ltrim($this->rutaRelativa($id), '/') . $nombre),
+        ]));
     }
 
     // -----------------------------------------------------------------
@@ -265,16 +264,20 @@ class ProductoDescripcionController extends Controller
     // Borra las imágenes de la carpeta de la descripción que ya no están en el HTML guardado (y no son recientes).
     private function borrarImagenesSueltas(int $proId, string $contenido): void
     {
-        try {
-            $limite = time() - self::HORAS_IMAGEN_SUELTA * 3600;
-            foreach (Storage::disk('local')->files($this->carpeta($proId)) as $archivo) {
-                $nombre = basename($archivo);
-                if (!str_contains($contenido, '/' . $nombre) && Storage::disk('local')->lastModified($archivo) < $limite) {
-                    Storage::disk('local')->delete($archivo);
+        $limite = time() - self::HORAS_IMAGEN_SUELTA * 3600;
+        // En cada disco donde puede haber imágenes (el activo y, con el NAS activo, también local).
+        foreach (ArchivosPaginaWeb::discosDeLectura() as $disco) {
+            try {
+                $almacen = Storage::disk($disco);
+                foreach ($almacen->files($this->carpeta($proId)) as $archivo) {
+                    $nombre = basename($archivo);
+                    if (!str_contains($contenido, '/' . $nombre) && $almacen->lastModified($archivo) < $limite) {
+                        $almacen->delete($archivo);
+                    }
                 }
+            } catch (\Throwable $th) {
+                Log::warning('No se pudieron limpiar las imágenes de la descripción', ['pro_id' => $proId, 'disco' => $disco, 'error' => $th->getMessage()]);
             }
-        } catch (\Throwable $th) {
-            Log::warning('No se pudieron limpiar las imágenes de la descripción', ['pro_id' => $proId, 'error' => $th->getMessage()]);
         }
     }
 

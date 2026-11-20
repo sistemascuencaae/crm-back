@@ -4,12 +4,11 @@ namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Servicios\PaginaWeb\LimpiadorDocumento;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -22,8 +21,8 @@ use Illuminate\Support\Str;
 class DocumentosController extends Controller
 {
     // Imágenes y PDF: carpeta privada storage/app/documentos; se piden por api/public/documentos/imagenes|pdf/{nombre}.
-    private const CARPETA_IMAGENES = 'documentos/imagenes';
-    private const CARPETA_PDF = 'documentos/pdf';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/documentos/imagenes';
+    private const CARPETA_PDF = ArchivosPaginaWeb::CARPETA . '/documentos/pdf';
     private const TIPOS_IMAGEN = ['webp' => 'image/webp', 'jpg' => 'image/jpeg', 'png' => 'image/png'];
     private const IMAGEN_MAXIMO_KB = 2048;
     private const PDF_MAXIMO_KB = 10240;
@@ -455,20 +454,17 @@ class DocumentosController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        try {
-            $extension = array_search($request->file('imagen')->getMimeType(), self::TIPOS_IMAGEN, true) ?: 'webp';
-            $nombre = Str::random(40) . '.' . $extension;
-            $request->file('imagen')->storeAs(self::CARPETA_IMAGENES, $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
-                'nombre' => $nombre,
-                'url' => url('api/public/documentos/imagenes/' . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir la imagen del documento', ['error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $extension = array_search($request->file('imagen')->getMimeType(), self::TIPOS_IMAGEN, true) ?: 'webp';
+        $nombre = Str::random(40) . '.' . $extension;
+        if (!ArchivosPaginaWeb::guardar($request->file('imagen'), self::CARPETA_IMAGENES, $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
         }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
+            'nombre' => $nombre,
+            'url' => url('api/public/documentos/imagenes/' . $nombre),
+        ]));
     }
 
     // Sube el PDF descargable del documento (hasta 10 MB). Devuelve el nombre (para guardarlo en doc_pdf) y su dirección.
@@ -486,19 +482,16 @@ class DocumentosController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        try {
-            $nombre = Str::random(40) . '.pdf';
-            $request->file('pdf')->storeAs(self::CARPETA_PDF, $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'PDF subido', [
-                'nombre' => $nombre,
-                'url' => url('api/public/documentos/pdf/' . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir el PDF del documento', ['error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $nombre = Str::random(40) . '.pdf';
+        if (!ArchivosPaginaWeb::guardar($request->file('pdf'), self::CARPETA_PDF, $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir el PDF.', null));
         }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'PDF subido', [
+            'nombre' => $nombre,
+            'url' => url('api/public/documentos/pdf/' . $nombre),
+        ]));
     }
 
     // ================= Ayudas =================

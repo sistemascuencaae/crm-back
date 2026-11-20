@@ -4,9 +4,9 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 // Páginas de la tienda (público, sin login): las páginas del CRM (Ecommerce > Páginas) listas para dibujar y las
 // imágenes de sus secciones.
@@ -20,8 +20,8 @@ use Illuminate\Support\Facades\Storage;
 // status y code. El mantenimiento está en ecommerce/PaginasController y SeccionesController (CRM).
 class PaginasTiendaController extends Controller
 {
-    // Imágenes de las secciones: carpeta privada storage/app/secciones; nombre aleatorio de 40 letras y números + .webp
-    private const CARPETA_IMAGENES = 'secciones';
+    // Imágenes de las secciones: carpeta ecommerce/secciones (NAS o local); nombre aleatorio de 40 letras y números + .webp
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/secciones';
     private const NOMBRE_IMAGEN = '/^[A-Za-z0-9]{40}\.webp$/';
 
     public function inicio()
@@ -58,17 +58,12 @@ class PaginasTiendaController extends Controller
     // Una imagen de las secciones (pública: la pide la tienda y el CRM). El nombre nunca cambia de contenido.
     public function verImagen(string $nombre)
     {
-        $ruta = self::CARPETA_IMAGENES . '/' . $nombre;
-
-        if (!preg_match(self::NOMBRE_IMAGEN, $nombre) || !Storage::disk('local')->exists($ruta)) {
+        if (!preg_match(self::NOMBRE_IMAGEN, $nombre)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => 'image/webp',
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        // Del NAS o de local (ArchivosPaginaWeb::entregar).
+        return ArchivosPaginaWeb::entregar(self::CARPETA_IMAGENES . '/' . $nombre, 'image/webp');
     }
 
     // -----------------------------------------------------------------

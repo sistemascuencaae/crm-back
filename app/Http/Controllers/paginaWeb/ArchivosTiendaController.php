@@ -4,11 +4,10 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
-use Illuminate\Support\Facades\Storage;
 
 // Archivos de la tienda (público, sin login): fotos de los productos, imágenes de la descripción completa de un
 // producto, logos de las marcas y los archivos que se subían con Página web (imágenes y PDF). Todos en la carpeta privada
-// storage/app/pagina-web (ArchivosPaginaWeb::CARPETA); los suben Inventarios (productos, descripción, marcas).
+// ecommerce/ (ArchivosPaginaWeb::CARPETA, NAS o local); los suben Inventarios (productos, descripción, marcas).
 class ArchivosTiendaController extends Controller
 {
     private const CARPETA = ArchivosPaginaWeb::CARPETA;
@@ -21,13 +20,13 @@ class ArchivosTiendaController extends Controller
     // GET public/pagina-web/imagenes/{nombre}
     public function verImagen(string $nombre)
     {
-        return $this->entregar($nombre, self::IMAGEN_VALIDA);
+        return $this->entregar($nombre, self::IMAGEN_VALIDA, 'archivos');
     }
 
     // GET public/pagina-web/documentos/{nombre}
     public function verPdf(string $nombre)
     {
-        return $this->entregar($nombre, self::PDF_VALIDO);
+        return $this->entregar($nombre, self::PDF_VALIDO, 'archivos');
     }
 
     // Imágenes de un producto de la tienda (carpeta productos/{proId}). GET public/pagina-web/imagenes/productos/{proId}/{nombre}
@@ -49,19 +48,19 @@ class ArchivosTiendaController extends Controller
         return $this->entregar($nombre, self::IMAGEN_VALIDA, 'marcas');
     }
 
-    // Entrega el archivo solo si el nombre es válido y existe. El nombre es aleatorio y nunca cambia de contenido: el
-    // navegador puede guardarlo un año.
+    private const TIPOS = [
+        'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf',
+    ];
+
+    // Entrega el archivo solo si el nombre es válido y existe (en el NAS o en local: ArchivosPaginaWeb::entregar).
+    // El nombre es aleatorio y nunca cambia de contenido: el navegador puede guardarlo un año.
     private function entregar(string $nombre, string $patron, string $subcarpeta = '')
     {
-        $ruta = self::CARPETA . '/' . ($subcarpeta === '' ? '' : $subcarpeta . '/') . $nombre;
-
-        if (!preg_match($patron, $nombre) || !Storage::disk('local')->exists($ruta)) {
+        if (!preg_match($patron, $nombre)) {
             abort(404);
         }
+        $ruta = self::CARPETA . '/' . ($subcarpeta === '' ? '' : $subcarpeta . '/') . $nombre;
 
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Cache-Control'          => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return ArchivosPaginaWeb::entregar($ruta, self::TIPOS[strtolower(pathinfo($nombre, PATHINFO_EXTENSION))]);
     }
 }

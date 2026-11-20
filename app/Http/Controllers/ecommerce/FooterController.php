@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\RespuestaApi;
 use App\Http\Controllers\paginaWeb\FooterTiendaController;
+use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -26,9 +25,9 @@ class FooterController extends Controller
         $this->middleware('auth:api');
     }
 
-    // Imágenes de los footers (logo, logos de bancos): carpeta privada storage/app/footers; se piden por
+    // Imágenes de los footers (logo, logos de bancos): carpeta ecommerce/footers (NAS o local); se piden por
     // api/public/footers/imagenes/{nombre}. En la base se guarda la ruta relativa; aquí se completa con el dominio al salir.
-    private const CARPETA_IMAGENES = 'footers';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/footers';
     private const RUTA_IMAGENES = '/api/public/footers/imagenes/';
     private const TIPOS_IMAGEN = ['webp' => 'image/webp', 'jpg' => 'image/jpeg', 'png' => 'image/png'];
 
@@ -369,19 +368,16 @@ class FooterController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        try {
-            $extension = array_search($request->file('imagen')->getMimeType(), self::TIPOS_IMAGEN, true);
-            $nombre = Str::random(40) . '.' . $extension;
-            $request->file('imagen')->storeAs(self::CARPETA_IMAGENES, $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
-                'url' => url(self::RUTA_IMAGENES . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir la imagen del footer', ['error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $extension = array_search($request->file('imagen')->getMimeType(), self::TIPOS_IMAGEN, true);
+        $nombre = Str::random(40) . '.' . $extension;
+        if (!ArchivosPaginaWeb::guardar($request->file('imagen'), self::CARPETA_IMAGENES, $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
         }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
+            'url' => url(self::RUTA_IMAGENES . $nombre),
+        ]));
     }
 
     // ================= Papelera =================

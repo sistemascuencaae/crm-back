@@ -4,11 +4,10 @@ namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -20,9 +19,9 @@ use Illuminate\Support\Str;
 // contra los campos de la plantilla.
 class SeccionesController extends Controller
 {
-    // Imágenes de las secciones: carpeta privada storage/app/secciones; la tienda y el CRM las piden por
+    // Imágenes de las secciones: carpeta ecommerce/secciones (NAS o local); la tienda y el CRM las piden por
     // api/public/secciones/imagenes/{nombre}. En la base se guarda solo el nombre: 40 letras y números + .webp.
-    private const CARPETA_IMAGENES = 'secciones';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/secciones';
 
     // Códigos sin "dónde" -> mensaje para el usuario.
     private const MENSAJES_ERROR = [
@@ -362,19 +361,16 @@ class SeccionesController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        try {
-            $nombre = Str::random(40) . '.webp';
-            $request->file('imagen')->storeAs(self::CARPETA_IMAGENES, $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
-                'nombre' => $nombre,
-                'url' => url('api/public/secciones/imagenes/' . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir la imagen de la sección', ['error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $nombre = Str::random(40) . '.webp';
+        if (!ArchivosPaginaWeb::guardar($request->file('imagen'), self::CARPETA_IMAGENES, $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
         }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
+            'nombre' => $nombre,
+            'url' => url('api/public/secciones/imagenes/' . $nombre),
+        ]));
     }
 
     // Traduce un error de sección con "dónde" (CODIGO:ruta). La usa también PaginasController al clonar.

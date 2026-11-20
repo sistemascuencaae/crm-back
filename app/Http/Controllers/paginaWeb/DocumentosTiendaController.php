@@ -4,9 +4,9 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Servicios\PaginaWeb\LimpiadorDocumento;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 // Documentos en la tienda (público, sin login): un documento activo por su dirección, la pantalla de una carpeta de
 // primer nivel, la lista de documentos activos, y sus imágenes y PDF (ecommerce.fn_documento_*_publico/s).
@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Storage;
 class DocumentosTiendaController extends Controller
 {
     // Imágenes y PDF: carpeta privada storage/app/documentos; se piden por api/public/documentos/imagenes|pdf/{nombre}.
-    private const CARPETA_IMAGENES = 'documentos/imagenes';
-    private const CARPETA_PDF = 'documentos/pdf';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/documentos/imagenes';
+    private const CARPETA_PDF = ArchivosPaginaWeb::CARPETA . '/documentos/pdf';
     private const NOMBRE_IMAGEN = '/^[A-Za-z0-9]{40}\.(webp|jpg|png)$/';
     private const NOMBRE_PDF = '/^[A-Za-z0-9]{40}\.pdf$/';
     private const TIPOS_IMAGEN = ['webp' => 'image/webp', 'jpg' => 'image/jpeg', 'png' => 'image/png'];
@@ -85,30 +85,23 @@ class DocumentosTiendaController extends Controller
 
     public function verImagen(string $nombre)
     {
-        $ruta = self::CARPETA_IMAGENES . '/' . $nombre;
-        if (!preg_match(self::NOMBRE_IMAGEN, $nombre, $m) || !Storage::disk('local')->exists($ruta)) {
+        if (!preg_match(self::NOMBRE_IMAGEN, $nombre, $m)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => self::TIPOS_IMAGEN[$m[1]],
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        // Del NAS o de local (ArchivosPaginaWeb::entregar).
+        return ArchivosPaginaWeb::entregar(self::CARPETA_IMAGENES . '/' . $nombre, self::TIPOS_IMAGEN[$m[1]]);
     }
 
     public function verPdf(string $nombre)
     {
-        $ruta = self::CARPETA_PDF . '/' . $nombre;
-        if (!preg_match(self::NOMBRE_PDF, $nombre) || !Storage::disk('local')->exists($ruta)) {
+        if (!preg_match(self::NOMBRE_PDF, $nombre)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => 'application/pdf',
+        // Del NAS o de local (ArchivosPaginaWeb::entregar).
+        return ArchivosPaginaWeb::entregar(self::CARPETA_PDF . '/' . $nombre, 'application/pdf', [
             'Content-Disposition' => 'inline; filename="documento.pdf"',
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

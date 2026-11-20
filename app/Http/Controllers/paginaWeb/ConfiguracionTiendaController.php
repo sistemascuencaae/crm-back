@@ -4,10 +4,10 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 // Configuración de la tienda (público, sin login): número de WhatsApp, ventana emergente y video de intro del inicio
 // (ecommerce.fn_configuracion_tienda_publica), y los archivos de la ventana y del video.
@@ -18,8 +18,8 @@ class ConfiguracionTiendaController extends Controller
     private const CACHE_TIENDA = 'ecommerce.configuracion.tienda';
     private const SEGUNDOS_CACHE_TIENDA = 600;
 
-    // Dónde se guardan la imagen de la ventana y el video (storage/app/...), y qué tipos hay.
-    public const CARPETA = 'configuracion-tienda';
+    // Dónde se guardan la imagen de la ventana y el video (ecommerce/configuracion, NAS o local), y qué tipos hay.
+    public const CARPETA = ArchivosPaginaWeb::CARPETA . '/configuracion';
     public const TIPOS = ['webp' => 'image/webp', 'jpg' => 'image/jpeg', 'png' => 'image/png', 'mp4' => 'video/mp4'];
     private const NOMBRE = '/^[A-Za-z0-9]{40}\.(webp|jpg|png|mp4)$/';
 
@@ -38,7 +38,7 @@ class ConfiguracionTiendaController extends Controller
     public static function borrarArchivo(string $nombre): void
     {
         if (preg_match(self::NOMBRE, $nombre)) {
-            Storage::disk('local')->delete(self::CARPETA . '/' . $nombre);
+            ArchivosPaginaWeb::borrarRuta(self::CARPETA . '/' . $nombre);
         }
     }
 
@@ -71,19 +71,14 @@ class ConfiguracionTiendaController extends Controller
         }
     }
 
-    // GET public/configuracion/archivos/{nombre}: la imagen de la ventana o el video (con soporte de rangos, para que el
-    // video empiece a verse sin descargarlo entero). Cada archivo nuevo tiene otro nombre: se guarda en caché un año.
+    // GET public/configuracion/archivos/{nombre}: la imagen de la ventana o el video, del NAS o de local
+    // (ArchivosPaginaWeb::entregar; desde local con soporte de rangos). Cada archivo nuevo tiene otro nombre: un año en caché.
     public function verArchivo(string $nombre)
     {
-        $ruta = self::CARPETA . '/' . $nombre;
-        if (!preg_match(self::NOMBRE, $nombre, $m) || !Storage::disk('local')->exists($ruta)) {
+        if (!preg_match(self::NOMBRE, $nombre, $m)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => self::TIPOS[$m[1]],
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return ArchivosPaginaWeb::entregar(self::CARPETA . '/' . $nombre, self::TIPOS[$m[1]]);
     }
 }

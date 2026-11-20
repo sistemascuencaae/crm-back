@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\RespuestaApi;
 use App\Http\Controllers\paginaWeb\HeaderTiendaController;
+use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -24,9 +23,9 @@ class HeaderController extends Controller
         $this->middleware('auth:api');
     }
 
-    // Imágenes de los headers (el logo): carpeta privada storage/app/headers; la tienda y el CRM las piden por
+    // Imágenes de los headers (el logo): carpeta ecommerce/headers (NAS o local); la tienda y el CRM las piden por
     // api/public/headers/imagenes/{nombre}. Nombre aleatorio de 40 letras y números + .webp (nunca cambia de contenido).
-    private const CARPETA_IMAGENES = 'headers';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/headers';
     // La dirección que se guarda en hbl_imagen: solo una imagen subida aquí.
     private const RUTA_IMAGEN = '#/api/public/headers/imagenes/[A-Za-z0-9]{40}\.webp$#';
 
@@ -317,18 +316,15 @@ class HeaderController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        try {
-            $nombre = Str::random(40) . '.webp';
-            $request->file('imagen')->storeAs(self::CARPETA_IMAGENES, $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
-                'url' => url('api/public/headers/imagenes/' . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir la imagen del header', ['error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $nombre = Str::random(40) . '.webp';
+        if (!ArchivosPaginaWeb::guardar($request->file('imagen'), self::CARPETA_IMAGENES, $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
         }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
+            'url' => url('api/public/headers/imagenes/' . $nombre),
+        ]));
     }
 
     // Mensaje de MENSAJES_ERROR para el código que lanzó la función PG; si no hay, el genérico con el detalle. Se busca

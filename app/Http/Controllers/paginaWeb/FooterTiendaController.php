@@ -4,18 +4,18 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 // Footer de la tienda (público, sin login): el footer que se muestra ahora (ecommerce.fn_footer_tienda_publico) y las imágenes
 // de los footers. El mantenimiento está en ecommerce/FooterController (CRM), que borra la caché al guardar.
 class FooterTiendaController extends Controller
 {
-    // Imágenes de los footers (logo, logos de bancos): carpeta privada storage/app/footers; se piden por
+    // Imágenes de los footers (logo, logos de bancos): carpeta ecommerce/footers (NAS o local); se piden por
     // api/public/footers/imagenes/{nombre}. En la base se guarda la ruta relativa; aquí se completa con el dominio al salir.
-    private const CARPETA_IMAGENES = 'footers';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/footers';
     private const RUTA_IMAGENES = '/api/public/footers/imagenes/';
     private const NOMBRE_IMAGEN = '/^[A-Za-z0-9]{40}\.(webp|jpg|png)$/';
     private const TIPOS_IMAGEN = ['webp' => 'image/webp', 'jpg' => 'image/jpeg', 'png' => 'image/png'];
@@ -54,17 +54,12 @@ class FooterTiendaController extends Controller
     // Entrega una imagen de la carpeta de footers y nada más (el nombre se revisa antes de abrir el archivo).
     public function verImagen(string $nombre)
     {
-        $ruta = self::CARPETA_IMAGENES . '/' . $nombre;
-
-        if (!preg_match(self::NOMBRE_IMAGEN, $nombre) || !Storage::disk('local')->exists($ruta)) {
+        if (!preg_match(self::NOMBRE_IMAGEN, $nombre)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => self::TIPOS_IMAGEN[pathinfo($nombre, PATHINFO_EXTENSION)],
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        // Del NAS o de local (ArchivosPaginaWeb::entregar).
+        return ArchivosPaginaWeb::entregar(self::CARPETA_IMAGENES . '/' . $nombre, self::TIPOS_IMAGEN[pathinfo($nombre, PATHINFO_EXTENSION)]);
     }
 
     // ================= Ayudantes =================

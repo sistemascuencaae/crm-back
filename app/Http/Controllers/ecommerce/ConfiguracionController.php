@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ecommerce;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\paginaWeb\ConfiguracionTiendaController;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -179,19 +180,18 @@ class ConfiguracionController extends Controller
 
     private function guardarArchivo(Request $request, string $campo, string $extension, string $exito, string $error)
     {
-        try {
-            $nombre = Str::random(40) . '.' . $extension;
-            $request->file($campo)->storeAs(ConfiguracionTiendaController::CARPETA, $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', $exito, [
-                'nombre' => $nombre,
-                'url' => ConfiguracionTiendaController::urlArchivo($nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error($error, ['error' => $th->getMessage()]);
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $nombre = Str::random(40) . '.' . $extension;
+        if (!ArchivosPaginaWeb::guardar($request->file($campo), ConfiguracionTiendaController::CARPETA, $nombre)) {
+            Log::error($error);
 
             return response()->json(RespuestaApi::returnResultado('error', $error, null));
         }
+
+        return response()->json(RespuestaApi::returnResultado('success', $exito, [
+            'nombre' => $nombre,
+            'url' => ConfiguracionTiendaController::urlArchivo($nombre),
+        ]));
     }
 
     // errorInfo[2] trae solo el mensaje de PG (getMessage() incluye el SQL con el payload).

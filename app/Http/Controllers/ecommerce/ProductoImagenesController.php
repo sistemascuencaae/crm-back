@@ -4,11 +4,10 @@ namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -17,11 +16,11 @@ use Illuminate\Support\Str;
 // ordenar, eliminar (borra de verdad: no hay papelera) y auditoría.
 // Las reglas (máximo 10, archivo sin repetir, auditoría módulo PRODUCTOS) viven en inventarios.fn_producto_imagen_*
 // (database/sql/producto_imagenes_una_seccion.sql y producto_imagenes_sin_papelera.sql). La base guarda solo el nombre
-// del archivo; el archivo va en storage/app/pagina-web/productos/{pro_id}/ y se entrega por
+// del archivo; el archivo va en ecommerce/productos/{pro_id}/ (NAS o local) y se entrega por
 // api/public/pagina-web/imagenes/productos/{pro_id}/{nombre} (paginaWeb/ArchivosTiendaController::verImagenProducto).
 class ProductoImagenesController extends Controller
 {
-    private const CARPETA = 'pagina-web/productos';
+    private const CARPETA = ArchivosPaginaWeb::CARPETA . '/productos';
     private const IMAGEN_MAXIMO_KB = 2048;
 
     // Código que lanza la función PG -> mensaje para el usuario.
@@ -236,29 +235,21 @@ class ProductoImagenesController extends Controller
 
     // -----------------------------------------------------------------
 
-    // Guarda el archivo con un nombre de 40 letras y números + .webp en la carpeta del producto. null si falla.
+    // Guarda la imagen en ecommerce/productos/{pro_id}/ con un nombre de 40 letras y números + .webp.
+    // El disco lo decide crm.parametro 'NAS': true = NAS (FTP, raíz /crm), false = local. Las carpetas que falten se
+    // crean solas. Devuelve el nombre del archivo, o null si no se pudo guardar.
     private function guardarArchivo(Request $request, int $proId): ?string
     {
-        try {
-            $nombre = Str::random(40) . '.webp';
-            $request->file('imagen')->storeAs(self::CARPETA . '/' . $proId, $nombre, 'local');
+        // El disco (NAS o local) lo decide crm.parametro 'NAS' en ArchivosPaginaWeb::disco().
+        $nombre = Str::random(40) . '.webp';
 
-            return $nombre;
-        } catch (\Throwable $th) {
-            Log::error('No se pudo guardar la imagen del producto', ['pro_id' => $proId, 'error' => $th->getMessage()]);
-
-            return null;
-        }
+        return ArchivosPaginaWeb::guardar($request->file('imagen'), self::CARPETA . '/' . $proId, $nombre) ? $nombre : null;
     }
 
-    // Borra un archivo de la carpeta del producto (si no se puede, solo queda en el log: la base ya no lo usa).
+    // Borra un archivo de la carpeta del producto, del disco donde esté (si no se puede, solo queda en el log).
     private function borrarArchivo(int $proId, string $nombre): void
     {
-        try {
-            Storage::disk('local')->delete(self::CARPETA . '/' . $proId . '/' . basename($nombre));
-        } catch (\Throwable $th) {
-            Log::warning('No se pudo borrar la imagen del producto', ['pro_id' => $proId, 'archivo' => $nombre, 'error' => $th->getMessage()]);
-        }
+        ArchivosPaginaWeb::borrarRuta(self::CARPETA . '/' . $proId . '/' . basename($nombre));
     }
 
     // Dirección pública de una imagen (la misma que arma la base con inventarios.fn_producto_imagen_ruta).
