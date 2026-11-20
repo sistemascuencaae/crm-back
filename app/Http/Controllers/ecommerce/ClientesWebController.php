@@ -8,10 +8,12 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
-// Clientes de la tienda web (ecommerce.clientes_web) desde el CRM: listar, ver, activar / desactivar y desbloquear.
-// El CRM nunca ve ni cambia sus contraseñas. Las reglas viven en ecommerce.fn_cliente_web_*.
-// Reemplaza a paginaWeb/ClienteWebController.
+// Clientes de la tienda web (ecommerce.clientes_web) desde el CRM: listar, ver, activar / desactivar, desbloquear y
+// auditoría. El CRM nunca ve ni cambia sus contraseñas. Las reglas viven en ecommerce.fn_cliente_web_*
+// (database/sql/clientes_web.sql): validan, guardan y auditan (módulo CLIENTES_WEB). Cada escritura manda
+// {datos, auditoria} (estándar de Clientes).
 class ClientesWebController extends Controller
 {
     // Código que lanza la función PG -> mensaje para el usuario.
@@ -21,29 +23,28 @@ class ClientesWebController extends Controller
         'CLIENTE_NO_EXISTE' => 'La cuenta no existe.',
     ];
 
-    // GET pagina-web/clientes-web?busqueda=&pagina=1&tamanio=20   → {registros, total}
+    // GET ecommerce/listClientesWeb?busqueda=&pagina=1&tamanio=20   → {registros, total, pagina, tamanio}
     public function listar(Request $request)
     {
         try {
-            $filas = DB::select('SELECT * FROM ecommerce.fn_cliente_web_listar(?, ?, ?)', [
-                (string) $request->input('busqueda', ''),
-                (int) $request->input('pagina', 1),
-                (int) $request->input('tamanio', 20),
-            ]);
+            $pagina   = max((int) $request->query('pagina', 1), 1);
+            $tamanio  = min(max((int) $request->query('tamanio', 20), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
 
-            // El total no se repite en cada registro
-            $total = (int) ($filas[0]->total ?? 0);
-            foreach ($filas as $fila) {
-                unset($fila->total);
-            }
+            $registros = DB::select('SELECT * FROM ecommerce.fn_cliente_web_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Clientes', ['registros' => $filas, 'total' => $total]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Clientes listados con éxito', [
+                'registros' => $registros,
+                'total'     => (int) ($registros[0]->total_registros ?? 0),
+                'pagina'    => $pagina,
+                'tamanio'   => $tamanio,
+            ]));
         } catch (QueryException $e) {
             return $this->error($e, 'No se pudieron listar los clientes');
         }
     }
 
-    // GET pagina-web/clientes-web/{clwId}   (sin filas → code 404 en el cuerpo)
+    // GET ecommerce/getClienteWeb/{id}   (sin filas → code 404 en el cuerpo)
     public function buscar(int $clwId)
     {
         try {
@@ -59,40 +60,83 @@ class ClientesWebController extends Controller
         }
     }
 
-    // PUT pagina-web/clientes-web/{clwId}/activo   {activo: true | false}  (desactivar cierra sus sesiones)
-    // Otra cosa que no sea true / false llega como null → CAMPO_INVALIDO de la base
+    // POST ecommerce/activoClienteWeb/{id}   {activo: true | false}  (desactivar cierra sus sesiones)
+    // El valor va tal cual: si no es true / false, la base responde CAMPO_INVALIDO:clw_activo.
     public function cambiarActivo(Request $request, int $clwId)
     {
         try {
-            $activo = $request->input('activo');
-            DB::statement('SELECT ecommerce.fn_cliente_web_cambiar_activo(?, ?::boolean, ?)', [
-                $clwId, is_bool($activo) ? ($activo ? 'true' : 'false') : null, $this->usuario(),
-            ]);
+            $id = DB::selectOne('SELECT ecommerce.fn_cliente_web_cambiar_activo(?::jsonb) AS id', [json_encode([
+                'clw_id'     => $clwId,
+                'clw_activo' => $request->input('activo'),
+                'auditoria'  => $this->contextoAuditoriaForense($request),
+            ])])->id;
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Cliente guardado con éxito', ['clw_id' => $clwId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Cliente guardado con éxito', ['clw_id' => $id]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al guardar el cliente');
         }
     }
 
-    // PUT pagina-web/clientes-web/{clwId}/desbloquear
-    public function desbloquear(int $clwId)
+    // POST ecommerce/desbloquearClienteWeb/{id}
+    public function desbloquear(Request $request, int $clwId)
     {
         try {
-            DB::statement('SELECT ecommerce.fn_cliente_web_desbloquear(?, ?)', [$clwId, $this->usuario()]);
+            $id = DB::selectOne('SELECT ecommerce.fn_cliente_web_desbloquear(?::jsonb) AS id', [json_encode([
+                'clw_id'    => $clwId,
+                'auditoria' => $this->contextoAuditoriaForense($request),
+            ])])->id;
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Cliente desbloqueado', ['clw_id' => $clwId]));
+            return response()->json(RespuestaApi::returnResultado('success', 'Cliente desbloqueado', ['clw_id' => $id]));
         } catch (QueryException $e) {
             return $this->error($e, 'Error al desbloquear el cliente');
         }
     }
 
+    // GET ecommerce/clienteWebAuditoria?clw_id=&pagina=1&tamanio=10&busqueda=
+    // Resumen e historial paginado con la foto completa (sin la huella de la contraseña).
+    public function auditoria(Request $request)
+    {
+        try {
+            $clwId    = (int) $request->query('clw_id', 0);
+            $pagina   = max((int) $request->query('pagina', 1), 1);
+            $tamanio  = min(max((int) $request->query('tamanio', 10), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($clwId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Cliente no válido', null));
+            }
+
+            $resumen = DB::selectOne('SELECT * FROM ecommerce.fn_cliente_web_auditoria_resumen(?)', [$clwId]);
+            $eventos = DB::select('SELECT * FROM ecommerce.fn_cliente_web_auditoria_listar_paginacion(?, ?, ?, ?)', [$clwId, $pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total'   => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina'  => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (QueryException $e) {
+            return $this->error($e, 'No se pudo cargar la auditoría del cliente');
+        }
+    }
+
     // -----------------------------------------------------------------
 
-    // Usuario del CRM que hace el cambio (sin sesión → TypeError, igual que antes)
-    private function usuario(): int
+    // Contexto de auditoría (estándar de Clientes): el usuario del CRM que hace el cambio. Sin sesión, usuario_id va
+    // vacío y la base responde REQUIERE_USUARIO.
+    private function contextoAuditoriaForense(Request $request): array
     {
-        return auth()->id();
+        $u = auth('api')->user();
+
+        return [
+            'usuario_id'     => $u->id ?? null,
+            'usuario_login'  => $u->usu_alias ?? null,
+            'usuario_nombre' => $u ? trim(trim($u->surname ?? '') . ' ' . trim($u->name ?? '')) : null,
+            'ip_address'     => $request->ip(),
+            'user_agent'     => $request->userAgent(),
+            'request_id'     => (string) Str::uuid(),
+        ];
     }
 
     // Código conocido → su mensaje; si trae campo, data = {campo: mensaje} y el CRM lo pinta debajo del campo.

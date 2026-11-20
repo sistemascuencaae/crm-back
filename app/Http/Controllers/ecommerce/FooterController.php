@@ -117,7 +117,12 @@ class FooterController extends Controller
         'foo_derechos_color',
     ];
 
-    private const CAMPOS_COLUMNA = ['fco_id', 'fco_titulo', 'fco_ancho', 'fco_visible'];
+    private const CAMPOS_COLUMNA = [
+        'fco_id', 
+        'fco_titulo', 
+        'fco_ancho', 
+        'fco_visible'
+    ];
 
     private const CAMPOS_ELEMENTO = [
         'fel_id', 'fco_id', 'fel_padre_id', 'fel_tipo', 'fel_activo',

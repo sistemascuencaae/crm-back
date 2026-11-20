@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\paginaWeb\PreciosController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,6 +17,4 @@ use Illuminate\Support\Facades\Route;
 //     return view('welcome');
 // });
 
-Route::group(["prefix" => "ecommerce"], function ($router) {
-    Route::get('/alm_precios', [PreciosController::class, 'alm_precios']);
-});
+// (ecommerce/alm_precios se quitó: leía la vista vieja av_producto_tipoproducto_ecommerce_api, que ya no existe)

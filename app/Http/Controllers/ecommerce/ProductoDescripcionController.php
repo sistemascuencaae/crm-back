@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\inventarios;
+namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-// Descripción completa de un producto (Inventarios > Productos, botón "Descripción completa"): un documento con el
+// Descripción completa de un producto (Ecommerce > Contenido de productos; antes en Inventarios > Productos): un documento con el
 // editor de Documentos (títulos, colores, tablas, imágenes...) que la tienda muestra en el detalle del producto.
 // Una por producto, un CRUD sencillo sin auditoría: ver, crear, editar, eliminar, copiar (al clonar) y subir imágenes.
 // Las reglas viven en inventarios.fn_producto_descripcion_* (database/sql/producto_descripciones.sql,

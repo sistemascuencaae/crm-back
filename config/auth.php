@@ -77,9 +77,9 @@ return [
             'model' => App\Models\User::class,
         ],
 
+        // Lee al cliente con ecommerce.fn_cliente_web_perfil (App\Auth\ClientesWebProveedor), nunca de la tabla
         'clientes_web' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\paginaWeb\ClienteWeb::class,
+            'driver' => 'clientes_web_fn',
         ],
 
         // 'users' => [

@@ -5,8 +5,7 @@ namespace App\Http\Controllers\paginaWeb;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Models\mail\SendMailClienteWeb;
-use App\Models\paginaWeb\ClienteWeb;
-use App\Servicios\ValidacionCedulaRucService;
+use App\Auth\ClientesWebProveedor;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,9 +18,10 @@ use Illuminate\Support\Str;
 // Clientes de la tienda web (ecommerce.clientes_web), aparte de los usuarios del CRM.
 // Sin sesión: registro, ingreso, olvidé mi contraseña y los enlaces de los correos. Con sesión (middleware
 // cliente.sesion, que deja el perfil en el request): ver y cambiar la cuenta, contraseña, correo y salir.
-// Las reglas viven en ecommerce.fn_cliente_web_*; aquí solo se cifra y compara la contraseña (bcrypt: la base nunca la
+// Las reglas viven en ecommerce.fn_cliente_web_* (database/sql/clientes_web.sql): validaciones (también la cédula o el
+// RUC), guardado y auditoría (módulo CLIENTES_WEB). Aquí solo se cifra y compara la contraseña (bcrypt: la base nunca la
 // recibe en texto), se generan los tokens de los enlaces (a la base va solo su sha256), se mandan los correos y se
-// emiten los JWT del guard 'cliente'. Respuesta de siempre (RespuestaApi, HTTP 200); los errores llevan además
+// emiten los JWT del guard 'cliente'. Cada escritura manda {datos, auditoria} (estándar de Clientes). Respuesta de siempre (RespuestaApi, HTTP 200); los errores llevan además
 // 'codigo' y 'campo'. Cada ruta tiene su propio throttle (routes/api.php).
 // Reemplaza a ClienteWebPublicoController, ClienteWebCuentaController y al servicio de clientes web.
 class ClientesTiendaController extends Controller
@@ -91,19 +91,39 @@ class ClientesTiendaController extends Controller
         if ($error = $this->errorContrasena($request)) {
             return $this->errorCliente(...$error);
         }
-        if ($this->identificacionInvalida($request->input('clw_identificacion'))) {
-            return $this->errorCliente('IDENTIFICACION_INVALIDA', 'clw_identificacion');
-        }
 
         try {
             $datos = $request->only(self::CAMPOS_REGISTRO) + ['acepta_politica' => $request->boolean('acepta_politica')];
-            $clwId = DB::selectOne('SELECT ecommerce.fn_cliente_web_registrar(?::jsonb) AS id', [
-                $this->json($datos + ['clw_contrasena' => Hash::make($request->input('contrasena'))]),
-            ])->id;
+            // La cuenta y su primer ingreso van juntos: si algo falla no queda una cuenta a medias (que al reintentar
+            // diría "ya hay una cuenta con ese correo")
+            $clwId = DB::transaction(function () use ($request, $datos) {
+                $id = DB::selectOne('SELECT ecommerce.fn_cliente_web_registrar(?::jsonb) AS id', [
+                    $this->json($datos + [
+                        'clw_contrasena' => Hash::make($request->input('contrasena')),
+                        'auditoria'      => $this->auditoria($request, (object) [
+                            'clw_correo' => $request->input('clw_correo'),
+                            'clw_nombres' => $request->input('clw_nombres'),
+                            'clw_apellidos' => $request->input('clw_apellidos'),
+                        ]),
+                    ]),
+                ])->id;
+                DB::statement('SELECT ecommerce.fn_cliente_web_ingreso_exitoso(?)', [$id]);
+
+                return $id;
+            });
 
             $perfil = $this->perfilCliente($clwId);
-            $correo = $this->enviarEnlace($perfil, 'confirmar_correo');
-            DB::statement('SELECT ecommerce.fn_cliente_web_ingreso_exitoso(?)', [$clwId]);
+            // La cuenta ya está creada: si el enlace de confirmación falla, se responde igual con éxito y
+            // correo_enviado false (el cliente lo pide de nuevo con "reenviar confirmación")
+            try {
+                $correo = $this->enviarEnlace($perfil, 'confirmar_correo');
+            } catch (QueryException $e) {
+                Log::error('No se pudo crear el enlace de confirmación del cliente de la tienda', [
+                    'clw_id' => $clwId,
+                    'error'  => $e->getMessage(),
+                ]);
+                $correo = 'fallo';
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Cuenta creada con éxito',
                 $this->sesion($perfil, self::MINUTOS_SESION) + ['correo_enviado' => $correo === 'enviado']));
@@ -183,7 +203,11 @@ class ClientesTiendaController extends Controller
         try {
             $clwId = DB::transaction(function () use ($request) {
                 $enlace = $this->usarEnlace($request->input('token'), 'restablecer');
-                DB::statement('SELECT ecommerce.fn_cliente_web_restablecer_contrasena(?, ?)', [$enlace->clw_id, Hash::make($request->input('contrasena'))]);
+                DB::selectOne('SELECT ecommerce.fn_cliente_web_restablecer_contrasena(?::jsonb) AS id', [$this->json([
+                    'clw_id'         => $enlace->clw_id,
+                    'clw_contrasena' => Hash::make($request->input('contrasena')),
+                    'auditoria'      => $this->auditoria($request, $this->perfilCliente($enlace->clw_id)),
+                ])]);
 
                 return $enlace->clw_id;
             });
@@ -218,7 +242,10 @@ class ClientesTiendaController extends Controller
         try {
             DB::transaction(function () use ($request) {
                 $enlace = $this->usarEnlace($request->input('token'), 'confirmar_correo');
-                DB::statement('SELECT ecommerce.fn_cliente_web_confirmar_correo(?)', [$enlace->clw_id]);
+                DB::selectOne('SELECT ecommerce.fn_cliente_web_confirmar_correo(?::jsonb) AS id', [$this->json([
+                    'clw_id'    => $enlace->clw_id,
+                    'auditoria' => $this->auditoria($request, $this->perfilCliente($enlace->clw_id)),
+                ])]);
             });
 
             return response()->json(RespuestaApi::returnResultado('success', 'Tu correo quedó confirmado', null));
@@ -234,7 +261,11 @@ class ClientesTiendaController extends Controller
             [$antes, $correoNuevo] = DB::transaction(function () use ($request) {
                 $enlace = $this->usarEnlace($request->input('token'), 'cambiar_correo');
                 $antes  = $this->perfilCliente($enlace->clw_id);
-                DB::statement('SELECT ecommerce.fn_cliente_web_cambiar_correo(?, ?)', [$enlace->clw_id, $enlace->dato]);
+                DB::selectOne('SELECT ecommerce.fn_cliente_web_cambiar_correo(?::jsonb) AS id', [$this->json([
+                    'clw_id'     => $enlace->clw_id,
+                    'clw_correo' => $enlace->dato,
+                    'auditoria'  => $this->auditoria($request, $antes),
+                ])]);
 
                 return [$antes, $enlace->dato];
             });
@@ -260,13 +291,12 @@ class ClientesTiendaController extends Controller
     // PUT public/pagina-web/clientes/cuenta   (solo lo que cambia: clw_nombres, clw_apellidos, clw_telefono, clw_identificacion)
     public function modificar(Request $request)
     {
-        if ($request->has('clw_identificacion') && $this->identificacionInvalida($request->input('clw_identificacion'))) {
-            return $this->errorCliente('IDENTIFICACION_INVALIDA', 'clw_identificacion');
-        }
-
         try {
-            $clwId = $this->cliente($request)->clw_id;
-            DB::statement('SELECT ecommerce.fn_cliente_web_modificar_perfil(?, ?::jsonb)', [$clwId, $this->json($request->only(self::CAMPOS_MODIFICABLES))]);
+            $cliente = $this->cliente($request);
+            $clwId = $cliente->clw_id;
+            DB::selectOne('SELECT ecommerce.fn_cliente_web_modificar_perfil(?::jsonb) AS id', [$this->json(
+                $request->only(self::CAMPOS_MODIFICABLES) + ['clw_id' => $clwId, 'auditoria' => $this->auditoria($request, $cliente)]
+            )]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Tus datos se guardaron', $this->perfilPublico($this->perfilCliente($clwId))));
         } catch (QueryException $e) {
@@ -291,7 +321,11 @@ class ClientesTiendaController extends Controller
             $payload = auth('cliente')->payload();
             $minutos = (int) round(($payload->get('exp') - $payload->get('iat')) / 60);
 
-            DB::statement('SELECT ecommerce.fn_cliente_web_cambiar_contrasena(?, ?)', [$cliente->clw_id, Hash::make($request->input('contrasena'))]);
+            DB::selectOne('SELECT ecommerce.fn_cliente_web_cambiar_contrasena(?::jsonb) AS id', [$this->json([
+                'clw_id'         => $cliente->clw_id,
+                'clw_contrasena' => Hash::make($request->input('contrasena')),
+                'auditoria'      => $this->auditoria($request, $cliente),
+            ])]);
             $this->enviarAviso('aviso_contrasena', $cliente->clw_correo, $cliente);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Tu contraseña se cambió', $this->sesion($cliente, $minutos)));
@@ -366,12 +400,17 @@ class ClientesTiendaController extends Controller
         return null;
     }
 
-    // La identificación es opcional: vacía vale; si llega, debe ser una cédula o un RUC válidos
-    private function identificacionInvalida($identificacion): bool
+    // Contexto de auditoría (estándar de Clientes) de lo que hace el propio cliente: sin usuario del CRM; login = su correo
+    private function auditoria(Request $request, ?object $cliente): array
     {
-        $identificacion = trim((string) $identificacion);
-
-        return $identificacion !== '' && !ValidacionCedulaRucService::esIdentificacionValida($identificacion);
+        return [
+            'usuario_id'     => null,
+            'usuario_login'  => $cliente ? mb_strtolower(trim((string) ($cliente->clw_correo ?? ''))) : null,
+            'usuario_nombre' => $cliente ? trim(trim((string) ($cliente->clw_nombres ?? '')) . ' ' . trim((string) ($cliente->clw_apellidos ?? ''))) : null,
+            'ip_address'     => $request->ip(),
+            'user_agent'     => $request->userAgent(),
+            'request_id'     => (string) Str::uuid(),
+        ];
     }
 
     // {clw_id, clw_correo, clw_nombres, clw_apellidos, clw_telefono, clw_identificacion, correo_confirmado, sesiones_desde};
@@ -402,7 +441,7 @@ class ClientesTiendaController extends Controller
     private function sesion(object $perfil, int $minutos): array
     {
         return [
-            'token'   => auth('cliente')->setTTL($minutos)->login(ClienteWeb::find($perfil->clw_id)),
+            'token'   => auth('cliente')->setTTL($minutos)->login(ClientesWebProveedor::cliente((array) $perfil)),
             'minutos' => $minutos,
             'perfil'  => $this->perfilPublico($perfil),
         ];

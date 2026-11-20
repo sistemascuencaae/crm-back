@@ -47,10 +47,12 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/fm-limpiar-huerfanos.log'));
 
-        // Página web: renueva la caché de los productos publicados (dura 15 min), así ninguna visita paga la consulta del ERP
-        $schedule->command('pagina-web:renovar-publicados')
-            ->everyFiveMinutes()
-            ->withoutOverlapping();
+        // Carritos abandonados de la tienda (la base decide cuáles: invitado 30 días, cliente 90). Todos los días 03:30 AM.
+        $schedule->command('tienda:limpiar-carritos')
+            ->cron('30 3 * * *')
+            ->withoutOverlapping()
+            ->sendOutputTo(storage_path('logs/tienda-limpiar-carritos.log'));
+
         // Comandos de tiempo
             // ->hourly()
             // ->everyFiveMinutes()

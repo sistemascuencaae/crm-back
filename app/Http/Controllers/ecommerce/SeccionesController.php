@@ -240,19 +240,16 @@ class SeccionesController extends Controller
         }
     }
 
-    // Secciones de UNA página que están en la papelera -> ecommerce.fn_seccion_papelera_paginacion.
-    // GET ?pag_id=&pagina=&tamanio=&busqueda=
+    // Secciones en la papelera -> ecommerce.fn_seccion_papelera_paginacion. Sin pag_id: las de todas las páginas
+    // (la papelera única de Páginas). GET ?pag_id=&pagina=&tamanio=&busqueda=
     public function papelera(Request $request)
     {
         try {
             $pagId = (int) $request->query('pag_id', 0);
+            $pagId = $pagId > 0 ? $pagId : null;
             $pagina = max((int) $request->query('pagina', 1), 1);
             $tamanio = min(max((int) $request->query('tamanio', 20), 1), 100);
             $busqueda = trim((string) $request->query('busqueda', ''));
-
-            if ($pagId <= 0) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Página no válida', null));
-            }
 
             $registros = DB::select('SELECT * FROM ecommerce.fn_seccion_papelera_paginacion(?, ?, ?, ?)', [$pagId, $pagina, $tamanio, $busqueda]);
 

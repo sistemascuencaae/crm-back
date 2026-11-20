@@ -78,7 +78,16 @@ class SucursalesController extends Controller
     ];
 
     // Lo único que se acepta del formulario de la sucursal.
-    private const CAMPOS_PAYLOAD = ['sci_id', 'suc_nombre', 'suc_direccion', 'suc_horario', 'suc_telefono', 'suc_latitud', 'suc_longitud', 'suc_activo'];
+    private const CAMPOS_PAYLOAD = [
+        'sci_id', 
+        'suc_nombre', 
+        'suc_direccion', 
+        'suc_horario', 
+        'suc_telefono', 
+        'suc_latitud', 
+        'suc_longitud', 
+        'suc_activo'
+    ];
 
     public function __construct()
     {

@@ -92,7 +92,15 @@ class DocumentosController extends Controller
     ];
 
     // Lo único que se acepta del formulario del documento.
-    private const CAMPOS_PAYLOAD = ['doc_titulo', 'doc_ruta', 'doc_contenido', 'doc_pdf', 'doc_pdf_etiqueta', 'dca_id', 'doc_activo'];
+    private const CAMPOS_PAYLOAD = [
+        'doc_titulo', 
+        'doc_ruta', 
+        'doc_contenido', 
+        'doc_pdf', 
+        'doc_pdf_etiqueta', 
+        'dca_id', 
+        'doc_activo'
+    ];
 
     public function __construct(private LimpiadorDocumento $limpiador)
     {

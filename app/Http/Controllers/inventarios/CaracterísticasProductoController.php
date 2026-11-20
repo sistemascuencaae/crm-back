@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-// Características de los productos: la plantilla de cada categoría de tercer nivel y sus valores en cada producto.
-// Las reglas y la auditoría (auditoria.logs_cambios) viven en las funciones inventarios.fn_caracteristica_* y
-// inventarios.fn_producto_ficha_guardar, que también usa la pantalla de la tienda.
+// Características de los productos: la plantilla de cada categoría de tercer nivel. Las reglas y la auditoría
+// (auditoria.logs_cambios) viven en las funciones inventarios.fn_caracteristica_*. Los valores de cada producto (su
+// ficha) se llenan en Ecommerce > Contenido de productos (ecommerce/ContenidoProductosController).
 class CaracterísticasProductoController extends Controller
 {
     public function __construct()
@@ -36,16 +36,6 @@ class CaracterísticasProductoController extends Controller
         'CAMPO_LARGO:car_unidad' => 'La unidad no puede tener más de 15 caracteres.',
         'CAMPO_INVALIDO:car_tipo' => 'El tipo debe ser texto o número.',
         'CAMPO_INVALIDO:car_filtro_tienda' => 'El valor de "Filtro en la tienda" no es válido.',
-        // Valores de la ficha (inventarios.fn_producto_ficha_guardar)
-        'PRODUCTO_NO_EXISTE' => 'El producto no existe o está inactivo.',
-        'FICHA_INVALIDA' => 'Los datos de la ficha no tienen un formato válido.',
-        'FICHA_DESACTUALIZADA' => 'Las características de esta categoría cambiaron. Vuelva a abrir el producto.',
-        'CAMPO_NUMERO' => 'Escriba solo un número (por ejemplo 150 o 150.5).',
-        'SUELTA_REPETIDA' => 'Ese nombre ya está en la ficha.',
-        'SUELTAS_MAXIMO' => 'Se pueden agregar como máximo 20 datos sueltos.',
-        'CAMPO_REQUERIDO:sueltas' => 'Cada dato suelto necesita nombre y valor.',
-        'CAMPO_LARGO:sueltas' => 'El nombre de un dato suelto admite 60 caracteres y su valor 500.',
-        'CAMPO_LARGO:valores' => 'Un valor de la ficha admite máximo 500 caracteres.',
     ];
 
     private const NIVEL_TRANSACCIONAL = 3;
@@ -64,12 +54,6 @@ class CaracterísticasProductoController extends Controller
         'car_tipo', 
         'car_unidad',
         'car_filtro_tienda'
-    ];
-
-    private const CAMPOS_FICHA = [
-        'valores',
-        'sueltas',
-        'orden'
     ];
 
     private const REGLAS_COMUNES = [
@@ -316,56 +300,6 @@ class CaracterísticasProductoController extends Controller
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de la característica', $th->getMessage()));
-        }
-    }
-
-    // La ficha de un producto en su orden: las características de su categoría con sus valores, y sus datos sueltos.
-    // orden_propio: el producto tiene su propio orden; si no, va el de la categoría y después los datos sueltos.
-    public function fichaProducto($id)
-    {
-        try {
-            $ficha = DB::select('SELECT * FROM inventarios.fn_producto_ficha_ordenada(?)', [(int) $id]);
-            $ordenPropio = (bool) ($ficha[0]->orden_propio ?? false);
-
-            foreach ($ficha as $fila) {
-                unset($fila->orden_propio);
-            }
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Ficha cargada con éxito', ['ficha' => $ficha, 'orden_propio' => $ordenPropio]));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la ficha del producto', $th->getMessage()));
-        }
-    }
-
-    // {valores: {car_id: valor}, sueltas: [{nombre, valor}], orden: ['c:45', 's:Incluye']}. Un valor vacío lo borra;
-    // sueltas reemplaza todos los del producto; orden null vuelve al de la categoría y, si no viene, no se toca.
-    public function guardarFichaProducto(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'valores' => 'sometimes|array',
-            'sueltas' => 'sometimes|array',
-            'orden' => 'nullable|array',
-            'orden.*' => 'string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
-        }
-
-        $payload = $request->only(self::CAMPOS_FICHA);
-        $payload['pro_id'] = (int) $id;
-
-        // {} vacío llega a PHP como [] y se enviaría como arreglo: debe ir como objeto.
-        if (array_key_exists('valores', $payload)) {
-            $payload['valores'] = (object) $payload['valores'];
-        }
-
-        try {
-            $resultado = DB::selectOne('SELECT inventarios.fn_producto_ficha_guardar(?::jsonb) AS pro_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Ficha guardada con éxito', ['pro_id' => $resultado->pro_id]));
-        } catch (QueryException $e) {
-            return $this->errorTraducido($e, 'Error al guardar la ficha');
         }
     }
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\inventarios;
+namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-// Imágenes de un producto (Inventarios > Productos): un CRUD sencillo de UNA lista ordenada de hasta 10 imágenes. La
+// Imágenes de un producto (Ecommerce > Contenido de productos; antes en Inventarios > Productos): un CRUD sencillo de UNA lista ordenada de hasta 10 imágenes. La
 // tarjeta de la tienda muestra la 1.ª y la 2.ª; el detalle, todas. Listar, subir, editar (visible o reemplazar la foto),
 // ordenar, eliminar (borra de verdad: no hay papelera) y auditoría.
 // Las reglas (máximo 10, archivo sin repetir, auditoría módulo PRODUCTOS) viven en inventarios.fn_producto_imagen_*

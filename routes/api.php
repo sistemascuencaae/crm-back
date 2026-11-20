@@ -194,8 +194,9 @@ use App\Http\Controllers\contabilidad\EmisorController;
 use App\Http\Controllers\contabilidad\SistemaLiquidacionController;
 use App\Http\Controllers\inventarios\CaracterísticasProductoController;
 use App\Http\Controllers\inventarios\ProductoController;
-use App\Http\Controllers\inventarios\ProductoImagenesController;
-use App\Http\Controllers\inventarios\ProductoDescripcionController;
+use App\Http\Controllers\ecommerce\ProductoImagenesController;
+use App\Http\Controllers\ecommerce\ProductoDescripcionController;
+use App\Http\Controllers\ecommerce\ContenidoProductosController;
 use App\Http\Controllers\inventarios\TipoProductoController;
 use App\Http\Controllers\inventarios\MarcaController;
 use App\Http\Controllers\ecommerce\HeaderController;
@@ -209,9 +210,14 @@ use App\Http\Controllers\ecommerce\SucursalesController;
 use App\Http\Controllers\ServidorController;
 use App\Http\Controllers\formulario\EmpresaController;
 use App\Http\Controllers\ecommerce\ClientesWebController;
+use App\Http\Controllers\ecommerce\DecoracionesController;
+use App\Http\Controllers\paginaWeb\DecoracionesTiendaController;
+use App\Http\Controllers\ecommerce\ConfiguracionController;
+use App\Http\Controllers\paginaWeb\ConfiguracionTiendaController;
 use App\Http\Controllers\paginaWeb\ArchivosTiendaController;
 use App\Http\Controllers\paginaWeb\CategoriasTiendaController;
 use App\Http\Controllers\paginaWeb\ClientesTiendaController;
+use App\Http\Controllers\paginaWeb\CarritoTiendaController;
 use App\Http\Controllers\paginaWeb\DocumentosTiendaController;
 use App\Http\Controllers\paginaWeb\FooterTiendaController;
 use App\Http\Controllers\paginaWeb\HeaderTiendaController;
@@ -312,6 +318,19 @@ Route::prefix('public/pagina-web/clientes')->group(function () {
         Route::post('cambiar-correo', [ClientesTiendaController::class, 'cambiarCorreo']);
         Route::post('salir', [ClientesTiendaController::class, 'salir']);
     });
+});
+
+// PÁGINA WEB (tienda): carrito, con sesión de cliente (Bearer) o de invitado (cabecera X-Carrito). Sin token pasa como
+// invitado; con un token de cliente que no sirve responde SESION_VENCIDA. "unir" exige sesión.
+Route::prefix('public/pagina-web/carrito')->middleware('throttle:120,1,carrito')->group(function () {
+    Route::middleware('cliente.sesion:opcional')->group(function () {
+        Route::get('/', [CarritoTiendaController::class, 'ver']);
+        Route::delete('/', [CarritoTiendaController::class, 'vaciar']);
+        Route::post('lineas', [CarritoTiendaController::class, 'agregar']);
+        Route::put('lineas/{proId}', [CarritoTiendaController::class, 'cambiarCantidad'])->whereNumber('proId');
+        Route::delete('lineas/{proId}', [CarritoTiendaController::class, 'quitar'])->whereNumber('proId');
+    });
+    Route::post('unir', [CarritoTiendaController::class, 'unir'])->middleware('cliente.sesion');
 });
 Route::get('public/pagina-web/imagenes/{nombre}', [ArchivosTiendaController::class, 'verImagen'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
@@ -2162,20 +2181,6 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::post('/eliminarProducto/{id}', [ProductoController::class, 'eliminarProducto'])->whereNumber('id');
     Route::post('/restaurarProducto/{id}', [ProductoController::class, 'restaurarProducto'])->whereNumber('id');
     Route::get('/papeleraProductos', [ProductoController::class, 'papeleraProductos']);
-    // Imágenes del producto: una sola lista de hasta 10 (la tarjeta de la tienda muestra la 1.ª y la 2.ª; el detalle, todas).
-    Route::get('/productoImagenes', [ProductoImagenesController::class, 'listar']);
-    Route::post('/subirProductoImagen', [ProductoImagenesController::class, 'subir']);
-    Route::post('/editarProductoImagen/{id}', [ProductoImagenesController::class, 'editar'])->whereNumber('id');
-    Route::post('/ordenarProductoImagenes', [ProductoImagenesController::class, 'ordenar']);
-    Route::post('/eliminarProductoImagen/{id}', [ProductoImagenesController::class, 'eliminar'])->whereNumber('id');
-    Route::get('/productoImagenesAuditoria', [ProductoImagenesController::class, 'auditoria']);
-    // Descripción completa del producto (documento para el detalle de la tienda).
-    Route::get('/productoDescripcion/{id}', [ProductoDescripcionController::class, 'ver'])->whereNumber('id');
-    Route::post('/crearProductoDescripcion/{id}', [ProductoDescripcionController::class, 'crear'])->whereNumber('id');
-    Route::post('/editarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'editar'])->whereNumber('id');
-    Route::post('/eliminarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'eliminar'])->whereNumber('id');
-    Route::post('/subirProductoDescripcionImagen/{id}', [ProductoDescripcionController::class, 'subirImagen'])->whereNumber('id');
-    Route::post('/copiarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'copiar'])->whereNumber('id');
     // Características: la plantilla de cada categoría de tercer nivel y sus valores en cada producto.
     Route::get('/arbolTiposCaracteristicas', [CaracterísticasProductoController::class, 'arbolTiposProducto']);
     Route::get('/listCaracteristicas', [CaracterísticasProductoController::class, 'listCaracteristicas']);
@@ -2189,8 +2194,6 @@ Route::group(["prefix" => "inventarios", 'middleware' => ['jwt.auth', 'usuario.a
     Route::post('/restaurarCaracteristica/{id}', [CaracterísticasProductoController::class, 'restaurarCaracteristica'])->whereNumber('id');
     Route::post('/vaciarCaracteristicas', [CaracterísticasProductoController::class, 'vaciarCaracteristicas']);
     Route::get('/caracteristicaAuditoria', [CaracterísticasProductoController::class, 'caracteristicaAuditoria']);
-    Route::get('/fichaProducto/{id}', [CaracterísticasProductoController::class, 'fichaProducto'])->whereNumber('id');
-    Route::post('/fichaProducto/{id}', [CaracterísticasProductoController::class, 'guardarFichaProducto'])->whereNumber('id');
     // Tipos de producto: reemplaza a la pantalla de Dynamo.
     Route::post('/crearTipoProducto', [TipoProductoController::class, 'crearTipoProducto']);
     Route::post('/clonarTipoProducto/{tprId}', [TipoProductoController::class, 'clonarTipoProducto'])->whereNumber('tprId');
@@ -2324,6 +2327,52 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::post('/restaurarCiudadSucursales/{id}', [SucursalesController::class, 'restaurarCiudad'])->whereNumber('id');
     Route::post('/ordenarCiudadesSucursales', [SucursalesController::class, 'ordenarCiudades']);
     Route::get('/ciudadSucursalesAuditoria', [SucursalesController::class, 'ciudadAuditoria']);
+
+    // Clientes web: las cuentas de la tienda (el CRM nunca ve ni cambia sus contraseñas)
+    Route::get('/listClientesWeb', [ClientesWebController::class, 'listar']);
+    Route::get('/getClienteWeb/{id}', [ClientesWebController::class, 'buscar'])->whereNumber('id');
+    Route::post('/activoClienteWeb/{id}', [ClientesWebController::class, 'cambiarActivo'])->whereNumber('id');
+    Route::post('/desbloquearClienteWeb/{id}', [ClientesWebController::class, 'desbloquear'])->whereNumber('id');
+    Route::get('/clienteWebAuditoria', [ClientesWebController::class, 'auditoria']);
+
+    // Decoraciones de temporada del inicio de la tienda (nieve, confeti, corazones)
+    Route::get('/listDecoraciones', [DecoracionesController::class, 'listar']);
+    Route::get('/catalogosDecoraciones', [DecoracionesController::class, 'catalogos']);
+    Route::post('/crearDecoracion', [DecoracionesController::class, 'crear']);
+    Route::post('/editarDecoracion/{id}', [DecoracionesController::class, 'editar'])->whereNumber('id');
+    Route::post('/eliminarDecoracion/{id}', [DecoracionesController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarDecoracion/{id}', [DecoracionesController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraDecoraciones', [DecoracionesController::class, 'papelera']);
+    Route::get('/decoracionAuditoria', [DecoracionesController::class, 'auditoria']);
+
+    // Contenido de productos: imágenes, ficha y descripción completa de los productos con stock vendible (antes en
+    // Inventarios > Productos)
+    Route::get('/contenidoProductosFaltas', [ContenidoProductosController::class, 'faltas']);
+    Route::get('/contenidoProductosArbol', [ContenidoProductosController::class, 'arbol']);
+    Route::get('/listContenidoProductos', [ContenidoProductosController::class, 'listar']);
+    Route::get('/fichaProducto/{id}', [ContenidoProductosController::class, 'fichaProducto'])->whereNumber('id');
+    Route::post('/fichaProducto/{id}', [ContenidoProductosController::class, 'guardarFichaProducto'])->whereNumber('id');
+    // Imágenes del producto: una sola lista de hasta 10 (la tarjeta de la tienda muestra la 1.ª y la 2.ª; el detalle, todas).
+    Route::get('/productoImagenes', [ProductoImagenesController::class, 'listar']);
+    Route::post('/subirProductoImagen', [ProductoImagenesController::class, 'subir']);
+    Route::post('/editarProductoImagen/{id}', [ProductoImagenesController::class, 'editar'])->whereNumber('id');
+    Route::post('/ordenarProductoImagenes', [ProductoImagenesController::class, 'ordenar']);
+    Route::post('/eliminarProductoImagen/{id}', [ProductoImagenesController::class, 'eliminar'])->whereNumber('id');
+    Route::get('/productoImagenesAuditoria', [ProductoImagenesController::class, 'auditoria']);
+    // Descripción completa del producto (documento para el detalle de la tienda).
+    Route::get('/productoDescripcion/{id}', [ProductoDescripcionController::class, 'ver'])->whereNumber('id');
+    Route::post('/crearProductoDescripcion/{id}', [ProductoDescripcionController::class, 'crear'])->whereNumber('id');
+    Route::post('/editarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'editar'])->whereNumber('id');
+    Route::post('/eliminarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/subirProductoDescripcionImagen/{id}', [ProductoDescripcionController::class, 'subirImagen'])->whereNumber('id');
+    Route::post('/copiarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'copiar'])->whereNumber('id');
+
+    // Configuración de la tienda (una sola fila): número de WhatsApp
+    Route::get('/configuracionTienda', [ConfiguracionController::class, 'ver']);
+    Route::post('/editarConfiguracionTienda', [ConfiguracionController::class, 'editar']);
+    Route::post('/subirImagenVentanaTienda', [ConfiguracionController::class, 'subirImagenVentana']);
+    Route::post('/subirVideoIntroTienda', [ConfiguracionController::class, 'subirVideoIntro']);
+    Route::get('/configuracionTiendaAuditoria', [ConfiguracionController::class, 'auditoria']);
 });
 // Productos de la tienda: listado de /shop (con el panel de filtros), sugerencias del buscador y detalle. Públicos.
 Route::get('public/productos', [ProductosTiendaController::class, 'listar']);
@@ -2331,6 +2380,11 @@ Route::get('public/productos/sugerencias', [ProductosTiendaController::class, 's
 Route::get('public/productos/{proId}', [ProductosTiendaController::class, 'detalle'])->whereNumber('proId');
 // Nuestras tiendas: ciudades y sucursales activas. Público, lo pide la tienda (/tiendas).
 Route::get('public/sucursales/tienda', [SucursalesTiendaController::class, 'tienda']);
+// Decoración de temporada que toca hoy en el inicio de la tienda (o null). Público.
+Route::get('public/decoraciones/hoy', [DecoracionesTiendaController::class, 'hoy']);
+// Configuración de la tienda (número de WhatsApp). Público.
+Route::get('public/configuracion/tienda', [ConfiguracionTiendaController::class, 'tienda']);
+Route::get('public/configuracion/archivos/{nombre}', [ConfiguracionTiendaController::class, 'verArchivo'])->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png|mp4)');
 // Header de la tienda e imágenes de los headers (el logo): públicas, las pide la tienda.
 Route::get('public/headers/tienda', [HeaderTiendaController::class, 'tienda']);
 Route::get('public/headers/imagenes/{nombre}', [HeaderTiendaController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
@@ -2349,20 +2403,3 @@ Route::get('public/documentos/imagenes/{nombre}', [DocumentosTiendaController::c
 Route::get('public/documentos/pdf/{nombre}', [DocumentosTiendaController::class, 'verPdf'])->where('nombre', '[A-Za-z0-9]{40}\.pdf');
 Route::get('public/documentos/{ruta}', [DocumentosTiendaController::class, 'publico'])->where('ruta', '[a-z0-9]+(-[a-z0-9]+)*');
 
-// PÁGINA WEB: administración del contenido de la tienda desde el CRM (el header y el footer están en ECOMMERCE)
-Route::group(["prefix" => "pagina-web", 'middleware' => ['jwt.auth', 'usuario.activo', 'verificar.version']], function ($router) {
-
-    // Categorías destacadas en la página web
-
-    // Secciones de la página de inicio
-
-    // Bloques destacados del inicio
-
-    // Clientes de la tienda (el CRM nunca ve ni cambia sus contraseñas)
-    Route::get('clientes-web', [ClientesWebController::class, 'listar']);
-    Route::get('clientes-web/{clwId}', [ClientesWebController::class, 'buscar'])->whereNumber('clwId');
-    Route::put('clientes-web/{clwId}/activo', [ClientesWebController::class, 'cambiarActivo'])->whereNumber('clwId');
-    Route::put('clientes-web/{clwId}/desbloquear', [ClientesWebController::class, 'desbloquear'])->whereNumber('clwId');
-
-
-});
