@@ -79,8 +79,6 @@ class FooterController extends Controller
         'DESTINO_INVALIDO' => 'El destino no es válido: elíjalo de la lista (las direcciones web empiezan con https://).',
         'DESTINO_NO_EXISTE' => 'El destino ya no existe o está en la papelera: elija otro.',
         'CARPETA_NO_PRINCIPAL' => 'Solo se pueden enlazar carpetas de primer nivel.',
-        // Los íconos (redes y logos) siguen con su dirección escrita.
-        'ENLACE_INVALIDO' => 'La dirección de un ícono debe empezar con https://, mailto: o tel: (o ser una ruta de la tienda), de hasta 250 caracteres.',
         'ICONO_INVALIDO' => 'El ícono no es válido.',
         'IMAGEN_INVALIDA' => 'La imagen debe ser una subida desde el CRM.',
         'REQUIERE_IMAGEN' => 'Suba una imagen.',
@@ -91,7 +89,7 @@ class FooterController extends Controller
         'ICONO_REPETIDO' => 'Un ícono se envió dos veces.',
         'RED_INVALIDA' => 'La red social no es válida.',
         'REQUIERE_RED' => 'Elija la red social de cada ícono.',
-        'REQUIERE_ENLACE_RED' => 'Cada red social necesita su dirección.',
+        'REQUIERE_ENLACE_RED' => 'Cada red social necesita su destino.',
         'ux_footers_nombre' => 'Ya existe un footer con ese nombre.',
         'ux_footers_predeterminado' => 'Otro usuario cambió el footer predeterminado al mismo tiempo. Intente de nuevo.',
     ];
