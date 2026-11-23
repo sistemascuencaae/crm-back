@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\paginaWeb\PaginasTiendaController;
 use App\Http\Resources\RespuestaApi;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -128,6 +129,8 @@ class PaginasController extends Controller
             // El bloque 'auditoria' va dentro del jsonb: la función lo usa para la auditoría forense y para el usu_id.
             $resultado = DB::selectOne('SELECT ecommerce.fn_pagina_add(?::jsonb) AS pag_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
+            PaginasTiendaController::limpiarCache();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Página creada con éxito', ['pag_id' => $resultado->pag_id]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al crear la página');
@@ -154,6 +157,8 @@ class PaginasController extends Controller
 
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_pagina_edit(?::jsonb) AS pag_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            PaginasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Página modificada con éxito', ['pag_id' => $resultado->pag_id]));
         } catch (QueryException $e) {
@@ -186,6 +191,8 @@ class PaginasController extends Controller
             // En su propio bloque (como las altas de SeccionesController): si falla, se deshace antes de armar el mensaje.
             $resultado = DB::transaction(fn() => DB::selectOne('SELECT ecommerce.fn_pagina_clonar(?::jsonb) AS pag_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]));
 
+            PaginasTiendaController::limpiarCache();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Página clonada con éxito', ['pag_id' => $resultado->pag_id]));
         } catch (QueryException $e) {
             // Al copiar, cada sección se revalida: sus errores (contenido que ya no existe...) los explica SeccionesController.
@@ -198,6 +205,8 @@ class PaginasController extends Controller
     {
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_pagina_papelera(?::jsonb) AS pag_id', [json_encode(['pag_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            PaginasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Página enviada a la papelera', ['pag_id' => $resultado->pag_id]));
         } catch (QueryException $e) {
@@ -219,6 +228,8 @@ class PaginasController extends Controller
                 'pag_id' => $id, 'pag_inicio' => $request->boolean('pag_inicio'), 'auditoria' => $this->contextoAuditoriaForense($request),
             ])]);
 
+            PaginasTiendaController::limpiarCache();
+
             return response()->json(RespuestaApi::returnResultado('success',
                 $request->boolean('pag_inicio') ? 'Ahora es la página de inicio de la tienda' : 'Ya no es la página de inicio',
                 ['pag_id' => $resultado->pag_id]));
@@ -232,6 +243,8 @@ class PaginasController extends Controller
     {
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_pagina_restaurar(?::jsonb) AS pag_id', [json_encode(['pag_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            PaginasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Página restaurada con éxito', ['pag_id' => $resultado->pag_id]));
         } catch (QueryException $e) {

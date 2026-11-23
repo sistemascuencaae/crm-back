@@ -5,6 +5,7 @@ namespace App\Http\Controllers\inventarios;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Controllers\paginaWeb\CategoriasTiendaController;
+use App\Http\Controllers\paginaWeb\ProductosTiendaController;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -238,6 +239,7 @@ class ProductoController extends Controller
             $resultado = DB::selectOne('SELECT crm.fn_producto_registrar(?::jsonb) AS pro_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             CategoriasTiendaController::limpiarCache();
+            ProductosTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto creado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {
@@ -263,6 +265,7 @@ class ProductoController extends Controller
             $resultado = DB::selectOne('SELECT crm.fn_producto_clonar(?::jsonb) AS pro_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             CategoriasTiendaController::limpiarCache();
+            ProductosTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto clonado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {
@@ -288,6 +291,7 @@ class ProductoController extends Controller
 
             // El menú de la tienda (categorías con productos) va en caché.
             CategoriasTiendaController::limpiarCache();
+            ProductosTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto modificado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {
@@ -321,6 +325,7 @@ class ProductoController extends Controller
 
             // El menú de la tienda (categorías con productos) va en caché.
             CategoriasTiendaController::limpiarCache();
+            ProductosTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto actualizado', ['pro_id' => $id]));
         } catch (QueryException $e) {
@@ -363,6 +368,7 @@ class ProductoController extends Controller
             $resultado = DB::selectOne('SELECT crm.fn_producto_papelera(?::jsonb) AS pro_id', [json_encode(['pro_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             CategoriasTiendaController::limpiarCache();
+            ProductosTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto enviado a la papelera', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {
@@ -376,6 +382,7 @@ class ProductoController extends Controller
             $resultado = DB::selectOne('SELECT crm.fn_producto_restaurar(?::jsonb) AS pro_id', [json_encode(['pro_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             CategoriasTiendaController::limpiarCache();
+            ProductosTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto restaurado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {

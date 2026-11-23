@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\paginaWeb\PaginasTiendaController;
+use App\Http\Controllers\paginaWeb\ProductosTiendaController;
 use App\Http\Resources\RespuestaApi;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -195,6 +197,9 @@ class GrupoProductosController extends Controller
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_grupo_producto_edit(?::jsonb) AS gpr_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
+            PaginasTiendaController::limpiarCache();
+            ProductosTiendaController::limpiarCache();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Grupo modificado con éxito', ['gpr_id' => $resultado->gpr_id]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al modificar el grupo');
@@ -236,6 +241,9 @@ class GrupoProductosController extends Controller
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_grupo_producto_papelera(?::jsonb) AS gpr_id', [json_encode(['gpr_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
 
+            PaginasTiendaController::limpiarCache();
+            ProductosTiendaController::limpiarCache();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Grupo enviado a la papelera', ['gpr_id' => $resultado->gpr_id]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al eliminar el grupo');
@@ -247,6 +255,9 @@ class GrupoProductosController extends Controller
     {
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_grupo_producto_restaurar(?::jsonb) AS gpr_id', [json_encode(['gpr_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            PaginasTiendaController::limpiarCache();
+            ProductosTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Grupo restaurado con éxito', ['gpr_id' => $resultado->gpr_id]));
         } catch (QueryException $e) {
