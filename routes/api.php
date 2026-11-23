@@ -2099,6 +2099,8 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::get('/listProformas', [CproformaController::class, 'listProformas']);
     Route::get('/getCotizacion/{id}', [CproformaController::class, 'getCotizacion']);
     Route::get('/listProformasCaso/{casoId}', [CproformaController::class, 'listProformasCaso']);
+    // 23-nov: las novedades de la última proforma del caso (botón «NOVEDADES PROFORMA»; el caso ya no trae el texto).
+    Route::get('/novedadesProformaCaso/{casoId}', [CproformaController::class, 'novedadesProformaCaso'])->where('casoId', '[0-9]+');
     // Contado: las formas de pago de contado con sus reglas (25-oct: las tarjetas pasaron a Tarjetas y comisiones).
     // 11-nov-2026 (Fase 6): Contado (V07) al estándar: ContadoParametrosController (las formas de pago con sus reglas, que
     // se guardan juntas con un solo Guardar).

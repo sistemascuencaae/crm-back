@@ -93,6 +93,12 @@ class Caso extends Model
         'tiene_novedad' => 'boolean',
     ];
 
+    // 23-nov: el texto de las novedades no viaja con el caso (tablero, getCaso, websocket): pesa. Solo lo entrega
+    // CproformaController@novedadesProformaCaso, cuando el usuario pulsa «NOVEDADES PROFORMA».
+    protected $hidden = [
+        'texto_novedad',
+    ];
+
     public function userCreador()
     {
         return $this->belongsTo(User::class, "user_creador_id", "id");
