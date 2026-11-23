@@ -232,6 +232,8 @@ use App\Http\Controllers\paginaWeb\PaginasTiendaController;
 use App\Http\Controllers\paginaWeb\ProductosTiendaController;
 use App\Http\Controllers\paginaWeb\SucursalesTiendaController;
 use App\Http\Controllers\ItemPruebaFlutterController;
+use App\Http\Controllers\paginaWeb\CreditoController;
+use App\Http\Controllers\formulario\SolicitudesCreditosWebController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -290,6 +292,15 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // FORMULARIO INSTITUCIONAL (/formulario): combo de empresas
     Route::get('/listAllEmpresas', [EmpresaController::class, 'listAllEmpresas'])->middleware('throttle:60,1,formulario');
+});
+
+// FORMULARIO INSTITUCIONAL (/formulario), migrado de ecommerce-back con las mismas rutas.
+// Mismo límite que tenía allá (60/min por IP); el prefijo evita compartir el contador con el STS.
+Route::group(["prefix" => "ecommerce", "middleware" => "throttle:60,1,formulario"], function ($router) {
+    // La lupa consulta Ecuador Legal / SRI: 10 por minuto por IP
+    Route::post('/buscarCliente', [CreditoController::class, 'buscarCliente'])->middleware('throttle:10,1,formulario-lupa');
+    Route::post('/enviarCliente', [CreditoController::class, 'enviarCliente']); // antes crearCaso: ya no crea caso
+    Route::get('/autorizarTratamientoDatos/{empresa}/{id}', [SolicitudesCreditosWebController::class, 'autorizarTratamientoDatos']); // link del correo
 });
 
 
