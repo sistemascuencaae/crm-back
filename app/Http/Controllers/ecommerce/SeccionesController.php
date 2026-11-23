@@ -389,6 +389,20 @@ class SeccionesController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
+        // Medida exacta de la lista (pco_imagen_ancho × pco_imagen_alto; ej. los logos de la Cinta de marcas, 125 × 70).
+        // La decide la base; sin medida, cualquiera.
+        // (?? null: con el SQL sin aplicar la función no trae estas columnas.)
+        if (($contenido->pco_imagen_ancho ?? null) && ($contenido->pco_imagen_alto ?? null)) {
+            $medida = @getimagesize($request->file('imagen')->getRealPath());
+            $ancho = (int) $contenido->pco_imagen_ancho;
+            $alto = (int) $contenido->pco_imagen_alto;
+            if (!$medida || (int) $medida[0] !== $ancho || (int) $medida[1] !== $alto) {
+                $tiene = $medida ? " (esta mide {$medida[0]} × {$medida[1]} px)" : '';
+                return response()->json(RespuestaApi::returnResultado('error',
+                    "La imagen tiene que medir exactamente {$ancho} × {$alto} px{$tiene} ({$contenido->pco_etiqueta}).", null));
+            }
+        }
+
         // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
         $nombre = Str::random(40) . '.webp';
         if (!ArchivosPaginaWeb::guardar($request->file('imagen'), self::CARPETA_IMAGENES, $nombre)) {
