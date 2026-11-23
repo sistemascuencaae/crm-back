@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\paginaWeb\HeaderTiendaController;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -19,33 +19,16 @@ class HeaderController extends Controller
 {
     public function __construct()
     {
-        // verImagen y tienda son públicas: la tienda las pide sin sesión.
-        $this->middleware('auth:api')->except(['verImagen', 'tienda']);
+        // Lo público (el header de la tienda y sus imágenes) está en paginaWeb/HeaderTiendaController.
+        $this->middleware('auth:api');
     }
 
-    // Imágenes de los headers (el logo): carpeta privada storage/app/headers; la tienda y el CRM las piden por
+    // Imágenes de los headers (el logo): carpeta ecommerce/headers (NAS o local); la tienda y el CRM las piden por
     // api/public/headers/imagenes/{nombre}. Nombre aleatorio de 40 letras y números + .webp (nunca cambia de contenido).
-    private const CARPETA_IMAGENES = 'headers';
-    private const NOMBRE_IMAGEN = '/^[A-Za-z0-9]{40}\.webp$/';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/headers';
     // La dirección que se guarda en hbl_imagen: solo una imagen subida aquí.
     private const RUTA_IMAGEN = '#/api/public/headers/imagenes/[A-Za-z0-9]{40}\.webp$#';
 
-    // Lo que lee la tienda (tienda()): se guarda 60 s; cada cambio guardado en el CRM lo borra. Los 60 s cubren el
-    // cambio de header por fechas (empieza o termina una campaña) sin que nadie guarde nada.
-    private const CACHE_TIENDA = 'ecommerce.header_tienda';
-    private const SEGUNDOS_CACHE_TIENDA = 60;
-
-    // Solo esto sale a la tienda (sin usuarios, fechas de auditoría ni papelera).
-    private const TIENDA_HEADER = ['hea_fuente', 'hea_fijo', 'hea_superior_visible', 'hea_superior_fondo', 'hea_superior_borde',
-        'hea_media_fondo', 'hea_inferior_visible', 'hea_inferior_fondo', 'hea_inferior_contorno'];
-    private const TIENDA_BLOQUE = ['hbl_tipo', 'hbl_franja', 'hbl_orden', 'hbl_imagen', 'hbl_imagen_alt', 'hbl_ancho', 'hbl_enlace',
-        'hbl_nueva_pestana', 'hbl_color_fondo', 'hbl_color_contorno', 'hbl_color_efecto', 'hbl_color_texto_efecto', 'hbl_color_foco',
-        'hbl_redondeo', 'hbl_icono', 'hbl_color_icono', 'hbl_color_fondo_icono', 'hbl_panel_fondo', 'hbl_panel_contorno',
-        'hbl_panel_efecto', 'hbl_contador_fondo', 'hbl_contador_texto', 'hbl_segundos'];
-    private const TIENDA_TEXTO = ['htx_clave', 'htx_texto', 'htx_negrita', 'htx_cursiva', 'htx_mayusculas', 'htx_color', 'htx_tamano',
-        'htx_resaltado'];
-    private const TIENDA_ENLACE = ['hen_texto', 'hen_enlace', 'hen_nueva_pestana', 'hen_icono', 'hen_color_icono', 'hen_negrita',
-        'hen_cursiva', 'hen_mayusculas', 'hen_color', 'hen_tamano', 'hen_resaltado'];
 
     // Mensaje amigable para cada excepción que puede lanzar ecommerce.fn_header_add (y sus validaciones).
     // Los dos últimos son los índices únicos: cubren dos altas al mismo tiempo que pasaron las validaciones.
@@ -71,7 +54,9 @@ class HeaderController extends Controller
         'REDONDEO_INVALIDO' => 'El redondeo debe estar entre 0 y 50 px.',
         'ANCHO_INVALIDO' => 'El ancho del logo debe estar entre 40 y 400 px.',
         'SEGUNDOS_INVALIDOS' => 'Las frases del buscador deben cambiar cada 2 a 30 segundos.',
-        'ENLACE_INVALIDO' => 'El destino debe ser una ruta de la tienda (empieza con /) o una dirección http(s), de hasta 250 caracteres.',
+        'DESTINO_INVALIDO' => 'Uno de los destinos no es válido: elíjalo de la lista (las direcciones web empiezan con https://).',
+        'DESTINO_NO_EXISTE' => 'Uno de los destinos ya no existe o está en la papelera: elija otro.',
+        'CARPETA_NO_PRINCIPAL' => 'Solo se pueden enlazar carpetas de primer nivel.',
         'ICONO_INVALIDO' => 'El ícono no es válido.',
         'TEXTOS_INVALIDOS' => 'Los textos enviados no son válidos.',
         'TEXTO_CLAVE_INVALIDA' => 'Uno de los textos no corresponde a esta parte del header.',
@@ -86,7 +71,7 @@ class HeaderController extends Controller
         'SUBLINKS_NIVEL' => 'Los sublinks no pueden tener sublinks.',
         'ENLACE_NO_EXISTE' => 'Uno de los links no existe o ya no pertenece a esta barra.',
         'ENLACE_REPETIDO' => 'Un link se envió dos veces.',
-        'REQUIERE_ENLACE' => 'Cada sublink, y cada link sin sublinks, necesita un destino.',
+        'REQUIERE_ENLACE' => 'Cada sublink, y cada link sin sublinks, necesita un destino (a dónde lleva).',
         'FRANJA_INVALIDA' => 'La franja no es válida.',
         'ORDEN_INVALIDO' => 'El orden debe traer exactamente las partes de esa franja, sin repetir.',
         'ux_headers_nombre' => 'Ya existe un header con ese nombre.',
@@ -132,7 +117,7 @@ class HeaderController extends Controller
         'hbl_imagen',
         'hbl_imagen_alt',
         'hbl_ancho',
-        'hbl_enlace',
+        'hbl_destino',
         'hbl_nueva_pestana',
         'hbl_color_fondo',
         'hbl_color_contorno',
@@ -188,17 +173,11 @@ class HeaderController extends Controller
             // auditoría forense y para el usu_id de las filas, y NO lo guarda como dato del header.
             $resultado = DB::selectOne('SELECT ecommerce.fn_header_add(?::jsonb) AS hea_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
-            Cache::forget(self::CACHE_TIENDA);
+            HeaderTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Header creado con éxito', ['hea_id' => $resultado->hea_id]));
         } catch (QueryException $e) {
-            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-                if (strpos($e->getMessage(), $codigo) !== false) {
-                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
-                }
-            }
-
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al crear el header', $e->getMessage()));
+            return $this->errorTraducido($e, 'Error al crear el header');
         }
     }
 
@@ -237,17 +216,11 @@ class HeaderController extends Controller
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_header_edit(?::jsonb) AS hea_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
-            Cache::forget(self::CACHE_TIENDA);
+            HeaderTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Header modificado con éxito', ['hea_id' => $resultado->hea_id]));
         } catch (QueryException $e) {
-            foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-                if (strpos($e->getMessage(), $codigo) !== false) {
-                    return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
-                }
-            }
-
-            return response()->json(RespuestaApi::returnResultado('error', 'Error al modificar el header', $e->getMessage()));
+            return $this->errorTraducido($e, 'Error al modificar el header');
         }
     }
 
@@ -271,6 +244,9 @@ class HeaderController extends Controller
             'hbl_ancho' => 'nullable|integer',
             'hbl_redondeo' => 'nullable|integer',
             'hbl_segundos' => 'nullable|integer',
+            'hbl_destino' => 'nullable|array',
+            'enlaces.*.hen_destino' => 'nullable|array',
+            'enlaces.*.sublinks.*.hen_destino' => 'nullable|array',
             'textos' => 'sometimes|array',
             'textos.*.htx_clave' => 'required|string|max:15',
             'enlaces' => 'sometimes|array|max:8',
@@ -289,7 +265,7 @@ class HeaderController extends Controller
         try {
             $resultado = DB::selectOne("SELECT {$funcion}(?::jsonb) AS hea_id", [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
-            Cache::forget(self::CACHE_TIENDA);
+            HeaderTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Parte del header modificada con éxito', ['hea_id' => $resultado->hea_id]));
         } catch (QueryException $e) {
@@ -315,7 +291,7 @@ class HeaderController extends Controller
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_header_edit_orden(?::jsonb) AS hea_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
-            Cache::forget(self::CACHE_TIENDA);
+            HeaderTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', ['hea_id' => $resultado->hea_id]));
         } catch (QueryException $e) {
@@ -323,7 +299,6 @@ class HeaderController extends Controller
         }
     }
 
-    // Mensaje de MENSAJES_ERROR para el código que lanzó la función PG; si no hay, el genérico con el detalle.
     // Sube una imagen del header (el logo): solo WebP de verdad (mimetypes mira el contenido, no la extensión: un PNG
     // renombrado a .webp no pasa) y hasta 2 MB. Devuelve la dirección para ponerla en hbl_imagen; se publica al guardar.
     public function subirImagen(Request $request)
@@ -341,103 +316,26 @@ class HeaderController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        try {
-            $nombre = Str::random(40) . '.webp';
-            $request->file('imagen')->storeAs(self::CARPETA_IMAGENES, $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
-                'url' => url('api/public/headers/imagenes/' . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir la imagen del header', ['error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $nombre = Str::random(40) . '.webp';
+        if (!ArchivosPaginaWeb::guardar($request->file('imagen'), self::CARPETA_IMAGENES, $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
         }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
+            'url' => url('api/public/headers/imagenes/' . $nombre),
+        ]));
     }
 
-    // Pública: el header que la tienda muestra ahora (ecommerce.fn_header_tienda), listo para dibujar. Solo van las
-    // partes visibles, los textos activos y los links activos y vigentes en este momento (con sus sublinks adentro).
-    // data = null si todavía no hay headers (la tienda usa su diseño de respaldo).
-    public function tienda()
-    {
-        try {
-            $header = Cache::remember(self::CACHE_TIENDA, self::SEGUNDOS_CACHE_TIENDA, function () {
-                $fila = DB::selectOne('SELECT ecommerce.fn_header_tienda() AS header');
-
-                return $fila->header ? $this->headerParaTienda(json_decode($fila->header, true)) : null;
-            });
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Header de la tienda', $header));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo leer el header de la tienda', ['error' => $th->getMessage()]);
-
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo leer el header.', null));
-        }
-    }
-
-    private function headerParaTienda(array $h): array
-    {
-        $ahora = now();
-        $vigente = fn(array $e) => !empty($e['hen_activo'])
-            && (empty($e['hen_vigente_desde'])
-                || ($ahora->gte(\Carbon\Carbon::parse($e['hen_vigente_desde'])) && $ahora->lt(\Carbon\Carbon::parse($e['hen_vigente_hasta']))));
-        $porOrden = fn(string $campo) => fn($a, $b) => ($a[$campo] ?? 0) <=> ($b[$campo] ?? 0);
-        $solo = fn(array $fila, array $campos) => array_intersect_key($fila, array_flip($campos));
-
-        $bloques = [];
-        foreach ($h['bloques'] ?? [] as $b) {
-            if (empty($b['hbl_visible'])) {
-                continue;
-            }
-
-            $textos = array_values(array_filter($b['textos'] ?? [], fn($t) => ($t['htx_activo'] ?? true) !== false));
-            usort($textos, fn($x, $y) => [$x['htx_clave'], $x['htx_orden']] <=> [$y['htx_clave'], $y['htx_orden']]);
-
-            $todos = array_values(array_filter($b['enlaces'] ?? [], $vigente));
-            usort($todos, $porOrden('hen_orden'));
-            $enlaces = [];
-            foreach ($todos as $e) {
-                if (!empty($e['hen_padre_id'])) {
-                    continue;
-                }
-                $sublinks = array_values(array_filter($todos, fn($s) => ($s['hen_padre_id'] ?? null) === $e['hen_id']));
-                // Un link sin destino solo sirve para abrir sus sublinks.
-                if (empty($e['hen_enlace']) && !$sublinks) {
-                    continue;
-                }
-                $enlaces[] = $solo($e, self::TIENDA_ENLACE) + ['sublinks' => array_map(fn($s) => $solo($s, self::TIENDA_ENLACE), $sublinks)];
-            }
-
-            $bloques[] = $solo($b, self::TIENDA_BLOQUE) + [
-                'textos' => array_map(fn($t) => $solo($t, self::TIENDA_TEXTO), $textos),
-                'enlaces' => $enlaces,
-            ];
-        }
-        usort($bloques, $porOrden('hbl_orden'));
-
-        return $solo($h, self::TIENDA_HEADER) + ['bloques' => $bloques];
-    }
-
-    // Pública: entrega una imagen de la carpeta de headers y nada más (el nombre se revisa antes de abrir el archivo).
-    public function verImagen(string $nombre)
-    {
-        $ruta = self::CARPETA_IMAGENES . '/' . $nombre;
-
-        if (!preg_match(self::NOMBRE_IMAGEN, $nombre) || !Storage::disk('local')->exists($ruta)) {
-            abort(404);
-        }
-
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => 'image/webp',
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
-    }
-
+    // Mensaje de MENSAJES_ERROR para el código que lanzó la función PG; si no hay, el genérico con el detalle. Se busca
+    // solo en la primera línea del error de PG: el resto trae el CONTEXT (el código de la función, con otros códigos
+    // escritos adentro) y el SQL con el payload.
     private function errorTraducido(QueryException $e, string $mensajeGenerico)
     {
+        $primera = strtok((string) ($e->errorInfo[2] ?? $e->getMessage()), "\n");
+
         foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
-            if (strpos($e->getMessage(), $codigo) !== false) {
+            if (strpos($primera, $codigo) !== false) {
                 return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
             }
         }
@@ -475,7 +373,7 @@ class HeaderController extends Controller
     {
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_header_eliminar(?::jsonb) AS hea_id', [json_encode(['hea_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
-            Cache::forget(self::CACHE_TIENDA);
+            HeaderTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Header enviado a la papelera', ['hea_id' => $resultado->hea_id]));
         } catch (QueryException $e) {
@@ -488,7 +386,7 @@ class HeaderController extends Controller
     {
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_header_restaurar(?::jsonb) AS hea_id', [json_encode(['hea_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
-            Cache::forget(self::CACHE_TIENDA);
+            HeaderTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Header restaurado (queda inactivo)', ['hea_id' => $resultado->hea_id]));
         } catch (QueryException $e) {

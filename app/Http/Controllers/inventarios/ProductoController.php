@@ -4,7 +4,7 @@ namespace App\Http\Controllers\inventarios;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Servicios\PaginaWeb\ProductoTiendaService;
+use App\Http\Controllers\paginaWeb\CategoriasTiendaController;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +47,6 @@ class ProductoController extends Controller
         'PAPELERA_EN_PEDIDOS' => 'No se puede eliminar: el producto está en pedidos pendientes.',
         'PAPELERA_EN_PROFORMAS' => 'No se puede eliminar: el producto está en proformas de pedido pendientes.',
         'PAPELERA_EN_ORDENES_COMPRA' => 'No se puede eliminar: el producto está en órdenes de compra que todavía no llegan a bodega.',
-        'PAPELERA_EN_FAMILIA' => 'No se puede eliminar: el producto pertenece a una familia. Quítelo de la familia primero.',
         'PAPELERA_TIPO_EN_PAPELERA' => 'No se puede restaurar porque su tipo de producto está en la papelera: restáurelo primero.',
         'OBSERVACION_FACTURA_NO_VALIDA' => 'Elija qué datos pide la factura (MOTOS o GENERAL).',
         'USUARIO_SIN_DYNAMO' => 'Su usuario del CRM no tiene un usuario en Dynamo: no se puede registrar la bitácora.',
@@ -151,8 +150,18 @@ class ProductoController extends Controller
                     $stock[(int) $s->pro_id] = $s->stock_actual;
                 }
             }
+            // Stock vendible: el que usa la tienda (ecommerce.v_productos_web: solo las bodegas que venden, sin saldos,
+            // servicio técnico, consignación...). null = el producto no puede salir en la tienda (inactivo, sin "En la
+            // web", servicio, categoría que no es de tercer nivel...).
+            $vendible = [];
+            if ($ids) {
+                foreach (DB::select('SELECT v.pro_id, v.stock FROM ecommerce.v_productos_web v WHERE v.pro_id = ANY (?::integer[])', ['{' . implode(',', $ids) . '}']) as $s) {
+                    $vendible[(int) $s->pro_id] = $s->stock;
+                }
+            }
             foreach ($registros as $r) {
                 $r->stock_actual = $stock[(int) $r->pro_id] ?? 0;
+                $r->stock_vendible = array_key_exists((int) $r->pro_id, $vendible) ? max((float) $vendible[(int) $r->pro_id], 0) : null;
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Productos listados con éxito', [
@@ -228,7 +237,7 @@ class ProductoController extends Controller
         try {
             $resultado = DB::selectOne('SELECT crm.fn_producto_registrar(?::jsonb) AS pro_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
-            ProductoTiendaService::limpiarCacheTienda();
+            CategoriasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto creado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {
@@ -253,7 +262,7 @@ class ProductoController extends Controller
         try {
             $resultado = DB::selectOne('SELECT crm.fn_producto_clonar(?::jsonb) AS pro_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
-            ProductoTiendaService::limpiarCacheTienda();
+            CategoriasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto clonado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {
@@ -277,8 +286,8 @@ class ProductoController extends Controller
         try {
             $resultado = DB::selectOne('SELECT crm.fn_producto_modificar(?::jsonb) AS pro_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
-            // La tienda cachea el nombre y si está activo.
-            ProductoTiendaService::limpiarCacheTienda();
+            // El menú de la tienda (categorías con productos) va en caché.
+            CategoriasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto modificado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {
@@ -310,8 +319,8 @@ class ProductoController extends Controller
                 'auditoria' => $this->contextoAuditoriaForense($request),
             ])]);
 
-            // La tienda cachea qué productos salen.
-            ProductoTiendaService::limpiarCacheTienda();
+            // El menú de la tienda (categorías con productos) va en caché.
+            CategoriasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto actualizado', ['pro_id' => $id]));
         } catch (QueryException $e) {
@@ -353,7 +362,7 @@ class ProductoController extends Controller
         try {
             $resultado = DB::selectOne('SELECT crm.fn_producto_papelera(?::jsonb) AS pro_id', [json_encode(['pro_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
 
-            ProductoTiendaService::limpiarCacheTienda();
+            CategoriasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto enviado a la papelera', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {
@@ -366,7 +375,7 @@ class ProductoController extends Controller
         try {
             $resultado = DB::selectOne('SELECT crm.fn_producto_restaurar(?::jsonb) AS pro_id', [json_encode(['pro_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
 
-            ProductoTiendaService::limpiarCacheTienda();
+            CategoriasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Producto restaurado con éxito', ['pro_id' => $resultado->pro_id]));
         } catch (QueryException $e) {

@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Auth\ClientesWebProveedor;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
@@ -25,6 +27,7 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        // Sesión de los clientes de la tienda: el cliente sale de la función de la base, no de la tabla
+        Auth::provider('clientes_web_fn', fn () => new ClientesWebProveedor());
     }
 }

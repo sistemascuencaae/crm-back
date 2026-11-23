@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Servicios\PaginaWeb\ErroresPaginaWeb;
+use App\Http\Resources\RespuestaApi;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -14,11 +14,17 @@ use Illuminate\Support\Facades\DB;
  * contraseña y la desactivación desde el CRM lo mueven). Si no, responde SESION_VENCIDA (code 401 en
  * el cuerpo, HTTP 200). Deja el perfil en el request (cliente_perfil) para que el controlador no lo vuelva a consultar.
  * Un token emitido hasta 2 s antes de mover sesiones_desde todavía pasa (margen por la hora distinta de los servidores).
+ * cliente.sesion:opcional (el carrito, que también sirve sin sesión): sin token pasa como invitado (sin cliente_perfil);
+ * con un token que no sirve responde SESION_VENCIDA igual, así la tienda sabe que debe borrar la sesión guardada.
  */
 class VerificarSesionCliente
 {
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next, ?string $modo = null)
     {
+        if ($modo === 'opcional' && !$request->bearerToken()) {
+            return $next($request);
+        }
+
         $guard   = auth('cliente');
         $cliente = $guard->user();   // null: sin token, vencido, firma mala, en la lista negra o de otro modelo
 
@@ -46,8 +52,11 @@ class VerificarSesionCliente
         return $next($request);
     }
 
+    // SESION_VENCIDA: {code: 401, status: 'error', message, data: null, icon, color, codigo, campo: null}
     private function vencida()
     {
-        return ErroresPaginaWeb::errorCliente('SESION_VENCIDA', null, null, 401);
+        return response()->json(
+            ['code' => 401] + RespuestaApi::returnResultado('error', 'Tu sesión venció. Vuelve a ingresar.', null) + ['codigo' => 'SESION_VENCIDA', 'campo' => null]
+        );
     }
 }

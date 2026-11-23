@@ -7,8 +7,9 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 /**
  * Cliente de la tienda web (ecommerce.clientes_web), aparte de los usuarios del CRM (crm.users).
- * Solo se usa para emitir y leer su JWT (guard 'cliente'): nunca para guardar. Todo cambio va por las funciones
- * ecommerce.fn_cliente_web_* (ClienteWebService).
+ * Solo se usa para emitir y leer su JWT (guard 'cliente'): nunca lee ni guarda la tabla. El cliente lo arma
+ * App\Auth\ClientesWebProveedor desde ecommerce.fn_cliente_web_perfil, y todo cambio va por las funciones
+ * ecommerce.fn_cliente_web_* (ClientesTiendaController, database/sql/clientes_web.sql).
  */
 class ClienteWeb extends Authenticatable implements JWTSubject
 {

@@ -4,12 +4,10 @@ namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
-use App\Servicios\PaginaWeb\ProductoTiendaService;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -21,10 +19,9 @@ use Illuminate\Support\Str;
 // contra los campos de la plantilla.
 class SeccionesController extends Controller
 {
-    // Imágenes de las secciones: carpeta privada storage/app/secciones; la tienda y el CRM las piden por
+    // Imágenes de las secciones: carpeta ecommerce/secciones (NAS o local); la tienda y el CRM las piden por
     // api/public/secciones/imagenes/{nombre}. En la base se guarda solo el nombre: 40 letras y números + .webp.
-    private const CARPETA_IMAGENES = 'secciones';
-    private const NOMBRE_IMAGEN = '/^[A-Za-z0-9]{40}\.webp$/';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/secciones';
 
     // Códigos sin "dónde" -> mensaje para el usuario.
     private const MENSAJES_ERROR = [
@@ -41,7 +38,7 @@ class SeccionesController extends Controller
         'ELEMENTOS_INVALIDOS' => 'El contenido de la sección no es válido.',
         'SECCION_NO_EXISTE' => 'La sección no existe o está en la papelera.',
         'SECCION_NO_EN_PAPELERA' => 'La sección no está en la papelera (puede que otro usuario ya la restauró).',
-        'PAPELERA_SECCION_VISIBLE' => 'No se puede eliminar porque está visible: ocúltela primero.',
+        'PAPELERA_SECCION_VISIBLE' => 'Para eliminar la sección, primero desactívela.',
         'REQUIERE_SECCIONES' => 'Envíe el nuevo orden de las secciones.',
         'SECCIONES_NO_COINCIDEN' => 'La página cambió mientras la ordenaba (se agregó o eliminó una sección). Vuelva a cargarla.',
     ];
@@ -67,6 +64,8 @@ class SeccionesController extends Controller
         'ELEMENTO_INVALIDO' => 'no es válido para esta lista.',
         'IMAGEN_INVALIDA' => 'la imagen no es válida: súbala de nuevo desde el CRM.',
         'IMAGEN_MOVIL_NO_APLICA' => 'esta lista no lleva imagen para celular.',
+        'PIEZA_VACIA' => 'escriba la frase o agregue al menos un ícono.',
+        'ICONOS_INVALIDOS' => 'los íconos no son válidos (hasta 5: imágenes subidas desde el CRM o íconos de la lista).',
         'GRUPO_NO_EXISTE' => 'el grupo de productos no existe o está en la papelera.',
         'PRODUCTO_NO_EXISTE' => 'el producto no existe o está en la papelera.',
         'GRUPO_REQUERIDO' => 'elija primero el grupo de productos y después, de ese grupo, el producto.',
@@ -77,19 +76,15 @@ class SeccionesController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' => ['verImagen']]);
+        // La imagen de las secciones (pública) está en paginaWeb/PaginasTiendaController.
+        $this->middleware('auth:api');
     }
 
     // Plantillas que se pueden elegir para una sección nueva (de sección y activas), en el orden del catálogo.
     public function plantillas()
     {
         try {
-            $registros = DB::select(
-                "SELECT pla_id, pla_codigo, pla_nombre, pla_descripcion, pla_miniatura, pla_tarjeta_id IS NOT NULL AS tiene_tarjeta
-                   FROM ecommerce.plantillas
-                  WHERE pla_alcance = 'seccion' AND pla_activo
-                  ORDER BY pla_orden, pla_id"
-            );
+            $registros = DB::select('SELECT * FROM ecommerce.fn_plantilla_listar_seccion()');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Plantillas listadas con éxito', ['registros' => $registros]));
         } catch (\Throwable $th) {
@@ -180,7 +175,7 @@ class SeccionesController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Sección modificada con éxito', ['sec_id' => $resultado->sec_id]));
         } catch (QueryException $e) {
-            $plaId = DB::selectOne('SELECT pla_id FROM ecommerce.secciones WHERE sec_id = ?', [$id])->pla_id ?? null;
+            $plaId = DB::selectOne('SELECT ecommerce.fn_seccion_plantilla(?) AS pla_id', [$id])->pla_id ?? null;
 
             return $this->errorTraducido($e, 'Error al modificar la sección', $plaId);
         }
@@ -218,6 +213,34 @@ class SeccionesController extends Controller
         }
     }
 
+    // El interruptor de la lista: solo visible / oculta -> ecommerce.fn_seccion_visible. No revisa el contenido (eso se
+    // revisa al guardar los cambios de la sección). Body: { sec_visible: true|false }
+    public function visible(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'sec_visible' => 'required|boolean',
+        ], [
+            'sec_visible.required' => 'El valor de "Visible" no es válido.',
+            'sec_visible.boolean' => 'El valor de "Visible" no es válido.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
+        }
+
+        try {
+            $visible = $request->boolean('sec_visible');
+            $resultado = DB::selectOne('SELECT ecommerce.fn_seccion_visible(?::jsonb) AS sec_id', [json_encode([
+                'sec_id' => $id,
+                'sec_visible' => $visible,
+                'auditoria' => $this->contextoAuditoriaForense($request),
+            ])]);
+
+            return response()->json(RespuestaApi::returnResultado('success', $visible ? 'Sección visible' : 'Sección desactivada', ['sec_id' => $resultado->sec_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al cambiar la sección');
+        }
+    }
+
     // A la papelera: borrado lógico -> ecommerce.fn_seccion_papelera. No se puede vaciar.
     public function eliminar(Request $request, int $id)
     {
@@ -238,25 +261,22 @@ class SeccionesController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Sección restaurada con éxito', ['sec_id' => $resultado->sec_id]));
         } catch (QueryException $e) {
-            $plaId = DB::selectOne('SELECT pla_id FROM ecommerce.secciones WHERE sec_id = ?', [$id])->pla_id ?? null;
+            $plaId = DB::selectOne('SELECT ecommerce.fn_seccion_plantilla(?) AS pla_id', [$id])->pla_id ?? null;
 
             return $this->errorTraducido($e, 'Error al restaurar la sección', $plaId);
         }
     }
 
-    // Secciones de UNA página que están en la papelera -> ecommerce.fn_seccion_papelera_paginacion.
-    // GET ?pag_id=&pagina=&tamanio=&busqueda=
+    // Secciones en la papelera -> ecommerce.fn_seccion_papelera_paginacion. Sin pag_id: las de todas las páginas
+    // (la papelera única de Páginas). GET ?pag_id=&pagina=&tamanio=&busqueda=
     public function papelera(Request $request)
     {
         try {
             $pagId = (int) $request->query('pag_id', 0);
+            $pagId = $pagId > 0 ? $pagId : null;
             $pagina = max((int) $request->query('pagina', 1), 1);
             $tamanio = min(max((int) $request->query('tamanio', 20), 1), 100);
             $busqueda = trim((string) $request->query('busqueda', ''));
-
-            if ($pagId <= 0) {
-                return response()->json(RespuestaApi::returnResultado('error', 'Página no válida', null));
-            }
 
             $registros = DB::select('SELECT * FROM ecommerce.fn_seccion_papelera_paginacion(?, ?, ?, ?)', [$pagId, $pagina, $tamanio, $busqueda]);
 
@@ -301,23 +321,22 @@ class SeccionesController extends Controller
 
     // Tarjetas REALES de productos para la vista previa del CRM (foto, marca, precio, precio anterior): las de un grupo
     // (en su orden) o las de unos productos. Regla de los grupos de productos: salen los activos con stock
-    // (ProductoTiendaService::tarjetasDe).
+    // (ecommerce.fn_producto_tienda_tarjetas, ver tarjetasDe).
     // GET ?gpr_id=  o  ?pro_ids=1,2,3
-    public function productos(Request $request, ProductoTiendaService $tienda)
+    public function productos(Request $request)
     {
         try {
             $gprId = (int) $request->query('gpr_id', 0);
-            if ($gprId > 0) {
-                $proIds = array_column(DB::select(
-                    'SELECT pro_id FROM ecommerce.grupo_productos_detalles WHERE gpr_id = ? ORDER BY gpd_orden', [$gprId]
-                ), 'pro_id');
-            } else {
-                $proIds = array_filter(array_map('intval', explode(',', (string) $request->query('pro_ids', ''))));
-            }
+            $proIds = array_values(array_filter(array_map('intval', explode(',', (string) $request->query('pro_ids', ''))), fn ($id) => $id > 0));
+
+            // Todas: los afiches no tienen límite. La base elige y ordena (ecommerce.fn_seccion_vista_previa_tarjetas)
+            $filas = DB::select(
+                'SELECT * FROM ecommerce.fn_seccion_vista_previa_tarjetas(?, ?::integer[])',
+                [$gprId, $this->arreglo($proIds)]
+            );
 
             return response()->json(RespuestaApi::returnResultado('success', 'Productos de la vista previa', [
-                // Todas las del grupo: los afiches no tienen límite (tarjetasDe corta en 24 si no se le dice cuántas).
-                'tarjetas' => $proIds ? $tienda->tarjetasDe($proIds, count($proIds)) : [],
+                'tarjetas' => array_map(fn ($f) => $this->tarjeta($f), $filas),
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los productos de la vista previa', $th->getMessage()));
@@ -332,8 +351,7 @@ class SeccionesController extends Controller
         try {
             $proIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string) $request->query('pro_ids', ''))))));
             $marcas = $proIds ? DB::select(
-                'SELECT pro_id, COALESCE(pro_oferta, false) AS oferta, COALESCE(pro_destacado, false) AS destacado
-                   FROM public.producto WHERE pro_id = ANY (?::integer[])',
+                'SELECT * FROM ecommerce.fn_producto_marcas_web(?::integer[])',
                 ['{' . implode(',', array_slice($proIds, 0, 200)) . '}']
             ) : [];
 
@@ -343,17 +361,13 @@ class SeccionesController extends Controller
         }
     }
 
-    // Sube una imagen para una lista de imágenes de una plantilla (pco_id): solo WebP de verdad (mimetypes mira el
+    // Sube una imagen para una lista de imágenes (o los íconos de los grupos de una lista de piezas) de una plantilla (pco_id): solo WebP de verdad (mimetypes mira el
     // contenido, no la extensión) y hasta el peso máximo de ESA lista (pco_peso_maximo_kb: banners 2 MB, tarjetas 500 KB,
     // logos y fotos del 360 200 KB). Devuelve el nombre (para guardarlo en la sección) y la dirección para verla.
     // Body (multipart): imagen, pco_id
     public function subirImagen(Request $request)
     {
-        $contenido = DB::selectOne(
-            "SELECT pco_id, pco_etiqueta, pco_peso_maximo_kb FROM ecommerce.plantilla_contenidos
-              WHERE pco_id = ? AND pco_tipo = 'imagen'",
-            [(int) $request->input('pco_id')]
-        );
+        $contenido = DB::selectOne('SELECT * FROM ecommerce.fn_plantilla_contenido_imagen(?)', [(int) $request->input('pco_id')]);
 
         if (!$contenido) {
             return response()->json(RespuestaApi::returnResultado('error', 'La lista de imágenes no es válida.', null));
@@ -375,35 +389,30 @@ class SeccionesController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        try {
-            $nombre = Str::random(40) . '.webp';
-            $request->file('imagen')->storeAs(self::CARPETA_IMAGENES, $nombre, 'local');
+        // Medida exacta de la lista (pco_imagen_ancho × pco_imagen_alto; ej. los logos de la Cinta de marcas, 125 × 70).
+        // La decide la base; sin medida, cualquiera.
+        // (?? null: con el SQL sin aplicar la función no trae estas columnas.)
+        if (($contenido->pco_imagen_ancho ?? null) && ($contenido->pco_imagen_alto ?? null)) {
+            $medida = @getimagesize($request->file('imagen')->getRealPath());
+            $ancho = (int) $contenido->pco_imagen_ancho;
+            $alto = (int) $contenido->pco_imagen_alto;
+            if (!$medida || (int) $medida[0] !== $ancho || (int) $medida[1] !== $alto) {
+                $tiene = $medida ? " (esta mide {$medida[0]} × {$medida[1]} px)" : '';
+                return response()->json(RespuestaApi::returnResultado('error',
+                    "La imagen tiene que medir exactamente {$ancho} × {$alto} px{$tiene} ({$contenido->pco_etiqueta}).", null));
+            }
+        }
 
-            return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
-                'nombre' => $nombre,
-                'url' => url('api/public/secciones/imagenes/' . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir la imagen de la sección', ['error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $nombre = Str::random(40) . '.webp';
+        if (!ArchivosPaginaWeb::guardar($request->file('imagen'), self::CARPETA_IMAGENES, $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
         }
-    }
 
-    // Una imagen de las secciones (pública: la pide la tienda y el CRM). El nombre nunca cambia de contenido.
-    public function verImagen(string $nombre)
-    {
-        $ruta = self::CARPETA_IMAGENES . '/' . $nombre;
-
-        if (!preg_match(self::NOMBRE_IMAGEN, $nombre) || !Storage::disk('local')->exists($ruta)) {
-            abort(404);
-        }
-
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => 'image/webp',
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
+            'nombre' => $nombre,
+            'url' => url('api/public/secciones/imagenes/' . $nombre),
+        ]));
     }
 
     // Traduce un error de sección con "dónde" (CODIGO:ruta). La usa también PaginasController al clonar.
@@ -436,16 +445,12 @@ class SeccionesController extends Controller
         // La lista (si la ruta habla de una) y el campo.
         $lista = null;
         if (!$esTarjeta && ($posicion !== '' || $claveElemento !== '' || !self::buscarCampo($plaId, null, $primero))) {
-            $lista = DB::selectOne(
-                'SELECT pco_id, pco_etiqueta, pco_minimo, pco_maximo FROM ecommerce.plantilla_contenidos
-                  WHERE pco_clave = ? AND (?::integer IS NULL OR pla_id = ?) ORDER BY pco_id LIMIT 1',
-                [$primero, $plaId, $plaId]
-            );
+            $lista = DB::selectOne('SELECT * FROM ecommerce.fn_plantilla_contenido_por_clave(?, ?)', [$primero, $plaId]);
         }
 
         $campo = null;
         if ($esTarjeta) {
-            $tarjetaId = $plaId ? (DB::selectOne('SELECT pla_tarjeta_id FROM ecommerce.plantillas WHERE pla_id = ?', [$plaId])->pla_tarjeta_id ?? null) : null;
+            $tarjetaId = $plaId ? (DB::selectOne('SELECT ecommerce.fn_plantilla_tarjeta(?) AS pla_tarjeta_id', [$plaId])->pla_tarjeta_id ?? null) : null;
             $campo = self::buscarCampo($tarjetaId, null, $primero, true);
         } elseif ($lista && $claveElemento !== '') {
             $campo = self::buscarCampo(null, $lista->pco_id, $claveElemento);
@@ -480,18 +485,9 @@ class SeccionesController extends Controller
     // Un campo por clave: de una plantilla (pco_id vacío) o de una lista. Sin plantilla conocida, el primero con esa clave.
     private static function buscarCampo(?int $plaId, ?int $pcoId, string $clave, bool $deComponente = false)
     {
-        if ($pcoId !== null) {
-            return DB::selectOne('SELECT pca_etiqueta, pca_minimo, pca_maximo, pca_largo_maximo FROM ecommerce.plantilla_campos
-                                   WHERE pco_id = ? AND pca_clave = ? LIMIT 1', [$pcoId, $clave]);
-        }
-
         return DB::selectOne(
-            "SELECT c.pca_etiqueta, c.pca_minimo, c.pca_maximo, c.pca_largo_maximo
-               FROM ecommerce.plantilla_campos c JOIN ecommerce.plantillas p ON p.pla_id = c.pla_id
-              WHERE c.pco_id IS NULL AND c.pca_clave = ? AND (?::integer IS NULL OR c.pla_id = ?)
-                AND p.pla_alcance = ?
-              ORDER BY c.pca_id LIMIT 1",
-            [$clave, $plaId, $plaId, $deComponente ? 'componente' : 'seccion']
+            'SELECT * FROM ecommerce.fn_plantilla_campo_buscar(?, ?, ?, ?)',
+            [$plaId, $pcoId, $clave, $deComponente]
         );
     }
 
@@ -579,5 +575,48 @@ class SeccionesController extends Controller
             'user_agent' => $request->userAgent(),
             'request_id' => (string) Str::uuid(),
         ];
+    }
+
+    // ================= Tarjetas de la vista previa (filas de ecommerce.fn_seccion_vista_previa_tarjetas) =================
+
+    /**
+     * La tarjeta de producto de todo el sitio, de una fila de las funciones de la tienda (traen precio, stock y es_moto).
+     */
+    private function tarjeta(object $f): array
+    {
+        return [
+            'pro_id'          => (int) $f->pro_id,
+            'codigo'          => $f->pro_codigo,
+            'nombre'          => $f->pro_nombre,
+            'marca'           => $f->marca,
+            'tpr_id'          => (int) $f->tpr_id,
+            'categoria'       => $f->categoria,
+            'imagenes'        => $this->imagenes($f->imagenes),
+            'destacado'       => (bool) $f->destacado,
+            // En oferta (producto.pro_oferta): etiqueta Oferta.
+            'oferta'          => (bool) ($f->oferta ?? false),
+            'precio'          => $f->precio !== null ? (float) $f->precio : null,
+            'precio_anterior' => $f->precio_anterior !== null ? (float) $f->precio_anterior : null,
+            'stock'           => (float) $f->stock,
+            // Su factura pide los datos de MOTOS (inventarios.fn_producto_es_moto)
+            'es_moto'         => (bool) ($f->es_moto ?? false),
+        ];
+    }
+
+    /**
+     * Las fotos que arma la base (inventarios.fn_producto_imagen_ruta: /api/public/pagina-web/imagenes/productos/…) con
+     * la dirección de este servidor, porque la tienda está en otro.
+     */
+    private function imagenes(?string $json): array
+    {
+        $rutas = json_decode($json ?? '[]', true);
+
+        return is_array($rutas) ? array_map(fn ($ruta) => url($ruta), $rutas) : [];
+    }
+
+    /** Lista de números como arreglo de Postgres: [1, 2, 3] → "{1,2,3}" */
+    private function arreglo(array $ids): string
+    {
+        return '{' . implode(',', array_map('intval', $ids)) . '}';
     }
 }

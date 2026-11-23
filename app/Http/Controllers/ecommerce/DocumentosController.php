@@ -4,12 +4,11 @@ namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Servicios\PaginaWeb\LimpiadorDocumento;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -22,10 +21,8 @@ use Illuminate\Support\Str;
 class DocumentosController extends Controller
 {
     // Imágenes y PDF: carpeta privada storage/app/documentos; se piden por api/public/documentos/imagenes|pdf/{nombre}.
-    private const CARPETA_IMAGENES = 'documentos/imagenes';
-    private const CARPETA_PDF = 'documentos/pdf';
-    private const NOMBRE_IMAGEN = '/^[A-Za-z0-9]{40}\.(webp|jpg|png)$/';
-    private const NOMBRE_PDF = '/^[A-Za-z0-9]{40}\.pdf$/';
+    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/documentos/imagenes';
+    private const CARPETA_PDF = ArchivosPaginaWeb::CARPETA . '/documentos/pdf';
     private const TIPOS_IMAGEN = ['webp' => 'image/webp', 'jpg' => 'image/jpeg', 'png' => 'image/png'];
     private const IMAGEN_MAXIMO_KB = 2048;
     private const PDF_MAXIMO_KB = 10240;
@@ -51,7 +48,7 @@ class DocumentosController extends Controller
         'DOCUMENTO_NO_EN_PAPELERA' => 'El documento no está en la papelera (puede que otro usuario ya lo restauró).',
         'PAPELERA_DOCUMENTO_ACTIVO' => 'No se puede eliminar porque está activo: inactívelo primero.',
         'REQUIERE_DOCUMENTOS' => 'Envíe el nuevo orden de los documentos.',
-        'DOCUMENTOS_NO_COINCIDEN' => 'La carpeta cambió mientras la ordenaba (se agregó, movió o eliminó un documento). Vuelva a cargarla.',
+        'DOCUMENTOS_NO_COINCIDEN' => 'Los documentos de la carpeta cambiaron mientras trabajaba (se agregó, movió o eliminó uno). Vuelva a cargarla.',
         'REQUIERE_NOMBRE_CARPETA' => 'Debe ingresar el nombre de la carpeta.',
         'NOMBRE_CARPETA_LARGO' => 'El nombre de la carpeta no puede tener más de 80 caracteres.',
         'CARPETA_DUPLICADA' => 'Ya existe una carpeta con ese nombre en el mismo lugar.',
@@ -65,6 +62,12 @@ class DocumentosController extends Controller
         'CARPETA_CON_DOCUMENTOS' => 'La carpeta tiene documentos: muévalos a otra carpeta o elimínelos antes.',
         'REQUIERE_CARPETAS' => 'Envíe el nuevo orden de las carpetas.',
         'CARPETAS_NO_COINCIDEN' => 'Las carpetas cambiaron mientras las ordenaba. Vuelva a cargarlas.',
+        // Enlaces: lo que se usa como destino (header, footer o sección) no se borra ni deja de ser de primer nivel.
+        'DOCUMENTO_ENLAZADO' => 'No se puede eliminar porque es el destino de un enlace: cámbielo primero.',
+        'CARPETA_ENLAZADA' => 'No se puede porque la carpeta es el destino de un enlace (solo se enlazan carpetas de primer nivel): cámbielo primero.',
+        'CARPETA_DIRECCION_INVALIDA' => 'La dirección de la carpeta solo puede tener letras minúsculas, números y guiones (hasta 60). Ejemplo: proteccion-de-datos.',
+        'CARPETA_DIRECCION_DUPLICADA' => 'Ya hay otra carpeta con esa dirección.',
+        'ux_documentos_carpetas_ruta' => 'Ya hay otra carpeta con esa dirección.',
     ];
 
     private const MENSAJES_FORMULARIO = [
@@ -88,11 +91,20 @@ class DocumentosController extends Controller
     ];
 
     // Lo único que se acepta del formulario del documento.
-    private const CAMPOS_PAYLOAD = ['doc_titulo', 'doc_ruta', 'doc_contenido', 'doc_pdf', 'doc_pdf_etiqueta', 'dca_id', 'doc_activo'];
+    private const CAMPOS_PAYLOAD = [
+        'doc_titulo', 
+        'doc_ruta', 
+        'doc_contenido', 
+        'doc_pdf', 
+        'doc_pdf_etiqueta', 
+        'dca_id', 
+        'doc_activo'
+    ];
 
     public function __construct(private LimpiadorDocumento $limpiador)
     {
-        $this->middleware('auth:api')->except(['publico', 'publicos', 'verImagen', 'verPdf']);
+        // Lo público (documentos de la tienda, sus imágenes y PDF) está en paginaWeb/DocumentosTiendaController.
+        $this->middleware('auth:api');
     }
 
     // ================= Documentos =================
@@ -201,6 +213,25 @@ class DocumentosController extends Controller
         }
     }
 
+    // Crea un documento nuevo a partir de otro -> ecommerce.fn_documento_clonar. Body: el mismo del formulario (título y
+    // dirección obligatorios); lo que no viene (contenido, PDF, carpeta, activo) se copia del origen.
+    public function clonar(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), $this->reglas(false), self::MENSAJES_FORMULARIO);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
+        }
+
+        try {
+            $payload = $this->payload($request) + ['doc_id_origen' => $id];
+            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_clonar(?::jsonb) AS doc_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Documento clonado con éxito', ['doc_id' => $resultado->doc_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al clonar el documento');
+        }
+    }
+
     public function eliminar(Request $request, int $id)
     {
         return $this->accion('fn_documento_papelera', ['doc_id' => $id], $request, 'Documento enviado a la papelera', 'Error al eliminar el documento');
@@ -262,6 +293,35 @@ class DocumentosController extends Controller
 
     // ================= Carpetas =================
 
+    // Auditoría de UNA carpeta (también de las de la papelera). GET ?dca_id=&pagina=&tamanio=&busqueda=
+    public function carpetaAuditoria(Request $request)
+    {
+        try {
+            $dcaId = (int) $request->query('dca_id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = min(max((int) $request->query('tamanio', 10), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($dcaId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Carpeta no válida', null));
+            }
+
+            $resumen = DB::selectOne('SELECT * FROM ecommerce.fn_documento_carpeta_auditoria_resumen(?)', [$dcaId]);
+            $eventos = DB::select('SELECT * FROM ecommerce.fn_documento_carpeta_auditoria_listar_paginacion(?, ?, ?, ?)', [$dcaId, $pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría de la carpeta', $th->getMessage()));
+        }
+    }
+
+
     // Las carpetas en su orden con cuántos documentos tienen (?papelera=1: las de la papelera).
     public function carpetas(Request $request)
     {
@@ -274,16 +334,17 @@ class DocumentosController extends Controller
         }
     }
 
-    // Body: { dca_nombre, dca_padre_id? } (sin padre = primer nivel; hasta tres niveles).
+    // Body: { dca_nombre, dca_padre_id?, dca_ruta? } (sin padre = primer nivel; hasta tres niveles). dca_ruta: la dirección
+    // de una carpeta de primer nivel (vacía = se arma con el nombre).
     public function crearCarpeta(Request $request)
     {
-        $validator = Validator::make($request->all(), ['dca_nombre' => 'required|string|max:80', 'dca_padre_id' => 'nullable|integer|min:1'], self::MENSAJES_FORMULARIO);
+        $validator = Validator::make($request->all(), ['dca_nombre' => 'required|string|max:80', 'dca_padre_id' => 'nullable|integer|min:1', 'dca_ruta' => 'nullable|string|max:60'], self::MENSAJES_FORMULARIO);
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
         }
 
         try {
-            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_add(?::jsonb) AS dca_id', [json_encode($request->only(['dca_nombre', 'dca_padre_id']) + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_add(?::jsonb) AS dca_id', [json_encode($request->only(['dca_nombre', 'dca_padre_id', 'dca_ruta']) + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Carpeta creada con éxito', ['dca_id' => $resultado->dca_id]));
         } catch (QueryException $e) {
@@ -291,20 +352,51 @@ class DocumentosController extends Controller
         }
     }
 
-    // Body: { dca_nombre, dca_padre_id? } — si viene dca_padre_id, la carpeta se mueve allí (null = primer nivel).
+    // Body: { dca_nombre, dca_padre_id?, dca_ruta? } — si viene dca_padre_id, la carpeta se mueve allí (null = primer
+    // nivel). Una carpeta enlazada no se mete en otra.
     public function editarCarpeta(Request $request, int $id)
     {
-        $validator = Validator::make($request->all(), ['dca_nombre' => 'required|string|max:80', 'dca_padre_id' => 'sometimes|nullable|integer|min:1'], self::MENSAJES_FORMULARIO);
+        $validator = Validator::make($request->all(), ['dca_nombre' => 'required|string|max:80', 'dca_padre_id' => 'sometimes|nullable|integer|min:1', 'dca_ruta' => 'sometimes|nullable|string|max:60'], self::MENSAJES_FORMULARIO);
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
         }
 
         try {
-            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_edit(?::jsonb) AS dca_id', [json_encode($request->only(['dca_nombre', 'dca_padre_id']) + ['dca_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
+            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_edit(?::jsonb) AS dca_id', [json_encode($request->only(['dca_nombre', 'dca_padre_id', 'dca_ruta']) + ['dca_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
 
             return response()->json(RespuestaApi::returnResultado('success', 'Carpeta guardada con éxito', ['dca_id' => $resultado->dca_id]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al guardar la carpeta');
+        }
+    }
+
+    // Crea una carpeta nueva con copia de sus documentos -> ecommerce.fn_documento_carpeta_clonar. Va en el mismo lugar que
+    // la de origen salvo que venga dca_padre_id. Los documentos copiados quedan inactivos, con título "_CLON" y dirección "-clon".
+    // Body: { dca_nombre, dca_padre_id?, dca_ruta?, documentos?: [doc_id, ...] } (documentos = los que se copian, en su
+    // orden; si no viene, todos los de la carpeta, sin sus subcarpetas; [] = ninguno).
+    public function clonarCarpeta(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'dca_nombre' => 'required|string|max:80',
+            'dca_padre_id' => 'sometimes|nullable|integer|min:1',
+            'dca_ruta' => 'nullable|string|max:60',
+            'documentos' => 'sometimes|array',
+            'documentos.*' => 'integer|min:1',
+        ], self::MENSAJES_FORMULARIO);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
+        }
+
+        try {
+            $payload = $request->only(['dca_nombre', 'dca_padre_id', 'dca_ruta']) + ['dca_id_origen' => $id];
+            if ($request->has('documentos')) {
+                $payload['documentos'] = array_values($request->input('documentos', []));
+            }
+            $resultado = DB::selectOne('SELECT ecommerce.fn_documento_carpeta_clonar(?::jsonb) AS dca_id', [json_encode($payload + ['auditoria' => $this->contextoAuditoriaForense($request)])]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Carpeta clonada con éxito', ['dca_id' => $resultado->dca_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al clonar la carpeta');
         }
     }
 
@@ -362,20 +454,17 @@ class DocumentosController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        try {
-            $extension = array_search($request->file('imagen')->getMimeType(), self::TIPOS_IMAGEN, true) ?: 'webp';
-            $nombre = Str::random(40) . '.' . $extension;
-            $request->file('imagen')->storeAs(self::CARPETA_IMAGENES, $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
-                'nombre' => $nombre,
-                'url' => url('api/public/documentos/imagenes/' . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir la imagen del documento', ['error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $extension = array_search($request->file('imagen')->getMimeType(), self::TIPOS_IMAGEN, true) ?: 'webp';
+        $nombre = Str::random(40) . '.' . $extension;
+        if (!ArchivosPaginaWeb::guardar($request->file('imagen'), self::CARPETA_IMAGENES, $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
         }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
+            'nombre' => $nombre,
+            'url' => url('api/public/documentos/imagenes/' . $nombre),
+        ]));
     }
 
     // Sube el PDF descargable del documento (hasta 10 MB). Devuelve el nombre (para guardarlo en doc_pdf) y su dirección.
@@ -393,82 +482,16 @@ class DocumentosController extends Controller
             return response()->json(RespuestaApi::returnResultado('error', $validator->errors()->first(), null));
         }
 
-        try {
-            $nombre = Str::random(40) . '.pdf';
-            $request->file('pdf')->storeAs(self::CARPETA_PDF, $nombre, 'local');
-
-            return response()->json(RespuestaApi::returnResultado('success', 'PDF subido', [
-                'nombre' => $nombre,
-                'url' => url('api/public/documentos/pdf/' . $nombre),
-            ]));
-        } catch (\Throwable $th) {
-            Log::error('No se pudo subir el PDF del documento', ['error' => $th->getMessage()]);
-
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $nombre = Str::random(40) . '.pdf';
+        if (!ArchivosPaginaWeb::guardar($request->file('pdf'), self::CARPETA_PDF, $nombre)) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir el PDF.', null));
         }
-    }
 
-    // ================= Tienda (públicos) =================
-
-    // Un documento activo por su dirección, para la tienda. GET public/documentos/{ruta}
-    public function publico(string $ruta)
-    {
-        try {
-            $documento = DB::selectOne('SELECT * FROM ecommerce.fn_documento_buscar_publico(?)', [$ruta]);
-            // 404 (como las páginas informativas): la tienda muestra "no disponible".
-            if (!$documento) {
-                return response()->json(RespuestaApi::returnResultado('error', 'El documento no existe.', null), 404);
-            }
-
-            $documento->doc_contenido = $this->conImagenesCompletas($documento->doc_contenido);
-            $documento->doc_pdf_url = $documento->doc_pdf ? url('api/public/documentos/pdf/' . $documento->doc_pdf) : null;
-            unset($documento->doc_pdf);
-
-            return response()->json(RespuestaApi::returnResultado('success', 'Documento', ['documento' => $documento]));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el documento', null));
-        }
-    }
-
-    // Los documentos activos por carpeta (para el pie de página o un índice). GET public/documentos
-    public function publicos()
-    {
-        try {
-            return response()->json(RespuestaApi::returnResultado('success', 'Documentos', [
-                'documentos' => DB::select('SELECT * FROM ecommerce.fn_documento_listar_publicos()'),
-            ]));
-        } catch (\Throwable $th) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los documentos', null));
-        }
-    }
-
-    public function verImagen(string $nombre)
-    {
-        $ruta = self::CARPETA_IMAGENES . '/' . $nombre;
-        if (!preg_match(self::NOMBRE_IMAGEN, $nombre, $m) || !Storage::disk('local')->exists($ruta)) {
-            abort(404);
-        }
-
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => self::TIPOS_IMAGEN[$m[1]],
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
-    }
-
-    public function verPdf(string $nombre)
-    {
-        $ruta = self::CARPETA_PDF . '/' . $nombre;
-        if (!preg_match(self::NOMBRE_PDF, $nombre) || !Storage::disk('local')->exists($ruta)) {
-            abort(404);
-        }
-
-        return response()->file(Storage::disk('local')->path($ruta), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="documento.pdf"',
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return response()->json(RespuestaApi::returnResultado('success', 'PDF subido', [
+            'nombre' => $nombre,
+            'url' => url('api/public/documentos/pdf/' . $nombre),
+        ]));
     }
 
     // ================= Ayudas =================
@@ -532,6 +555,10 @@ class DocumentosController extends Controller
 
         foreach (self::MENSAJES_ERROR as $codigo => $mensaje) {
             if (strpos($texto, $codigo) !== false) {
+                // "Enlazado": la base manda en el DETAIL dónde se usa; se agrega al mensaje.
+                if (preg_match('/_ENLAZAD[AO]$/', $codigo) && preg_match('/DETAIL:\s*(.+)/', $texto, $m)) {
+                    $mensaje .= ' Lo usa: ' . trim($m[1]) . '.';
+                }
                 return response()->json(RespuestaApi::returnResultado('error', $mensaje, null));
             }
         }

@@ -27,13 +27,15 @@ class PaginasController extends Controller
         'REQUIERE_RUTA' => 'Debe ingresar la ruta de la página.',
         'RUTA_LARGA' => 'La ruta no puede tener más de 60 caracteres.',
         'RUTA_INVALIDA' => 'La ruta solo puede tener letras minúsculas, números y guiones (sin espacios, tildes ni barras). Ejemplo: ofertas-del-mes.',
-        'RUTA_RESERVADA' => 'Esa ruta la usa una pantalla fija de la tienda (login, carrito, cuenta, producto...). Elija otra.',
+        'RUTA_RESERVADA' => 'Esa dirección la usa una pantalla fija de la tienda (login, carrito, cuenta, tiendas, documentos…). Elija otra.',
+        'PAGINA_INICIO_INACTIVA' => 'La página de inicio tiene que estar activa: para desactivarla, primero marque otra como inicio (o quítele la marca).',
+        'ux_paginas_inicio' => 'Otro usuario cambió la página de inicio al mismo tiempo. Intente de nuevo.',
         'RUTA_DUPLICADA' => 'Ya existe una página con esa ruta (si está restaurando, cambie primero la ruta de la otra página).',
         'ux_paginas_ruta' => 'Ya existe una página con esa ruta.',
         'VALOR_INVALIDO' => 'El valor de "Activo" no es válido.',
         'PAGINA_NO_EXISTE' => 'La página no existe o está en la papelera.',
-        'PAPELERA_PAGINA_ACTIVA' => 'No se puede eliminar porque está activa: inactívela primero.',
-        'PAPELERA_PAGINA_EN_USO' => 'No se puede eliminar porque es el destino de un enlace en una sección de otra página: cambie ese enlace primero.',
+        'PAPELERA_PAGINA_SECCIONES_VISIBLES' => 'Para eliminar la página, primero desactive todas sus secciones.',
+        'PAPELERA_PAGINA_ACTIVA' => 'Para eliminar la página, primero desactívela.',
         'PAGINA_NO_EN_PAPELERA' => 'La página no está en la papelera (puede que otro usuario ya la restauró).',
         'SECCIONES_NO_COINCIDEN' => 'Las secciones elegidas para clonar no son de la página de origen. Vuelva a cargarla.',
     ];
@@ -200,6 +202,28 @@ class PaginasController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Página enviada a la papelera', ['pag_id' => $resultado->pag_id]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al eliminar la página');
+        }
+    }
+
+    // Marca (o quita) la página de inicio -> ecommerce.fn_pagina_inicio. Body: { pag_inicio: true|false }. Al marcar una,
+    // la anterior pierde la marca. La tienda muestra la de inicio en / (sin ninguna, el inicio fijo).
+    public function marcarInicio(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), ['pag_inicio' => 'required|boolean']);
+        if ($validator->fails()) {
+            return response()->json(RespuestaApi::returnResultado('error', 'Indique si la página es la de inicio.', $validator->errors()));
+        }
+
+        try {
+            $resultado = DB::selectOne('SELECT ecommerce.fn_pagina_inicio(?::jsonb) AS pag_id', [json_encode([
+                'pag_id' => $id, 'pag_inicio' => $request->boolean('pag_inicio'), 'auditoria' => $this->contextoAuditoriaForense($request),
+            ])]);
+
+            return response()->json(RespuestaApi::returnResultado('success',
+                $request->boolean('pag_inicio') ? 'Ahora es la página de inicio de la tienda' : 'Ya no es la página de inicio',
+                ['pag_id' => $resultado->pag_id]));
+        } catch (QueryException $e) {
+            return $this->errorTraducido($e, 'Error al cambiar la página de inicio');
         }
     }
 
