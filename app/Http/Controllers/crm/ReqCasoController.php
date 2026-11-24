@@ -315,19 +315,22 @@ class ReqCasoController extends Controller
         }
     }
 
-    // 19-nov: guarda el TIPO CRÉDITO con ventas.fn_precalifica_elegir (PrecalificaController::elegir), que también llena y bloquea
-    // los otros 6 requerimientos marcados del caso. Del requerimiento solo cambia además la descripción que escribe el usuario.
-    // Devuelve todos los requerimientos del caso, para que la pantalla refresque los 6.
+    // 19-nov: guarda el TIPO CRÉDITO con ventas.fn_precalifica_elegir (PrecalificaController::elegir), que también llena los otros
+    // 6 requerimientos marcados del caso (24-nov: se puede cambiar hasta la primera proforma). Del requerimiento solo cambia además
+    // la descripción que escribe el usuario. Devuelve todos los requerimientos del caso, para que la pantalla refresque los 6.
     private function guardarTipoCredito(RequerimientoCaso $requerimiento, Request $request)
     {
         $linea = $requerimiento->tipo_campo === 'lista agrupada' ? $request->input('valor_varchar_2') : $request->input('valor_varchar');
         $error = null;
 
         DB::transaction(function () use ($requerimiento, $request, $linea, &$error) {
+            $precalifica = app(PrecalificaController::class);
             // 20-nov: foto de los 7 marcados antes de elegir, para dejar en la bitácora cada uno que cambió
-            $marcados = fn () => RequerimientoCaso::where('caso_id', $requerimiento->caso_id)->whereNotNull('dato_cotizador')->get()->keyBy('id');
-            $antes = $marcados();
-            $error = app(PrecalificaController::class)->elegir((int) $requerimiento->id, $linea, $request);
+            // QUITADO 24-nov (pasó a PrecalificaController::requerimientosMarcados, que también usa el recalcular):
+            // $marcados = fn () => RequerimientoCaso::where('caso_id', $requerimiento->caso_id)->whereNotNull('dato_cotizador')->get()->keyBy('id');
+            // $antes = $marcados();
+            $antes = $precalifica->requerimientosMarcados((int) $requerimiento->caso_id);
+            $error = $precalifica->elegir((int) $requerimiento->id, $linea, $request);
             if ($error !== null) {
                 return;
             }
@@ -337,27 +340,30 @@ class ReqCasoController extends Controller
             }
 
             // QUITADO 20-nov (la bitácora no conoce esa acción y salía en blanco): $audit->accion = 'editRequerimientoTipoCredito';
-            // Ahora un registro 'editRequerimiento' por cada requerimiento que cambió (el TIPO CRÉDITO y los 6 que llenó la precalifica).
-            foreach ($marcados() as $id => $nuevo) {
-                $viejo = $antes->get($id);
-                if (!$viejo || json_encode($viejo) === json_encode($nuevo)) {
-                    continue;
-                }
-                $audit = new Audits();
-                $audit->old_values = json_encode($viejo);
-                $audit->new_values = json_encode($nuevo);
-                $audit->user_id = Auth::id();
-                $audit->event = 'updated';
-                $audit->auditable_type = RequerimientoCaso::class;
-                $audit->auditable_id = $id;
-                $audit->user_type = User::class;
-                $audit->ip_address = $request->ip();
-                $audit->url = $request->fullUrl();
-                $audit->user_agent = $request->header('User-Agent');
-                $audit->accion = 'editRequerimiento';
-                $audit->caso_id = $requerimiento->caso_id;
-                $audit->save();
-            }
+            // Un registro 'editRequerimiento' por cada requerimiento que cambió (el TIPO CRÉDITO y los 6 que llenó la precalifica).
+            // 24-nov: el registro pasó a PrecalificaController::registrarCambiosMarcados (lo usa también el recalcular).
+            $precalifica->registrarCambiosMarcados((int) $requerimiento->caso_id, $antes, $request);
+            // QUITADO 24-nov (es el mismo código, ahora en PrecalificaController::registrarCambiosMarcados):
+            // foreach ($marcados() as $id => $nuevo) {
+            //     $viejo = $antes->get($id);
+            //     if (!$viejo || json_encode($viejo) === json_encode($nuevo)) {
+            //         continue;
+            //     }
+            //     $audit = new Audits();
+            //     $audit->old_values = json_encode($viejo);
+            //     $audit->new_values = json_encode($nuevo);
+            //     $audit->user_id = Auth::id();
+            //     $audit->event = 'updated';
+            //     $audit->auditable_type = RequerimientoCaso::class;
+            //     $audit->auditable_id = $id;
+            //     $audit->user_type = User::class;
+            //     $audit->ip_address = $request->ip();
+            //     $audit->url = $request->fullUrl();
+            //     $audit->user_agent = $request->header('User-Agent');
+            //     $audit->accion = 'editRequerimiento';
+            //     $audit->caso_id = $requerimiento->caso_id;
+            //     $audit->save();
+            // }
         });
 
         if ($error !== null) {

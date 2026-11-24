@@ -29,6 +29,8 @@ class Precalifica extends Model
         'es_reiterativo',
         'score',
         'riesgo',
+        // 24-nov: SI APLICA / NO APLICA de la línea (aplica_credito de la función)
+        'aplica_credito',
         'es_vigente',
     ];
 }

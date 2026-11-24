@@ -1140,6 +1140,9 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     // 19-nov-2026: la precalifica del caso (pestaña Precalifica) y su Reintentar (sale solo si falló).
     Route::get('/listPrecalifica/{caso_id}', [PrecalificaController::class, 'listPrecalifica'])->where('caso_id', '[0-9]+');
     Route::post('/reintentarPrecalifica/{caso_id}', [PrecalificaController::class, 'reintentarPrecalifica'])->where('caso_id', '[0-9]+');
+    // 23-nov-2026: vista previa de la precalifica por cédula en el modal del cliente de Nuevo Caso (solo lee).
+    Route::get('/precalificaVistaPrevia/{tipo_caso_id}/{identificacion}', [PrecalificaController::class, 'vistaPrevia'])
+        ->where(['tipo_caso_id' => '[0-9]+', 'identificacion' => '[0-9]{10,13}']);
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::post('/respuestaCasoMasivo', [CasoController::class, 'respuestaCasoMasivo']);
