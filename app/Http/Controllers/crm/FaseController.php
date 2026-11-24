@@ -433,7 +433,8 @@ class FaseController extends Controller
         }
 
         return $this->ordenarComoLaFuncion(
-            Caso::with($this->relacionesCaso())->whereIn('id', $casoIds)->get(),
+            // 20-nov: la tarjeta solo necesita tiene_novedad (⚠ Novedad); el texto se ve al abrir el caso.
+            Caso::with($this->relacionesCaso())->whereIn('id', $casoIds)->get()->makeHidden('texto_novedad'),
             $casoIds
         );
     }

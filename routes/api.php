@@ -24,6 +24,7 @@ use App\Http\Controllers\configuracion\CalificacionColorController;
 use App\Http\Controllers\configuracion\Archivos2Controller;
 use App\Http\Controllers\anuncios\AnunciosController;
 use App\Http\Controllers\anuncios\AnunciosUsuarioController;
+use App\Http\Controllers\anuncios\GrupoAnunciosController;
 use App\Http\Controllers\configuracion\CodigoQrController;
 use App\Http\Controllers\configuracion\HorarioController;
 use App\Http\Controllers\crm\ActividadesFormulasController;
@@ -170,11 +171,13 @@ use App\Http\Controllers\gestionClientes\ZonaController;
 use App\Http\Controllers\openceo\PoliticaController;
 use App\Http\Controllers\ventas\cotizador\CotizadorParametrosController;
 use App\Http\Controllers\ventas\cotizador\ComportamientoClienteParametrosController;
-use App\Http\Controllers\ventas\cotizador\TipoClienteParametrosController;
-use App\Http\Controllers\ventas\cotizador\FormalInformalParametrosController;
+use App\Http\Controllers\ventas\cotizador\PerfilClienteParametrosController;
+use App\Http\Controllers\ventas\cotizador\ActividadClienteParametrosController;
 use App\Http\Controllers\ventas\cotizador\PerformanceCreditoController;
 // 11-nov-2026 (líneas): el catálogo de líneas (panel izquierdo de Performance crédito).
 use App\Http\Controllers\ventas\cotizador\LineaController;
+// 19-nov-2026: precalifica del caso (pestaña Precalifica y su Reintentar).
+use App\Http\Controllers\ventas\cotizador\PrecalificaController;
 // 11-nov-2026 (Fase 4): Parámetros de calificación (V05) salió de openceo\PoliticaController.
 use App\Http\Controllers\ventas\cotizador\CalificacionClienteParametrosController;
 use App\Http\Controllers\ventas\cotizador\CmargenController;
@@ -229,6 +232,8 @@ use App\Http\Controllers\paginaWeb\PaginasTiendaController;
 use App\Http\Controllers\paginaWeb\ProductosTiendaController;
 use App\Http\Controllers\paginaWeb\SucursalesTiendaController;
 use App\Http\Controllers\ItemPruebaFlutterController;
+use App\Http\Controllers\paginaWeb\CreditoController;
+use App\Http\Controllers\formulario\SolicitudesCreditosWebController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -287,6 +292,15 @@ Route::group(["prefix" => "crm"], function ($router) {
 
     // FORMULARIO INSTITUCIONAL (/formulario): combo de empresas
     Route::get('/listAllEmpresas', [EmpresaController::class, 'listAllEmpresas'])->middleware('throttle:60,1,formulario');
+});
+
+// FORMULARIO INSTITUCIONAL (/formulario), migrado de ecommerce-back con las mismas rutas.
+// Mismo límite que tenía allá (60/min por IP); el prefijo evita compartir el contador con el STS.
+Route::group(["prefix" => "ecommerce", "middleware" => "throttle:60,1,formulario"], function ($router) {
+    // La lupa consulta Ecuador Legal / SRI: 10 por minuto por IP
+    Route::post('/buscarCliente', [CreditoController::class, 'buscarCliente'])->middleware('throttle:10,1,formulario-lupa');
+    Route::post('/enviarCliente', [CreditoController::class, 'enviarCliente']); // antes crearCaso: ya no crea caso
+    Route::get('/autorizarTratamientoDatos/{empresa}/{id}', [SolicitudesCreditosWebController::class, 'autorizarTratamientoDatos']); // link del correo
 });
 
 
@@ -1123,6 +1137,12 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/casoConsultaGarancheck/{caso_id}', [CasoConsultaGarancheckController::class, 'mostrar'])->where('caso_id', '[0-9]+');
     // 30-oct (fase 3b de Yupana): el botón Calificar / Reintentar del caso: consulta con la agencia del caso, casa la consulta y guarda la calificación.
     Route::post('/casoCalificar/{caso_id}', [CasoConsultaGarancheckController::class, 'calificar'])->where('caso_id', '[0-9]+')->middleware('throttle:20,1,caso-calificar');
+    // 19-nov-2026: la precalifica del caso (pestaña Precalifica) y su Reintentar (sale solo si falló).
+    Route::get('/listPrecalifica/{caso_id}', [PrecalificaController::class, 'listPrecalifica'])->where('caso_id', '[0-9]+');
+    Route::post('/reintentarPrecalifica/{caso_id}', [PrecalificaController::class, 'reintentarPrecalifica'])->where('caso_id', '[0-9]+');
+    // 23-nov-2026: vista previa de la precalifica por cédula en el modal del cliente de Nuevo Caso (solo lee).
+    Route::get('/precalificaVistaPrevia/{tipo_caso_id}/{identificacion}', [PrecalificaController::class, 'vistaPrevia'])
+        ->where(['tipo_caso_id' => '[0-9]+', 'identificacion' => '[0-9]{10,13}']);
     Route::put('/editCaUsAs', [CasoController::class, 'reasignarCaso']);
     Route::post('/respuestaCaso', [CasoController::class, 'respuestaCaso']);
     Route::post('/respuestaCasoMasivo', [CasoController::class, 'respuestaCasoMasivo']);
@@ -2034,6 +2054,13 @@ Route::group(["prefix" => "anuncios", 'middleware' => ['jwt.auth', 'usuario.acti
     Route::get('/config', [AnunciosUsuarioController::class, 'config']);
     Route::get('/listAnunciosUsuario', [AnunciosUsuarioController::class, 'listAnunciosUsuario']);
     Route::post('/marcarVistosVarios', [AnunciosUsuarioController::class, 'marcarVistosVarios']);
+    // 19-nov: Grupo Anuncios (grupos de agencias para los destinos)
+    Route::get('/listGrupoAnuncios', [GrupoAnunciosController::class, 'listGrupoAnuncios']);
+    Route::get('/listAgenciasGrupoAnuncios', [GrupoAnunciosController::class, 'listAgenciasGrupoAnuncios']);
+    Route::get('/listGrupoAnunciosActivos', [GrupoAnunciosController::class, 'listGrupoAnunciosActivos']);
+    Route::post('/addGrupoAnuncios', [GrupoAnunciosController::class, 'addGrupoAnuncios']);
+    Route::put('/editGrupoAnuncios/{id}', [GrupoAnunciosController::class, 'editGrupoAnuncios']);
+    Route::get('/grupoAnunciosAuditoria/{id}', [GrupoAnunciosController::class, 'grupoAnunciosAuditoria']);
 });
 
 // VENTAS > COTIZADOR: Parámetros cotizador (V02), Margen y aportes (V01), Cotizar (V06), Proformas (V04), Contado (V07), Tarjetas y
@@ -2077,6 +2104,8 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     Route::get('/listProformas', [CproformaController::class, 'listProformas']);
     Route::get('/getCotizacion/{id}', [CproformaController::class, 'getCotizacion']);
     Route::get('/listProformasCaso/{casoId}', [CproformaController::class, 'listProformasCaso']);
+    // 23-nov: las novedades de la última proforma del caso (botón «NOVEDADES PROFORMA»; el caso ya no trae el texto).
+    Route::get('/novedadesProformaCaso/{casoId}', [CproformaController::class, 'novedadesProformaCaso'])->where('casoId', '[0-9]+');
     // Contado: las formas de pago de contado con sus reglas (25-oct: las tarjetas pasaron a Tarjetas y comisiones).
     // 11-nov-2026 (Fase 6): Contado (V07) al estándar: ContadoParametrosController (las formas de pago con sus reglas, que
     // se guardan juntas con un solo Guardar).
@@ -2109,23 +2138,24 @@ Route::group(["prefix" => "ventas", 'middleware' => ['jwt.auth', 'usuario.activo
     // 11-nov-2026 (activo): la auditoría de TODA la pestaña Comportamiento (el botón Auditoría de la cabecera).
     Route::get('/comportamientoClienteParametrosAuditoria', [ComportamientoClienteParametrosController::class, 'comportamientoClienteParametrosAuditoria']);
 
-    Route::get('/listTipoClienteParametros', [TipoClienteParametrosController::class, 'listTipoClienteParametros']);
-    Route::get('/listCombosTipoClienteParametros', [TipoClienteParametrosController::class, 'listCombosTipoClienteParametros']);
-    Route::post('/guardarTipoClienteParametros', [TipoClienteParametrosController::class, 'guardarTipoClienteParametros']);
+    Route::get('/listPerfilClienteParametros', [PerfilClienteParametrosController::class, 'listPerfilClienteParametros']);
+    Route::get('/listCombosPerfilClienteParametros', [PerfilClienteParametrosController::class, 'listCombosPerfilClienteParametros']);
+    Route::post('/guardarPerfilClienteParametros', [PerfilClienteParametrosController::class, 'guardarPerfilClienteParametros']);
     // QUITADO 11-nov-2026 (pestaña 2): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
-    // Route::delete('/deleteTipoClienteParametro/{id}', [TipoClienteParametrosController::class, 'deleteTipoClienteParametro']);
-    Route::get('/tipoClienteParametroAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametroAuditoria']);
+    // Route::delete('/deletePerfilClienteParametro/{id}', [PerfilClienteParametrosController::class, 'deletePerfilClienteParametro']);
+    Route::get('/perfilClienteParametroAuditoria', [PerfilClienteParametrosController::class, 'perfilClienteParametroAuditoria']);
     // 11-nov-2026 (pestaña 2): la auditoría de TODA la pestaña Tipo de cliente (el botón Auditoría de la cabecera).
-    Route::get('/tipoClienteParametrosAuditoria', [TipoClienteParametrosController::class, 'tipoClienteParametrosAuditoria']);
+    Route::get('/perfilClienteParametrosAuditoria', [PerfilClienteParametrosController::class, 'perfilClienteParametrosAuditoria']);
 
-    Route::get('/listFormalInformalParametros', [FormalInformalParametrosController::class, 'listFormalInformalParametros']);
-    Route::get('/listCombosFormalInformalParametros', [FormalInformalParametrosController::class, 'listCombosFormalInformalParametros']);
-    Route::post('/guardarFormalInformalParametros', [FormalInformalParametrosController::class, 'guardarFormalInformalParametros']);
+    Route::get('/listActividadClienteParametros', [ActividadClienteParametrosController::class, 'listActividadClienteParametros']);
+    // QUITADO 16-nov-2026 (sin línea): la pestaña Formal / Informal ya no tiene combos (el único era la Línea).
+    // Route::get('/listCombosActividadClienteParametros', [ActividadClienteParametrosController::class, 'listCombosActividadClienteParametros']);
+    Route::post('/guardarActividadClienteParametros', [ActividadClienteParametrosController::class, 'guardarActividadClienteParametros']);
     // QUITADO 11-nov-2026 (activo): lo guardado ya no se borra (se desactiva con el check Activo de la grilla).
-    // Route::delete('/deleteFormalInformalParametro/{id}', [FormalInformalParametrosController::class, 'deleteFormalInformalParametro']);
-    Route::get('/formalInformalParametroAuditoria', [FormalInformalParametrosController::class, 'formalInformalParametroAuditoria']);
+    // Route::delete('/deleteActividadClienteParametro/{id}', [ActividadClienteParametrosController::class, 'deleteActividadClienteParametro']);
+    Route::get('/actividadClienteParametroAuditoria', [ActividadClienteParametrosController::class, 'actividadClienteParametroAuditoria']);
     // 11-nov-2026 (activo): la auditoría de TODA la pestaña Formal / Informal (el botón Auditoría de la cabecera).
-    Route::get('/formalInformalParametrosAuditoria', [FormalInformalParametrosController::class, 'formalInformalParametrosAuditoria']);
+    Route::get('/actividadClienteParametrosAuditoria', [ActividadClienteParametrosController::class, 'actividadClienteParametrosAuditoria']);
 
     Route::get('/listPerformanceCredito', [PerformanceCreditoController::class, 'listPerformanceCredito']);
     Route::get('/listCombosPerformanceCredito', [PerformanceCreditoController::class, 'listCombosPerformanceCredito']);

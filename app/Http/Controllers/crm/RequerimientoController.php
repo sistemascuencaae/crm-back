@@ -319,8 +319,8 @@ class RequerimientoController extends Controller
             return response()->json(RespuestaApi::returnResultado('success', 'Se listo con éxito', [
                 'comportamiento' => DB::select('SELECT * FROM ventas.fn_comportamiento_cliente_parametros_opciones_listar()'),
                 // QUITADO 10-nov: 'tipos_cliente' => DB::select('SELECT * FROM ventas.fn_tipo_cliente_parametros_tipos_listar()'),
-                // QUITADO 11-nov-2026 (líneas): 'lineas_formal_informal' => DB::select('SELECT * FROM ventas.fn_formal_informal_parametros_lineas_listar()'),
-                'lineas_formal_informal' => DB::select('SELECT * FROM ventas.fn_linea_activas_listar()'),
+                // QUITADO 11-nov-2026 (líneas): 'lineas_actividad_cliente' => DB::select('SELECT * FROM ventas.fn_formal_informal_parametros_lineas_listar()'),
+                'lineas_actividad_cliente' => DB::select('SELECT * FROM ventas.fn_linea_activas_listar()'),
                 'datos_cotizador' => DB::select('SELECT codigo, nombre FROM crm.fn_requerimientos_predefinidos_datos_cotizador_listar()'),
             ]));
         } catch (Exception $e) {

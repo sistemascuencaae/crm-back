@@ -74,7 +74,7 @@ class CalificacionClienteParametrosController extends Controller
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', json_decode($fila->resultado, true)));
         } catch (Exception $e) {
-            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los tipos de cliente, actividades y comportamientos', $e->getMessage()));
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los perfiles cliente, actividades y comportamientos', $e->getMessage()));
         }
     }
 
@@ -91,7 +91,7 @@ class CalificacionClienteParametrosController extends Controller
                 'parametros'                             => 'present|array',
                 'parametros.*'                           => 'array',
                 'parametros.*.id'                        => 'nullable|integer|max:2147483647',
-                'parametros.*.tipo_cliente_id'           => 'required|integer|min:1|max:2147483647',
+                'parametros.*.perfil_cliente_id'           => 'required|integer|min:1|max:2147483647',
                 'parametros.*.actividad_cliente_id'      => 'required|integer|min:1|max:2147483647',
                 'parametros.*.comportamiento_cliente_id' => 'required|integer|min:1|max:2147483647',
                 'parametros.*.margen_financiero_general' => 'required|numeric',
@@ -223,10 +223,10 @@ class CalificacionClienteParametrosController extends Controller
             'parametros.*.array'                              => 'Los parámetros de calificación no tienen un formato válido.',
             'parametros.*.id.integer'                         => 'Uno de los parámetros de calificación no es válido.',
             'parametros.*.id.max'                             => 'Uno de los parámetros de calificación no es válido.',
-            'parametros.*.tipo_cliente_id.required'           => 'El tipo de cliente del parámetro de calificación es obligatorio.',
-            'parametros.*.tipo_cliente_id.integer'            => 'El tipo de cliente del parámetro de calificación no es válido.',
-            'parametros.*.tipo_cliente_id.min'                => 'El tipo de cliente del parámetro de calificación no es válido.',
-            'parametros.*.tipo_cliente_id.max'                => 'El tipo de cliente del parámetro de calificación no es válido.',
+            'parametros.*.perfil_cliente_id.required'           => 'El perfil cliente del parámetro de calificación es obligatorio.',
+            'parametros.*.perfil_cliente_id.integer'            => 'El perfil cliente del parámetro de calificación no es válido.',
+            'parametros.*.perfil_cliente_id.min'                => 'El perfil cliente del parámetro de calificación no es válido.',
+            'parametros.*.perfil_cliente_id.max'                => 'El perfil cliente del parámetro de calificación no es válido.',
             'parametros.*.actividad_cliente_id.required'      => 'La actividad del parámetro de calificación es obligatoria.',
             'parametros.*.actividad_cliente_id.integer'       => 'La actividad del parámetro de calificación no es válida.',
             'parametros.*.actividad_cliente_id.min'           => 'La actividad del parámetro de calificación no es válida.',

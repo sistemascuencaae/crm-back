@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
 class CalificacionColorController extends Controller
 {
     // 30-oct: textura = ORO | PLATA | BRONCE | PLATINO | DIAMANTE | vacío (color liso); el catálogo lo da fn_calificacion_color_texturas_listar.
-    private const CAMPOS_PAYLOAD = ['calificacion', 'color', 'color_texto', 'orden', 'activo', 'textura'];
+    private const CAMPOS_PAYLOAD = ['calificacion', 'color', 'color_texto', 'activo', 'textura'];
 
     // Mensaje amigable para cada código que levantan crm.fn_calificacion_color_validaciones / _modificar / _eliminar.
     private const MENSAJES_ERROR = [
@@ -27,7 +27,6 @@ class CalificacionColorController extends Controller
         'REQUIERE_COLOR' => 'El color es obligatorio.',
         'COLOR_INVALIDO' => 'El color debe ser #RRGGBB.',
         'COLOR_TEXTO_INVALIDO' => 'El color del texto debe ser #RRGGBB.',
-        'ORDEN_INVALIDO' => 'El orden debe ser un número entero.',
         'ACTIVO_INVALIDO' => 'El estado no es válido.',
         'TEXTURA_INVALIDA' => 'La textura no es válida.',
         'COLOR_NO_EXISTE' => 'La fila ya no existe.',

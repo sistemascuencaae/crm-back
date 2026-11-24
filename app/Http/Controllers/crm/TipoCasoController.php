@@ -32,6 +32,8 @@ class TipoCasoController extends Controller
             'cotiza_tarjeta' => 'sometimes|boolean',
             // 30-oct: el switch "Pide calificación"
             'requiere_calificacion' => 'sometimes|boolean',
+            // 19-nov: el switch "Pide precalifica"
+            'requiere_precalifica' => 'sometimes|boolean',
         ], [
             'boolean' => 'El valor de :attribute debe ser sí o no.',
         ], [
@@ -39,6 +41,7 @@ class TipoCasoController extends Controller
             'cotiza_credito' => 'Crédito',
             'cotiza_tarjeta' => 'Tarjeta de crédito',
             'requiere_calificacion' => 'Pide calificación',
+            'requiere_precalifica' => 'Pide precalifica',
         ]);
 
         return $validator->fails() ? $validator->errors()->first() : null;

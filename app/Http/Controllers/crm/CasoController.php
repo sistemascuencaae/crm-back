@@ -8,6 +8,7 @@ use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\crm\EmailDinamicoController;
 use App\Http\Controllers\crm\credito\RobotCasoController;
+use App\Http\Controllers\ventas\cotizador\PrecalificaController;
 use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Models\configuracion\Agencia;
@@ -166,6 +167,8 @@ class CasoController extends Controller
 
             // 27-oct: casa la consulta GaranCheck vigente del cliente con el caso (crm.caso.cliente_consulta_id).
             $this->vincularConsultaGarancheck($caso->id);
+            // 19-nov: si el tipo de caso pide precalifica, se precalifica (después de la calificación). Nunca tumba el alta.
+            app(PrecalificaController::class)->calcular((int) $caso->id, true);
 
             for ($i = 0; $i < sizeof($miembros); $i++) {
                 $mieExixte = Miembros::where("user_id", $miembros[$i])->where("caso_id", $caso->id)->first();
@@ -2708,6 +2711,8 @@ class CasoController extends Controller
 
                 // 27-oct: casa la consulta GaranCheck vigente del cliente con el caso (crm.caso.cliente_consulta_id).
                 $this->vincularConsultaGarancheck($caso->id);
+                // 19-nov: si el tipo de caso pide precalifica, se precalifica (después de la calificación). Nunca tumba el alta.
+                app(PrecalificaController::class)->calcular((int) $caso->id, true);
 
                 // El caso es nuevo: no tiene miembros previos, así que no hace falta consultar
                 // duplicados (esa consulta escaneaba toda la tabla miembros). Basta deduplicar el array.

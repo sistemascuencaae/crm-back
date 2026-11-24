@@ -72,6 +72,17 @@ class ApiProxyHelper
         return 'api_client_cancelar_' . $uid;
     }
 
+    // 18-nov: token de la sesión para {{$token_crm}}, sin importar mayúsculas ('bearer ' del front o 'Bearer ').
+    public static function tokenSesion(Request $request): ?string
+    {
+        $token = $request->bearerToken();
+        if ($token === null && preg_match('/^\s*bearer\s+(\S+)/i', (string) $request->header('Authorization', ''), $m)) {
+            $token = $m[1];
+        }
+
+        return $token !== null && $token !== '' ? $token : null;
+    }
+
     // Devuelve ['status' => 'success'|'error', 'message' => texto corto, 'data' => RespuestaProxy|ErrorProxy].
     public function ejecutar(Request $request): array
     {
@@ -88,7 +99,9 @@ class ApiProxyHelper
         $uid = $p['uid'];
         $usuarioId = ($u = auth('api')->user()) ? (int) $u->id : null;
 
-        $this->cargarVariables($usuarioId, $p['api_colecciones_id'], $p['entorno_id'], $request->bearerToken());
+        // QUITADO 18-nov: bearerToken() solo reconoce 'Bearer ' y el front manda 'bearer ': {{$token_crm}} quedaba vacío (reactivar = descomentar)
+        // $this->cargarVariables($usuarioId, $p['api_colecciones_id'], $p['entorno_id'], $request->bearerToken());
+        $this->cargarVariables($usuarioId, $p['api_colecciones_id'], $p['entorno_id'], self::tokenSesion($request));
         $this->cargarColeccion($p['api_colecciones_id'], $usuarioId); // 30-oct F2: auth 'heredar' y headers de la colección
 
         // Variables en url, params, headers, auth y body

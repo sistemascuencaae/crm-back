@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\ventas\cotizador;
 
+use App\Events\TableroEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\crm\CasoController;
+use App\Http\Resources\crm\Funciones;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Traits\PermisosCotizacionTrait;
 use App\Models\crm\Audits;
@@ -12,6 +15,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Throwable;
 
 // Version 1.0
 // Cotizar (modal de Ventas > Cotizaciones, sin menu propio): una cotizacion de contado o de credito con N productos.
@@ -127,7 +131,14 @@ class CotizarController extends Controller
             $respuesta = json_decode($fila->resultado, true);
 
             if ($respuesta['success']) {
-                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], $this->datosSegunPermisoCostos($respuesta['data'])));
+                $data = $this->datosSegunPermisoCostos($respuesta['data']);
+                // 20-nov: las novedades contra los datos del caso (Plazo, Cuota, Inicial), para avisar antes de guardar.
+                $casoId = $this->enteroONulo($request->input('caso_id'));
+                if ($casoId !== null) {
+                    $nov = DB::selectOne('SELECT ventas.fn_cotizar_novedades(?, ?::jsonb) AS n', [$casoId, json_encode($respuesta['data'])]);
+                    $data['novedades'] = json_decode($nov->n, true)['novedades'] ?? [];
+                }
+                return response()->json(RespuestaApi::returnResultado('success', $respuesta['message'], $data));
             }
 
             return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
@@ -190,7 +201,11 @@ class CotizarController extends Controller
             $respuesta = json_decode($fila->resultado, true);
 
             if (!$respuesta['success']) {
-                return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], null));
+                // 20-nov: con novedades sin confirmar no se guarda: el front pregunta y vuelve a mandar con acepta_novedades.
+                $datosError = ($respuesta['codigo'] ?? null) === 'NOVEDADES'
+                    ? ['codigo' => 'NOVEDADES', 'novedades' => $respuesta['novedades'] ?? []]
+                    : null;
+                return response()->json(RespuestaApi::returnResultado('error', $respuesta['message'], $datosError));
             }
 
             if (empty($respuesta['data']['ccotizacion_id'])) {
@@ -220,6 +235,13 @@ class CotizarController extends Controller
 
             $data = $this->datosSegunPermisoCostos($respuesta['data']);
             $data['reqCaso'] = RequerimientoCaso::where('caso_id', $casoId)->orderBy('id', 'asc')->get();
+
+            // 20-nov: la tarjeta del tablero se pone al día con la novedad del caso (⚠ Novedad).
+            try {
+                broadcast(new TableroEvent(app(CasoController::class)->getCaso($casoId)));
+            } catch (Throwable $e) {
+                (new Funciones())->logError(CotizarController::class, 'No se pudo avisar al tablero la proforma del caso #' . $casoId, $e);
+            }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Proforma N° ' . $respuesta['data']['ccotizacion_id'] . ' guardada.', $data));
         });
@@ -309,6 +331,8 @@ class CotizarController extends Controller
             'tarjeta_plazo_id' => $this->enteroONulo($request->input('tarjeta_plazo_id')),
             'plazo_default_id' => $this->enteroONulo($request->input('plazo_default_id')),
             'contado_parametros_id' => $this->enteroONulo($request->input('contado_parametros_id')),
+            // 20-nov: el usuario ya vio las novedades y quiere guardar igual (ventas.fn_cproforma_registrar).
+            'acepta_novedades' => $guardar && $request->boolean('acepta_novedades'),
         ];
 
         return $payload;

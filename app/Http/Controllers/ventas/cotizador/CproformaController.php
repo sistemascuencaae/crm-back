@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ventas\cotizador;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Traits\PermisosCotizacionTrait;
+use App\Models\crm\Caso;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -122,6 +123,35 @@ class CproformaController extends Controller
             ]));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar las proformas del caso', $e->getMessage()));
+        }
+    }
+
+    // Version 1.0
+    // GET /api/ventas/novedadesProformaCaso/{casoId} — 23-nov: las novedades de la última proforma del caso, que el caso guarda
+    // al guardarla (ventas.fn_cproforma_registrar). Las pide siempre el botón «NOVEDADES PROFORMA» de la cabecera.
+    // Respuesta: { tiene_novedad: bool, novedades: string[] }. Errores: caso no válido o inexistente.
+    public function novedadesProformaCaso($casoId)
+    {
+        try {
+            if (!preg_match('/^[0-9]{1,9}$/', (string) $casoId) || (int) $casoId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Caso no válido', null));
+            }
+
+            $caso = Caso::query()->whereKey((int) $casoId)->first(['id', 'tiene_novedad', 'texto_novedad']);
+
+            if (!$caso) {
+                return response()->json(RespuestaApi::returnResultado('error', 'No se encontró el caso.', null));
+            }
+
+            // Una línea por novedad (las arma ventas.fn_cotizar_novedades).
+            $novedades = array_values(array_filter(array_map('trim', explode("\n", (string) $caso->texto_novedad)), 'strlen'));
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', [
+                'tiene_novedad' => (bool) $caso->tiene_novedad,
+                'novedades' => $novedades,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar las novedades', $e->getMessage()));
         }
     }
 }

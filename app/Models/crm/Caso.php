@@ -87,6 +87,16 @@ class Caso extends Model
         'fecha_ingreso_fase' => 'datetime',
         // 30-oct: copia del switch del tipo de caso; la escribe crm.fn_caso_calificacion_iniciar (no va en $fillable).
         'requiere_calificacion' => 'boolean',
+        // 19-nov: copia del switch del tipo de caso; la escribe ventas.fn_precalifica_calcular (no va en $fillable).
+        'requiere_precalifica' => 'boolean',
+        // 20-nov: la novedad de su última proforma; la escribe ventas.fn_cproforma_registrar (no va en $fillable).
+        'tiene_novedad' => 'boolean',
+    ];
+
+    // 23-nov: el texto de las novedades no viaja con el caso (tablero, getCaso, websocket): pesa. Solo lo entrega
+    // CproformaController@novedadesProformaCaso, cuando el usuario pulsa «NOVEDADES PROFORMA».
+    protected $hidden = [
+        'texto_novedad',
     ];
 
     public function userCreador()
