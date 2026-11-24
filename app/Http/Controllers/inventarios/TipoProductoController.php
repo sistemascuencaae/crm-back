@@ -5,6 +5,7 @@ namespace App\Http\Controllers\inventarios;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Http\Controllers\paginaWeb\CategoriasTiendaController;
+use App\Http\Controllers\paginaWeb\ProductosTiendaController;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -202,6 +203,7 @@ class TipoProductoController extends Controller
             // "En la web", el estado o el nombre cambian lo que sale en la tienda (menú y catálogo)
             if (array_key_exists('tpr_web_visible', $payload) || array_key_exists('tpr_activo', $payload) || array_key_exists('tpr_nombre', $payload)) {
                 CategoriasTiendaController::limpiarCache();
+                ProductosTiendaController::limpiarCache();
             }
 
             return response()->json(RespuestaApi::returnResultado('success', 'Tipo de producto modificado con éxito', ['tpr_id' => $resultado->tpr_id]));

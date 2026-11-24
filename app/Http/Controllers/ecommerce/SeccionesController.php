@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ecommerce;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\paginaWeb\PaginasTiendaController;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Database\QueryException;
@@ -151,6 +152,8 @@ class SeccionesController extends Controller
             // consulte la plantilla para nombrar el campo (si no, esa consulta caería en una transacción abortada).
             $resultado = DB::transaction(fn() => DB::selectOne('SELECT ecommerce.fn_seccion_add(?::jsonb) AS sec_id', [json_encode($payload)]));
 
+            PaginasTiendaController::limpiarCache();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Sección creada con éxito', ['sec_id' => $resultado->sec_id]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al crear la sección', (int) $request->input('pla_id'));
@@ -172,6 +175,8 @@ class SeccionesController extends Controller
 
         try {
             $resultado = DB::transaction(fn() => DB::selectOne('SELECT ecommerce.fn_seccion_edit(?::jsonb) AS sec_id', [json_encode($payload)]));
+
+            PaginasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Sección modificada con éxito', ['sec_id' => $resultado->sec_id]));
         } catch (QueryException $e) {
@@ -207,6 +212,8 @@ class SeccionesController extends Controller
                 'auditoria' => $this->contextoAuditoriaForense($request),
             ])]);
 
+            PaginasTiendaController::limpiarCache();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Orden guardado con éxito', ['pag_id' => $pagId]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al ordenar las secciones');
@@ -235,6 +242,8 @@ class SeccionesController extends Controller
                 'auditoria' => $this->contextoAuditoriaForense($request),
             ])]);
 
+            PaginasTiendaController::limpiarCache();
+
             return response()->json(RespuestaApi::returnResultado('success', $visible ? 'Sección visible' : 'Sección desactivada', ['sec_id' => $resultado->sec_id]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al cambiar la sección');
@@ -247,6 +256,8 @@ class SeccionesController extends Controller
         try {
             $resultado = DB::selectOne('SELECT ecommerce.fn_seccion_papelera(?::jsonb) AS sec_id', [json_encode(['sec_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]);
 
+            PaginasTiendaController::limpiarCache();
+
             return response()->json(RespuestaApi::returnResultado('success', 'Sección enviada a la papelera', ['sec_id' => $resultado->sec_id]));
         } catch (QueryException $e) {
             return $this->errorTraducido($e, 'Error al eliminar la sección');
@@ -258,6 +269,8 @@ class SeccionesController extends Controller
     {
         try {
             $resultado = DB::transaction(fn() => DB::selectOne('SELECT ecommerce.fn_seccion_restaurar(?::jsonb) AS sec_id', [json_encode(['sec_id' => $id, 'auditoria' => $this->contextoAuditoriaForense($request)])]));
+
+            PaginasTiendaController::limpiarCache();
 
             return response()->json(RespuestaApi::returnResultado('success', 'Sección restaurada con éxito', ['sec_id' => $resultado->sec_id]));
         } catch (QueryException $e) {

@@ -2307,6 +2307,7 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     // Selector de enlace (headers, footers, secciones): qué se puede elegir y cómo se llama cada destino.
     Route::get('/enlacesCatalogo', [EnlacesController::class, 'catalogo']);
     Route::post('/enlacesDescribir', [EnlacesController::class, 'describir']);
+    Route::get('/enlacesOpciones', [EnlacesController::class, 'opciones']);
     Route::get('/papeleraPaginas', [PaginasController::class, 'papelera']);
     Route::get('/paginaAuditoria', [PaginasController::class, 'auditoria']);
     Route::get('/plantillasSeccion', [SeccionesController::class, 'plantillas']);

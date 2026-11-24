@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
 use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use App\Http\Controllers\paginaWeb\CategoriasTiendaController;
+use App\Http\Controllers\paginaWeb\ProductosTiendaController;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -277,6 +278,7 @@ class MarcaController extends Controller
     private function limpiarCacheTienda(): void
     {
         CategoriasTiendaController::limpiarCache();
+        ProductosTiendaController::limpiarCache();
     }
 
     // La regla acepta 1/0 y "1"/"0", pero la función solo recibe true o false.

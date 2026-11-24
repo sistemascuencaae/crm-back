@@ -4,21 +4,38 @@ namespace App\Http\Controllers\paginaWeb;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RespuestaApi;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 // Productos de la tienda (públicos, sin login): el listado de /shop con el panel de filtros, las sugerencias del buscador
 // del header y el detalle de un producto. La base decide todo (ecommerce.fn_producto_tienda_*: qué productos se ven, en
 // qué orden, cuántos, las opciones del panel, los relacionados, si es moto…); aquí solo se revisa lo que llega, se
 // llama a la base y se arma el JSON. Lo único que se agrega es la dirección de este servidor en las fotos (la tienda
-// está en otro). Las respuestas no se guardan en caché.
+// está en otro). El listado de /shop se guarda 60 s (ver CACHE_VERSION); las sugerencias y el detalle no.
 // Reemplaza a paginaWeb/ProductoTiendaPublicoController del sistema viejo (que pasaba por ProductoTiendaService).
 class ProductosTiendaController extends Controller
 {
     // Productos por página que acepta el listado de /shop (la tienda pide 24)
     private const TAMANIOS = [12, 24, 48];
+
+    // El listado de /shop se guarda 60 s por combinación de filtros (listadoGuardado), salvo con búsqueda escrita o rango
+    // de precio. Al guardar productos, marcas, tipos de producto o grupos en el CRM se borra (limpiarCache); lo que cambia
+    // solo (stock, precio, la regla de la tienda) tarda hasta 60 s.
+    private const CACHE_VERSION = 'ecommerce.shop_tienda.version';
+    private const SEGUNDOS_CACHE = 60;
+    private const ESPERA_SEGUNDOS = 5;
+
+    // El CRM guardó algo que cambia el listado: todos los listados se vuelven a pedir en la próxima visita (se cambia la
+    // versión de la clave; no hace falta saber qué combinaciones hay guardadas).
+    public static function limpiarCache(): void
+    {
+        Cache::forever(self::CACHE_VERSION, Str::random(8));
+    }
 
     // Filtros de características: como máximo cuántas características, cuántos valores en cada una y su largo
     private const CARACTERISTICAS_MAXIMO = 20;
@@ -103,10 +120,23 @@ class ProductosTiendaController extends Controller
         ];
 
         try {
-            $registros = DB::select(
-                'SELECT * FROM ecommerce.fn_producto_tienda_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?)',
-                [$pagina, $tamanio, ...$filtros, $v['orden'] ?? 'recent']
-            );
+            $consulta = function () use ($pagina, $tamanio, $filtros, $v) {
+                return [
+                    'registros' => DB::select(
+                        'SELECT * FROM ecommerce.fn_producto_tienda_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?)',
+                        [$pagina, $tamanio, ...$filtros, $v['orden'] ?? 'recent']
+                    ),
+                    'opciones' => $pagina === 1
+                        ? DB::select('SELECT * FROM ecommerce.fn_producto_tienda_opciones(?, ?, ?, ?, ?, ?, ?::jsonb)', $filtros)
+                        : null,
+                ];
+            };
+            // Con búsqueda escrita o rango de precio no se guarda: casi nunca se repiten y llenarían la caché
+            $guardable = $filtros[0] === null && $filtros[4] === null && $filtros[5] === null;
+            $filas = $guardable
+                ? $this->listadoGuardado([$pagina, $tamanio, ...$filtros, $v['orden'] ?? 'recent'], $consulta)
+                : $consulta();
+            $registros = $filas['registros'];
 
             $resultado = [
                 'registros' => array_map(fn ($f) => $this->tarjeta($f), $registros),
@@ -116,7 +146,7 @@ class ProductosTiendaController extends Controller
                 'opciones'  => null,
             ];
             if ($pagina === 1) {
-                [$resultado['opciones'], $grupoActivo] = $this->opciones($filtros);
+                [$resultado['opciones'], $grupoActivo] = $this->opciones($filas['opciones']);
                 // Con filtro de grupo: su nombre (chip de /shop), o null si no existe o no está activo
                 if ($grupo !== null) {
                     $resultado['grupo'] = $grupoActivo;
@@ -177,7 +207,7 @@ class ProductosTiendaController extends Controller
         }
     }
 
-    // GET public/productos/{proId}   → {producto, relacionados}
+    // GET public/productos/{proId}   → {producto (con cuotas: [{plazo, cuota}]), relacionados}
     // El producto sale de ecommerce.fn_producto_tienda_detalle (solo si se vende en la tienda) y los relacionados de
     // ecommerce.fn_producto_tienda_relacionados. Si no se vende: code 404 en el cuerpo (HTTP 200), status 'error' y data
     // null; la tienda muestra "Producto no disponible". Una falla interna responde code 500 en el cuerpo (también
@@ -195,6 +225,8 @@ class ProductosTiendaController extends Controller
             }
 
             $relacionados = DB::select('SELECT * FROM ecommerce.fn_producto_tienda_relacionados(?, ?)', [$proId, self::RELACIONADOS]);
+            // Las cuotas que calcula el ERP, del plazo más corto al más largo ([] = no se muestran)
+            $cuotas = DB::select('SELECT * FROM ecommerce.fn_producto_tienda_cuotas(?)', [$proId]);
 
             return response()
                 ->json(RespuestaApi::returnResultado('success', 'Producto', [
@@ -219,6 +251,7 @@ class ProductosTiendaController extends Controller
                         'precio_anterior' => $p->precio_anterior !== null ? (float) $p->precio_anterior : null,
                         'es_moto'         => (bool) $p->es_moto,
                         'camino'          => json_decode($p->camino ?? '[]', true) ?? [],
+                        'cuotas'          => array_map(fn ($c) => ['plazo' => (int) $c->plazo, 'cuota' => (float) $c->cuota], $cuotas),
                         'marca'           => $p->mar_id === null ? null : [
                             'mar_id' => (int) $p->mar_id,
                             'nombre' => $p->marca,
@@ -243,6 +276,37 @@ class ProductosTiendaController extends Controller
     // -----------------------------------------------------------------
 
     /**
+     * Las filas de la base para un listado de /shop, guardadas SEGUNDOS_CACHE por combinación de parámetros. Cuando se
+     * vence, solo una petición la vuelve a pedir; las demás esperan hasta ESPERA_SEGUNDOS y leen lo que dejó. Se guardan
+     * las filas, no la respuesta: las direcciones de las fotos se completan en cada petición con el servidor que la recibe.
+     */
+    private function listadoGuardado(array $parametros, \Closure $consulta): array
+    {
+        $clave = 'ecommerce.shop_tienda.' . Cache::get(self::CACHE_VERSION, '0') . '.' . md5(json_encode($parametros));
+        $filas = Cache::get($clave);
+        if ($filas !== null) {
+            return $filas;
+        }
+
+        $armar = function () use ($clave, $consulta) {
+            $filas = Cache::get($clave);
+            if ($filas === null) {
+                $filas = $consulta();
+                Cache::put($clave, $filas, self::SEGUNDOS_CACHE);
+            }
+
+            return $filas;
+        };
+
+        try {
+            return Cache::lock($clave . '.armando', self::ESPERA_SEGUNDOS * 2)->block(self::ESPERA_SEGUNDOS, $armar);
+        } catch (LockTimeoutException $e) {
+            // La base está tardando más de lo normal: esta petición la pide por su cuenta.
+            return $armar();
+        }
+    }
+
+    /**
      * Opciones del panel de filtros tal como las devuelve la base (ecommerce.fn_producto_tienda_opciones), ya elegidas
      * y en su orden; aquí solo se agrupan:
      *   [{categorias: árbol del panel por relevancia [{tpr_id, nombre, cantidad, elegida, abierta, hijas: [...]}],
@@ -251,7 +315,7 @@ class ProductosTiendaController extends Controller
      *     ignorados: ['categoria' | 'marca' | 'grupo']},
      *    grupo activo {gpr_id, nombre} | null]
      */
-    private function opciones(array $filtros): array
+    private function opciones(array $filas): array
     {
         $opciones = ['categorias' => [], 'camino' => [], 'marcas' => [], 'precio' => null, 'caracteristicas' => [], 'ignorados' => []];
         $grupo    = null;
@@ -261,7 +325,7 @@ class ProductosTiendaController extends Controller
         $categorias = [];
         $llegada    = [];
 
-        foreach (DB::select('SELECT * FROM ecommerce.fn_producto_tienda_opciones(?, ?, ?, ?, ?, ?, ?::jsonb)', $filtros) as $o) {
+        foreach ($filas as $o) {
             switch ($o->tipo) {
                 case 'categoria':
                     $categorias[(int) $o->id] = [
