@@ -36,6 +36,8 @@ trait PermisosCotizacionTrait
     {
         return [
             'costo', 'origen_costo', 'aportes', 'total_aportes', 'came', 'margen',
+            // 25-nov: los dos costos del producto ese día.
+            'costo_promedio', 'costo_negociacion',
             'margen_financiero', 'margen_financiero_general', 'incremento',
             'cotizador_parametros_id', 'concepto_margen', 'origen_margen', 'cmargen_id', 'cabecera_margen',
             'dmargen_id', 'orden_margen', 'vigencia_inicio_margen', 'vigencia_fin_margen',

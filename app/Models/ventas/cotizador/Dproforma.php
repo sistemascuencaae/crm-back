@@ -52,5 +52,11 @@ class Dproforma extends Model
         'negociado',
         'origen_costo',
         'precio_sin_descuento_unitario',
+        // 25-nov: la marca de regalo del producto ese día y si se dio como regalo (en $0).
+        'pro_es_regalo',
+        'regalo',
+        // 25-nov: los dos costos del producto ese día (el usado sigue en costo y origen_costo).
+        'costo_promedio',
+        'costo_negociacion',
     ];
 }
