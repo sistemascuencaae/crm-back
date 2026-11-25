@@ -262,6 +262,8 @@ class CotizarController extends Controller
             'items.*.pro_id'   => 'required|integer',
             'items.*.cantidad' => 'required|numeric|gt:0',
             'items.*.precio'   => 'nullable|numeric|gt:0',
+            // 25-nov: el check Regalo (solo cuenta en productos marcados como regalo).
+            'items.*.regalo'   => 'nullable|boolean',
             'pol_id'           => 'nullable|integer',
             'entrada'          => 'nullable|numeric|min:0',
             'identificacion'   => ['nullable', 'regex:/^(\d{10}|\d{13})$/'],
@@ -293,6 +295,7 @@ class CotizarController extends Controller
             'items.*.cantidad.gt'       => 'La cantidad debe ser mayor que cero.',
             'items.*.precio.numeric'    => 'El precio debe ser un número mayor que cero.',
             'items.*.precio.gt'         => 'El precio debe ser un número mayor que cero.',
+            'items.*.regalo.boolean'    => 'El regalo debe ser sí o no.',
             'pol_id.integer'            => 'La política no existe.',
             'entrada.numeric'           => 'La entrada debe ser un número mayor o igual a cero.',
             'entrada.min'               => 'La entrada debe ser un número mayor o igual a cero.',
@@ -320,6 +323,8 @@ class CotizarController extends Controller
                 'pro_id'   => (int) $i['pro_id'],
                 'cantidad' => $i['cantidad'],
                 'precio'   => (isset($i['precio']) && trim((string) $i['precio']) !== '') ? $i['precio'] : null,
+                // 25-nov: false = Regalo desmarcado; sin el dato, la funcion lo da como regalo si el producto lo es.
+                'regalo'   => isset($i['regalo']) ? (bool) $i['regalo'] : null,
             ], array_values($request->input('items'))),
             'pol_id'          => $this->enteroONulo($request->input('pol_id')),
             'entrada'         => $request->input('entrada'),
