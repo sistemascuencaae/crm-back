@@ -84,5 +84,7 @@ class Cproforma extends Model
         'novedad_plazo',
         'novedad_cuota',
         'novedad_entrada',
+        // 25-nov: si el cliente aplica a credito (SI o NO, informativo; requerimiento marcado APLICA_CREDITO)
+        'aplica_credito_caso',
     ];
 }
