@@ -55,7 +55,7 @@ class ProductoController extends Controller
         'CAMPO_LARGO:pro_codigo3' => 'El código 3 no puede tener más de 15 caracteres.',
         'CAMPO_LARGO:pro_codbarras' => 'El código de barras no puede tener más de 200 caracteres.',
         'CAMPO_LARGO:pro_observacion' => 'La descripción no puede tener más de 500 caracteres.',
-        'MARCA_NO_VALIDA' => 'Desde la lista solo se puede cambiar si el producto es visible en la web.',
+        'MARCA_NO_VALIDA' => 'Desde la lista solo se puede cambiar si el producto es visible en la web o si es regalo.',
         'VALOR_NO_VALIDO' => 'El valor tiene que ser sí o no.',
         'REQUIERE_USUARIO' => 'No se pudo identificar al usuario del CRM.',
     ];
@@ -300,14 +300,15 @@ class ProductoController extends Controller
     }
 
     // Auditoría de UN producto: resumen (quién creó / última modificación) + eventos paginados de auditoria.logs_cambios.
-    // Marca web del producto desde la lista (check "Web" de la grilla): por ahora solo visible en la web.
+    // Marca del producto desde la lista (checks "Web" y "Regalo" de la grilla).
     // Cambia solo esa marca (crm.fn_producto_web_marcar), sin la edición completa del producto.
-    // Body: { campo: pro_visible_web, valor: true | false }
+    // Body: { campo: pro_visible_web | pro_es_regalo | pro_oferta | pro_destacado, valor: true | false }
     public function marcarProductoWeb(Request $request, int $id)
     {
         $validator = Validator::make($request->all(), [
-            // pro_visible_web: check "Web" de la lista; pro_oferta / pro_destacado: botones del editor de secciones.
-            'campo' => 'required|in:pro_visible_web,pro_oferta,pro_destacado',
+            // pro_visible_web / pro_es_regalo: checks "Web" y "Regalo" de la lista; pro_oferta / pro_destacado: botones
+            // del editor de secciones.
+            'campo' => 'required|in:pro_visible_web,pro_es_regalo,pro_oferta,pro_destacado',
             'valor' => 'required|boolean',
         ]);
 
