@@ -10,9 +10,13 @@ class TrustProxies extends Middleware
     /**
      * The trusted proxies for this application.
      *
+     * El proxy 192.168.254.6 está delante del servidor y manda la IP real del visitante en X-Forwarded-For (y el
+     * https en X-Forwarded-Proto). Sin confiar en él, Laravel veía a todos los visitantes con la IP del proxy: los
+     * límites de peticiones (throttle, que van por IP) eran uno solo para toda la tienda.
+     *
      * @var array|string|null
      */
-    protected $proxies;
+    protected $proxies = ['192.168.254.6'];
 
     /**
      * The headers that should be used to detect proxies.

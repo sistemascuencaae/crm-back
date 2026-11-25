@@ -55,7 +55,7 @@ class ProductoController extends Controller
         'CAMPO_LARGO:pro_codigo3' => 'El código 3 no puede tener más de 15 caracteres.',
         'CAMPO_LARGO:pro_codbarras' => 'El código de barras no puede tener más de 200 caracteres.',
         'CAMPO_LARGO:pro_observacion' => 'La descripción no puede tener más de 500 caracteres.',
-        'MARCA_NO_VALIDA' => 'Desde la lista solo se puede cambiar si el producto es visible en la web.',
+        'MARCA_NO_VALIDA' => 'Desde la lista solo se puede cambiar si el producto es visible en la web o si es regalo.',
         'VALOR_NO_VALIDO' => 'El valor tiene que ser sí o no.',
         'REQUIERE_USUARIO' => 'No se pudo identificar al usuario del CRM.',
     ];
@@ -76,11 +76,13 @@ class ProductoController extends Controller
         'pro_codigo3',
         'pro_codbarras',
         'pro_visible_web',
+        'pro_es_regalo',
+        'pro_activo',
     ];
 
     // El código y la unidad no se cambian al editar (igual que en Dynamo); el peso y las medidas tampoco.
-    // pro_codigo2, pro_codigo3, pro_codbarras, pro_observacion y pro_visible_web son opcionales: si no vienen, conservan
-    // su valor.
+    // pro_codigo2, pro_codigo3, pro_codbarras, pro_observacion, pro_visible_web y pro_es_regalo son opcionales: si no
+    // vienen, conservan su valor.
     private const CAMPOS_EDITAR = [
         'pro_nombre',
         'tpr_id',
@@ -96,6 +98,7 @@ class ProductoController extends Controller
         'pro_codigo3',
         'pro_codbarras',
         'pro_visible_web',
+        'pro_es_regalo',
     ];
 
     private const REGLAS_COMUNES = [
@@ -115,6 +118,10 @@ class ProductoController extends Controller
         'pro_observacion' => 'nullable|string|max:500',
         // Sale en la web (tienda). Opcional: al crear, si no viene, nace visible; al clonar, el del origen.
         'pro_visible_web' => 'sometimes|boolean',
+        // Es regalo. Opcional: al crear, si no viene, no es regalo; al clonar, el del origen.
+        'pro_es_regalo' => 'sometimes|boolean',
+        // Estado. Al crear y clonar es opcional (si no viene, nace activo); al editar es obligatorio (regla aparte).
+        'pro_activo' => 'sometimes|boolean',
     ];
 
     // Árbol de tipos (niveles 1, 2 y 3) con los productos de cada rama; con búsqueda, solo las ramas que coinciden.
@@ -188,7 +195,8 @@ class ProductoController extends Controller
         }
     }
 
-    // Ficha para editar + si tiene movimientos (bloquea IVA e inventario en la pantalla).
+    // Ficha para editar + si tiene movimientos (bloquea IVA e inventario en la pantalla) + su stock global (el de la
+    // columna Stock de la lista: activo y con stock, el interruptor Estado queda bloqueado).
     public function getProducto($id)
     {
         try {
@@ -201,9 +209,12 @@ class ProductoController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'El producto no existe.', null));
             }
 
+            $stock = DB::selectOne('SELECT s.stock_actual FROM crm.fn_producto_stock_global_por_productos(?::integer[]) s', ['{' . (int) $id . '}']);
+
             return response()->json(RespuestaApi::returnResultado('success', 'Producto cargado con éxito', [
                 'producto' => json_decode($fila->producto, true),
                 'tiene_movimientos' => (int) $fila->tiene_movimientos === 1,
+                'stock_actual' => (float) ($stock->stock_actual ?? 0),
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar el producto', $th->getMessage()));
@@ -275,9 +286,9 @@ class ProductoController extends Controller
 
     public function editarProducto(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), self::REGLAS_COMUNES + [
+        $validator = Validator::make($request->all(), [
             'pro_activo' => 'required|boolean',
-        ]);
+        ] + self::REGLAS_COMUNES);
 
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
@@ -300,14 +311,15 @@ class ProductoController extends Controller
     }
 
     // Auditoría de UN producto: resumen (quién creó / última modificación) + eventos paginados de auditoria.logs_cambios.
-    // Marca web del producto desde la lista (check "Web" de la grilla): por ahora solo visible en la web.
+    // Marca del producto desde la lista (checks "Web" y "Regalo" de la grilla).
     // Cambia solo esa marca (crm.fn_producto_web_marcar), sin la edición completa del producto.
-    // Body: { campo: pro_visible_web, valor: true | false }
+    // Body: { campo: pro_visible_web | pro_es_regalo | pro_oferta | pro_destacado, valor: true | false }
     public function marcarProductoWeb(Request $request, int $id)
     {
         $validator = Validator::make($request->all(), [
-            // pro_visible_web: check "Web" de la lista; pro_oferta / pro_destacado: botones del editor de secciones.
-            'campo' => 'required|in:pro_visible_web,pro_oferta,pro_destacado',
+            // pro_visible_web / pro_es_regalo: checks "Web" y "Regalo" de la lista; pro_oferta / pro_destacado: botones
+            // del editor de secciones.
+            'campo' => 'required|in:pro_visible_web,pro_es_regalo,pro_oferta,pro_destacado',
             'valor' => 'required|boolean',
         ]);
 
