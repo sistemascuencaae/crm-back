@@ -432,11 +432,12 @@ class FaseController extends Controller
             return collect();
         }
 
-        return $this->ordenarComoLaFuncion(
-            // 20-nov: la tarjeta solo necesita tiene_novedad (⚠ Novedad); el texto se ve al abrir el caso.
-            Caso::with($this->relacionesCaso())->whereIn('id', $casoIds)->get()->makeHidden('texto_novedad'),
-            $casoIds
-        );
+        // 20-nov: la tarjeta solo necesita tiene_novedad (⚠ Novedad); el texto se ve al abrir el caso.
+        $casos = Caso::with($this->relacionesCaso())->whereIn('id', $casoIds)->get()->makeHidden('texto_novedad');
+        // 26-nov: perfil y comportamiento del cliente para la tarjeta y la lista (una consulta por página)
+        Caso::ponerPerfilComportamiento($casos);
+
+        return $this->ordenarComoLaFuncion($casos, $casoIds);
     }
 
     // whereIn no conserva el orden: se deja el de los ids que devolvio la funcion (orden de llegada)

@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
@@ -98,6 +99,47 @@ class Caso extends Model
     protected $hidden = [
         'texto_novedad',
     ];
+
+    // 26-nov: perfil (NN, R1...) y comportamiento (ORO...) del cliente, para la tarjeta del Kanban y la lista.
+    // No son columnas: los pone ponerPerfilComportamiento(); en los demás JSON del caso salen en null.
+    protected $appends = [
+        'perfil_cliente',
+        'comportamiento_cliente',
+    ];
+
+    private ?array $perfilComportamiento = null;
+
+    public function getPerfilClienteAttribute(): ?string
+    {
+        return $this->perfilComportamiento['perfil_cliente'] ?? null;
+    }
+
+    public function getComportamientoClienteAttribute(): ?string
+    {
+        return $this->perfilComportamiento['comportamiento_cliente'] ?? null;
+    }
+
+    // Una sola consulta para todos los casos (los mismos lectores de requerimientos que usa el cotizador)
+    public static function ponerPerfilComportamiento($casos): void
+    {
+        $casos = collect($casos instanceof self ? [$casos] : $casos)->filter();
+        if ($casos->isEmpty()) {
+            return;
+        }
+
+        $filas = collect(DB::select(
+            'SELECT * FROM crm.fn_caso_perfil_comportamiento_listar(?::integer[])',
+            ['{' . $casos->pluck('id')->map(fn ($id) => (int) $id)->implode(',') . '}']
+        ))->keyBy('caso_id');
+
+        foreach ($casos as $caso) {
+            $fila = $filas->get($caso->id);
+            $caso->perfilComportamiento = [
+                'perfil_cliente' => $fila->perfil_cliente ?? null,
+                'comportamiento_cliente' => $fila->comportamiento_cliente ?? null,
+            ];
+        }
+    }
 
     public function userCreador()
     {

@@ -1081,7 +1081,7 @@ class CasoController extends Controller
             //$userLogin = Auth::id();
             //$user = DB::selectOne("SELECT usu_tipo FROM crm.users where id = ?", [$userLogin]);
 
-            return Caso::selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
+            $caso = Caso::selectRaw("*, (CASE WHEN crm.caso.acc_publico = false THEN 'PUBLICO' ELSE 'PRIVADO' END) AS acceso_caso")
                 ->with([
                     'user',
                     'userCreador',
@@ -1116,6 +1116,11 @@ class CasoController extends Controller
                     'tiempo_caso',
                     'agencia'
                 ])->where('id', $casoId)->first();
+
+            // 26-nov: perfil y comportamiento del cliente (la tarjeta los muestra y el WebSocket los lleva)
+            Caso::ponerPerfilComportamiento($caso);
+
+            return $caso;
         } catch (Exception $e) {
             $log->logError(CasoController::class, 'Error al listar el caso #' . $casoId, $e);
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));
