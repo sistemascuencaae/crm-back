@@ -23,7 +23,8 @@ class ConfiguracionTiendaController extends Controller
         Cache::forget(self::CACHE_TIENDA);
     }
 
-    // GET public/configuracion/tienda -> {whatsapp_numero}. null = sin botones de WhatsApp.
+    // GET public/configuracion/tienda -> {whatsapp_numero, cookies_ruta}.
+    // whatsapp_numero null = sin botones de WhatsApp; cookies_ruta null = "Más información" lleva a /documentos;
     public function tienda()
     {
         try {
@@ -32,6 +33,7 @@ class ConfiguracionTiendaController extends Controller
 
                 return [
                     'whatsapp_numero' => $c->whatsapp_numero ?? null,
+                    'cookies_ruta' => $c->cookies_ruta ?? null,
                 ];
             });
 

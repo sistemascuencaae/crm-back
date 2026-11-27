@@ -227,6 +227,7 @@ use App\Http\Controllers\paginaWeb\ClientesTiendaController;
 use App\Http\Controllers\paginaWeb\CarritoTiendaController;
 use App\Http\Controllers\paginaWeb\DocumentosTiendaController;
 use App\Http\Controllers\paginaWeb\FooterTiendaController;
+use App\Http\Controllers\paginaWeb\ProductoDetalleController;
 use App\Http\Controllers\paginaWeb\HeaderTiendaController;
 use App\Http\Controllers\paginaWeb\PaginasTiendaController;
 use App\Http\Controllers\paginaWeb\ProductosTiendaController;
@@ -2304,6 +2305,7 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::post('/eliminarPagina/{id}', [PaginasController::class, 'eliminar'])->whereNumber('id');
     Route::post('/restaurarPagina/{id}', [PaginasController::class, 'restaurar'])->whereNumber('id');
     Route::post('/inicioPagina/{id}', [PaginasController::class, 'marcarInicio'])->whereNumber('id');
+    Route::post('/subirPaginaFondo', [PaginasController::class, 'subirFondo']);
     // Selector de enlace (headers, footers, secciones): qué se puede elegir y cómo se llama cada destino.
     Route::get('/enlacesCatalogo', [EnlacesController::class, 'catalogo']);
     Route::post('/enlacesDescribir', [EnlacesController::class, 'describir']);
@@ -2423,10 +2425,27 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::post('/subirProductoDescripcionImagen/{id}', [ProductoDescripcionController::class, 'subirImagen'])->whereNumber('id');
     Route::post('/copiarProductoDescripcion/{id}', [ProductoDescripcionController::class, 'copiar'])->whereNumber('id');
 
-    // Configuración de la tienda (una sola fila): número de WhatsApp
+    // Configuración de la tienda (una sola fila): número de WhatsApp y enlace del aviso de cookies
     Route::get('/configuracionTienda', [ConfiguracionController::class, 'ver']);
     Route::post('/editarConfiguracionTienda', [ConfiguracionController::class, 'editar']);
     Route::get('/configuracionTiendaAuditoria', [ConfiguracionController::class, 'auditoria']);
+
+    // Detalle del producto: diseños de la columna derecha (uno predeterminado y los demás por vigencia), sus 6 bloques
+    // (orden, visible y estilo), sus cintas, papelera y auditoría.
+    Route::get('/listDetallesProductos', [ProductoDetalleController::class, 'listar']);
+    Route::get('/getDetalleProducto/{id}', [ProductoDetalleController::class, 'buscar'])->whereNumber('id');
+    Route::post('/crearDetalleProducto', [ProductoDetalleController::class, 'crear']);
+    Route::post('/editarDetalleProducto/{id}', [ProductoDetalleController::class, 'editar'])->whereNumber('id');
+    Route::post('/guardarDetalleProductoBloque/{id}/{dpb}', [ProductoDetalleController::class, 'guardarBloque'])->whereNumber(['id', 'dpb']);
+    Route::post('/ordenarDetalleProductoBloques/{id}', [ProductoDetalleController::class, 'ordenarBloques'])->whereNumber('id');
+    Route::post('/guardarDetalleProductoCinta/{id}', [ProductoDetalleController::class, 'guardarCinta'])->whereNumber('id');
+    Route::post('/eliminarDetalleProductoCinta/{id}/{dpc}', [ProductoDetalleController::class, 'eliminarCinta'])->whereNumber(['id', 'dpc']);
+    Route::post('/ordenarDetalleProductoCintas/{id}', [ProductoDetalleController::class, 'ordenarCintas'])->whereNumber('id');
+    Route::post('/subirDetalleProductoImagenCinta', [ProductoDetalleController::class, 'subirImagenCinta']);
+    Route::post('/eliminarDetalleProducto/{id}', [ProductoDetalleController::class, 'eliminar'])->whereNumber('id');
+    Route::post('/restaurarDetalleProducto/{id}', [ProductoDetalleController::class, 'restaurar'])->whereNumber('id');
+    Route::get('/papeleraDetallesProductos', [ProductoDetalleController::class, 'papelera']);
+    Route::get('/detalleProductoAuditoria', [ProductoDetalleController::class, 'auditoria']);
 });
 // Productos de la tienda: listado de /shop (con el panel de filtros), sugerencias del buscador y detalle. Públicos.
 Route::get('public/productos', [ProductosTiendaController::class, 'listar']);
@@ -2444,6 +2463,8 @@ Route::get('public/videos-inicio/hoy', [VideosInicioTiendaController::class, 'ho
 Route::get('public/videos-inicio/videos/{nombre}', [VideosInicioTiendaController::class, 'verVideo'])->where('nombre', '[A-Za-z0-9]{40}\.mp4');
 // Configuración de la tienda (número de WhatsApp). Público.
 Route::get('public/configuracion/tienda', [ConfiguracionTiendaController::class, 'tienda']);
+// Diseño del detalle del producto que toca hoy (bloques y cintas). Público, lo pide la tienda (/product/:slug).
+Route::get('public/detalle-producto/tienda', [ProductoDetalleController::class, 'tienda']);
 // Header de la tienda e imágenes de los headers (el logo): públicas, las pide la tienda.
 Route::get('public/headers/tienda', [HeaderTiendaController::class, 'tienda']);
 Route::get('public/headers/imagenes/{nombre}', [HeaderTiendaController::class, 'verImagen'])->where('nombre', '[A-Za-z0-9]{40}\.webp');
