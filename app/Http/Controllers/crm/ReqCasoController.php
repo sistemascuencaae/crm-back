@@ -402,7 +402,10 @@ class ReqCasoController extends Controller
     public function listReqCasoId($casoId)
     {
         try {
-            $data = RequerimientoCaso::where('caso_id', $casoId)->get();
+            // QUITADO 26-nov (sin ORDER BY, la base los devolvía en su orden físico y cada cambio del TIPO CRÉDITO, que
+            // reescribe los 8 marcados, los mandaba al final): $data = RequerimientoCaso::where('caso_id', $casoId)->get();
+            // Mismo orden que la carga inicial del caso (getCaso y el tablero)
+            $data = RequerimientoCaso::where('caso_id', $casoId)->orderBy('id', 'asc')->orderBy('orden', 'asc')->get();
             return response()->json(RespuestaApi::returnResultado('success', 'Se guardo con éxito', $data));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'Error', $e));

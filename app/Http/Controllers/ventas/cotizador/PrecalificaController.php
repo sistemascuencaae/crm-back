@@ -150,7 +150,11 @@ class PrecalificaController extends Controller
     // 24-nov: los requerimientos marcados del caso (el TIPO CRÉDITO y los 6 del cotizador), por id: la foto para la bitácora.
     public function requerimientosMarcados(int $casoId): Collection
     {
-        return RequerimientoCaso::where('caso_id', $casoId)->whereNotNull('dato_cotizador')->get()->keyBy('id');
+        // 26-nov: también PROFORMAR, que el Reintentar de GaranCheck limpia junto con los marcados (queda en la bitácora)
+        // QUITADO 26-nov: return RequerimientoCaso::where('caso_id', $casoId)->whereNotNull('dato_cotizador')->get()->keyBy('id');
+        return RequerimientoCaso::where('caso_id', $casoId)
+            ->where(fn ($q) => $q->whereNotNull('dato_cotizador')->orWhere('tipo_campo', 'proformar'))
+            ->get()->keyBy('id');
     }
 
     // 24-nov: lo que la bitácora muestra de un requerimiento. Si nada de esto cambió, no se registra.

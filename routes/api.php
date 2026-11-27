@@ -1135,6 +1135,10 @@ Route::group(['prefix' => 'crm', 'middleware' => ['jwt.auth', 'usuario.activo', 
     Route::get('/casoById/{id}', [CasoController::class, 'casoById']);
     // 27-oct: la consulta GaranCheck casada con el caso (cabecera y pestaña Calificación)
     Route::get('/casoConsultaGarancheck/{caso_id}', [CasoConsultaGarancheckController::class, 'mostrar'])->where('caso_id', '[0-9]+');
+    // 26-nov: comportamiento y tipo de cliente del caso (cabecera del modal; la misma regla de la tarjeta del tablero)
+    Route::get('/perfilComportamientoCaso/{caso_id}', [CasoController::class, 'perfilComportamientoCaso'])->where('caso_id', '[0-9]+');
+    // 26-nov: opciones de los filtros de comportamiento y tipo de cliente (Kanban y lista)
+    Route::get('/perfilComportamientoOpciones', [CasoController::class, 'perfilComportamientoOpciones']);
     // 30-oct (fase 3b de Yupana): el botón Calificar / Reintentar del caso: consulta con la agencia del caso, casa la consulta y guarda la calificación.
     Route::post('/casoCalificar/{caso_id}', [CasoConsultaGarancheckController::class, 'calificar'])->where('caso_id', '[0-9]+')->middleware('throttle:20,1,caso-calificar');
     // 19-nov-2026: la precalifica del caso (pestaña Precalifica) y su Reintentar (sale solo si falló).

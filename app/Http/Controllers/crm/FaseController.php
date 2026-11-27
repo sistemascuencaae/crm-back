@@ -489,6 +489,36 @@ class FaseController extends Controller
         ];
     }
 
+    // 26-nov: comportamiento (ORO...) y tipo de cliente (NN, R1...) del panel Filtros; van al final de las dos consultas
+    private function filtrosCliente(Request $request): array
+    {
+        return [
+            $this->textoArrayPg($request->input('filtroComportamiento', [])),
+            $this->textoArrayPg($request->input('filtroPerfil', [])),
+        ];
+    }
+
+    // Arreglo de texto de PostgreSQL ('{"ORO","SIN DATOS"}') en mayúsculas y sin repetidos; null = sin filtro.
+    // A lo sumo 50 valores de hasta 60 letras: lo demás se descarta.
+    private function textoArrayPg($valores): ?string
+    {
+        $limpios = [];
+        foreach (array_slice((array) $valores, 0, 50) as $valor) {
+            if (!is_scalar($valor)) {
+                continue;
+            }
+            $texto = mb_strtoupper(trim((string) $valor));
+            if ($texto !== '' && mb_strlen($texto) <= 60) {
+                $limpios[$texto] = true;
+            }
+        }
+        if (!$limpios) {
+            return null;
+        }
+
+        return '{' . implode(',', array_map(fn ($v) => '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $v) . '"', array_keys($limpios))) . '}';
+    }
+
     // Llegada a la fase del cursor, tal como la mando el servidor (con microsegundos); null si no es una fecha
     private function cursorIngreso($valor): ?string
     {
@@ -515,7 +545,7 @@ class FaseController extends Controller
     private function consultarKanban(Request $request, $user, $fasId, $cursorId, ?string $cursorIngreso, int $tamanio): array
     {
         $fila = DB::selectOne(
-            'SELECT crm.fn_caso_kanban_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?, ?::integer[], ?, ?, ?, ?::timestamptz) AS resultado',
+            'SELECT crm.fn_caso_kanban_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?, ?::integer[], ?, ?, ?, ?::timestamptz, ?::text[], ?::text[]) AS resultado',
             [
                 (int) $request->input('tabId'), // siempre numerico: con letras fallaba la base
                 $user->id,
@@ -527,6 +557,7 @@ class FaseController extends Controller
                 ...$this->filtrosTablero($request),
                 self::ORDEN_KANBAN,
                 $cursorIngreso,
+                ...$this->filtrosCliente($request),
             ]
         );
 
@@ -537,7 +568,7 @@ class FaseController extends Controller
     private function consultarLista(Request $request, $user, int $pagina, int $tamanio): array
     {
         $fila = DB::selectOne(
-            'SELECT crm.fn_caso_lista_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?::integer[], ?, ?, ?) AS resultado',
+            'SELECT crm.fn_caso_lista_listar_paginacion(?, ?, ?, ?, ?, ?, ?, ?, ?::integer[], ?, ?, ?, ?::text[], ?::text[]) AS resultado',
             [
                 (int) $request->input('tabId'),
                 $user->id,
@@ -547,6 +578,7 @@ class FaseController extends Controller
                 $tamanio,
                 ...$this->filtrosTablero($request),
                 self::ORDEN_LISTA,
+                ...$this->filtrosCliente($request),
             ]
         );
 

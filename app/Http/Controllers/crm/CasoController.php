@@ -1127,6 +1127,43 @@ class CasoController extends Controller
         }
     }
 
+    // 26-nov: comportamiento y tipo de cliente del caso para la cabecera del modal, con la misma regla de la tarjeta
+    // (crm.fn_caso_perfil_comportamiento_listar). Liviano: no trae el caso completo.
+    public function perfilComportamientoCaso($casoId)
+    {
+        $log = new Funciones();
+        try {
+            $caso = Caso::select('id')->find((int) $casoId);
+            if (!$caso) {
+                return response()->json(RespuestaApi::returnResultado('error', 'El caso no existe.', null));
+            }
+            Caso::ponerPerfilComportamiento($caso);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Perfil y comportamiento del caso', [
+                'perfil_cliente' => $caso->perfil_cliente,
+                'comportamiento_cliente' => $caso->comportamiento_cliente,
+            ]));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al leer el perfil y el comportamiento del caso #' . $casoId, $e);
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo leer el perfil y el comportamiento del caso.', null));
+        }
+    }
+
+    // 26-nov: las opciones de los filtros de comportamiento y tipo de cliente del Kanban y la lista (los catálogos y
+    // SIN DATOS, crm.fn_caso_perfil_comportamiento_opciones)
+    public function perfilComportamientoOpciones()
+    {
+        $log = new Funciones();
+        try {
+            $fila = DB::selectOne('SELECT crm.fn_caso_perfil_comportamiento_opciones() AS resultado');
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Opciones de los filtros', json_decode($fila->resultado, true)));
+        } catch (Exception $e) {
+            $log->logError(CasoController::class, 'Error al listar las opciones de comportamiento y tipo de cliente', $e);
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar las opciones de los filtros.', null));
+        }
+    }
+
     public function validarEstadoOPMdynamo($casoId)
     {
         $cpedidoProforma = DB::selectOne("SELECT ca.nombre, cpp.cpp_id, cpp.cpp_estado, ec.ecr_nombre from crm.caso ca

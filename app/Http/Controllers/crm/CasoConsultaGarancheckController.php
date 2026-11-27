@@ -121,8 +121,10 @@ class CasoConsultaGarancheckController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', ($cuerpo['message'] ?? 'No se pudo consultar al calificador.') . $sufijoCodigo, $data));
             }
 
+            // 26-nov (pedido del usuario): sin la calificación del proveedor en el mensaje, solo que la consulta salió bien.
+            // QUITADO 26-nov: ? 'Cliente calificado: ' . $texto
             $mensaje = $texto !== null && $texto !== ''
-                ? 'Cliente calificado: ' . $texto
+                ? 'La consulta se realizó correctamente.'
                 : 'La consulta se hizo, pero el calificador no devolvió la calificación.' . $sufijoCodigo;
 
             return response()->json(RespuestaApi::returnResultado('success', $mensaje, $data));
