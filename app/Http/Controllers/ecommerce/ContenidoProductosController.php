@@ -12,8 +12,9 @@ use Illuminate\Support\Str;
 
 // Ecommerce > Contenido de productos: marketing pone las imágenes, la ficha y la descripción completa de los productos
 // que la tienda puede vender (stock vendible mayor a 0), sin entrar a Inventarios > Productos.
-//   - Aquí: el árbol de tipos, la lista (con lo que le falta a cada producto) y la ficha (antes en
-//     inventarios/CaracterísticasProductoController).
+//   - Aquí: el árbol de tipos, la lista (con lo que le falta a cada producto), la ficha (antes en
+//     inventarios/CaracterísticasProductoController) y la auditoría general de un producto (ficha, imágenes,
+//     descripción y vista 360° en una sola lista).
 //   - Las imágenes y la descripción completa tienen su propio controlador (ecommerce/ProductoImagenesController y
 //     ecommerce/ProductoDescripcionController, antes en inventarios/).
 // Las reglas viven en ecommerce.fn_contenido_producto_* (database/sql/contenido_productos.sql) y en
@@ -89,6 +90,33 @@ class ContenidoProductosController extends Controller
             ]));
         } catch (\Throwable $th) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron listar los productos', $th->getMessage()));
+        }
+    }
+
+    // Auditoría general de UN producto: todo lo que se hizo con su contenido (ficha, imágenes, descripción y vista 360°),
+    // el más nuevo primero -> ecommerce.fn_contenido_producto_auditoria_listar_paginacion. GET ?pro_id=&pagina=&tamanio=&busqueda=
+    public function auditoria(Request $request)
+    {
+        try {
+            $proId = (int) $request->query('pro_id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = min(max((int) $request->query('tamanio', 10), 1), 100);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($proId <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Producto no válido', null));
+            }
+
+            $eventos = DB::select('SELECT * FROM ecommerce.fn_contenido_producto_auditoria_listar_paginacion(?, ?, ?, ?)', [$proId, $pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'eventos' => $eventos,
+                'total' => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (\Throwable $th) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del producto', $th->getMessage()));
         }
     }
 

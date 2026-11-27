@@ -198,6 +198,7 @@ use App\Http\Controllers\contabilidad\SistemaLiquidacionController;
 use App\Http\Controllers\inventarios\CaracterísticasProductoController;
 use App\Http\Controllers\inventarios\ProductoController;
 use App\Http\Controllers\ecommerce\ProductoImagenesController;
+use App\Http\Controllers\ecommerce\ProductoImagenes360Controller;
 use App\Http\Controllers\ecommerce\ProductoDescripcionController;
 use App\Http\Controllers\ecommerce\ContenidoProductosController;
 use App\Http\Controllers\inventarios\TipoProductoController;
@@ -357,6 +358,8 @@ Route::get('public/pagina-web/imagenes/productos/{proId}/{nombre}', [ArchivosTie
     ->whereNumber('proId')->where('nombre', '[A-Za-z0-9]+\.webp');
 Route::get('public/pagina-web/imagenes/productos/{proId}/descripcion/{nombre}', [ArchivosTiendaController::class, 'verImagenDescripcionProducto'])
     ->whereNumber('proId')->where('nombre', '[A-Za-z0-9]{40}\.(webp|jpg|png)');
+Route::get('public/pagina-web/imagenes/productos/{proId}/360/{nombre}', [ArchivosTiendaController::class, 'verImagenProducto360'])
+    ->whereNumber('proId')->where('nombre', '[A-Za-z0-9]{40}\.webp');
 Route::get('public/pagina-web/imagenes/marcas/{nombre}', [ArchivosTiendaController::class, 'verImagenMarca'])
     ->where('nombre', '[A-Za-z0-9]+\.(jpg|jpeg|png|webp)');
 Route::get('public/pagina-web/documentos/{nombre}', [ArchivosTiendaController::class, 'verPdf'])
@@ -2408,6 +2411,7 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::get('/contenidoProductosFaltas', [ContenidoProductosController::class, 'faltas']);
     Route::get('/contenidoProductosArbol', [ContenidoProductosController::class, 'arbol']);
     Route::get('/listContenidoProductos', [ContenidoProductosController::class, 'listar']);
+    Route::get('/contenidoProductosAuditoria', [ContenidoProductosController::class, 'auditoria']);
     Route::get('/fichaProducto/{id}', [ContenidoProductosController::class, 'fichaProducto'])->whereNumber('id');
     Route::post('/fichaProducto/{id}', [ContenidoProductosController::class, 'guardarFichaProducto'])->whereNumber('id');
     // Imágenes del producto: una sola lista de hasta 10 (la tarjeta de la tienda muestra la 1.ª y la 2.ª; el detalle, todas).
@@ -2417,6 +2421,14 @@ Route::group(["prefix" => "ecommerce", 'middleware' => ['jwt.auth', 'usuario.act
     Route::post('/ordenarProductoImagenes', [ProductoImagenesController::class, 'ordenar']);
     Route::post('/eliminarProductoImagen/{id}', [ProductoImagenesController::class, 'eliminar'])->whereNumber('id');
     Route::get('/productoImagenesAuditoria', [ProductoImagenesController::class, 'auditoria']);
+    // Vista 360° del producto: los cuadros se suben de uno en uno y después se guarda la serie completa en su orden.
+    Route::get('/productoImagenes360', [ProductoImagenes360Controller::class, 'ver']);
+    Route::post('/subirProductoImagen360', [ProductoImagenes360Controller::class, 'subir']);
+    Route::post('/guardarProductoImagenes360', [ProductoImagenes360Controller::class, 'guardar']);
+    Route::post('/visibleProductoImagenes360', [ProductoImagenes360Controller::class, 'visible']);
+    Route::post('/eliminarProductoImagenes360/{id}', [ProductoImagenes360Controller::class, 'eliminar'])->whereNumber('id');
+    Route::post('/descartarProductoImagenes360', [ProductoImagenes360Controller::class, 'descartar']);
+    Route::get('/productoImagenes360Auditoria', [ProductoImagenes360Controller::class, 'auditoria']);
     // Descripción completa del producto (documento para el detalle de la tienda).
     Route::get('/productoDescripcion/{id}', [ProductoDescripcionController::class, 'ver'])->whereNumber('id');
     Route::post('/crearProductoDescripcion/{id}', [ProductoDescripcionController::class, 'crear'])->whereNumber('id');

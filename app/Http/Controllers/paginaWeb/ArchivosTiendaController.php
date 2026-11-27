@@ -35,6 +35,13 @@ class ArchivosTiendaController extends Controller
         return $this->entregar($nombre, self::WEBP_VALIDO, 'productos/' . $proId);
     }
 
+    // Cuadros de la vista 360° de un producto (carpeta productos/{proId}/360; los sube ProductoImagenes360Controller).
+    // WebP con nombre de 40 letras y números. GET public/pagina-web/imagenes/productos/{proId}/360/{nombre}
+    public function verImagenProducto360(int $proId, string $nombre)
+    {
+        return $this->entregar($nombre, '/^[A-Za-z0-9]{40}\.webp$/', 'productos/' . $proId . '/360');
+    }
+
     // Imágenes de la descripción completa de un producto (carpeta productos/{proId}/descripcion; las sube
     // ProductoDescripcionController). WebP, JPG o PNG con nombre de 40 letras y números.
     public function verImagenDescripcionProducto(int $proId, string $nombre)
