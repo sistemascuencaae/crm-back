@@ -56,7 +56,9 @@ class ComportamientoClienteParametrosController extends Controller
     {
         try {
             $pagina = max((int) $request->query('pagina', 1), 1);
-            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            // QUITADO 27-nov: $tamanio = max((int) $request->query('tamanio', 10), 1);
+            // 27-nov (pedido del usuario): la pestaña ya no pagina; sin tamanio trae todos
+            $tamanio = $request->filled('tamanio') ? max((int) $request->query('tamanio'), 1) : null;
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             $registros = DB::select('SELECT * FROM ventas.fn_comportamiento_cliente_parametros_listar_paginacion(?, ?, ?)', [$pagina, $tamanio, $busqueda]);

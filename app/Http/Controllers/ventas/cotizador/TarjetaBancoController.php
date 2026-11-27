@@ -40,7 +40,9 @@ class TarjetaBancoController extends Controller
         try {
             // Topes: tamanio 1..100 y pagina sin desbordar el OFFSET (integer) de la funcion.
             $pagina = min(max((int) $request->query('pagina', 1), 1), 1000000);
-            $tamanio = min(max((int) $request->query('tamanio', 20), 1), 100);
+            // QUITADO 27-nov: $tamanio = min(max((int) $request->query('tamanio', 20), 1), 100);
+            // 27-nov: sin tamanio trae todos (Tarjetas y comisiones y Descuentos de plazos ya no paginan)
+            $tamanio = $request->filled('tamanio') ? min(max((int) $request->query('tamanio'), 1), 100) : null;
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             $registros = DB::select(
