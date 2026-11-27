@@ -275,10 +275,11 @@ class ReqCasoController extends Controller
                     $audit = new Audits();
                     $valorAntiguo = $requerimiento;
                     $audit->old_values = json_encode($valorAntiguo);
-                    // 06-nov: el valor de los que llena el sistema no se cambia a mano: desde el caso solo cambia la descripción.
-                    $requerimiento->update(in_array($requerimiento->tipo_campo, RequerimientoCaso::TIPOS_AUTOMATICOS, true)
-                        ? $request->only('descripcion')
-                        : $request->all());
+                    // QUITADO 27-nov (ya no hay requerimientos automáticos): los automáticos solo cambiaban la descripción.
+                    // $requerimiento->update(in_array($requerimiento->tipo_campo, RequerimientoCaso::TIPOS_AUTOMATICOS, true)
+                    //     ? $request->only('descripcion')
+                    //     : $request->all());
+                    $requerimiento->update($request->all());
                     // START Bloque de código que genera un registro de auditoría manualmente
                     $audit->user_id = Auth::id();
                     $audit->event = 'updated';

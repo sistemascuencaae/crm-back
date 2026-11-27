@@ -91,8 +91,7 @@ class CasoConsultaGarancheckController extends Controller
             $calificacion = $fila && $fila->resultado ? (json_decode($fila->resultado, true) ?: []) : [];
             $texto = $calificacion['calificacion_proveedor'] ?? null;
 
-            // 06-nov: con el score de la consulta se llenan los requerimientos automáticos que quedaron sin resultado.
-            app(CasoController::class)->calcularRequerimientosAutomaticos($casoId);
+            // QUITADO 27-nov (ya no hay requerimientos automáticos): app(CasoController::class)->calcularRequerimientosAutomaticos($casoId);
 
             // 19-nov: GaranCheck había fallado y ahora salió bien: se vuelve a precalificar si el TIPO CRÉDITO no se eligió.
             if ($consultaOk) {

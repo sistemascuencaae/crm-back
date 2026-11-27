@@ -36,13 +36,15 @@ class CalificacionClienteParametrosController extends Controller
     // Version 1.0
     // GET /api/ventas/listPoliticasCalificacionClienteParametros?pagina&tamanio&busqueda — la lista de la izquierda: solo las
     // políticas ACTIVAS de clientes, con su modalidad (credito true = CRÉDITO), paginadas y buscadas en el servidor. Antes
-    // PoliticaController@listPoliticasActivasClientes.
+    // PoliticaController@listPoliticasActivasClientes. 27-nov: solo las de CRÉDITO (lo filtra la función) y sin tamanio = todas.
     public function listPoliticasCalificacionClienteParametros(Request $request)
     {
         try {
             // Topes: tamanio 1..100 y pagina sin desbordar el OFFSET (integer) de la funcion.
             $pagina   = min(max((int) $request->query('pagina', 1), 1), 1000000);
-            $tamanio  = min(max((int) $request->query('tamanio', 20), 1), 100);
+            // QUITADO 27-nov: $tamanio  = min(max((int) $request->query('tamanio', 20), 1), 100);
+            // 27-nov: sin tamanio = todas (la pantalla ya no pagina); Clonar sigue pidiendo por páginas
+            $tamanio  = $request->filled('tamanio') ? min(max((int) $request->query('tamanio'), 1), 100) : null;
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             $registros = DB::select(

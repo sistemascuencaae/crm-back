@@ -17,7 +17,7 @@ class RequerimientoCaso extends Model
     // 06-nov: los tipos de campo que llena el sistema (crm.fn_requerimientos_caso_automaticos_calcular). Su configuración va en
     // valor_lista y su valor no se edita desde el caso.
     // QUITADO 17-nov-2026 (perfil y actividad cliente): public const TIPOS_AUTOMATICOS = ['comportamiento cliente', 'tipo cliente', 'formal informal'];
-    public const TIPOS_AUTOMATICOS = ['comportamiento cliente', 'perfil cliente', 'actividad cliente'];
+    // QUITADO 27-nov (ya no hay requerimientos automáticos): public const TIPOS_AUTOMATICOS = ['comportamiento cliente', 'perfil cliente', 'actividad cliente'];
 
     protected $fillable = [
         "descripcion",

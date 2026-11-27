@@ -1336,7 +1336,7 @@ class CasoController extends Controller
                 [$casoId, $faseId, $tipo_caso_id]
             );
 
-            $hayAutomaticos = false;
+            // QUITADO 27-nov (ya no hay requerimientos automáticos): $hayAutomaticos = false;
             for ($i = 0; $i < sizeof($reqFase); $i++) {
                 $reqCaso = new RequerimientoCaso();
                 $reqCaso->form_control_name = Funciones::fun_obtenerAlfanumericos($reqFase[$i]->nombre);
@@ -1392,17 +1392,15 @@ class CasoController extends Controller
                 }
 
                 $reqCaso->marcado = $this->validarEnrolamiento($casoId, $reqFase[$i]->tipo);
-                // 06-nov: los que llena el sistema nacen marcados: nunca frenan el cambio de fase, aunque el cálculo falle.
-                if (in_array($reqCaso->tipo_campo, RequerimientoCaso::TIPOS_AUTOMATICOS, true)) {
-                    $reqCaso->marcado = true;
-                    $hayAutomaticos = true;
-                }
+                // QUITADO 27-nov (ya no hay requerimientos automáticos): nacían marcados y se calculaban al entrar a la fase.
+                // if (in_array($reqCaso->tipo_campo, RequerimientoCaso::TIPOS_AUTOMATICOS, true)) {
+                //     $reqCaso->marcado = true;
+                //     $hayAutomaticos = true;
+                // }
                 $reqCaso->save();
             }
 
-            if ($hayAutomaticos) {
-                $this->calcularRequerimientosAutomaticos((int) $casoId);
-            }
+            // QUITADO 27-nov: if ($hayAutomaticos) { $this->calcularRequerimientosAutomaticos((int) $casoId); }
 
             $log->logInfo(CasoController::class, 'Se agregaron con exito los requerimientos de la fase ' . $faseId . ', en el caso #' . $casoId);
         } catch (Exception $e) {
@@ -1412,6 +1410,8 @@ class CasoController extends Controller
         }
     }
 
+    // QUITADO 27-nov (ya no hay requerimientos automáticos; la función SQL se borró). Reactivar = descomentar.
+    /*
     // Version 1.0
     // 06-nov: llena los requerimientos que calcula el sistema (crm.fn_requerimientos_caso_automaticos_calcular). Corre al entrar a
     // la fase y en Reintentar. Si falla, se registra y el caso sigue: dentro de la transacción de quien llama, DB::transaction es
@@ -1443,6 +1443,7 @@ class CasoController extends Controller
             $log->logError(CasoController::class, 'No se pudieron calcular los requerimientos automáticos del caso #' . $casoId, $e);
         }
     }
+    */
 
     public function validarEnrolamiento($casoId, $tipoCampo)
     {

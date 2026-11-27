@@ -145,7 +145,9 @@ class PerformanceCreditoController extends Controller
         try {
             $lineaId = (int) $request->query('linea_id', 0);
             $pagina = max((int) $request->query('pagina', 1), 1);
-            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            // QUITADO 27-nov: $tamanio = max((int) $request->query('tamanio', 10), 1);
+            // 27-nov: sin tamanio = todas las filas de la línea (la grilla ya no pagina)
+            $tamanio = $request->filled('tamanio') ? max((int) $request->query('tamanio'), 1) : null;
             $busqueda = trim((string) $request->query('busqueda', ''));
 
             if ($lineaId <= 0) {
