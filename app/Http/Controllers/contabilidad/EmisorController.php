@@ -97,6 +97,41 @@ class EmisorController extends Controller
     }
 
     // Version 1.0
+    // GET /api/contabilidad/emisorAuditoria?id&pagina&tamanio&busqueda — 27-nov (pedido del usuario): la auditoría de UN emisor
+    // (lo guardado desde el CRM: resumen + historial paginado), con el permiso audit del menú EMISORES
+    // (ventas.fn_emisor_auditoria_resumen y ventas.fn_emisor_auditoria_paginacion).
+    public function emisorAuditoria(Request $request)
+    {
+        try {
+            if (!$this->tienePermiso(self::MENU, 'audit')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Su perfil no tiene permiso para ver la auditoría de los emisores.', null));
+            }
+
+            $id = (int) $request->query('id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($id <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Emisor no válido', null));
+            }
+
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_emisor_auditoria_resumen(?)', [$id]);
+            $eventos = DB::select('SELECT * FROM ventas.fn_emisor_auditoria_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del emisor', $e->getMessage()));
+        }
+    }
+
+    // Version 1.0
     // POST /api/contabilidad/addEmisor — agrega uno (nace activo; pos y sli_id tienen que venir, aunque vacíos) y devuelve la
     // lista de ahora. Antes guardarEmisor sin emi_id (un emi_id en el cuerpo no cuenta: siempre es uno nuevo).
     public function addEmisor(Request $request)

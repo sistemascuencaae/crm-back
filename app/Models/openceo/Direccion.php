@@ -23,4 +23,18 @@ class Direccion extends Model
         "locked",
         "dir_imagen",
     ];
+
+    // 27-nov: la dirección principal de un banco (CONTABILIDAD > Bancos): la columna y la clave que espera
+    // ventas.fn_banco_guardar en p_json->'direccion'.
+    public const CLAVES_FUNCION_BANCO = [
+        'dir_calle_principal' => 'calle_principal',
+        'dir_calle_secundaria' => 'calle_secundaria',
+        'dir_numeracion' => 'numeracion',
+        'dir_nombre_edificio' => 'edificio',
+        'dir_piso' => 'piso',
+        'dir_oficina' => 'oficina',
+        'dir_latitud' => 'latitud',
+        'dir_longitud' => 'longitud',
+        'dir_indicaciones_adicionales' => 'indicaciones',
+    ];
 }

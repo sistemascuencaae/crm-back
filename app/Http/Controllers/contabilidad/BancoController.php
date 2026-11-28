@@ -7,6 +7,7 @@ use App\Http\Resources\RespuestaApi;
 use App\Http\Traits\AuditoriaForenseTrait;
 use App\Http\Traits\PermisoMenuTrait;
 use App\Models\contabilidad\Banco;
+use App\Models\openceo\Direccion;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Validator;
 // Viene de ventas/BancosEmisoresController (listarBancosDynamo y guardarBancoDynamo; 11-nov-2026, reestructura de Contabilidad), con
 // las mismas funciones SQL, las mismas reglas y los mismos mensajes. La lista y su combo, antes un solo endpoint, son ahora listBanco
 // y listCombosBanco, y guardar se partió en addBanco (sin id) y editBanco/{ban_id}, que llaman a la misma función.
+// 27-nov (pedido del usuario): también el cheque actual, los programas de impresión de cheques y de pagos y la dirección principal.
 class BancoController extends Controller
 {
     use AuditoriaForenseTrait;
@@ -38,6 +40,8 @@ class BancoController extends Controller
         'boolean'       => 'El campo :attribute tiene que ser verdadero o falso.',
         'string'        => 'El campo :attribute tiene que ser un texto.',
         'max'           => 'El campo :attribute no puede pasar de :max caracteres.',
+        // 27-nov: la dirección llega como objeto.
+        'array'         => 'El campo :attribute tiene que ser un objeto.',
     ];
 
     // Los nombres de los campos en esos mensajes (sin ellos, Laravel dice "cco id").
@@ -48,6 +52,11 @@ class BancoController extends Controller
         'cuenta'    => 'número de cuenta',
         'activo'    => 'activo',
         'comercial' => 'comercial',
+        // 27-nov (pedido del usuario): los campos de Dynamo que faltaban.
+        'cheque_actual' => 'cheque actual',
+        'pgr_id'        => 'programa de impresión de cheques',
+        'pgr_pag_id'    => 'programa de impresión de pagos',
+        'direccion'     => 'dirección',
     ];
 
     public function __construct()
@@ -81,6 +90,7 @@ class BancoController extends Controller
     // GET /api/contabilidad/listCombosBanco — el combo Cuenta contable del modal: las cuentas contables de Bancos (las de
     // movimiento), con su activo y el banco que ya la tiene (la pantalla ofrece las activas libres y la del banco)
     // (ventas.fn_banco_cuentas_contables_buscar). Antes, la mitad 'cuentas' de listarBancosDynamo: mismo permiso y mismos mensajes.
+    // 27-nov (pedido del usuario): y 'programas', los de impresión de cheques y de pagos (ventas.fn_banco_programas_listar).
     public function listCombosBanco()
     {
         try {
@@ -88,13 +98,51 @@ class BancoController extends Controller
                 return response()->json(RespuestaApi::returnResultado('error', 'Su perfil no tiene permiso para ver los bancos.', null));
             }
 
-            $fila = DB::selectOne('SELECT ventas.fn_banco_cuentas_contables_buscar() AS cuentas');
+            // QUITADO 27-nov: $fila = DB::selectOne('SELECT ventas.fn_banco_cuentas_contables_buscar() AS cuentas');
+            // 27-nov: las cuentas y los programas en la misma consulta.
+            $fila = DB::selectOne('SELECT ventas.fn_banco_cuentas_contables_buscar() AS cuentas, ventas.fn_banco_programas_listar() AS programas');
 
             return response()->json(RespuestaApi::returnResultado('success', 'Se listó con éxito', [
                 'cuentas' => json_decode($fila->cuentas, true) ?? [],
+                'programas' => json_decode($fila->programas, true) ?? [],
             ]));
         } catch (Exception $e) {
             return response()->json(RespuestaApi::returnResultado('error', 'No se pudieron cargar los bancos', $e->getMessage()));
+        }
+    }
+
+    // Version 1.0
+    // GET /api/contabilidad/bancoAuditoria?id&pagina&tamanio&busqueda — 27-nov (pedido del usuario): la auditoría de UN banco (lo
+    // guardado desde el CRM: resumen + historial paginado), con el permiso audit del menú BANCOS
+    // (ventas.fn_banco_auditoria_resumen y ventas.fn_banco_auditoria_paginacion).
+    public function bancoAuditoria(Request $request)
+    {
+        try {
+            if (!$this->tienePermiso(self::MENU, 'audit')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Su perfil no tiene permiso para ver la auditoría de los bancos.', null));
+            }
+
+            $id = (int) $request->query('id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($id <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Banco no válido', null));
+            }
+
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_banco_auditoria_resumen(?)', [$id]);
+            $eventos = DB::select('SELECT * FROM ventas.fn_banco_auditoria_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del banco', $e->getMessage()));
         }
     }
 
@@ -116,9 +164,12 @@ class BancoController extends Controller
         return $this->guardar($request, $ban_id);
     }
 
+    // Version 1.0
     // Lo que hacía guardarBancoDynamo, con el id de la URL (null = uno nuevo): el permiso del menú va antes que revisar los datos, y
     // las reglas y los mensajes del Validator son los de antes (el id entra a la validación como antes venía en el cuerpo, así
     // 'activo' se sigue pidiendo solo al cambiar uno). Devuelve {ban_id, bancos} como antes.
+    // 27-nov (pedido del usuario): además el cheque actual, los 2 programas de impresión y la dirección principal (aquí solo la
+    // forma: las reglas y sus mensajes son de la función).
     private function guardar(Request $request, $banId)
     {
         try {
@@ -135,6 +186,11 @@ class BancoController extends Controller
                 'cco_id'    => 'nullable|integer',
                 'activo'    => 'required_with:ban_id|nullable|boolean',
                 'comercial' => 'present|nullable|boolean',
+                // 27-nov: tienen que venir (vacíos, la función dice qué falta).
+                'cheque_actual' => 'present|nullable',
+                'pgr_id'        => 'present|nullable|integer',
+                'pgr_pag_id'    => 'present|nullable|integer',
+                'direccion'     => 'present|nullable|array',
             ], self::MENSAJES, self::ATRIBUTOS);
 
             if ($validator->fails()) {
@@ -146,6 +202,11 @@ class BancoController extends Controller
             foreach ((new Banco())->getFillable() as $columna) {
                 $clave = Banco::CLAVES_FUNCION[$columna];
                 $payload[$clave] = $this->valorCampo($clave, $request->input($clave));
+            }
+            // 27-nov: la dirección principal con las claves del modelo Direccion, cada valor tal cual (la función lo valida).
+            $payload['direccion'] = [];
+            foreach (Direccion::CLAVES_FUNCION_BANCO as $clave) {
+                $payload['direccion'][$clave] = $this->valorCampo($clave, $request->input('direccion.' . $clave));
             }
             $payload['auditoria'] = $this->contextoAuditoriaForense($request);
 
@@ -165,13 +226,17 @@ class BancoController extends Controller
         }
     }
 
+    // Version 1.0
     // Cada valor como lo recibía la función: la cuenta contable como entero (vacío = null), activo y comercial como booleanos
     // (null = la función pone el valor por defecto) y lo demás (el nombre y el número de cuenta) tal cual, para que la función
     // los valide con sus mensajes.
+    // 27-nov: los 2 programas de impresión también como entero; el cheque actual y la dirección, tal cual.
     private function valorCampo(string $clave, $valor)
     {
         switch ($clave) {
             case 'cco_id':
+            case 'pgr_id':
+            case 'pgr_pag_id':
                 return $this->enteroONulo($valor);
             case 'activo':
             case 'comercial':

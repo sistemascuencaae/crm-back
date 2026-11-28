@@ -73,6 +73,41 @@ class SistemaLiquidacionController extends Controller
     }
 
     // Version 1.0
+    // GET /api/contabilidad/sistemaLiquidacionAuditoria?id&pagina&tamanio&busqueda — 27-nov (pedido del usuario): la auditoría
+    // de UN sistema de liquidación (lo guardado desde el CRM: resumen + historial paginado), con el permiso audit del menú
+    // SISTEMAS-LIQUIDACION (ventas.fn_sistema_liquidacion_auditoria_resumen y _paginacion).
+    public function sistemaLiquidacionAuditoria(Request $request)
+    {
+        try {
+            if (!$this->tienePermiso(self::MENU, 'audit')) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Su perfil no tiene permiso para ver la auditoría de los sistemas de liquidación.', null));
+            }
+
+            $id = (int) $request->query('id', 0);
+            $pagina = max((int) $request->query('pagina', 1), 1);
+            $tamanio = max((int) $request->query('tamanio', 10), 1);
+            $busqueda = trim((string) $request->query('busqueda', ''));
+
+            if ($id <= 0) {
+                return response()->json(RespuestaApi::returnResultado('error', 'Sistema de liquidación no válido', null));
+            }
+
+            $resumen = DB::selectOne('SELECT * FROM ventas.fn_sistema_liquidacion_auditoria_resumen(?)', [$id]);
+            $eventos = DB::select('SELECT * FROM ventas.fn_sistema_liquidacion_auditoria_paginacion(?, ?, ?, ?)', [$id, $pagina, $tamanio, $busqueda]);
+
+            return response()->json(RespuestaApi::returnResultado('success', 'Auditoría cargada con éxito', [
+                'resumen' => $resumen,
+                'eventos' => $eventos,
+                'total' => (int) ($eventos[0]->total_registros ?? 0),
+                'pagina' => $pagina,
+                'tamanio' => $tamanio,
+            ]));
+        } catch (Exception $e) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo cargar la auditoría del sistema de liquidación', $e->getMessage()));
+        }
+    }
+
+    // Version 1.0
     // POST /api/contabilidad/addSistemaLiquidacion — agrega uno (nace activo) y devuelve la lista de ahora. Antes
     // guardarSistemaLiquidacion sin sli_id (un sli_id en el cuerpo no cuenta: siempre es uno nuevo).
     public function addSistemaLiquidacion(Request $request)

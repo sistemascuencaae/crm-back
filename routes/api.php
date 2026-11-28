@@ -2202,6 +2202,10 @@ Route::group(["prefix" => "contabilidad", 'middleware' => ['jwt.auth', 'usuario.
     Route::get('/listCombosBanco', [BancoController::class, 'listCombosBanco']);
     Route::post('/addBanco', [BancoController::class, 'addBanco']);
     Route::post('/editBanco/{ban_id}', [BancoController::class, 'editBanco']);
+    // 27-nov (pedido del usuario): la auditoría de cada fila (el candado de la columna Acciones), con el permiso audit del menú.
+    Route::get('/emisorAuditoria', [EmisorController::class, 'emisorAuditoria']);
+    Route::get('/sistemaLiquidacionAuditoria', [SistemaLiquidacionController::class, 'sistemaLiquidacionAuditoria']);
+    Route::get('/bancoAuditoria', [BancoController::class, 'bancoAuditoria']);
 });
 
 // INVENTARIOS > PRODUCTOS: CRUD de public.producto (funciones crm.fn_producto_*).
