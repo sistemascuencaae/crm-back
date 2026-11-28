@@ -11,9 +11,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-// Configuración de la tienda (ecommerce.configuraciones_tienda, una sola fila): el número de WhatsApp. Ver, guardar y
-// auditoría. La publicidad y el video de inicio tienen su propia pantalla (VentanasEmergentesController y
-// VideosInicioController).
+// Configuración de la tienda (ecommerce.configuraciones_tienda, una sola fila): el número de WhatsApp, a dónde lleva
+// "Más información" del aviso de cookies. Ver, guardar y auditoría. La publicidad y el video de inicio tienen su propia
+// pantalla (VentanasEmergentesController y VideosInicioController); las cintas del detalle del producto, la suya
+// (paginaWeb/ProductoDetalleController).
 // Las reglas viven en ecommerce.fn_configuracion_tienda_* (database/sql/configuracion_tienda*.sql); lo que pide la
 // tienda está en paginaWeb/ConfiguracionTiendaController.
 class ConfiguracionController extends Controller
@@ -23,15 +24,20 @@ class ConfiguracionController extends Controller
         'REQUIERE_USUARIO' => 'No se pudo identificar al usuario. Vuelva a iniciar sesión.',
         'CONFIG_WHATSAPP_INVALIDO' => 'El número de WhatsApp no es válido: escríbalo con el código del país, por ejemplo 593991234567.',
         'CONFIG_WHATSAPP_ECUADOR' => 'Un número de Ecuador debe ser un celular: 593 seguido de 9 dígitos que empiezan con 9 (por ejemplo 593991234567).',
+        'DESTINO_INVALIDO' => 'El enlace de "Más información" no es válido: elíjalo de la lista (las direcciones web empiezan con https://).',
+        'DESTINO_NO_EXISTE' => 'El enlace de "Más información" ya no existe o está en la papelera: elija otro.',
+        'CARPETA_NO_PRINCIPAL' => 'En "Más información" solo se pueden enlazar carpetas de primer nivel.',
     ];
 
     private const MENSAJES_FORMULARIO = [
         'cfg_whatsapp_numero.max' => 'El número de WhatsApp es demasiado largo.',
+        'cfg_cookies_destino.array' => 'El enlace de "Más información" no es válido: elíjalo de la lista.',
     ];
 
     // Lo único que se acepta del formulario.
     private const CAMPOS_PAYLOAD = [
         'cfg_whatsapp_numero',
+        'cfg_cookies_destino',
     ];
 
     public function __construct()
@@ -49,7 +55,8 @@ class ConfiguracionController extends Controller
         }
     }
 
-    // Guarda -> ecommerce.fn_configuracion_tienda_edit. Body: { cfg_whatsapp_numero } (null o '' lo borra).
+    // Guarda -> ecommerce.fn_configuracion_tienda_edit. Body: { cfg_whatsapp_numero?, cfg_cookies_destino? }: lo que
+    // llegue (el número null o '' lo borra; el destino null = /documentos).
     public function editar(Request $request)
     {
         // Si el número llega como número (sin comillas), se trata como texto: la base lo limpia y lo valida.
@@ -58,6 +65,7 @@ class ConfiguracionController extends Controller
         }
         $validator = Validator::make($request->all(), [
             'cfg_whatsapp_numero' => 'nullable|string|max:30',
+            'cfg_cookies_destino' => 'nullable|array',
         ], self::MENSAJES_FORMULARIO);
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
@@ -98,10 +106,14 @@ class ConfiguracionController extends Controller
 
     // ================= Internos =================
 
-    // La fila de fn_configuracion_tienda_ver: { cfg_whatsapp_numero, cfg_fecha_modificacion, modificado_por }.
+    // La fila de fn_configuracion_tienda_ver: { cfg_whatsapp_numero, cfg_cookies_destino, cfg_fecha_modificacion,
+    // modificado_por } (el destino, ya como objeto).
     private function configuracion(): object
     {
-        return DB::selectOne('SELECT * FROM ecommerce.fn_configuracion_tienda_ver()') ?? (object) [];
+        $c = DB::selectOne('SELECT * FROM ecommerce.fn_configuracion_tienda_ver()') ?? (object) [];
+        $c->cfg_cookies_destino = isset($c->cfg_cookies_destino) ? json_decode($c->cfg_cookies_destino) : null;
+
+        return $c;
     }
 
     // errorInfo[2] trae solo el mensaje de PG (getMessage() incluye el SQL con el payload).

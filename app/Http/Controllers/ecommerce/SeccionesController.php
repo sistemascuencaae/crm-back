@@ -22,7 +22,8 @@ class SeccionesController extends Controller
 {
     // Imágenes de las secciones: carpeta ecommerce/secciones (NAS o local); la tienda y el CRM las piden por
     // api/public/secciones/imagenes/{nombre}. En la base se guarda solo el nombre: 40 letras y números + .webp.
-    private const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/secciones';
+    // Pública: PaginasController sube aquí también la imagen de fondo de las páginas.
+    public const CARPETA_IMAGENES = ArchivosPaginaWeb::CARPETA . '/secciones';
 
     // Códigos sin "dónde" -> mensaje para el usuario.
     private const MENSAJES_ERROR = [
@@ -73,6 +74,7 @@ class SeccionesController extends Controller
         'PRODUCTO_NO_EN_GRUPO' => 'el producto ya no está en el grupo elegido (puede que lo hayan quitado del grupo): elija otro.',
         'CONTENIDO_GRUPO_DISTINTO' => 'todos los productos de la lista tienen que ser del mismo grupo.',
         'FECHAS_INVALIDAS' => 'tiene que ser después de "Sale desde".',
+        'FECHAS_EVENTO_INVALIDAS' => 'tiene que ser después de "Empieza el evento".',
     ];
 
     public function __construct()
