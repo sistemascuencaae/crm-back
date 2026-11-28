@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ecommerce;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\paginaWeb\PaginasTiendaController;
 use App\Http\Resources\RespuestaApi;
+use App\Servicios\PaginaWeb\ArchivosPaginaWeb;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +40,10 @@ class PaginasController extends Controller
         'PAPELERA_PAGINA_ACTIVA' => 'Para eliminar la página, primero desactívela.',
         'PAGINA_NO_EN_PAPELERA' => 'La página no está en la papelera (puede que otro usuario ya la restauró).',
         'SECCIONES_NO_COINCIDEN' => 'Las secciones elegidas para clonar no son de la página de origen. Vuelva a cargarla.',
+        'FONDO_IMAGEN_INVALIDA' => 'La imagen de fondo no es válida. Vuelva a subirla.',
+        'FONDO_GLOBAL_INVALIDO' => 'El valor de "Fondo global" no es válido.',
+        'FONDO_COLOR_INVALIDO' => 'El color del fondo global no es válido: use #RRGGBB o #RRGGBBAA.',
+        'FONDO_COLOR_REQUERIDO' => 'Elija el color del fondo global (o márquelo como transparente).',
     ];
 
     // Mensajes de la validación del formulario (crear, editar y clonar).
@@ -49,6 +54,10 @@ class PaginasController extends Controller
         'pag_ruta.required' => 'Debe ingresar la ruta de la página.',
         'pag_ruta.max' => 'La ruta no puede tener más de 60 caracteres.',
         'pag_activo.boolean' => 'El valor de "Activo" no es válido.',
+        'pag_fondo_imagen.max' => 'La imagen de fondo no es válida. Vuelva a subirla.',
+        'pag_fondo_imagen_movil.max' => 'La imagen de fondo para celular no es válida. Vuelva a subirla.',
+        'pag_fondo_global.boolean' => 'El valor de "Fondo global" no es válido.',
+        'pag_fondo_global_color.max' => 'El color del fondo global no es válido: use #RRGGBB o #RRGGBBAA.',
         'secciones.array' => 'La lista de secciones no es válida.',
         'secciones.*.integer' => 'Una de las secciones elegidas no es válida.',
         'secciones.*.min' => 'Una de las secciones elegidas no es válida.',
@@ -60,6 +69,18 @@ class PaginasController extends Controller
         'pag_descripcion',
         'pag_ruta',
         'pag_activo',
+        'pag_fondo_imagen',
+        'pag_fondo_imagen_movil',
+        'pag_fondo_global',
+        'pag_fondo_global_color',
+    ];
+
+    // Reglas del fondo de la página (crear, editar y clonar). Opcionales: al editar, lo que no viene se conserva.
+    private const REGLAS_FONDO = [
+        'pag_fondo_imagen' => 'sometimes|nullable|string|max:60',
+        'pag_fondo_imagen_movil' => 'sometimes|nullable|string|max:60',
+        'pag_fondo_global' => 'sometimes|boolean',
+        'pag_fondo_global_color' => 'sometimes|nullable|string|max:9',
     ];
 
     public function __construct()
@@ -117,7 +138,7 @@ class PaginasController extends Controller
             'pag_descripcion' => 'nullable|string|max:250',
             'pag_ruta' => 'required|string|max:60',
             'pag_activo' => 'nullable|boolean',
-        ], self::MENSAJES_FORMULARIO);
+        ] + self::REGLAS_FONDO, self::MENSAJES_FORMULARIO);
 
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
@@ -146,7 +167,7 @@ class PaginasController extends Controller
             'pag_descripcion' => 'nullable|string|max:250',
             'pag_ruta' => 'sometimes|required|string|max:60',
             'pag_activo' => 'sometimes|boolean',
-        ], self::MENSAJES_FORMULARIO);
+        ] + self::REGLAS_FONDO, self::MENSAJES_FORMULARIO);
 
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
@@ -166,8 +187,8 @@ class PaginasController extends Controller
         }
     }
 
-    // Crea una página nueva a partir de otra, con copia de sus secciones -> ecommerce.fn_pagina_clonar. La descripción y
-    // "activo", si no vienen, se copian del origen. secciones = las que el usuario dejó, en el orden en que quedarán
+    // Crea una página nueva a partir de otra, con copia de sus secciones -> ecommerce.fn_pagina_clonar. La descripción,
+    // "activo" y el fondo, si no vienen, se copian del origen. secciones = las que el usuario dejó, en el orden en que quedarán
     // ([] = sin secciones); si no viene, se clonan todas.
     // Body: { pag_nombre, pag_ruta, pag_descripcion?, pag_activo?, secciones?: [sec_id, ...] }
     public function clonar(Request $request, int $id)
@@ -179,7 +200,7 @@ class PaginasController extends Controller
             'pag_activo' => 'sometimes|boolean',
             'secciones' => 'sometimes|array',
             'secciones.*' => 'required|integer|min:1',
-        ], self::MENSAJES_FORMULARIO);
+        ] + self::REGLAS_FONDO, self::MENSAJES_FORMULARIO);
 
         if ($validator->fails()) {
             return response()->json(RespuestaApi::returnResultado('error', 'Datos inválidos: ' . $validator->errors()->first(), $validator->errors()));
@@ -198,6 +219,28 @@ class PaginasController extends Controller
             // Al copiar, cada sección se revalida: sus errores (contenido que ya no existe...) los explica SeccionesController.
             return SeccionesController::errorDeSeccion($e) ?? $this->errorTraducido($e, 'Error al clonar la página');
         }
+    }
+
+    // Sube una imagen de fondo de una página (la de PC o la de celular): WebP de hasta 2 MB (ArchivosPaginaWeb::errorImagen). Va a la carpeta de las
+    // imágenes de las secciones (la tienda ya las pide por public/secciones/imagenes). Devuelve el nombre, que se guarda
+    // en pag_fondo_imagen o pag_fondo_imagen_movil al guardar la página, y la dirección para verla. Body (multipart): imagen
+    public function subirFondo(Request $request)
+    {
+        $error = ArchivosPaginaWeb::errorImagen($request, 'imagen');
+        if ($error !== null) {
+            return response()->json(RespuestaApi::returnResultado('error', $error, null));
+        }
+
+        // NAS o local según crm.parametro 'NAS' (ArchivosPaginaWeb::disco).
+        $nombre = Str::random(40) . '.webp';
+        if (!ArchivosPaginaWeb::guardar($request->file('imagen'), SeccionesController::CARPETA_IMAGENES, $nombre)) {
+            return response()->json(RespuestaApi::returnResultado('error', 'No se pudo subir la imagen.', null));
+        }
+
+        return response()->json(RespuestaApi::returnResultado('success', 'Imagen subida', [
+            'nombre' => $nombre,
+            'url' => url('api/public/secciones/imagenes/' . $nombre),
+        ]));
     }
 
     // A la papelera: borrado lógico -> ecommerce.fn_pagina_papelera. No se puede vaciar.
